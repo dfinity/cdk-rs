@@ -1,0 +1,11 @@
+[package]
+name = "ic_cdk"
+version = "0.1.0"
+authors = ["Hans Larsen <hans@larsen.online>"]
+edition = "2018"
+
+[dependencies]
+candid = { git = "https://github.com/hansl/candid", branch = "rust-cdk" }
+cfg-if = "0.1.10"
+serde = "1.0.110"
+wee_alloc = { version = "0.4.5" }

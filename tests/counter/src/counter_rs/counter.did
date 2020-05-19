@@ -1,0 +1,5 @@
+service : {
+  "inc": () -> ();
+  "read": () -> (nat) query;
+  "write": (nat) -> ();
+}

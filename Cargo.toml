@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "src/ic_cdk",
+    "src/ic_cdk_macros",
+    "tests/counter/src/counter_rs",
+    "tests/counter/src/inter_rs",
+    "tests/counter/src/inter2_rs",
+]
+
+[profile.release]
+lto = true
+opt-level = 's'
