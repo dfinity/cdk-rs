@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "src/counter_rs",
+    "src/inter_rs",
+    "src/inter2_rs",
+]
