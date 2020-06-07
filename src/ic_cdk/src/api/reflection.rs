@@ -1,5 +1,5 @@
-use crate::ic0;
 use crate::api::CanisterId;
+use crate::ic0;
 
 /// Returns the caller of the current call.
 pub fn caller() -> Vec<u8> {

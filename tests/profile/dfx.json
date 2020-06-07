@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "canisters": {
+    "profile_inter_rs": {
+      "type": "custom",
+      "candid": "src/profile_inter_rs/profile.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/profile_inter_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package profile_inter_rs",
+      "dependencies": [
+        "profile_rs"
+      ]
+    },
+    "profile_rs": {
+      "type": "custom",
+      "candid": "src/profile_rs/profile.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/profile_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package profile_rs"
+    }
+  },
+  "defaults": {
+    "build": {
+      "output": "canisters/"
+    },
+    "start": {
+      "address": "127.0.0.1",
+      "port": 8000,
+      "serve_root": "canisters/eeoo/assets"
+    }
+  }
+}

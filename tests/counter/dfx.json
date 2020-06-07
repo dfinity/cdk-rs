@@ -4,7 +4,7 @@
     "counter_rs": {
       "type": "custom",
       "candid": "src/counter_rs/counter.did",
-      "wasm": "../../target/wasm32-unknown-unknown/debug/counter_rs.wasm",
+      "wasm": "target/wasm32-unknown-unknown/debug/counter_rs.wasm",
       "build": "cargo build --target wasm32-unknown-unknown --package counter_rs"
     },
     "counter_mo": {
@@ -14,7 +14,7 @@
     "inter_rs": {
       "type": "custom",
       "candid": "src/inter_rs/lib.did",
-      "wasm": "../../target/wasm32-unknown-unknown/debug/inter_rs.wasm",
+      "wasm": "target/wasm32-unknown-unknown/debug/inter_rs.wasm",
       "build": "cargo build --target wasm32-unknown-unknown --package inter_rs",
       "dependencies": [
         "counter_mo"
@@ -27,7 +27,7 @@
     "inter2_rs": {
       "type": "custom",
       "candid": "src/inter2_rs/lib.did",
-      "wasm": "../../target/wasm32-unknown-unknown/debug/inter2_rs.wasm",
+      "wasm": "target/wasm32-unknown-unknown/debug/inter2_rs.wasm",
       "build": "cargo build --target wasm32-unknown-unknown --package inter2_rs",
       "dependencies": [
         "inter_mo"
@@ -36,21 +36,6 @@
     "inter2_mo": {
       "type": "motoko",
       "main": "src/inter2_mo/main.mo"
-    },
-    "profile_inter_rs": {
-      "type": "custom",
-      "candid": "src/profile_inter_rs/profile.did",
-      "wasm": "../../target/wasm32-unknown-unknown/debug/profile_inter_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package profile_inter_rs",
-      "dependencies": [
-        "profile_rs"
-      ]
-    },
-    "profile_rs": {
-      "type": "custom",
-      "candid": "src/profile_rs/profile.did",
-      "wasm": "../../target/wasm32-unknown-unknown/debug/profile_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package profile_rs"
     }
   },
   "defaults": {
