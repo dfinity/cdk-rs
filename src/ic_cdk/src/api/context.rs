@@ -1,4 +1,4 @@
-use crate::ic0;
+use crate::{ic0, reflection};
 use candid::{Decode, Encode};
 
 /// Rejection code from calling another canister.
@@ -96,4 +96,8 @@ pub fn arg_data<T: serde::de::DeserializeOwned>() -> T {
 
 pub fn arg_data_empty() -> () {
     unsafe { Decode!(&arg_data_raw()).unwrap() }
+}
+
+pub fn sender() -> Vec<u8> {
+    reflection::caller()
 }

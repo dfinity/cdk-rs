@@ -6,6 +6,7 @@ mod api;
 mod futures;
 mod ic0;
 mod printer;
+pub mod storage;
 
 pub use api::*;
 

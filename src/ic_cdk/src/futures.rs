@@ -1,14 +1,6 @@
-//! This module contains all mechanisms required to enable asynchronous
-//! programming in Rust, based on native async Rust capabilities:
-//!
-//!  - the future returned by the asynchronous System API call, and
-//!  - the kickstarting/waker implementations to advance top level futures on
-//!    every inter-canister callback call.
-use std::{
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 /// Must be called on every top-level future corresponding to a method call of a
 /// canister by the IC.

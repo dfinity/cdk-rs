@@ -5,6 +5,8 @@ members = [
     "tests/counter/src/counter_rs",
     "tests/counter/src/inter_rs",
     "tests/counter/src/inter2_rs",
+    "tests/counter/src/profile_rs",
+    "tests/counter/src/profile_inter_rs",
 ]
 
 [profile.release]

@@ -1,8 +1,15 @@
 use crate::error::Errors;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
+use serde::Deserialize;
+use serde_tokenstream::from_tokenstream;
 use syn::export::Formatter;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Type};
+
+#[derive(Default, Deserialize)]
+struct ExportAttributes {
+    pub name: Option<String>,
+}
 
 #[derive(Copy, Clone, Debug)]
 enum MethodType {
@@ -19,25 +26,15 @@ impl std::fmt::Display for MethodType {
     }
 }
 
-fn check_attributes(attr: TokenStream, method: MethodType) -> Result<(), Errors> {
-    let span = attr.span().clone();
-    let tokens = attr.into_iter().collect::<Vec<_>>();
-    if !tokens.is_empty() {
-        Err(Errors::single(
-            format!("expected #[{}] to have no attributes", method),
-            span,
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 fn dfn_macro(
     method: MethodType,
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Errors> {
-    check_attributes(attr, method)?;
+    let attrs = match from_tokenstream::<ExportAttributes>(&proc_macro2::TokenStream::from(attr)) {
+        Ok(a) => a,
+        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
+    };
 
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Errors::single(
@@ -107,7 +104,11 @@ fn dfn_macro(
         Span::call_site(),
     );
 
-    let export_name = format!("canister_{0} {1}", method, name);
+    let export_name = format!(
+        "canister_{0} {1}",
+        method,
+        attrs.name.unwrap_or(name.to_string())
+    );
 
     let function_call = if is_async {
         quote! { #name ( #(#arg_tuple),* ) .await }

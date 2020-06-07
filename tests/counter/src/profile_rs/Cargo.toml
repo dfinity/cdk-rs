@@ -1,5 +1,5 @@
 [package]
-name = "ic_cdk_macros"
+name = "profile_rs"
 version = "0.1.0"
 authors = ["Hans Larsen <hans@larsen.online>"]
 edition = "2018"
@@ -7,12 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-proc-macro = true
+path = "lib.rs"
+crate-type = ["cdylib"]
 
 [dependencies]
+ic_cdk = { path = "../../../../src/ic_cdk", version = "0.1.0" }
+ic_cdk_macros = { path = "../../../../src/ic_cdk_macros", version = "0.1.0" }
 candid = { git = "https://github.com/hansl/candid", branch = "rust-cdk" }
-syn = { version = "1.0", features = ["fold", "full"] }
-quote = "1.0"
-proc-macro2 = "1.0"
-serde_tokenstream = "0.1.0"
+candid_derive = "0.2.0"
 serde = "1.0.111"

@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 mod error;
 mod export;
 mod import;
-mod symbols;
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 pub(crate) fn id() -> u32 {

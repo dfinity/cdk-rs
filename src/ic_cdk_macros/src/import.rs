@@ -1,12 +1,13 @@
 use crate::error::Errors;
 use quote::quote;
-use std::convert::TryFrom;
+use serde::Deserialize;
+use serde_tokenstream::from_tokenstream;
 use std::path::PathBuf;
 use std::str::FromStr;
-use syn::{AttributeArgs, Lit, Meta, MetaNameValue, NestedMeta};
 
-#[derive(Default)]
+#[derive(Default, Deserialize)]
 struct ImportAttributes {
+    pub canister: Option<String>,
     pub canister_id: Option<String>,
     pub candid_path: Option<PathBuf>,
 }
@@ -28,107 +29,31 @@ fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Error
     ))
 }
 
-fn parse_meta_attr(meta: Meta) -> Result<(Option<String>, Option<PathBuf>), Errors> {
-    match meta.path().get_ident() {
-        Some(id) if id == &crate::symbols::CANISTER_ID => {
-            if let Meta::NameValue(MetaNameValue { ref lit, .. }) = meta {
-                match lit {
-                    Lit::Str(value) => Ok((Some(value.value()), None)),
-                    _ => Err(Errors::message(format!(
-                        "Argument {} requires a string value.",
-                        id
-                    ))),
-                }
-            } else {
-                return Err(Errors::message(format!(
-                    "Argument {} requires a value.",
-                    id
-                )));
-            }
-        }
-        Some(id) if id == &crate::symbols::CANDID_PATH => {
-            if let Meta::NameValue(MetaNameValue { ref lit, .. }) = meta {
-                match lit {
-                    Lit::Str(value) => Ok((None, Some(PathBuf::from(value.value())))),
-                    _ => Err(Errors::message(format!(
-                        "Argument {} requires a string value.",
-                        id
-                    ))),
-                }
-            } else {
-                return Err(Errors::message(format!(
-                    "Argument {} requires a value.",
-                    id
-                )));
-            }
-        }
-        Some(id) if id == &crate::symbols::CANISTER => {
-            if let Meta::NameValue(MetaNameValue { ref lit, .. }) = meta {
-                match lit {
-                    Lit::Str(value) => {
-                        let id = value.value();
-                        let (canister_id, candid_path) = get_env_id_and_candid(&id)?;
-
-                        Ok((Some(canister_id), Some(candid_path)))
-                    }
-                    _ => Err(Errors::message(format!(
-                        "Argument {} requires a string value.",
-                        id
-                    ))),
-                }
-            } else {
-                return Err(Errors::message(format!(
-                    "Argument {} requires a value.",
-                    id
-                )));
-            }
-        }
-        Some(other) => {
-            // This is a special shorthand for using a local DFX canister.
-            // Check if the CANISTER_ID and CANDID_PATH environment variables
-            // for this canister are set.
-            let id = format!("{}", other);
-            let (canister_id, candid_path) = get_env_id_and_candid(&id)?;
-
-            Ok((Some(canister_id), Some(candid_path)))
-        }
-        None => return Err(Errors::message("Must specify an identifier.")),
-    }
-}
-
-impl TryFrom<syn::AttributeArgs> for ImportAttributes {
-    type Error = Errors;
-
-    fn try_from(args: AttributeArgs) -> Result<Self, Self::Error> {
-        let mut attrs = ImportAttributes::default();
-        for arg in args {
-            match arg {
-                NestedMeta::Meta(meta) => {
-                    let (canister_id, candid_path) = parse_meta_attr(meta)?;
-                    if let Some(cid) = canister_id {
-                        attrs.canister_id = Some(cid);
-                    }
-                    if let Some(cpath) = candid_path {
-                        attrs.candid_path = Some(cpath);
-                    }
-                }
-                _ => {
-                    return Err(Errors::message(
-                        "Arguments must be tagged (no direct values).",
-                    ))
-                }
-            }
-        }
-        Ok(attrs)
-    }
-}
-
 struct RustLanguageBinding {
     visibility: String,
     canister_id: String,
 }
 
 impl candid::codegen::rust::RustBindings for RustLanguageBinding {
+    fn record(
+        &self,
+        id: &str,
+        fields: &[(String, String)],
+    ) -> Result<String, candid::error::Error> {
+        let all_fields = fields
+            .iter()
+            .map(|(name, ty)| format!("pub {} : {}", name, ty))
+            .collect::<Vec<String>>()
+            .join(" , ");
+        Ok(format!(
+            r#"
+                #[derive(Clone, Debug, Default, candid_derive::CandidType, serde::Deserialize)]
+                pub struct {} {{ {} }}
+            "#,
+            id, all_fields
+        ))
+    }
+
     fn actor(&self, name: &str, all_functions: &[String]) -> Result<String, candid::error::Error> {
         let mut all_functions_str = String::new();
         for f in all_functions {
@@ -239,16 +164,25 @@ pub(crate) fn ic_import(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> Result<proc_macro::TokenStream, Errors> {
-    let attr: syn::AttributeArgs = syn::parse_macro_input::parse::<syn::AttributeArgs>(attr)?;
-
-    let ImportAttributes {
-        canister_id,
-        candid_path,
-    } = ImportAttributes::try_from(attr)?;
+    let config = match from_tokenstream::<ImportAttributes>(&proc_macro2::TokenStream::from(attr)) {
+        Ok(c) => c,
+        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
+    };
 
     // We expect both fields to have values for now.
-    let canister_id = canister_id.unwrap();
-    let candid_path = candid_path.unwrap();
+    let (canister_id, candid_path) = {
+        if let Some(canister_name) = config.canister {
+            get_env_id_and_candid(&canister_name)?
+        } else if let Some(canister_id) = config.canister_id {
+            if let Some(candid_path) = config.candid_path {
+                (canister_id, candid_path)
+            } else {
+                return Err(Errors::message("Must specify both candid and canister_id."));
+            }
+        } else {
+            return Err(Errors::message("Must specify both candid and canister_id."));
+        }
+    };
 
     let item =
         syn::parse2::<syn::Item>(proc_macro2::TokenStream::from(item)).map_err(Errors::from)?;
@@ -282,6 +216,8 @@ pub(crate) fn ic_import(
 
     let rust_str =
         candid::codegen::idl_to_rust(&prog, &config).map_err(|e| Errors::message(e.to_string()))?;
+
+    let rust_str = format!("{} {}", "type principal = Vec<u8>;", rust_str);
 
     Ok(proc_macro::TokenStream::from_str(&rust_str).unwrap())
 }

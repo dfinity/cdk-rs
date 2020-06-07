@@ -30,7 +30,8 @@ macro_rules! ic0_module {
 
         $(
         #[cfg(not(target_arch = "wasm32"))]
-        pub(crate) fn $name($( $argname: $argtype, )*) -> _ic0_module_ret!($rettype) {
+        pub(crate) unsafe fn $name($( $argname: $argtype, )*) -> _ic0_module_ret!($rettype) {
+                            let _ = ( $( $argname, )* );
             panic!("{} should only be called inside canisters.", stringify!( $name ));
         }
         )*
