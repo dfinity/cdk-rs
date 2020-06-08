@@ -6,7 +6,6 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
 
-pub mod call;
 pub mod context;
 pub mod reflection;
 
@@ -91,7 +90,7 @@ pub fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
         // Make sure to un-borrow_mut the state.
         {
             state.borrow_mut().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(arg_data::<R>()),
+                RejectionCode::NoError => Ok(arg_data_1::<R>()),
                 n => Err((n, reject_message())),
             });
         }
@@ -158,7 +157,7 @@ pub fn call_no_return<T: candid::CandidType>(
         // Make sure to un-borrow_mut the state.
         {
             state.borrow_mut().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(arg_data_empty()),
+                RejectionCode::NoError => Ok(arg_data_0()),
                 n => Err((n, reject_message())),
             });
         }

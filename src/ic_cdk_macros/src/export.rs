@@ -58,7 +58,6 @@ fn dfn_macro(
     let is_async = signature.asyncness.is_some();
 
     let function_args = &signature.inputs;
-    let empty_args = function_args.len() == 0;
     let empty_return = match &signature.output {
         ReturnType::Default => true,
         ReturnType::Type(_, ty) => match ty.as_ref() {
@@ -116,11 +115,8 @@ fn dfn_macro(
         quote! { #name ( #(#arg_tuple),* ) }
     };
 
-    let arg_decode = if empty_args {
-        quote! { ic_cdk::context::arg_data_empty() }
-    } else {
-        quote! { ic_cdk::context::arg_data() }
-    };
+    let arg_count = arg_tuple.len();
+    let arg_decode = syn::Ident::new(&format!("arg_data_{}", arg_count), Span::call_site());
 
     let return_encode = if empty_return {
         quote! { ic_cdk::context::reply_empty() }
@@ -134,7 +130,7 @@ fn dfn_macro(
             ic_cdk::setup();
 
             ic_cdk::block_on(async {
-                let ( #( #arg_tuple ),* ) = #arg_decode;
+                let ( #( #arg_tuple ),* ) = ic_cdk::context::#arg_decode();
                 let result = #function_call;
                 #return_encode
             });

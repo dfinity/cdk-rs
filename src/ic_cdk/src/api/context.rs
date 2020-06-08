@@ -35,7 +35,7 @@ impl From<i32> for RejectionCode {
 /// the call succeeded (with T being the arg_data), and [reject_message()] if it failed.
 pub fn result<T: serde::de::DeserializeOwned>() -> Result<T, String> {
     match reject_code() {
-        RejectionCode::NoError => Ok(arg_data::<T>()),
+        RejectionCode::NoError => Ok(arg_data_1::<T>()),
         _ => Err(reject_message()),
     }
 }
@@ -64,6 +64,11 @@ pub fn reject(message: &str) -> () {
     }
 }
 
+/// Get the sender principal ID.
+pub fn sender() -> Vec<u8> {
+    reflection::caller()
+}
+
 pub(crate) unsafe fn reply_raw(reply: &[u8]) {
     ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);
     ic0::msg_reply();
@@ -90,14 +95,99 @@ pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
-pub fn arg_data<T: serde::de::DeserializeOwned>() -> T {
-    unsafe { Decode!(&arg_data_raw(), T).unwrap() }
-}
-
-pub fn arg_data_empty() -> () {
+/// Decodes 0 argument from the arguments data.
+pub fn arg_data_0() -> () {
     unsafe { Decode!(&arg_data_raw()).unwrap() }
 }
 
-pub fn sender() -> Vec<u8> {
-    reflection::caller()
+/// Decodes 1 argument from the arguments data.
+pub fn arg_data_1<A>() -> A
+where
+    A: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A).unwrap() }
+}
+
+/// Decodes 2 argument from the arguments data.
+pub fn arg_data_2<A, B>() -> (A, B)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B).unwrap() }
+}
+
+/// Decodes 3 argument from the arguments data.
+pub fn arg_data_3<A, B, C>() -> (A, B, C)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C).unwrap() }
+}
+
+/// Decodes 4 argument from the arguments data.
+pub fn arg_data_4<A, B, C, D>() -> (A, B, C, D)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+    D: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C, D).unwrap() }
+}
+
+/// Decodes 5 argument from the arguments data.
+pub fn arg_data_5<A, B, C, D, E>() -> (A, B, C, D, E)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+    D: serde::de::DeserializeOwned,
+    E: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C, D, E).unwrap() }
+}
+
+/// Decodes 6 argument from the arguments data.
+pub fn arg_data_6<A, B, C, D, E, F>() -> (A, B, C, D, E, F)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+    D: serde::de::DeserializeOwned,
+    E: serde::de::DeserializeOwned,
+    F: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C, D, E, F).unwrap() }
+}
+
+/// Decodes 7 argument from the arguments data.
+pub fn arg_data_7<A, B, C, D, E, F, G>() -> (A, B, C, D, E, F, G)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+    D: serde::de::DeserializeOwned,
+    E: serde::de::DeserializeOwned,
+    F: serde::de::DeserializeOwned,
+    G: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C, D, E, F, G).unwrap() }
+}
+
+/// Decodes 8 argument from the arguments data.
+pub fn arg_data_8<A, B, C, D, E, F, G, H>() -> (A, B, C, D, E, F, G, H)
+where
+    A: serde::de::DeserializeOwned,
+    B: serde::de::DeserializeOwned,
+    C: serde::de::DeserializeOwned,
+    D: serde::de::DeserializeOwned,
+    E: serde::de::DeserializeOwned,
+    F: serde::de::DeserializeOwned,
+    G: serde::de::DeserializeOwned,
+    H: serde::de::DeserializeOwned,
+{
+    unsafe { Decode!(&arg_data_raw(), A, B, C, D, E, F, G, H).unwrap() }
 }

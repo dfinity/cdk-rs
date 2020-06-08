@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "canisters": {
+    "chess_rs": {
+      "type": "custom",
+      "candid": "src/chess_rs/chess.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/chess_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package chess_rs"
+    }
+  },
+  "defaults": {
+    "build": {
+      "output": "canisters/"
+    },
+    "start": {
+      "address": "127.0.0.1",
+      "port": 8000,
+      "serve_root": "canisters/eeoo/assets"
+    }
+  }
+}
