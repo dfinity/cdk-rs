@@ -10,7 +10,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-candid = { git = "https://github.com/hansl/candid", branch = "rust-cdk" }
+candid = "0.2.4"
 syn = { version = "1.0", features = ["fold", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"

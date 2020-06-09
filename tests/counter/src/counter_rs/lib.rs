@@ -1,22 +1,30 @@
 use ic_cdk_macros::*;
 
-static mut COUNTER: u32 = 0;
+static mut COUNTER: Option<candid::Nat> = None;
+
+#[init]
+fn init() {
+    ic_cdk::print("HELLO");
+    unsafe {
+        COUNTER = Some(candid::Nat::from(0));
+    }
+}
 
 #[update]
 fn inc() -> () {
     unsafe {
-        COUNTER = COUNTER + 1;
+        COUNTER.as_mut().unwrap().0 += 1u64;
     }
 }
 
 #[query]
-fn read() -> u32 {
-    unsafe { COUNTER }
+fn read() -> candid::Nat {
+    unsafe { COUNTER.as_mut().unwrap().clone() }
 }
 
 #[update]
-fn write(input: u32) -> () {
+fn write(input: candid::Nat) -> () {
     unsafe {
-        COUNTER = input;
+        COUNTER.as_mut().unwrap().0 = input.0;
     }
 }

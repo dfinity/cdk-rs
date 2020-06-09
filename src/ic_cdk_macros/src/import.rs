@@ -210,8 +210,8 @@ pub(crate) fn ic_import(
 
     let config = candid::codegen::rust::Config::default()
         .with_actor_name(struct_name)
-        .with_biguint_type("u64".to_string())
-        .with_bigint_type("i64".to_string())
+        .with_biguint_type("candid::Nat".to_string())
+        .with_bigint_type("candid::Int".to_string())
         .with_bindings(bindings);
 
     let rust_str =

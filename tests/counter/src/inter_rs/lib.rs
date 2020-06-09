@@ -4,7 +4,7 @@ use ic_cdk_macros::*;
 struct CounterCanister;
 
 #[update]
-async fn read() -> u64 {
+async fn read() -> candid::Nat {
     CounterCanister::read().await
 }
 
@@ -14,6 +14,6 @@ async fn inc() -> () {
 }
 
 #[update]
-async fn write(input: u64) -> () {
+async fn write(input: candid::Nat) -> () {
     CounterCanister::write(input).await
 }

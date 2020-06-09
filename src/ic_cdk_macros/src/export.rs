@@ -3,16 +3,18 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
+use std::sync::atomic::{AtomicBool, Ordering};
 use syn::export::Formatter;
-use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Type};
+use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
 #[derive(Default, Deserialize)]
 struct ExportAttributes {
     pub name: Option<String>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum MethodType {
+    Init,
     Update,
     Query,
 }
@@ -20,56 +22,17 @@ enum MethodType {
 impl std::fmt::Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            MethodType::Init => f.write_str("init"),
             MethodType::Query => f.write_str("query"),
             MethodType::Update => f.write_str("update"),
         }
     }
 }
 
-fn dfn_macro(
-    method: MethodType,
-    attr: TokenStream,
-    item: TokenStream,
-) -> Result<TokenStream, Errors> {
-    let attrs = match from_tokenstream::<ExportAttributes>(&proc_macro2::TokenStream::from(attr)) {
-        Ok(a) => a,
-        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
-    };
-
-    let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
-        Errors::single(
-            format!("#[ic_{0}] must be above a function, \n{1}", method, e),
-            item.span(),
-        )
-    })?;
-    let signature = &fun.sig;
-    let generics = &signature.generics;
-
-    if !generics.params.is_empty() {
-        return Err(Errors::single(
-            format!(
-                "#[{}] must be above a function with no generic parameters",
-                method
-            ),
-            generics,
-        ));
-    }
-
-    let is_async = signature.asyncness.is_some();
-
-    let function_args = &signature.inputs;
-    let empty_return = match &signature.output {
-        ReturnType::Default => true,
-        ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Tuple(tuple) => tuple.elems.len() == 0,
-            _ => false,
-        },
-    };
-
+fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Errors> {
     // We only need the tuple of arguments, not their types. Magic of type inference.
-    let mut arg_tuple = vec![];
-    let mut arg_types = vec![];
-    for ref arg in function_args {
+    let mut args = vec![];
+    for ref arg in &signature.inputs {
         let (ident, ty) = match arg {
             FnArg::Receiver(r) => {
                 return Err(Errors::single(
@@ -92,10 +55,59 @@ fn dfn_macro(
             }
         };
 
-        arg_tuple.push(ident);
-        arg_types.push(ty);
+        args.push((ident, ty));
     }
 
+    Ok(args)
+}
+
+fn dfn_macro(
+    method: MethodType,
+    attr: TokenStream,
+    item: TokenStream,
+) -> Result<TokenStream, Errors> {
+    let attrs = match from_tokenstream::<ExportAttributes>(&proc_macro2::TokenStream::from(attr)) {
+        Ok(a) => a,
+        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
+    };
+
+    let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
+        Errors::single(
+            format!("#[{0}] must be above a function, \n{1}", method, e),
+            item.span(),
+        )
+    })?;
+    let signature = &fun.sig;
+    let generics = &signature.generics;
+
+    if !generics.params.is_empty() {
+        return Err(Errors::single(
+            format!(
+                "#[{}] must be above a function with no generic parameters",
+                method
+            ),
+            generics,
+        ));
+    }
+
+    let is_async = signature.asyncness.is_some();
+
+    let empty_return = match &signature.output {
+        ReturnType::Default => true,
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Tuple(tuple) => tuple.elems.len() == 0,
+            _ => false,
+        },
+    };
+
+    if method == MethodType::Init && !empty_return {
+        return Err(Errors::message(
+            "#[init] function cannot have a return value.",
+        ));
+    }
+
+    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
+        get_args(method, signature)?.iter().cloned().unzip();
     let name = &signature.ident;
 
     let outer_function_ident = Ident::new(
@@ -103,11 +115,15 @@ fn dfn_macro(
         Span::call_site(),
     );
 
-    let export_name = format!(
-        "canister_{0} {1}",
-        method,
-        attrs.name.unwrap_or(name.to_string())
-    );
+    let export_name = if method == MethodType::Init {
+        "canister_init".to_string()
+    } else {
+        format!(
+            "canister_{0} {1}",
+            method,
+            attrs.name.unwrap_or(name.to_string())
+        )
+    };
 
     let function_call = if is_async {
         quote! { #name ( #(#arg_tuple),* ) .await }
@@ -118,10 +134,25 @@ fn dfn_macro(
     let arg_count = arg_tuple.len();
     let arg_decode = syn::Ident::new(&format!("arg_data_{}", arg_count), Span::call_site());
 
-    let return_encode = if empty_return {
+    let return_encode = if method == MethodType::Init {
+        quote! {}
+    } else if empty_return {
         quote! { ic_cdk::context::reply_empty() }
     } else {
         quote! { ic_cdk::context::reply(result) }
+    };
+
+    // On initialization we can actually not receive any input and it's okay, only if
+    // we don't have any arguments either.
+    // If the data we receive is not empty, then try to unwrap it as if it's DID.
+    let arg_decode = if method == MethodType::Init && arg_count == 0 {
+        quote! {
+            if !ic_cdk::context::arg_data_is_empty() {
+                let _ = ic_cdk::context::arg_data_0();
+            }
+        }
+    } else {
+        quote! { let ( #( #arg_tuple ),* ) = ic_cdk::context::#arg_decode(); }
     };
 
     Ok(quote! {
@@ -130,7 +161,7 @@ fn dfn_macro(
             ic_cdk::setup();
 
             ic_cdk::block_on(async {
-                let ( #( #arg_tuple ),* ) = ic_cdk::context::#arg_decode();
+                #arg_decode
                 let result = #function_call;
                 #return_encode
             });
@@ -157,6 +188,27 @@ pub(crate) fn ic_update(
 ) -> Result<proc_macro::TokenStream, Errors> {
     dfn_macro(
         MethodType::Update,
+        TokenStream::from(attr),
+        TokenStream::from(item),
+    )
+    .map(proc_macro::TokenStream::from)
+}
+
+#[derive(Default, Deserialize)]
+struct InitAttributes {}
+
+static IS_INIT: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ic_init(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> Result<proc_macro::TokenStream, Errors> {
+    if IS_INIT.swap(true, Ordering::SeqCst) {
+        return Err(Errors::message("Init function already declared."));
+    }
+
+    dfn_macro(
+        MethodType::Init,
         TokenStream::from(attr),
         TokenStream::from(item),
     )

@@ -56,6 +56,11 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(export::ic_init, "ic_init", attr, item)
+}
+
+#[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }

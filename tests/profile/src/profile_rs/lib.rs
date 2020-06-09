@@ -38,12 +38,12 @@ fn get(name: String) -> Profile {
 
 #[update]
 fn update(profile: Profile) {
-    let id = ic_cdk::reflection::caller();
+    let principal_id = ic_cdk::reflection::caller();
     let id_store = storage::get::<IdStore>();
     let profile_store = storage::get::<ProfileStore>();
 
-    id_store.insert(profile.name.clone(), id.clone());
-    profile_store.insert(id, profile);
+    id_store.insert(profile.name.clone(), principal_id.clone());
+    profile_store.insert(principal_id, profile);
 }
 
 #[query]
