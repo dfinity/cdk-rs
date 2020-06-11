@@ -54,7 +54,6 @@ pub enum Player {
 
 #[derive(Clone, Debug, Default, CandidType, Serialize)]
 pub struct Game {
-    pub name: String,
     pub fen: String,
 }
 
@@ -88,6 +87,10 @@ fn new_from_fen(name: String, fen: String) -> () {
 fn uci_move(name: String, m: String) -> bool {
     let game_store = storage::get::<GameStore>();
 
+    if !game_store.contains_key(&name) {
+        new(name.clone());
+    }
+
     let game = game_store
         .get_mut(&name)
         .expect(&format!("No game named {}", name));
@@ -98,6 +101,10 @@ fn uci_move(name: String, m: String) -> bool {
 #[update(name = "generateMove")]
 fn generate_move(name: String) -> () {
     let game_store = storage::get::<GameStore>();
+
+    if !game_store.contains_key(&name) {
+        new(name.clone());
+    }
 
     let game = game_store
         .get_mut(&name)
@@ -138,7 +145,6 @@ fn get_state(name: String) -> Option<Game> {
 
     game_store.get(&name).and_then(|game| {
         Some(Game {
-            name,
             fen: game.board.fen(),
         })
     })

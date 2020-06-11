@@ -1,0 +1,25 @@
+{
+  "name": "new_project",
+  "version": "0.1.0",
+  "description": "",
+  "keywords": [],
+  "scripts": {
+    "build": "webpack"
+  },
+  "devDependencies": {
+    "@dfinity/agent": "/Users/hansl/.cache/dfinity/versions/0.5.7-60-g5828ebf/js-user-library",
+    "@types/chess.js": "^0.10.1",
+    "@types/react": "^16.9.23",
+    "@types/react-dom": "^16.9.5",
+    "chess.js": "0.10.3",
+    "chessboardjsx": "2.4.2",
+    "css-loader": "^3.5.3",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "terser-webpack-plugin": "2.2.2",
+    "ts-loader": "^6.2.1",
+    "typescript": "^3.8.3",
+    "webpack": "4.41.3",
+    "webpack-cli": "3.3.10"
+  }
+}

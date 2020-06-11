@@ -20,13 +20,13 @@ type Player = variant {
 };
 
 type Game = record {
-    "name": text;
     "fen": text;
 };
 
 service : {
     "new": (text) -> ();
     "newFromFen": (text, text) -> ();
+    "generateMove": (text) -> ();
     "getState": (text) -> (opt Game) query;
     "getBoard": (text) -> (opt vec vec Piece) query;
 

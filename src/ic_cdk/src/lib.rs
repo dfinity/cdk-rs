@@ -10,12 +10,17 @@ pub mod storage;
 
 pub use api::*;
 
-use std::sync::Once;
-static START: Once = Once::new();
+static mut DONE: bool = false;
 
 /// Setup the stdlib hooks.
 pub fn setup() -> () {
-    START.call_once(|| printer::hook());
+    unsafe {
+        if DONE {
+            return;
+        }
+        DONE = true;
+    }
+    printer::hook()
 }
 
 /// Block on a promise in a WASM-friendly way (no multithreading!).
