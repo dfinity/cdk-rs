@@ -22,7 +22,7 @@ pub fn delete<T: Sized + Default + 'static>() -> bool {
     storage().remove(&type_id).is_some()
 }
 
-pub fn get<T: Sized + Default + 'static>() -> &'static mut T {
+pub fn get_mut<T: Sized + Default + 'static>() -> &'static mut T {
     let type_id = std::any::TypeId::of::<T>();
 
     let store = storage();
@@ -37,6 +37,10 @@ pub fn get<T: Sized + Default + 'static>() -> &'static mut T {
         let value = Box::new(T::default());
         store.insert(type_id, value);
 
-        get::<T>()
+        get_mut::<T>()
     }
+}
+
+pub fn get<T: Sized + Default + 'static>() -> &'static T {
+    get_mut::<T>()
 }

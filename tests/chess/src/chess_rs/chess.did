@@ -1,34 +1,7 @@
-type Piece = variant {
-    None: null;
-    BlackPawn: null;
-    BlackRook: null;
-    BlackKnight: null;
-    BlackBishop: null;
-    BlackQueen: null;
-    BlackKing: null;
-    WhitePawn: null;
-    WhiteRook: null;
-    WhiteKnight: null;
-    WhiteBishop: null;
-    WhiteQueen: null;
-    WhiteKing: null;
-};
-
-type Player = variant {
-    Black: null;
-    White: null;
-};
-
-type Game = record {
-    "fen": text;
-};
-
 service : {
-    "new": (text) -> ();
-    "newFromFen": (text, text) -> ();
-    "generateMove": (text) -> ();
-    "getState": (text) -> (opt Game) query;
-    "getBoard": (text) -> (opt vec vec Piece) query;
+    "new": (text, bool) -> ();
+    "move": (text, text) -> (bool);
+    "aiMove": (text) -> ();
 
-    "uci": (text, text) -> (bool);
+    "getFen": (text) -> (opt text) query;
 }

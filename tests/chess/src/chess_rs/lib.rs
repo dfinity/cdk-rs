@@ -7,51 +7,6 @@ use std::collections::BTreeMap;
 
 type GameStore = BTreeMap<String, GameInternal>;
 
-#[repr(u8)]
-#[derive(Clone, Debug, CandidType, Serialize)]
-pub enum Piece {
-    None,
-    BlackPawn,
-    BlackRook,
-    BlackKnight,
-    BlackBishop,
-    BlackQueen,
-    BlackKing,
-    WhitePawn,
-    WhiteRook,
-    WhiteKnight,
-    WhiteBishop,
-    WhiteQueen,
-    WhiteKing,
-}
-
-impl From<pleco::Piece> for Piece {
-    fn from(p: pleco::Piece) -> Self {
-        match p {
-            pleco::Piece::None => Piece::None,
-            pleco::Piece::BlackPawn => Piece::BlackPawn,
-            pleco::Piece::BlackRook => Piece::BlackRook,
-            pleco::Piece::BlackKnight => Piece::BlackKnight,
-            pleco::Piece::BlackBishop => Piece::BlackBishop,
-            pleco::Piece::BlackQueen => Piece::BlackQueen,
-            pleco::Piece::BlackKing => Piece::BlackKing,
-            pleco::Piece::WhitePawn => Piece::WhitePawn,
-            pleco::Piece::WhiteRook => Piece::WhiteRook,
-            pleco::Piece::WhiteKnight => Piece::WhiteKnight,
-            pleco::Piece::WhiteBishop => Piece::WhiteBishop,
-            pleco::Piece::WhiteQueen => Piece::WhiteQueen,
-            pleco::Piece::WhiteKing => Piece::WhiteKing,
-        }
-    }
-}
-
-#[repr(u8)]
-#[derive(Clone, Debug, CandidType, Serialize)]
-pub enum Player {
-    Black,
-    White,
-}
-
 #[derive(Clone, Debug, Default, CandidType, Serialize)]
 pub struct Game {
     pub fen: String,
@@ -62,48 +17,48 @@ pub struct GameInternal {
 }
 
 #[update]
-fn new(name: String) -> () {
-    let game_store = storage::get::<GameStore>();
+fn new(name: String, white: bool) -> () {
+    let game_store = storage::get_mut::<GameStore>();
     game_store.insert(
-        name,
+        name.clone(),
         GameInternal {
             board: pleco::Board::start_pos(),
         },
     );
+
+    // If the user is playing black;
+    if !white {
+        ai_move(name);
+    }
 }
 
-#[update(name = "newFromFen")]
-fn new_from_fen(name: String, fen: String) -> () {
-    let game_store = storage::get::<GameStore>();
-    game_store.insert(
-        name,
-        GameInternal {
-            board: pleco::Board::from_fen(&fen).unwrap(),
-        },
-    );
-}
-
-#[update(name = "uci")]
+#[update(name = "move")]
 fn uci_move(name: String, m: String) -> bool {
-    let game_store = storage::get::<GameStore>();
+    let game_store = storage::get_mut::<GameStore>();
 
     if !game_store.contains_key(&name) {
-        new(name.clone());
+        panic!("Game {} does not exist.", name);
     }
 
     let game = game_store
         .get_mut(&name)
         .expect(&format!("No game named {}", name));
 
-    game.board.apply_uci_move(&m)
+    // If the move is valid, also apply the next move using AI.
+    if game.board.apply_uci_move(&m) {
+        ai_move(name);
+        true
+    } else {
+        false
+    }
 }
 
-#[update(name = "generateMove")]
-fn generate_move(name: String) -> () {
-    let game_store = storage::get::<GameStore>();
+#[update(name = "aiMove")]
+fn ai_move(name: String) -> () {
+    let game_store = storage::get_mut::<GameStore>();
 
     if !game_store.contains_key(&name) {
-        new(name.clone());
+        panic!("Game {} does not exist.", name);
     }
 
     let game = game_store
@@ -116,36 +71,11 @@ fn generate_move(name: String) -> () {
     game.board.apply_move(m);
 }
 
-#[query(name = "getBoard")]
-fn get_board(name: String) -> Option<Vec<Vec<Piece>>> {
-    let game_store = storage::get::<GameStore>();
+#[query(name = "getFen")]
+fn get_fen(name: String) -> Option<String> {
+    let game_store = storage::get_mut::<GameStore>();
 
-    game_store.get(&name).and_then(|game| {
-        let mut board = Vec::new();
-        for _ in 0..8 {
-            let mut file = Vec::new();
-            for _ in 0..8 {
-                file.push(Piece::None);
-            }
-
-            board.push(file);
-        }
-
-        for (sq, piece) in game.board.get_piece_locations() {
-            board[sq.file() as usize][sq.rank() as usize] = piece.into();
-        }
-
-        Some(board)
-    })
-}
-
-#[query(name = "getState")]
-fn get_state(name: String) -> Option<Game> {
-    let game_store = storage::get::<GameStore>();
-
-    game_store.get(&name).and_then(|game| {
-        Some(Game {
-            fen: game.board.fen(),
-        })
-    })
+    game_store
+        .get(&name)
+        .and_then(|game| Some(game.board.fen()))
 }

@@ -96,18 +96,19 @@ class HumanVsActor extends Component<Props, State> {
 
     let uci = move.from + move.to + (move.promotion || "");
 
-    chessActor.uci(this.state.name, uci).then((valid: boolean) => {
-      this.setState(({}) => ({ disabled: false }));
-
+    chessActor.move(this.state.name, uci).then((valid: boolean) => {
       if (!valid) {
+        this.setState(({}) => ({ disabled: false }));
         return;
       }
 
-      this.setState(({ history, pieceSquare }) => ({
-        fen: this.game!.fen(),
-        history: this.game!.history({ verbose: true }),
-        squareStyles: squareStyling({ pieceSquare, history })
-      }));
+      chessActor.getFen().then(([fen]) => {
+        this.setState(({ history, pieceSquare }) => ({
+          fen,
+          history: this.game!.history({ verbose: true }),
+          squareStyles: squareStyling({ pieceSquare, history })
+        }));
+      });
     });
   };
 
