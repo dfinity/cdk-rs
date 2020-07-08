@@ -24,10 +24,13 @@
   "defaults": {
     "build": {
       "output": "canisters/"
-    },
-    "start": {
-      "address": "127.0.0.1",
-      "port": 8000
+    }
+  },
+  "networks": {
+    "tungsten": {
+      "providers": [
+        "https://gw.dfinity.network/"
+      ]
     }
   }
 }
