@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "canisters": {
+    "asset_storage": {
+      "type": "custom",
+      "candid": "src/asset_storage_rs/asset_storage.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/asset_storage_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package asset_storage_rs"
+    }
+  }
+}

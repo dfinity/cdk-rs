@@ -1,4 +1,4 @@
-use candid_derive::CandidType;
+use candid::CandidType;
 use ic_cdk::storage;
 use ic_cdk_macros::*;
 use serde::Deserialize;

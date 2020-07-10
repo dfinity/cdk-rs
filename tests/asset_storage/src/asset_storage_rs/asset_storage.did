@@ -1,0 +1,4 @@
+service : {
+    "retrieve": (text) -> (vec nat8) query;
+    "store": (text, vec nat8) -> ();
+}

@@ -47,7 +47,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             .join(" , ");
         Ok(format!(
             r#"
-                #[derive(Clone, Debug, Default, candid_derive::CandidType, serde::Deserialize)]
+                #[derive(Clone, Debug, Default, CandidType, serde::Deserialize)]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields

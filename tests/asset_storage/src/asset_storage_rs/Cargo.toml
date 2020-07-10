@@ -1,5 +1,5 @@
 [package]
-name = "chess_rs"
+name = "asset_storage_rs"
 version = "0.1.0"
 authors = ["Hans Larsen <hans@larsen.online>"]
 edition = "2018"
@@ -13,6 +13,4 @@ crate-type = ["cdylib"]
 [dependencies]
 ic_cdk = { path = "../../../../src/ic_cdk", version = "0.1.0" }
 ic_cdk_macros = { path = "../../../../src/ic_cdk_macros", version = "0.1.0" }
-candid = "0.2.6"
 serde = "1.0.111"
-pleco = "0.5.0"
