@@ -3,7 +3,6 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
-use std::sync::atomic::{AtomicBool, Ordering};
 use syn::export::Formatter;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
@@ -197,16 +196,10 @@ pub(crate) fn ic_update(
 #[derive(Default, Deserialize)]
 struct InitAttributes {}
 
-static IS_INIT: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn ic_init(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> Result<proc_macro::TokenStream, Errors> {
-    if IS_INIT.swap(true, Ordering::SeqCst) {
-        return Err(Errors::message("Init function already declared."));
-    }
-
     dfn_macro(
         MethodType::Init,
         TokenStream::from(attr),
