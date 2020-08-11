@@ -18,11 +18,7 @@ impl Errors {
 
     pub fn emit(self) {
         if !self.0.is_empty() {
-            let errors: Vec<String> = self
-                .0
-                .iter()
-                .map(|e| format!("{}", e.to_string()))
-                .collect();
+            let errors: Vec<String> = self.0.iter().map(|e| e.to_string()).collect();
 
             panic!(errors.join("\n"))
         }

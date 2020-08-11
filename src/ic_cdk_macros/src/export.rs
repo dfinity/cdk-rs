@@ -66,7 +66,7 @@ fn dfn_macro(
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Errors> {
-    let attrs = match from_tokenstream::<ExportAttributes>(&proc_macro2::TokenStream::from(attr)) {
+    let attrs = match from_tokenstream::<ExportAttributes>(&attr) {
         Ok(a) => a,
         Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
     };
@@ -95,7 +95,7 @@ fn dfn_macro(
     let empty_return = match &signature.output {
         ReturnType::Default => true,
         ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Tuple(tuple) => tuple.elems.len() == 0,
+            Type::Tuple(tuple) => tuple.elems.is_empty(),
             _ => false,
         },
     };
@@ -121,7 +121,7 @@ fn dfn_macro(
         format!(
             "canister_{0} {1}",
             method,
-            attrs.name.unwrap_or(name.to_string())
+            attrs.name.unwrap_or_else(|| name.to_string())
         )
     };
 

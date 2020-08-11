@@ -13,7 +13,7 @@ pub use api::*;
 static mut DONE: bool = false;
 
 /// Setup the stdlib hooks.
-pub fn setup() -> () {
+pub fn setup() {
     unsafe {
         if DONE {
             return;
@@ -24,7 +24,7 @@ pub fn setup() -> () {
 }
 
 /// Block on a promise in a WASM-friendly way (no multithreading!).
-pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) -> () {
+pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
     futures::block_on(future);
 }
 

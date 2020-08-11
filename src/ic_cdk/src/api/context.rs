@@ -57,7 +57,7 @@ pub fn reject_message() -> String {
 }
 
 /// Reject the current call with the message.
-pub fn reject(message: &str) -> () {
+pub fn reject(message: &str) {
     let err_message = message.as_bytes();
     unsafe {
         ic0::msg_reject(err_message.as_ptr() as i32, err_message.len() as i32);
@@ -100,7 +100,7 @@ pub fn arg_data_is_empty() -> bool {
 }
 
 /// Decodes 0 argument from the arguments data.
-pub fn arg_data_0() -> () {
+pub fn arg_data_0() {
     unsafe { Decode!(&arg_data_raw()).unwrap() }
 }
 
