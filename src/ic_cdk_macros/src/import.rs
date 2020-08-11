@@ -105,7 +105,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             r#"
             {{
                 {call}(
-                  ic_cdk::CanisterId::from_str_unchecked("{canister_id}").unwrap(),
+                  ic_cdk::CanisterId::from_str("{canister_id}").unwrap(),
                   "{name}",
                   {arguments}
                  )

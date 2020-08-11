@@ -17,31 +17,100 @@ pub struct CanisterId(pub Vec<u8>);
 
 // TODO: move this to using the ic_agent canister.
 impl CanisterId {
-    pub fn from_str_unchecked(s: &str) -> Result<Self, String> {
-        // We don't validate the crc here.
-        let s = s.split_at(3).1; // remove 'ic:'
-        let s = s.split_at(s.len() - 2).0; // remove crc8
-        if s.len() % 2 != 0 {
-            return Err(format!("Invalid number of characters: {}", s.len()));
-        }
-        let s: &[u8] = s.as_bytes();
+    pub fn from_str(input: &str) -> Result<Self, CanisterIdParseError> {
+        // Strategy: Parse very liberally, then pretty-print and compare output
+        // This is both simpler and yields better error messages
 
-        fn val(a: u8, idx: usize) -> Result<u8, String> {
-            match a {
-                b'0'..=b'9' => Ok(a - b'0'),
-                b'a'..=b'f' => Ok(a - b'a' + 10),
-                b'A'..=b'F' => Ok(a - b'A' + 10),
-                x => return Err(format!("Invalid character at pos {}: '{}'", idx, x)),
+        let mut s = input.to_string();
+        s.make_ascii_lowercase();
+        s.retain(|c| c.is_ascii_alphanumeric());
+        match base32::decode(base32::Alphabet::RFC4648 { padding: false }, &s) {
+            Some(mut bytes) => {
+                if bytes.len() < 4 {
+                    return Err(CanisterIdParseError::TooShort);
+                }
+                let result = CanisterId(bytes.split_off(4));
+                let expected = format!("{}", result);
+                if input != expected {
+                    return Err(CanisterIdParseError::InvalidChecksum {
+                        found: input.to_string(),
+                        expected,
+                    });
+                }
+                Ok(result)
             }
+            None => Err(CanisterIdParseError::NotBase32),
         }
+    }
+}
 
-        let v: Result<Vec<u8>, String> = s
-            .chunks(2)
-            .enumerate()
-            .map(|(i, pair)| Ok(val(pair[0], i)? << 4 | val(pair[1], i)?))
-            .collect();
+impl std::fmt::Display for CanisterId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let blob = &self.0;
+        // Calculate CRC32 digest of the Canister ID
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&blob);
+        let checksum = hasher.finalize();
 
-        Ok(CanisterId(v?))
+        // Append the Canister ID bytes to the calculated CRC32 digest
+        let mut bytes = vec![];
+        bytes.extend(&(checksum.to_be_bytes().to_vec()));
+        bytes.extend_from_slice(&blob);
+
+        // Base32-encode the concatenated bytes
+        let mut s = base32::encode(base32::Alphabet::RFC4648 { padding: false }, &bytes);
+        s.make_ascii_lowercase();
+
+        // Print with a separator - (dash) inserted every 5 characters.
+        while s.len() > 5 {
+            // too bad split_off does not work the other way
+            let rest = s.split_off(5);
+            write!(f, "{}-", s)?;
+            s = rest;
+        }
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum CanisterIdParseError {
+    TooShort,
+    NotBase32,
+    InvalidChecksum { found: String, expected: String },
+}
+
+impl std::fmt::Display for CanisterIdParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TooShort => write!(f, "CanisterId textual representation is too short"),
+            Self::NotBase32 => write!(
+                f,
+                "Cannot decode CanisterId textual representation as base32"
+            ),
+            Self::InvalidChecksum { found, expected } => write!(
+                f,
+                "CanisterId {} failed checksum validation, expected {}",
+                found, expected
+            ),
+        }
+    }
+}
+
+impl std::fmt::Debug for CanisterId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CanisterId {}", self)
+    }
+}
+
+impl From<Vec<u8>> for CanisterId {
+    fn from(item: Vec<u8>) -> CanisterId {
+        CanisterId { 0: item }
+    }
+}
+
+impl Into<std::vec::Vec<u8>> for CanisterId {
+    fn into(self) -> std::vec::Vec<u8> {
+        self.0
     }
 }
 
@@ -223,3 +292,6 @@ pub fn trap(message: &str) {
         ic0::trap(message.as_ptr() as i32, message.len() as i32);
     }
 }
+
+#[cfg(test)]
+mod tests;
