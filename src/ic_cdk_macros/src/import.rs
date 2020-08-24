@@ -25,7 +25,7 @@ fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Error
         })?,
         std::env::var_os(candid_path_var_name)
             .ok_or_else(|| Errors::message("Could not find DFX bindings."))
-            .map(|p| PathBuf::from(p))?,
+            .map(PathBuf::from)?,
     ))
 }
 
@@ -205,7 +205,7 @@ pub(crate) fn ic_import(
 
     let bindings = Box::new(RustLanguageBinding {
         visibility,
-        canister_id: canister_id.clone(),
+        canister_id,
     });
 
     let config = candid::codegen::rust::Config::default()

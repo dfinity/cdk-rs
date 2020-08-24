@@ -24,7 +24,7 @@ where
         eprintln!("{}\n    attr: {}\n    item: {}", name, attr, item);
     }
 
-    let result = cb(TokenStream::from(attr), TokenStream::from(item));
+    let result = cb(attr, item);
 
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--------- RESULT  ---------");
@@ -42,7 +42,7 @@ where
     );
 
     errors.emit();
-    TokenStream::from(res)
+    res
 }
 
 #[proc_macro_attribute]
