@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use std::sync::atomic::{AtomicU32, Ordering};
+use syn::Error;
 
-mod error;
 mod export;
 mod import;
 
@@ -17,7 +17,7 @@ fn handle_debug_and_errors<F>(
     item: TokenStream,
 ) -> TokenStream
 where
-    F: FnOnce(TokenStream, TokenStream) -> Result<TokenStream, error::Errors>,
+    F: FnOnce(TokenStream, TokenStream) -> Result<TokenStream, Error>,
 {
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--- IC_CDK_MACROS DEBUG ---");
@@ -34,15 +34,7 @@ where
         eprintln!("---------------------------");
     }
 
-    // We return an empty tokenstream on a fatal error as not to display the error
-    // twice.
-    let (errors, res) = result.map_or_else(
-        |e| (e, TokenStream::new()),
-        |v| (error::Errors::default(), v),
-    );
-
-    errors.emit();
-    res
+    result.map_or_else(|e| e.to_compile_error().into(), Into::into)
 }
 
 #[proc_macro_attribute]

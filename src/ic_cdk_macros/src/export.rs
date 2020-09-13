@@ -1,10 +1,10 @@
-use crate::error::Errors;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use syn::export::Formatter;
+use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
 #[derive(Default, Deserialize)]
@@ -29,19 +29,19 @@ impl std::fmt::Display for MethodType {
     }
 }
 
-fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Errors> {
+fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Error> {
     // We only need the tuple of arguments, not their types. Magic of type inference.
     let mut args = vec![];
     for ref arg in &signature.inputs {
         let (ident, ty) = match arg {
             FnArg::Receiver(r) => {
-                return Err(Errors::single(
+                return Err(Error::new(
+                    r.span(),
                     format!(
                         "#[{}] cannot be above functions with `self` as a parameter",
                         method
                     ),
-                    r.span(),
-                ))
+                ));
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Pat::Ident(PatIdent { ident, .. }) = pat.as_ref() {
@@ -65,28 +65,25 @@ fn dfn_macro(
     method: MethodType,
     attr: TokenStream,
     item: TokenStream,
-) -> Result<TokenStream, Errors> {
-    let attrs = match from_tokenstream::<ExportAttributes>(&attr) {
-        Ok(a) => a,
-        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
-    };
+) -> Result<TokenStream, Error> {
+    let attrs = from_tokenstream::<ExportAttributes>(&attr)?;
 
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
-        Errors::single(
-            format!("#[{0}] must be above a function, \n{1}", method, e),
+        Error::new(
             item.span(),
+            format!("#[{0}] must be above a function, \n{1}", method, e),
         )
     })?;
     let signature = &fun.sig;
     let generics = &signature.generics;
 
     if !generics.params.is_empty() {
-        return Err(Errors::single(
+        return Err(Error::new(
+            generics.span(),
             format!(
                 "#[{}] must be above a function with no generic parameters",
                 method
             ),
-            generics,
         ));
     }
 
@@ -101,8 +98,9 @@ fn dfn_macro(
     };
 
     if method == MethodType::Init && !empty_return {
-        return Err(Errors::message(
-            "#[init] function cannot have a return value.",
+        return Err(Error::new(
+            Span::call_site(),
+            "#[init] function cannot have a return value.".to_string(),
         ));
     }
 
@@ -174,7 +172,7 @@ fn dfn_macro(
 pub(crate) fn ic_query(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Errors> {
+) -> Result<proc_macro::TokenStream, Error> {
     dfn_macro(
         MethodType::Query,
         TokenStream::from(attr),
@@ -185,7 +183,7 @@ pub(crate) fn ic_query(
 pub(crate) fn ic_update(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Errors> {
+) -> Result<proc_macro::TokenStream, Error> {
     dfn_macro(
         MethodType::Update,
         TokenStream::from(attr),
@@ -202,9 +200,12 @@ static IS_INIT: AtomicBool = AtomicBool::new(false);
 pub(crate) fn ic_init(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Errors> {
+) -> Result<proc_macro::TokenStream, Error> {
     if IS_INIT.swap(true, Ordering::SeqCst) {
-        return Err(Errors::message("Init function already declared."));
+        return Err(Error::new(
+            Span::call_site(),
+            "Init function already declared.",
+        ));
     }
 
     dfn_macro(

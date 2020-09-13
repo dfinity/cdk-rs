@@ -1,9 +1,10 @@
-use crate::error::Errors;
+use proc_macro2::Span;
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::path::PathBuf;
 use std::str::FromStr;
+use syn::Error;
 
 #[derive(Default, Deserialize)]
 struct ImportAttributes {
@@ -12,19 +13,22 @@ struct ImportAttributes {
     pub candid_path: Option<PathBuf>,
 }
 
-fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Errors> {
+fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Error> {
     let canister_id_var_name = format!("CANISTER_ID_{}", canister_name);
     let candid_path_var_name = format!("CANISTER_CANDID_{}", canister_name);
 
     Ok((
         std::env::var(canister_id_var_name).map_err(|_| {
-            Errors::message(&format!(
-                "Could not find DFX bindings for canister named '{}'. Did you build using DFX?",
-                canister_name
-            ))
+            Error::new(
+                Span::call_site(),
+                &format!(
+                    "Could not find DFX bindings for canister named '{}'. Did you build using DFX?",
+                    canister_name
+                ),
+            )
         })?,
         std::env::var_os(candid_path_var_name)
-            .ok_or_else(|| Errors::message("Could not find DFX bindings."))
+            .ok_or_else(|| Error::new(Span::call_site(), "Could not find DFX bindings."))
             .map(PathBuf::from)?,
     ))
 }
@@ -35,25 +39,6 @@ struct RustLanguageBinding {
 }
 
 impl candid::codegen::rust::RustBindings for RustLanguageBinding {
-    fn record(
-        &self,
-        id: &str,
-        fields: &[(String, String)],
-    ) -> Result<String, candid::error::Error> {
-        let all_fields = fields
-            .iter()
-            .map(|(name, ty)| format!("pub {} : {}", name, ty))
-            .collect::<Vec<String>>()
-            .join(" , ");
-        Ok(format!(
-            r#"
-                #[derive(Clone, Debug, Default, CandidType, serde::Deserialize)]
-                pub struct {} {{ {} }}
-            "#,
-            id, all_fields
-        ))
-    }
-
     fn actor(&self, name: &str, all_functions: &[String]) -> Result<String, candid::error::Error> {
         let mut all_functions_str = String::new();
         for f in all_functions {
@@ -158,16 +143,32 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             }
         ))
     }
+
+    fn record(
+        &self,
+        id: &str,
+        fields: &[(String, String)],
+    ) -> Result<String, candid::error::Error> {
+        let all_fields = fields
+            .iter()
+            .map(|(name, ty)| format!("pub {} : {}", name, ty))
+            .collect::<Vec<String>>()
+            .join(" , ");
+        Ok(format!(
+            r#"
+                #[derive(Clone, Debug, Default, CandidType, serde::Deserialize)]
+                pub struct {} {{ {} }}
+            "#,
+            id, all_fields
+        ))
+    }
 }
 
 pub(crate) fn ic_import(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Errors> {
-    let config = match from_tokenstream::<ImportAttributes>(&proc_macro2::TokenStream::from(attr)) {
-        Ok(c) => c,
-        Err(err) => return Err(Errors::message(format!("{}", err.to_compile_error()))),
-    };
+) -> Result<proc_macro::TokenStream, Error> {
+    let config = from_tokenstream::<ImportAttributes>(&proc_macro2::TokenStream::from(attr))?;
 
     // We expect both fields to have values for now.
     let (canister_id, candid_path) = {
@@ -177,20 +178,30 @@ pub(crate) fn ic_import(
             if let Some(candid_path) = config.candid_path {
                 (canister_id, candid_path)
             } else {
-                return Err(Errors::message("Must specify both candid and canister_id."));
+                return Err(Error::new(
+                    Span::call_site(),
+                    "Must specify both candid and canister_id.",
+                ));
             }
         } else {
-            return Err(Errors::message("Must specify both candid and canister_id."));
+            return Err(Error::new(
+                Span::call_site(),
+                "Must specify both candid and canister_id.",
+            ));
         }
     };
 
-    let item =
-        syn::parse2::<syn::Item>(proc_macro2::TokenStream::from(item)).map_err(Errors::from)?;
+    let item = syn::parse2::<syn::Item>(proc_macro2::TokenStream::from(item))?;
 
     // Validate that the item is a struct.
     let item = match item {
         syn::Item::Struct(item) => item,
-        _ => return Err(Errors::message("import must be used on a struct.")),
+        _ => {
+            return Err(Error::new(
+                Span::call_site(),
+                "import must be used on a struct.",
+            ))
+        }
     };
 
     let visibility = {
@@ -200,8 +211,12 @@ pub(crate) fn ic_import(
     let struct_name = item.ident.to_string();
 
     let candid_str = std::fs::read_to_string(&candid_path).unwrap();
-    let prog = candid::IDLProg::from_str(&candid_str)
-        .map_err(|e| Errors::message(format!("Could not parse the candid file: {}", e)))?;
+    let prog = candid::IDLProg::from_str(&candid_str).map_err(|e| {
+        Error::new(
+            Span::call_site(),
+            format!("Could not parse the candid file: {}", e),
+        )
+    })?;
 
     let bindings = Box::new(RustLanguageBinding {
         visibility,
@@ -214,8 +229,8 @@ pub(crate) fn ic_import(
         .with_bigint_type("candid::Int".to_string())
         .with_bindings(bindings);
 
-    let rust_str =
-        candid::codegen::idl_to_rust(&prog, &config).map_err(|e| Errors::message(e.to_string()))?;
+    let rust_str = candid::codegen::idl_to_rust(&prog, &config)
+        .map_err(|e| Error::new(Span::call_site(), e.to_string()))?;
 
     let rust_str = format!("{} {}", "type principal = Vec<u8>;", rust_str);
 
