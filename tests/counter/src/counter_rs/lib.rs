@@ -1,12 +1,13 @@
 use ic_cdk_macros::*;
+use ic_types::Principal;
 
 static mut COUNTER: Option<candid::Nat> = None;
-static mut OWNER: Option<candid::Principal> = None;
+static mut OWNER: Option<Principal> = None;
 
 #[init]
 fn init() {
     unsafe {
-        OWNER = Some(candid::Principal(ic_cdk::reflection::caller()));
+        OWNER = Some(ic_cdk::reflection::caller());
         COUNTER = Some(candid::Nat::from(0));
     }
 }

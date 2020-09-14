@@ -1,11 +1,12 @@
 use candid::CandidType;
 use ic_cdk::storage;
 use ic_cdk_macros::*;
+use ic_types::Principal;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
-type IdStore = BTreeMap<String, Vec<u8>>;
-type ProfileStore = BTreeMap<Vec<u8>, Profile>;
+type IdStore = BTreeMap<String, Principal>;
+type ProfileStore = BTreeMap<Principal, Profile>;
 
 #[derive(Clone, Debug, Default, CandidType, Deserialize)]
 struct Profile {
@@ -39,8 +40,8 @@ fn get(name: String) -> Profile {
 #[update]
 fn update(profile: Profile) {
     let principal_id = ic_cdk::reflection::caller();
-    let id_store = storage::get::<IdStore>();
-    let profile_store = storage::get::<ProfileStore>();
+    let id_store = storage::get_mut::<IdStore>();
+    let profile_store = storage::get_mut::<ProfileStore>();
 
     id_store.insert(profile.name.clone(), principal_id.clone());
     profile_store.insert(principal_id, profile);

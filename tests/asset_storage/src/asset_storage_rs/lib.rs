@@ -1,24 +1,27 @@
 use ic_cdk::{reflection, storage};
 use ic_cdk_macros::{init, query, update};
+use ic_types::Principal;
 use std::collections::BTreeMap;
 
 #[init]
 fn init() {
-    let owner = storage::get_mut::<Vec<u8>>();
-    let caller = reflection::caller();
-    owner.clone_from(&caller);
+    // Because Principal does not implement default, we use Option<Principal>.
+    let owner = storage::get_mut::<Option<Principal>>();
+    *owner = Some(reflection::caller());
 }
 
 #[update]
 fn store(path: String, contents: Vec<u8>) {
     let store = storage::get_mut::<BTreeMap<String, Vec<u8>>>();
-    let owner = storage::get::<Vec<u8>>();
+    let owner = storage::get::<Option<Principal>>();
 
-    if owner != &reflection::caller() {
-        panic!("Store can only be set by the owner of the asset canister.");
+    if let Some(o) = owner {
+        if o != &reflection::caller() {
+            panic!("Store can only be set by the owner of the asset canister.");
+        }
+
+        store.insert(path, contents);
     }
-
-    store.insert(path, contents);
 }
 
 #[query]

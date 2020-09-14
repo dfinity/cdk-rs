@@ -1,4 +1,4 @@
-use crate::{ic0, reflection};
+use crate::ic0;
 use candid::{Decode, Encode};
 
 /// Rejection code from calling another canister.
@@ -62,11 +62,6 @@ pub fn reject(message: &str) {
     unsafe {
         ic0::msg_reject(err_message.as_ptr() as i32, err_message.len() as i32);
     }
-}
-
-/// Get the sender principal ID.
-pub fn sender() -> Vec<u8> {
-    reflection::caller()
 }
 
 pub(crate) unsafe fn reply_raw(reply: &[u8]) {

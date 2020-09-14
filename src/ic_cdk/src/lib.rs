@@ -12,6 +12,10 @@ pub use api::*;
 
 static mut DONE: bool = false;
 
+pub mod export {
+    pub use ic_types::Principal;
+}
+
 /// Setup the stdlib hooks.
 pub fn setup() {
     unsafe {

@@ -1,3 +1,4 @@
+use ic_cdk;
 use proc_macro2::Span;
 use quote::quote;
 use serde::Deserialize;
@@ -86,11 +87,16 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             "ic_cdk::call"
         };
 
+        // We check the validity of the canister_id early so it fails if the
+        // ID isn't in the right text format.
+        let principal: ic_cdk::export::Principal =
+            ic_cdk::export::Principal::from_text(canister_id.as_str()).unwrap();
+
         Ok(format!(
             r#"
             {{
                 {call}(
-                  ic_cdk::CanisterId::from_str_unchecked("{canister_id}").unwrap(),
+                  ic_cdk::export::Principal::from_text("{principal}").unwrap() as ic_cdk::export::Principal,
                   "{name}",
                   {arguments}
                  )
@@ -99,7 +105,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             }}
         "#,
             call = call,
-            canister_id = canister_id,
+            principal = principal.to_string(),
             name = name.escape_debug(),
             arguments = arguments,
         ))
@@ -156,7 +162,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             .join(" , ");
         Ok(format!(
             r#"
-                #[derive(Clone, Debug, Default, CandidType, serde::Deserialize)]
+                #[derive(Clone, Debug, Default, candid::CandidType, serde::Deserialize)]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields
