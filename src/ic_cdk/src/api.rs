@@ -1,4 +1,5 @@
 use crate::ic0;
+use crate::ic1;
 use candid::Encode;
 use ic_types::Principal;
 use std::cell::RefCell;
@@ -19,6 +20,7 @@ struct CallFutureState<R: serde::de::DeserializeOwned> {
     result: Option<CallResult<R>>,
     waker: Option<Waker>,
 }
+
 struct CallFuture<R: serde::de::DeserializeOwned> {
     // We basically use Rc instead of Arc (since we're single threaded), and use
     // RefCell instead of Mutex (because we cannot lock in WASM).
@@ -161,6 +163,75 @@ pub fn call_no_return<T: candid::CandidType>(
             state_ptr as i32,
             data.as_ptr() as i32,
             data.len() as i32,
+        )
+    };
+
+    // 0 is a special error code, meaning call_simple call succeeded
+    if err_code != 0 {
+        let mut state = state.borrow_mut();
+        state.result = Some(Err((
+            RejectionCode::from(err_code),
+            "Couldn't send message".to_string(),
+        )));
+    }
+
+    CallFuture { state }
+}
+
+/// Calls another canister and returns a future.
+pub fn ic1_call<T: candid::CandidType>(
+    id: Principal,
+    method_name: &str,
+    arg: Option<T>,
+    amount: u64,
+) -> impl std::future::Future<Output = Result<(), (RejectionCode, String)>> {
+    // The callback from IC dereferences the future from a raw pointer, assigns the
+    // result and calls the waker. We cannot use a closure here because we pass raw
+    // pointers to the System and back.
+    fn callback(state_ptr: *const RefCell<CallFutureState<()>>) {
+        let state = unsafe { Rc::from_raw(state_ptr) };
+
+        // Make sure to un-borrow_mut the state.
+        {
+            state.borrow_mut().result = Some(match reject_code() {
+                RejectionCode::NoError => Ok(()),
+                n => Err((n, reject_message())),
+            });
+        }
+
+        if let Some(waker) = (|| state.borrow_mut().waker.take())() {
+            // This is all to protect this little guy here which will call the poll() which
+            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
+            waker.wake()
+        }
+    };
+
+    let data = match arg {
+        None => Encode!(),
+        Some(data) => Encode!(&data),
+    }
+        .expect("Could not encode arguments.");
+
+    let callee = id.as_slice();
+    let state = Rc::new(RefCell::new(CallFutureState {
+        result: None,
+        waker: None,
+    }));
+    let state_ptr = Rc::into_raw(state.clone());
+
+    let err_code = unsafe {
+        ic1::call_simple(
+            callee.as_ptr() as i32,
+            callee.len() as i32,
+            method_name.as_ptr() as i32,
+            method_name.len() as i32,
+            callback as i32,
+            state_ptr as i32,
+            callback as i32,
+            state_ptr as i32,
+            data.as_ptr() as i32,
+            data.len() as i32,
+            amount as i64,
         )
     };
 

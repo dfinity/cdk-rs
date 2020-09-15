@@ -79,4 +79,7 @@ ic0_module! {
     // ic0.time : () -> (timestamp : i64);                                     // *
     ic0.debug_print : (src : i32, size : i32) -> ();                        // * s
     ic0.trap : (src : i32, size : i32) -> ();                               // * s
+    // Cycle management.
+    ic0.canister_gas_count: () -> i64;
+    ic0.msg_received_gas: () -> i64;
 }
