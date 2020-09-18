@@ -85,6 +85,14 @@ pub fn reply<T: candid::CandidType>(reply: T) {
     }
 }
 
+#[cfg(feature = "experimental")]
+pub fn reply_1<T: candid::CandidType>(reply: T, gas_to_keep: i64) {
+    let bytes = Encode!(&reply).expect("Could not encode reply.");
+    unsafe {
+        reply_raw_1(&bytes, gas_to_keep);
+    }
+}
+
 pub fn reply_empty() {
     let bytes = Encode!().expect("Could not encode reply.");
     unsafe {
