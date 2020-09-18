@@ -1,6 +1,7 @@
 use crate::ic0;
 use crate::ic1;
 use candid::{Decode, Encode};
+use candid::ser::IDLBuilder;
 use ic_types::Principal;
 use std::cell::RefCell;
 use std::future::Future;
@@ -65,7 +66,7 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
     }
 }
 
-/// Calls a canister via ic0 and returns a future.
+/// Perfrom an asynchronous call to another canister via ic0.
 pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     id: Principal,
     method: String,
@@ -79,7 +80,23 @@ pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     Ok(Decode!(&bytes, R).unwrap())
 }
 
-/// Same as above, but without serialization.
+/// Same as 'call', but without a return value.
+pub async fn call_no_return<T: candid::CandidType>(
+    id: Principal,
+    method: String,
+    args: Option<T>,
+) -> CallResult<()> {
+    let args_raw = match args {
+        None => candid::Encode!(),
+        Some(args_raw) => candid::Encode!(&args_raw),
+    }.expect("Failed to encode arguments.");
+    let expect = IDLBuilder::new().serialize_to_vec().unwrap();
+    let actual = call_raw(id, method, args_raw).await?;
+    assert!(expect == actual);
+    Ok(())
+}
+
+/// Same as 'call', but without serialization.
 pub fn call_raw(
     id: Principal,
     method: String,
@@ -116,7 +133,7 @@ pub fn call_raw(
     CallFuture { state }
 }
 
-/// Calls a canister via ic1 and returns a future.
+/// Perfrom an asynchronous call to another canister via ic1.
 pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     id: Principal,
     method: String,
@@ -131,7 +148,24 @@ pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     Ok(Decode!(&bytes, R).unwrap())
 }
 
-/// Same as above, but without serialization.
+/// Same as 'call_1', but without a return value.
+pub async fn call_no_return_1<T: candid::CandidType>(
+    id: Principal,
+    method: String,
+    args: Option<T>,
+    amount: u64,
+) -> CallResult<()> {
+    let args_raw = match args {
+        None => candid::Encode!(),
+        Some(args_raw) => candid::Encode!(&args_raw),
+    }.expect("Failed to encode arguments.");
+    let expect = IDLBuilder::new().serialize_to_vec().unwrap();
+    let actual = call_raw_1(id, method, args_raw, amount).await?;
+    assert!(expect == actual);
+    Ok(())
+}
+
+/// Same as 'call_1', but without serialization.
 pub fn call_raw_1(
     id: Principal,
     method: String,
