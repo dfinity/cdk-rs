@@ -1,6 +1,9 @@
 use crate::ic0;
 use candid::{Decode, Encode};
 
+#[cfg(feature = "experimental")]
+use crate::ic1;
+
 /// Rejection code from calling another canister.
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[repr(i32)]
@@ -64,9 +67,15 @@ pub fn reject(message: &str) {
     }
 }
 
-pub(crate) unsafe fn reply_raw(reply: &[u8]) {
+pub unsafe fn reply_raw(reply: &[u8]) {
     ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);
     ic0::msg_reply();
+}
+
+#[cfg(feature = "experimental")]
+pub unsafe fn reply_raw_1(reply: &[u8], gas_to_keep: i64) {
+    ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);
+    ic1::msg_reply(gas_to_keep);
 }
 
 pub fn reply<T: candid::CandidType>(reply: T) {
@@ -76,11 +85,33 @@ pub fn reply<T: candid::CandidType>(reply: T) {
     }
 }
 
+#[cfg(feature = "experimental")]
+pub fn reply_1<T: candid::CandidType>(reply: T, gas_to_keep: i64) {
+    let bytes = Encode!(&reply).expect("Could not encode reply.");
+    unsafe {
+        reply_raw_1(&bytes, gas_to_keep);
+    }
+}
+
 pub fn reply_empty() {
     let bytes = Encode!().expect("Could not encode reply.");
     unsafe {
         reply_raw(&bytes);
     }
+}
+
+pub fn time() -> i64 {
+    unsafe { ic0::time() }
+}
+
+#[cfg(feature = "experimental")]
+pub fn canister_cycle_count() -> i64 {
+    unsafe { ic0::canister_gas_count() }
+}
+
+#[cfg(feature = "experimental")]
+pub fn msg_received_cycles() -> i64 {
+    unsafe { ic0::msg_received_gas() }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {

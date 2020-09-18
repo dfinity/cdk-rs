@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! This files represent the API endpoints for the IC System API.
 //! It is meant to be a copy-paste of the System API from the spec,
 //! and also not exported outside this crate.
@@ -76,7 +78,11 @@ ic0_module! {
     // ic0.stable_grow : (new_pages : i32) -> (old_page_count : i32);          // *
     // ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();         // *
     // ic0.stable_read : (dst : i32, offset : i32, size : i32) -> ();          // *
-    // ic0.time : () -> (timestamp : i64);                                     // *
+    ic0.time : () -> (timestamp : i64);                                     // *
     ic0.debug_print : (src : i32, size : i32) -> ();                        // * s
     ic0.trap : (src : i32, size : i32) -> ();                               // * s
+
+    // Cycle management.
+    ic0.canister_gas_count: () -> i64;
+    ic0.msg_received_gas: () -> i64;
 }
