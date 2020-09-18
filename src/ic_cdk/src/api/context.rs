@@ -1,6 +1,8 @@
 use crate::ic0;
-use crate::ic1;
 use candid::{Decode, Encode};
+
+#[cfg(feature = "experimental")]
+use crate::ic1;
 
 /// Rejection code from calling another canister.
 /// These can be obtained either using `reject_code()` or `reject_result()`.
@@ -70,6 +72,7 @@ pub unsafe fn reply_raw(reply: &[u8]) {
     ic0::msg_reply();
 }
 
+#[cfg(feature = "experimental")]
 pub unsafe fn reply_raw_1(reply: &[u8], gas_to_keep: i64) {
     ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);
     ic1::msg_reply(gas_to_keep);
@@ -89,10 +92,16 @@ pub fn reply_empty() {
     }
 }
 
+pub fn time() -> i64 {
+    unsafe { ic0::time() }
+}
+
+#[cfg(feature = "experimental")]
 pub fn canister_cycle_count() -> i64 {
     unsafe { ic0::canister_gas_count() }
 }
 
+#[cfg(feature = "experimental")]
 pub fn msg_received_cycles() -> i64 {
     unsafe { ic0::msg_received_gas() }
 }

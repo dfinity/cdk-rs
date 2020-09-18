@@ -1,13 +1,15 @@
 use crate::ic0;
-use crate::ic1;
-use candid::ser::IDLBuilder;
-use candid::{Decode, Encode};
 use ic_types::Principal;
 use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
+
+#[cfg(feature = "experimental")]
+use crate::ic1;
+use candid::ser::IDLBuilder;
+use candid::{Decode, Encode};
 
 pub mod context;
 pub mod reflection;
@@ -134,6 +136,7 @@ pub fn call_raw(
 }
 
 /// Perfrom an asynchronous call to another canister via ic1.
+#[cfg(feature = "experimental")]
 pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     id: Principal,
     method: String,
@@ -150,6 +153,7 @@ pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
 }
 
 /// Same as 'call_1', but without a return value.
+#[cfg(feature = "experimental")]
 pub async fn call_no_return_1<T: candid::CandidType>(
     id: Principal,
     method: String,
@@ -168,6 +172,7 @@ pub async fn call_no_return_1<T: candid::CandidType>(
 }
 
 /// Same as 'call_1', but without serialization.
+#[cfg(feature = "experimental")]
 pub fn call_raw_1(
     id: Principal,
     method: String,

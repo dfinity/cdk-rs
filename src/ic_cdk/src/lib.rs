@@ -5,9 +5,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 mod api;
 mod futures;
 mod ic0;
-mod ic1;
 mod printer;
 pub mod storage;
+
+#[cfg(feature = "experimental")]
+mod ic1;
 
 pub use api::*;
 

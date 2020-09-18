@@ -1,3 +1,5 @@
+#![cfg(feature = "experimental")]
+
 //! This files represent the API endpoints for the IC System API.
 //! It is meant to be a copy-paste of the System API from the spec,
 //! and also not exported outside this crate.
