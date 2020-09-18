@@ -1,7 +1,7 @@
 use crate::ic0;
 use crate::ic1;
-use candid::{Decode, Encode};
 use candid::ser::IDLBuilder;
+use candid::{Decode, Encode};
 use ic_types::Principal;
 use std::cell::RefCell;
 use std::future::Future;
@@ -53,9 +53,7 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
     // Make sure to un-borrow_mut the state.
     {
         state.borrow_mut().result = Some(match reject_code() {
-            RejectionCode::NoError => unsafe {
-                Ok(arg_data_raw())
-            },
+            RejectionCode::NoError => unsafe { Ok(arg_data_raw()) },
             n => Err((n, reject_message())),
         });
     }
@@ -75,7 +73,8 @@ pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     let args_raw = match args {
         None => candid::Encode!(),
         Some(args_raw) => candid::Encode!(&args_raw),
-    }.expect("Failed to encode arguments.");
+    }
+    .expect("Failed to encode arguments.");
     let bytes = call_raw(id, method, args_raw).await?;
     Ok(Decode!(&bytes, R).unwrap())
 }
@@ -89,7 +88,8 @@ pub async fn call_no_return<T: candid::CandidType>(
     let args_raw = match args {
         None => candid::Encode!(),
         Some(args_raw) => candid::Encode!(&args_raw),
-    }.expect("Failed to encode arguments.");
+    }
+    .expect("Failed to encode arguments.");
     let expect = IDLBuilder::new().serialize_to_vec().unwrap();
     let actual = call_raw(id, method, args_raw).await?;
     assert!(expect == actual);
@@ -143,7 +143,8 @@ pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     let args_raw = match args {
         None => candid::Encode!(),
         Some(args_raw) => candid::Encode!(&args_raw),
-    }.expect("Failed to encode arguments.");
+    }
+    .expect("Failed to encode arguments.");
     let bytes = call_raw_1(id, method, args_raw, amount).await?;
     Ok(Decode!(&bytes, R).unwrap())
 }
@@ -158,7 +159,8 @@ pub async fn call_no_return_1<T: candid::CandidType>(
     let args_raw = match args {
         None => candid::Encode!(),
         Some(args_raw) => candid::Encode!(&args_raw),
-    }.expect("Failed to encode arguments.");
+    }
+    .expect("Failed to encode arguments.");
     let expect = IDLBuilder::new().serialize_to_vec().unwrap();
     let actual = call_raw_1(id, method, args_raw, amount).await?;
     assert!(expect == actual);

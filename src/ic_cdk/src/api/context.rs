@@ -90,15 +90,11 @@ pub fn reply_empty() {
 }
 
 pub fn canister_cycle_count() -> i64 {
-    unsafe {
-        ic0::canister_gas_count()
-    }
+    unsafe { ic0::canister_gas_count() }
 }
 
 pub fn msg_received_cycles() -> i64 {
-    unsafe {
-        ic0::msg_received_gas()
-    }
+    unsafe { ic0::msg_received_gas() }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
