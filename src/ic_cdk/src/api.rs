@@ -1,6 +1,6 @@
 use crate::ic0;
 use crate::ic1;
-use candid::Encode;
+use candid::{Decode, Encode};
 use ic_types::Principal;
 use std::cell::RefCell;
 use std::future::Future;
@@ -44,62 +44,68 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
     }
 }
 
-/// Calls another canister and returns a future.
-pub fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
-    id: Principal,
-    method_name: &str,
-    arg: Option<T>,
-) -> impl Future<Output = CallResult<R>> {
-    // The callback from IC dereferences the future from a raw pointer, assigns the
-    // result and calls the waker. We cannot use a closure here because we pass raw
-    // pointers to the System and back.
-    fn callback<R: serde::de::DeserializeOwned>(state_ptr: *const RefCell<CallFutureState<R>>) {
-        let state = unsafe { Rc::from_raw(state_ptr) };
-
-        // Make sure to un-borrow_mut the state.
-        {
-            state.borrow_mut().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(arg_data_1::<R>()),
-                n => Err((n, reject_message())),
-            });
-        }
-
-        if let Some(waker) = (|| state.borrow_mut().waker.take())() {
-            // This is all to protect this little guy here which will call the poll() which
-            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-            waker.wake()
-        }
-    };
-
-    let data = match arg {
-        None => candid::Encode!(),
-        Some(data) => candid::Encode!(&data),
+// The callback from IC dereferences the future from a raw pointer, assigns the
+// result and calls the waker. We cannot use a closure here because we pass raw
+// pointers to the System and back.
+fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
+    let state = unsafe { Rc::from_raw(state_ptr) };
+    // Make sure to un-borrow_mut the state.
+    {
+        state.borrow_mut().result = Some(match reject_code() {
+            RejectionCode::NoError => unsafe {
+                Ok(arg_data_raw())
+            },
+            n => Err((n, reject_message())),
+        });
     }
-    .expect("Could not encode arguments.");
+    if let Some(waker) = (|| state.borrow_mut().waker.take())() {
+        // This is all to protect this little guy here which will call the poll() which
+        // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
+        waker.wake()
+    }
+}
 
+/// Calls a canister via ic0 and returns a future.
+pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
+    id: Principal,
+    method: String,
+    args: Option<T>,
+) -> CallResult<R> {
+    let args_raw = match args {
+        None => candid::Encode!(),
+        Some(args_raw) => candid::Encode!(&args_raw),
+    }.expect("Failed to encode arguments.");
+    let bytes = call_raw(id, method, args_raw).await?;
+    Ok(Decode!(&bytes, R).unwrap())
+}
+
+/// Same as above, but without serialization.
+pub fn call_raw(
+    id: Principal,
+    method: String,
+    args_raw: Vec<u8>,
+) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = Rc::new(RefCell::new(CallFutureState {
         result: None,
         waker: None,
     }));
     let state_ptr = Rc::into_raw(state.clone());
-
     let err_code = unsafe {
         ic0::call_simple(
             callee.as_ptr() as i32,
             callee.len() as i32,
-            method_name.as_ptr() as i32,
-            method_name.len() as i32,
-            callback::<R> as i32,
+            method.as_ptr() as i32,
+            method.len() as i32,
+            callback as i32,
             state_ptr as i32,
-            callback::<R> as i32,
+            callback as i32,
             state_ptr as i32,
-            data.as_ptr() as i32,
-            data.len() as i32,
+            args_raw.as_ptr() as i32,
+            args_raw.len() as i32,
         )
     };
-
-    // 0 is a special error code, meaning call_simple call succeeded
+    // 0 is a special error code meaning call_simple call succeeded.
     if err_code != 0 {
         let mut state = state.borrow_mut();
         state.result = Some(Err((
@@ -107,135 +113,53 @@ pub fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
             "Couldn't send message".to_string(),
         )));
     }
-
     CallFuture { state }
 }
 
-/// Calls another canister and returns a future.
-pub fn call_no_return<T: candid::CandidType>(
+/// Calls a canister via ic1 and returns a future.
+pub async fn call_1<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     id: Principal,
-    method_name: &str,
-    arg: Option<T>,
-) -> impl Future<Output = CallResult<()>> {
-    // The callback from IC dereferences the future from a raw pointer, assigns the
-    // result and calls the waker. We cannot use a closure here because we pass raw
-    // pointers to the System and back.
-    fn callback(state_ptr: *const RefCell<CallFutureState<()>>) {
-        let state = unsafe { Rc::from_raw(state_ptr) };
-
-        // Make sure to un-borrow_mut the state.
-        {
-            state.borrow_mut().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(arg_data_0()),
-                n => Err((n, reject_message())),
-            });
-        }
-
-        if let Some(waker) = (|| state.borrow_mut().waker.take())() {
-            // This is all to protect this little guy here which will call the poll() which
-            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-            waker.wake()
-        }
-    };
-
-    let data = match arg {
-        None => candid::Encode!(),
-        Some(data) => candid::Encode!(&data),
-    }
-    .expect("Could not encode arguments.");
-
-    let callee = id.as_slice();
-    let state = Rc::new(RefCell::new(CallFutureState {
-        result: None,
-        waker: None,
-    }));
-    let state_ptr = Rc::into_raw(state.clone());
-
-    let err_code = unsafe {
-        ic0::call_simple(
-            callee.as_ptr() as i32,
-            callee.len() as i32,
-            method_name.as_ptr() as i32,
-            method_name.len() as i32,
-            callback as i32,
-            state_ptr as i32,
-            callback as i32,
-            state_ptr as i32,
-            data.as_ptr() as i32,
-            data.len() as i32,
-        )
-    };
-
-    // 0 is a special error code, meaning call_simple call succeeded
-    if err_code != 0 {
-        let mut state = state.borrow_mut();
-        state.result = Some(Err((
-            RejectionCode::from(err_code),
-            "Couldn't send message".to_string(),
-        )));
-    }
-
-    CallFuture { state }
-}
-
-/// Calls another canister and returns a future.
-pub fn ic1_call<T: candid::CandidType>(
-    id: Principal,
-    method_name: &str,
-    arg: Option<T>,
+    method: String,
+    args: Option<T>,
     amount: u64,
-) -> impl std::future::Future<Output = Result<(), (RejectionCode, String)>> {
-    // The callback from IC dereferences the future from a raw pointer, assigns the
-    // result and calls the waker. We cannot use a closure here because we pass raw
-    // pointers to the System and back.
-    fn callback(state_ptr: *const RefCell<CallFutureState<()>>) {
-        let state = unsafe { Rc::from_raw(state_ptr) };
+) -> CallResult<R> {
+    let args_raw = match args {
+        None => candid::Encode!(),
+        Some(args_raw) => candid::Encode!(&args_raw),
+    }.expect("Failed to encode arguments.");
+    let bytes = call_raw_1(id, method, args_raw, amount).await?;
+    Ok(Decode!(&bytes, R).unwrap())
+}
 
-        // Make sure to un-borrow_mut the state.
-        {
-            state.borrow_mut().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(()),
-                n => Err((n, reject_message())),
-            });
-        }
-
-        if let Some(waker) = (|| state.borrow_mut().waker.take())() {
-            // This is all to protect this little guy here which will call the poll() which
-            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-            waker.wake()
-        }
-    };
-
-    let data = match arg {
-        None => Encode!(),
-        Some(data) => Encode!(&data),
-    }
-        .expect("Could not encode arguments.");
-
+/// Same as above, but without serialization.
+pub fn call_raw_1(
+    id: Principal,
+    method: String,
+    args_raw: Vec<u8>,
+    amount: u64,
+) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = Rc::new(RefCell::new(CallFutureState {
         result: None,
         waker: None,
     }));
     let state_ptr = Rc::into_raw(state.clone());
-
     let err_code = unsafe {
         ic1::call_simple(
             callee.as_ptr() as i32,
             callee.len() as i32,
-            method_name.as_ptr() as i32,
-            method_name.len() as i32,
+            method.as_ptr() as i32,
+            method.len() as i32,
             callback as i32,
             state_ptr as i32,
             callback as i32,
             state_ptr as i32,
-            data.as_ptr() as i32,
-            data.len() as i32,
+            args_raw.as_ptr() as i32,
+            args_raw.len() as i32,
             amount as i64,
         )
     };
-
-    // 0 is a special error code, meaning call_simple call succeeded
+    // 0 is a special error code meaning call_simple call succeeded.
     if err_code != 0 {
         let mut state = state.borrow_mut();
         state.result = Some(Err((
@@ -243,7 +167,6 @@ pub fn ic1_call<T: candid::CandidType>(
             "Couldn't send message".to_string(),
         )));
     }
-
     CallFuture { state }
 }
 
