@@ -102,7 +102,7 @@ class HumanVsActor extends Component<Props, State> {
         return;
       }
 
-      chessActor.getFen().then(([fen]) => {
+      chessActor.getFen().then(([fen]: [string]) => {
         this.setState(({ history, pieceSquare }) => ({
           fen,
           history: this.game!.history({ verbose: true }),
@@ -163,11 +163,11 @@ class HumanVsActor extends Component<Props, State> {
   reload = () => {
     this.setState({ disabled: true });
 
-    chessActor.getState(this.state.name).then(([board]: any) => {
-      this.game!.load(board?.fen || "start");
+    chessActor.getFen().then(([fen]: [string]) => {
+      this.game!.load(fen || "start");
       this.setState({
         disabled: false,
-        fen: board?.fen || "start",
+        fen: fen ? ('' + fen) : "start",
         history: this.game!.history({ verbose: true }),
       });
     });

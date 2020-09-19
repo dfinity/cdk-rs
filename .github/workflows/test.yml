@@ -1,0 +1,70 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [ linux-stable ]
+        include:
+          - build: linux-stable
+            os: ubuntu-latest
+            rust: 1.45.1
+          - build: macos-stable
+            os: macos-latest
+            rust: 1.45.1
+          - build: windows-stable
+            os: windows-latest
+            rust: 1.45.1
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+
+      - name: Install dependencies (windows only)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          vcpkg integrate install
+          vcpkg install openssl:x64-windows-static-md
+          echo "::set-env OPENSSL_DIR 'C:\Tools\vcpkg\installed\x64-windows-static-md'"
+          echo "::set-env OPENSSL_STATIC Yes"
+        env:
+          VCPKG_ROOT: 'C:\vcpkg'
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          # Test all features and no features for each package.
+          for p in $(cargo metadata --no-deps --format-version 1 | jq -r .packages[].manifest_path); do
+            pushd $(dirname $p)
+            cargo test --all-targets --all-features
+            cargo test --all-targets --no-default-features
+            popd
+          done
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Purge for OSX
+        if: matrix.os == 'macos-latest'
+        run: |
+          # There is a bug with BSD tar on macOS where the first 8MB of the file are
+          # sometimes all NUL bytes. See https://github.com/actions/cache/issues/403
+          # and https://github.com/rust-lang/cargo/issues/8603 for some more
+          # information. An alternative solution here is to install GNU tar, but
+          # flushing the disk cache seems to work, too.
+          sudo /usr/sbin/purge

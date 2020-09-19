@@ -37,11 +37,13 @@ where
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
 }
 
+/// Create a query call endpoint.
 #[proc_macro_attribute]
 pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_query, "ic_query", attr, item)
 }
 
+/// Create an update call endpoint.
 #[proc_macro_attribute]
 pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_update, "ic_update", attr, item)

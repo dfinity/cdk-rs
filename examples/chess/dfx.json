@@ -8,29 +8,16 @@
       "build": "cargo build --target wasm32-unknown-unknown --release --package chess_rs"
     },
     "chess_rs_assets": {
-      "type": "assets",
       "dependencies": [
         "chess_rs"
       ],
       "frontend": {
-        "entrypoint": "src/chess_rs_assets/index.tsx",
-        "output": "dist/"
+        "entrypoint": "src/chess_rs_assets/index.tsx"
       },
       "source": [
         "dist/"
-      ]
-    }
-  },
-  "defaults": {
-    "build": {
-      "output": "canisters/"
-    }
-  },
-  "networks": {
-    "tungsten": {
-      "providers": [
-        "https://gw.dfinity.network/"
-      ]
+      ],
+      "type": "assets"
     }
   }
 }

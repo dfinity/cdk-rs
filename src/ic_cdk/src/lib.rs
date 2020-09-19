@@ -47,8 +47,8 @@ macro_rules! println {
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_export]
 macro_rules! println {
-    ($fmt:expr) => (std::print!($fmt));
-    ($fmt:expr, $($arg:tt)*) => (std::print!($fmt, $($arg)*));
+    ($fmt:expr) => (std::println!($fmt));
+    ($fmt:expr, $($arg:tt)*) => (std::println!($fmt, $($arg)*));
 }
 
 /// Format and then print the formatted message

@@ -7,7 +7,7 @@
     "build": "webpack"
   },
   "devDependencies": {
-    "@dfinity/agent": "/Users/hansl/.cache/dfinity/versions/0.5.7-60-g5828ebf/js-user-library",
+    "@dfinity/agent": "0.6.7",
     "@types/chess.js": "^0.10.1",
     "@types/react": "^16.9.23",
     "@types/react-dom": "^16.9.5",

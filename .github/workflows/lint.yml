@@ -1,0 +1,29 @@
+name: Lint
+
+on: [pull_request]
+
+jobs:
+  test:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup component add clippy
+          rustup default ${{ matrix.rust }}
+      - name: Run Lint
+        run: cargo clippy --tests --benches -- -D clippy::all
+        env:
+          RUST_BACKTRACE: 1

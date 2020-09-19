@@ -59,7 +59,8 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
             n => Err((n, reject_message())),
         });
     }
-    if let Some(waker) = (|| state.borrow_mut().waker.take())() {
+    let w = state.borrow_mut().waker.take();
+    if let Some(waker) = w {
         // This is all to protect this little guy here which will call the poll() which
         // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
         waker.wake()
@@ -116,9 +117,9 @@ pub fn call_raw(
             callee.len() as i32,
             method.as_ptr() as i32,
             method.len() as i32,
-            callback as i32,
+            callback as usize as i32,
             state_ptr as i32,
-            callback as i32,
+            callback as usize as i32,
             state_ptr as i32,
             args_raw.as_ptr() as i32,
             args_raw.len() as i32,
