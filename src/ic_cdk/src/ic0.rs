@@ -42,6 +42,8 @@ macro_rules! ic0_module {
 
 // Copy-paste the spec section of the API here.
 ic0_module! {
+    ic0.controller_size : () -> i32;
+    ic0.controller_copy : (dst : i32, offset : i32, size : i32) -> ();
     ic0.msg_arg_data_size : () -> i32;                                      // I U Q Ry
     ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();    // I U Q Ry
     // ic0.msg_method_size : () -> i32;                                        // P

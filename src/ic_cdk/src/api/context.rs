@@ -1,5 +1,7 @@
 use crate::ic0;
 use candid::{Decode, Encode};
+use ic_types::Principal;
+use std::convert::TryFrom;
 
 #[cfg(feature = "experimental")]
 use crate::ic1;
@@ -97,6 +99,23 @@ pub fn reply_empty() {
     let bytes = Encode!().expect("Could not encode reply.");
     unsafe {
         reply_raw(&bytes);
+    }
+}
+
+#[cfg(feature = "experimental")]
+pub fn reply_empty_1(gas_to_keep: i64) {
+    let bytes = Encode!().expect("Could not encode reply.");
+    unsafe {
+        reply_raw_1(&bytes, gas_to_keep);
+    }
+}
+
+pub fn controller() -> Principal {
+    unsafe {
+        let size = ic0::controller_size();
+        let mut buf = vec![0u8; size as usize];
+        ic0::controller_copy(buf.as_mut_ptr() as i32, 0, size);
+        Principal::try_from(&buf).unwrap()
     }
 }
 
