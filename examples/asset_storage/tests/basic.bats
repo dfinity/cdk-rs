@@ -2,8 +2,7 @@
 setup() {
   cd examples/asset_storage
   # Make sure the directory is clean.
-  git clean -dfx .
-  dfx start --background
+  dfx start --clean --background
 
   run dfx identity new alice
   run dfx identity new bob

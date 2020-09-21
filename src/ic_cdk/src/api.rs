@@ -70,7 +70,7 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
 /// Perfrom an asynchronous call to another canister via ic0.
 pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
     id: Principal,
-    method: String,
+    method: &str,
     args: Option<T>,
 ) -> CallResult<R> {
     let args_raw = match args {
@@ -85,7 +85,7 @@ pub async fn call<T: candid::CandidType, R: serde::de::DeserializeOwned>(
 /// Same as 'call', but without a return value.
 pub async fn call_no_return<T: candid::CandidType>(
     id: Principal,
-    method: String,
+    method: &str,
     args: Option<T>,
 ) -> CallResult<()> {
     let args_raw = match args {
@@ -102,7 +102,7 @@ pub async fn call_no_return<T: candid::CandidType>(
 /// Same as 'call', but without serialization.
 pub fn call_raw(
     id: Principal,
-    method: String,
+    method: &str,
     args_raw: Vec<u8>,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
