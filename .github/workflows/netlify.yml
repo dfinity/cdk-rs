@@ -56,6 +56,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           msg: |
-            Netlify deployed agent-rust as draft
+            Netlify deployed rust-cdk as draft
 
             Link: ${{ steps.deploy_docs.outputs.NETLIFY_URL }}
