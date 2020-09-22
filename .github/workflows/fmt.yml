@@ -1,0 +1,31 @@
+name: Format
+
+on: [pull_request]
+
+jobs:
+  test:
+    name: fmt
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.build }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.build }}-cargo-
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+      - name: Run Cargo Fmt
+        run: cargo fmt --all -- --check
+        env:
+          RUST_BACKTRACE: 1

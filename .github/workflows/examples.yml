@@ -1,0 +1,63 @@
+
+name: Examples
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [ linux-stable ]
+        include:
+          - build: linux-stable
+            os: ubuntu-latest
+            rust: 1.45.1
+            dfx: 0.6.8
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            **/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install DFX
+        run: |
+          export DFX_VERSION=${{ matrix.dfx }}
+          echo Install DFX Version: $DFX_VERSION
+          yes | sh -ci "$(curl -fsSL https://sdk.dfinity.org/install.sh)"
+
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1.0.1
+        with:
+          bats-version: 1.2.1
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          echo CWD: $(pwd)
+          export PATH=$PATH:$HOME/bin
+          bats -r examples
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Purge for OSX
+        if: matrix.os == 'macos-latest'
+        run: |
+          # There is a bug with BSD tar on macOS where the first 8MB of the file are
+          # sometimes all NUL bytes. See https://github.com/actions/cache/issues/403
+          # and https://github.com/rust-lang/cargo/issues/8603 for some more
+          # information. An alternative solution here is to install GNU tar, but
+          # flushing the disk cache seems to work, too.
+          sudo /usr/sbin/purge

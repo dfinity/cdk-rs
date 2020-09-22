@@ -67,11 +67,15 @@ pub fn reject(message: &str) {
     }
 }
 
+/// # Safety
+/// This is not ready to be used externally.
 pub unsafe fn reply_raw(reply: &[u8]) {
     ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);
     ic0::msg_reply();
 }
 
+/// # Safety
+/// This is not ready to be used externally.
 #[cfg(feature = "experimental")]
 pub unsafe fn reply_raw_1(reply: &[u8], gas_to_keep: i64) {
     ic0::msg_reply_data_append(reply.as_ptr() as i32, reply.len() as i32);

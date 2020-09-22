@@ -2,3 +2,7 @@
 members = [
     "src/asset_storage_rs",
 ]
+
+[profile.release]
+lto = true
+opt-level = 'z'
