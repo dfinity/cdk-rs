@@ -95,6 +95,7 @@ fn call_raw(
     id: Principal,
     method: &str,
     args_raw: Vec<u8>,
+    payment: i64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = Rc::new(RefCell::new(CallFutureState {
@@ -115,6 +116,11 @@ fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+
+        if payment > 0 {
+            let bytes = vec![0u8];
+            ic0::call_funds_add(bytes.as_ptr() as i32, bytes.len() as i32, payment as i64);
+        }
 
         ic0::call_perform()
     };
@@ -137,7 +143,18 @@ pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     args: T,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, args_raw).await?;
+    let bytes = call_raw(id, method, args_raw, 0).await?;
+    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+}
+
+pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+    id: Principal,
+    method: &str,
+    args: T,
+    cycles: i64,
+) -> CallResult<R> {
+    let args_raw = encode_args(args).expect("Failed to encode arguments.");
+    let bytes = call_raw(id, method, args_raw, cycles).await?;
     decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
 }
 
