@@ -89,15 +89,15 @@ fn dfn_macro(
 
     let is_async = signature.asyncness.is_some();
 
-    let empty_return = match &signature.output {
-        ReturnType::Default => true,
+    let return_length = match &signature.output {
+        ReturnType::Default => 0,
         ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Tuple(tuple) => tuple.elems.is_empty(),
-            _ => false,
+            Type::Tuple(tuple) => tuple.elems.len(),
+            _ => 1,
         },
     };
 
-    if method == MethodType::Init && !empty_return {
+    if method == MethodType::Init && return_length > 0 {
         return Err(Error::new(
             Span::call_site(),
             "#[init] function cannot have a return value.".to_string(),
@@ -130,27 +130,24 @@ fn dfn_macro(
     };
 
     let arg_count = arg_tuple.len();
-    let arg_decode = syn::Ident::new(&format!("arg_data_{}", arg_count), Span::call_site());
 
     let return_encode = if method == MethodType::Init {
         quote! {}
-    } else if empty_return {
-        quote! { ic_cdk::context::reply_empty() }
     } else {
-        quote! { ic_cdk::context::reply(result) }
+        match return_length {
+            0 => quote! { ic_cdk::api::call::reply(()) },
+            1 => quote! { ic_cdk::api::call::reply((result,)) },
+            _ => quote! { ic_cdk::api::call::reply(result) },
+        }
     };
 
     // On initialization we can actually not receive any input and it's okay, only if
     // we don't have any arguments either.
     // If the data we receive is not empty, then try to unwrap it as if it's DID.
     let arg_decode = if method == MethodType::Init && arg_count == 0 {
-        quote! {
-            if !ic_cdk::context::arg_data_is_empty() {
-                let _ = ic_cdk::context::arg_data_0();
-            }
-        }
+        quote! { let _: () = ic_cdk::api::call::arg_data(); }
     } else {
-        quote! { let ( #( #arg_tuple ),* ) = ic_cdk::context::#arg_decode(); }
+        quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(); }
     };
 
     Ok(quote! {

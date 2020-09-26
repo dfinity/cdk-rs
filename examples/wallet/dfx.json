@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "canisters": {
+    "wallet": {
+      "type": "custom",
+      "candid": "src/wallet_rs/wallet.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/wallet_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package wallet_rs"
+    }
+  }
+}

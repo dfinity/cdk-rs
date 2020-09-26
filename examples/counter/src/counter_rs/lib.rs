@@ -7,7 +7,7 @@ static mut OWNER: Option<Principal> = None;
 #[init]
 fn init() {
     unsafe {
-        OWNER = Some(ic_cdk::reflection::caller());
+        OWNER = Some(ic_cdk::caller());
         COUNTER = Some(candid::Nat::from(0));
     }
 }

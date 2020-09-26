@@ -2,16 +2,13 @@
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-mod api;
+pub mod api;
 mod futures;
-mod ic0;
 mod printer;
 pub mod storage;
 
-#[cfg(feature = "experimental")]
-mod ic1;
-
-pub use api::*;
+pub use api::call::call;
+pub use api::{caller, id, print, trap};
 
 static mut DONE: bool = false;
 
