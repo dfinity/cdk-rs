@@ -240,10 +240,6 @@ pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
-pub fn arg_data_is_empty() -> bool {
-    unsafe { ic0::msg_arg_data_size() == 0 }
-}
-
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = unsafe { arg_data_raw() };
 

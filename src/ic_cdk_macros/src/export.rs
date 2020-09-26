@@ -145,7 +145,7 @@ fn dfn_macro(
     // we don't have any arguments either.
     // If the data we receive is not empty, then try to unwrap it as if it's DID.
     let arg_decode = if method == MethodType::Init && arg_count == 0 {
-        quote! { let _: () = ic_cdk::api::call::arg_data(); }
+        quote! {}
     } else {
         quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(); }
     };

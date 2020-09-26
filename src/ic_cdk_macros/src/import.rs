@@ -126,17 +126,10 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             id = id,
             arguments = arguments_list,
             body = body,
-            return_type = if returns.len() == 0 {
+            return_type = if returns.is_empty() {
                 format!("")
             } else {
-                format!(
-                    "-> ({},)",
-                    returns
-                        .iter()
-                        .map(|name| name.clone())
-                        .collect::<Vec<String>>()
-                        .join(",")
-                )
+                format!("-> ({},)", returns.to_vec().join(","))
             }
         ))
     }
