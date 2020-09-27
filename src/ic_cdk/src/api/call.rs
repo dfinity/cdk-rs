@@ -91,7 +91,7 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
 }
 
 /// Same as 'call', but without serialization.
-fn call_raw(
+pub fn call_raw(
     id: Principal,
     method: &str,
     args_raw: Vec<u8>,
