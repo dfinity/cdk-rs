@@ -10,6 +10,7 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 #[derive(Default, Deserialize)]
 struct ExportAttributes {
     pub name: Option<String>,
+    pub guard: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -150,10 +151,26 @@ fn dfn_macro(
         quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(); }
     };
 
+    let guard = if let Some(guard_name) = attrs.guard {
+        let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
+
+        quote! {
+            let r: Result<(), String> = #guard_ident ();
+            if let Err(e) = r {
+                ic_cdk::api::call::reject(&e);
+                return;
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     Ok(quote! {
         #[export_name = #export_name]
         fn #outer_function_ident() {
             ic_cdk::setup();
+
+            #guard
 
             ic_cdk::block_on(async {
                 #arg_decode

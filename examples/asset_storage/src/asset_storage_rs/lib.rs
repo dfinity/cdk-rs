@@ -10,18 +10,20 @@ fn init() {
     *owner = Some(ic_cdk::api::caller());
 }
 
-#[update]
-fn store(path: String, contents: Vec<u8>) {
-    let store = storage::get_mut::<BTreeMap<String, Vec<u8>>>();
+fn check_owner() -> Result<(), String> {
     let owner = storage::get::<Option<Principal>>();
-
     if let Some(o) = owner {
         if o != &ic_cdk::api::caller() {
-            panic!("Store can only be set by the owner of the asset canister.");
+            return Err("Store can only be set by the owner of the asset canister.".to_string());
         }
-
-        store.insert(path, contents);
     }
+    Ok(())
+}
+
+#[update(guard = "check_owner")]
+fn store(path: String, contents: Vec<u8>) {
+    let store = storage::get_mut::<BTreeMap<String, Vec<u8>>>();
+    store.insert(path, contents);
 }
 
 #[query]
