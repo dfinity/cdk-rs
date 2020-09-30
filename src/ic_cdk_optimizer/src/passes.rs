@@ -72,7 +72,7 @@ impl OptimizationPass for WasmOptPass {
             let mut file_out = std::fs::File::open(path_out)?;
             let metadata = file_out.metadata()?;
             let mut new_wasm = vec![0; metadata.len() as usize];
-            file_out.read(&mut new_wasm)?;
+            file_out.read_exact(&mut new_wasm)?;
 
             return Ok(new_wasm);
         } else {
