@@ -13,7 +13,7 @@ jobs:
           - build: linux-stable
             os: ubuntu-latest
             rust: 1.45.1
-            dfx: 0.6.8
+            dfx: 0.6.10
 
     steps:
       - uses: actions/checkout@v2

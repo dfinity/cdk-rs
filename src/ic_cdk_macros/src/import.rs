@@ -60,18 +60,16 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
         &self,
         name: &str,
         arguments: &[(String, String)],
-        return_type: &str,
+        _returns: &str,
         _is_query: bool,
     ) -> Result<String, candid::error::Error> {
         let canister_id = &self.canister_id;
 
         let arguments = if arguments.is_empty() {
-            "Option::<()>::None".to_string()
-        } else if arguments.len() == 1 {
-            format!("Some({})", arguments[0].0)
+            "()".to_string()
         } else {
             format!(
-                "Some(({}))",
+                "({},)",
                 arguments
                     .iter()
                     .map(|(name, _)| name.clone())
@@ -80,11 +78,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             )
         };
 
-        let call = if return_type.is_empty() {
-            "ic_cdk::call_no_return"
-        } else {
-            "ic_cdk::call"
-        };
+        let call = "ic_cdk::call";
 
         // We check the validity of the canister_id early so it fails if the
         // ID isn't in the right text format.
@@ -119,32 +113,23 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
     ) -> Result<String, candid::error::Error> {
         let id = candid::codegen::rust::candid_id_to_rust(name);
 
-        // Add Future binding.
-        let return_type = if returns.is_empty() {
-            "".to_string()
-        } else if returns.len() == 1 {
-            returns[0].clone()
-        } else {
-            format!("( {} )", returns.join(" , "))
-        };
-
         let arguments_list = arguments
             .iter()
             .map(|(name, ty)| format!("{} : {}", name, ty))
             .collect::<Vec<String>>()
             .join(" , ");
 
-        let body = self.actor_function_body(name, arguments, &return_type, is_query)?;
+        let body = self.actor_function_body(name, arguments, &returns.join(","), is_query)?;
 
         Ok(format!(
             "async fn {id}( {arguments} ) {return_type} {body}",
             id = id,
             arguments = arguments_list,
             body = body,
-            return_type = if return_type == "" {
+            return_type = if returns.is_empty() {
                 format!("")
             } else {
-                format!(" -> {}", return_type)
+                format!("-> ({},)", returns.to_vec().join(","))
             }
         ))
     }

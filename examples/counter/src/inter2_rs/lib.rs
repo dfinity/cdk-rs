@@ -5,7 +5,7 @@ struct CounterCanister;
 
 #[update]
 async fn read() -> candid::Nat {
-    CounterCanister::read().await
+    CounterCanister::read().await.0
 }
 
 #[update]
