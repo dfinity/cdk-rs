@@ -1,0 +1,25 @@
+[package]
+name = "ic-cdk-macros"
+version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2018"
+description = "Canister Developer Kit macros."
+homepage = "https://docs.rs/ic-cdk-macros"
+documentation = "https://docs.rs/ic-cdk-macros"
+license = "Apache-2.0"
+readme = "README.md"
+categories = ["api-bindings", "data-structures", "no-std"]
+keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+candid = "0.6.2"
+ic-cdk = { path = "../ic-cdk", version = "0.1" }
+syn = { version = "1.0", features = ["fold", "full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+serde_tokenstream = "0.1.0"
+serde = "1.0.111"

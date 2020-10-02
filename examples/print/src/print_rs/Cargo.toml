@@ -11,7 +11,7 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../../src/ic_cdk", version = "0.1.0" }
-ic_cdk_macros = { path = "../../../../src/ic_cdk_macros", version = "0.1.0" }
+ic-cdk = { path = "../../../../src/ic-cdk", version = "0.1.0" }
+ic-cdk-macros = { path = "../../../../src/ic-cdk-macros", version = "0.1.0" }
 candid = "0.6.2"
 serde = "1.0.111"
