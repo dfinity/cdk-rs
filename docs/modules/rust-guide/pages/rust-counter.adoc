@@ -39,7 +39,7 @@ Before starting the tutorial, verify the following:
 
 * You have downloaded and installed the {sdk-short-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
-* You have downloaded the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/rust-cdk[Rust CDK] repository.
+* You have downloaded the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/cdk-rs[Rust CDK] repository.
 
 * You have stopped any {IC} network processes running on the local
 computer.
@@ -179,10 +179,10 @@ path = "counter.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../rust-cdk/src/
+ic_cdk = { path = "../../../cdk-rs/src/
 ic_cdk", version = "0.1.0" }
 
-ic_cdk_macros = { path = "../../../rust-cdk/src/ic_cdk_macros", version = "0.1.0" }
+ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
 ic-types = "0.1.1"
 candid = "0.6.4"
 lazy_static = "1.4.0"

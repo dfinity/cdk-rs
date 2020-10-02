@@ -42,12 +42,12 @@ If you are comfortable meeting the prerequisites without instructions, continue 
 [[download-cdk]]
 == Get the latest {cdk-short-name}
 
-You can download the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/rust-cdk[Rust CDK] repository.
+You can download the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/cdk-rs[Rust CDK] repository.
 
 To get the latest {cdk-short-name} from the repository:
 
 [arabic]
-. Open a browser and navigate to the link:https://github.com/dfinity/rust-cdk[DFINITY Rust CDK] repository.
+. Open a browser and navigate to the link:https://github.com/dfinity/cdk-rs[DFINITY Rust CDK] repository.
 . Click **Code** to view the instructions for using HTTPS, SSH, or GitHub CLI to clone the repository, or to download a ZIP file of the repository directly.
 . Open a terminal shell on your local computer.
 +
@@ -212,8 +212,8 @@ path = "main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../rust-cdk/src/ic_cdk", version = "0.1.0" }
-ic_cdk_macros = { path = "../../../rust-cdk/src/ic_cdk_macros", version = "0.1.0" }
+ic_cdk = { path = "../../../cdk-rs/src/ic_cdk", version = "0.1.0" }
+ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
 candid = "0.6.4"
 serde = "1.0.111"
 ----
@@ -342,8 +342,8 @@ Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello'
    Compiling proc-macro2 v1.0.21
    ...
    Compiling candid v0.6.4
-   Compiling ic_cdk v0.1.0 (/Users/pubs/rust-cdk/src/ic_cdk)
-   Compiling ic_cdk_macros v0.1.0 (/Users/pubs/rust-cdk/src/ic_cdk_macros)
+   Compiling ic_cdk v0.1.0 (/Users/pubs/cdk-rs/src/ic_cdk)
+   Compiling ic_cdk_macros v0.1.0 (/Users/pubs/cdk-rs/src/ic_cdk_macros)
    Compiling rust_hello v0.1.0 (/Users/pubs/rust_hello/src/rust_hello)
     Finished dev [unoptimized + debuginfo] target(s) in 2m 44s
 Installing canisters...
