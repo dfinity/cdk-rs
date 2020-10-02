@@ -1,7 +1,4 @@
 //! System API and low level functions for it.
-//!
-//! These are not ALL `pub(crate)` visibility, but they should be. For each low level
-//! API there should be some higher level type or API to use.
 use ic_types::Principal;
 use std::convert::TryFrom;
 
