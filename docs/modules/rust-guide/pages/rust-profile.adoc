@@ -172,8 +172,7 @@ path = "profile.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../cdk-rs/src/
-ic_cdk", version = "0.1.0" }
+ic_cdk = { path = "../../../cdk-rs/src/ic_cdk", version = "0.1.0" }
 ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
 ic-types = "0.1.1"
 candid = "0.6.4"
