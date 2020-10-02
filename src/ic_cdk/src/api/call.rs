@@ -1,3 +1,4 @@
+//! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
 use crate::export::Principal;
 use candid::de::ArgumentDecoder;
@@ -39,6 +40,8 @@ impl From<i32> for RejectionCode {
     }
 }
 
+/// The result of a Call. Errors on the IC have two components; a Code and a message
+/// associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
 /// Internal state for the Future when sending a call.
@@ -70,9 +73,9 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
     }
 }
 
-// The callback from IC dereferences the future from a raw pointer, assigns the
-// result and calls the waker. We cannot use a closure here because we pass raw
-// pointers to the System and back.
+/// The callback from IC dereferences the future from a raw pointer, assigns the
+/// result and calls the waker. We cannot use a closure here because we pass raw
+/// pointers to the System and back.
 fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
     let state = unsafe { Rc::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
@@ -192,6 +195,7 @@ pub fn reject(message: &str) {
     }
 }
 
+/// Reply to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
     let bytes = encode_args(reply).expect("Could not encode reply.");
     unsafe {
@@ -200,6 +204,11 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
     }
 }
 
+/// Economics.
+///
+/// # Warning
+/// This section will be moved and breaking changes significantly before Mercury.
+/// The APIs behind it will stay the same, so deployed canisters will keep working.
 pub mod funds {
     use super::ic0;
 
@@ -240,6 +249,7 @@ pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
+/// Get the argument data in the current call.
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = unsafe { arg_data_raw() };
 
