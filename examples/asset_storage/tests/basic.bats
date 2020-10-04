@@ -6,6 +6,7 @@ setup() {
 
   run dfx identity new alice
   run dfx identity new bob
+  run dfx identity new charlie
 }
 
 # executed after each test
@@ -27,6 +28,8 @@ teardown() {
   dfx canister call asset_storage store '("asset_name", vec { 1; 2; 3; })'
   dfx canister call asset_storage retrieve '("asset_name")'
 
+  dfx canister call asset_storage add_user "(principal \"$(dfx --identity charlie identity get-principal)\")"
+
   dfx identity use bob
   dfx canister call asset_storage retrieve '("asset_name")'
 
@@ -38,6 +41,28 @@ teardown() {
   run dfx canister call asset_storage store '("asset_name", vec { 1; })'
   [ "$status" != 0 ]
 
+  # Test we can upload assets as charlie.
+  dfx identity use charlie
   run dfx canister call asset_storage store '("asset_name_2", vec { 1; 2; 3; })'
+  [ "$status" == 0 ]
+}
+
+@test "Can upgrade and keep ACLs" {
+  dfx identity use alice
+  dfx deploy
+
+  dfx canister call asset_storage store '("asset_name", vec { 1; 2; 3; })'
+  dfx identity use bob
+  run dfx canister call asset_storage retrieve '("unknown")'
   [ "$status" != 0 ]
+
+  dfx identity use alice
+  dfx canister call asset_storage add_user "(principal \"$(dfx --identity charlie identity get-principal)\")"
+
+  dfx build
+  dfx canister install --all --mode=upgrade
+
+  dfx identity use charlie
+  run dfx canister call asset_storage store '("asset_name_2", vec { 1; 2; 3; })'
+  [ "$status" == 0 ]
 }

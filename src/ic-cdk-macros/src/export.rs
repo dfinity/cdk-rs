@@ -16,16 +16,29 @@ struct ExportAttributes {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum MethodType {
     Init,
+    PreUpgrade,
+    PostUpgrade,
     Update,
     Query,
+}
+
+impl MethodType {
+    pub fn is_lifecycle(&self) -> bool {
+        match self {
+            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade => true,
+            _ => false,
+        }
+    }
 }
 
 impl std::fmt::Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MethodType::Init => f.write_str("init"),
-            MethodType::Query => f.write_str("query"),
-            MethodType::Update => f.write_str("update"),
+            MethodType::Init => f.write_str("canister_init"),
+            MethodType::PreUpgrade => f.write_str("canister_pre_upgrade"),
+            MethodType::PostUpgrade => f.write_str("canister_post_upgrade"),
+            MethodType::Query => f.write_str("canister_query"),
+            MethodType::Update => f.write_str("canister_update"),
         }
     }
 }
@@ -98,11 +111,16 @@ fn dfn_macro(
         },
     };
 
-    if method == MethodType::Init && return_length > 0 {
-        return Err(Error::new(
-            Span::call_site(),
-            "#[init] function cannot have a return value.".to_string(),
-        ));
+    match method {
+        MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
+            if return_length > 0 =>
+        {
+            return Err(Error::new(
+                Span::call_site(),
+                format!("#[{}] function cannot have a return value.", method),
+            ));
+        }
+        _ => {}
     }
 
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
@@ -114,11 +132,11 @@ fn dfn_macro(
         Span::call_site(),
     );
 
-    let export_name = if method == MethodType::Init {
-        "canister_init".to_string()
+    let export_name = if method.is_lifecycle() {
+        format!("{}", method)
     } else {
         format!(
-            "canister_{0} {1}",
+            "{0} {1}",
             method,
             attrs.name.unwrap_or_else(|| name.to_string())
         )
@@ -132,7 +150,7 @@ fn dfn_macro(
 
     let arg_count = arg_tuple.len();
 
-    let return_encode = if method == MethodType::Init {
+    let return_encode = if method.is_lifecycle() {
         quote! {}
     } else {
         match return_length {
@@ -145,7 +163,7 @@ fn dfn_macro(
     // On initialization we can actually not receive any input and it's okay, only if
     // we don't have any arguments either.
     // If the data we receive is not empty, then try to unwrap it as if it's DID.
-    let arg_decode = if method == MethodType::Init && arg_count == 0 {
+    let arg_decode = if method.is_lifecycle() && arg_count == 0 {
         quote! {}
     } else {
         quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(); }
@@ -224,6 +242,48 @@ pub(crate) fn ic_init(
 
     dfn_macro(
         MethodType::Init,
+        TokenStream::from(attr),
+        TokenStream::from(item),
+    )
+    .map(proc_macro::TokenStream::from)
+}
+
+static HAS_PRE_UPGRADE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ic_pre_upgrade(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> Result<proc_macro::TokenStream, Error> {
+    if HAS_PRE_UPGRADE.swap(true, Ordering::SeqCst) {
+        return Err(Error::new(
+            Span::call_site(),
+            "Pre-upgrade function already declared.",
+        ));
+    }
+
+    dfn_macro(
+        MethodType::PreUpgrade,
+        TokenStream::from(attr),
+        TokenStream::from(item),
+    )
+    .map(proc_macro::TokenStream::from)
+}
+
+static HAS_POST_UPGRADE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ic_post_upgrade(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> Result<proc_macro::TokenStream, Error> {
+    if HAS_POST_UPGRADE.swap(true, Ordering::SeqCst) {
+        return Err(Error::new(
+            Span::call_site(),
+            "Post-upgrade function already declared.",
+        ));
+    }
+
+    dfn_macro(
+        MethodType::PostUpgrade,
         TokenStream::from(attr),
         TokenStream::from(item),
     )

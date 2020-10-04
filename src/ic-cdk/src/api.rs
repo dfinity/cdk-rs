@@ -3,6 +3,8 @@ use ic_types::Principal;
 use std::convert::TryFrom;
 
 pub mod call;
+pub mod stable;
+
 mod ic0;
 
 /// Prints the given message.
