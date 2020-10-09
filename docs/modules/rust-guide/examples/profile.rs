@@ -1,7 +1,7 @@
 use candid::CandidType;
-use ic-cdk::storage;
-use ic-cdk-macros::*;
-use ic-types::Principal;
+use ic_cdk::storage;
+use ic_cdk_macros::*;
+use ic_types::Principal;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
@@ -17,7 +17,7 @@ struct Profile {
 
 #[query(name = "getSelf")]
 fn get_self() -> Profile {
-    let id = ic-cdk::caller();
+    let id = ic_cdk::caller();
     let profile_store = storage::get::<ProfileStore>();
 
     profile_store
@@ -39,7 +39,7 @@ fn get(name: String) -> Profile {
 
 #[update]
 fn update(profile: Profile) {
-    let principal_id = ic-cdk::caller();
+    let principal_id = ic_cdk::caller();
     let id_store = storage::get_mut::<IdStore>();
     let profile_store = storage::get_mut::<ProfileStore>();
 
