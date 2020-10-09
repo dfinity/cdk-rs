@@ -115,7 +115,7 @@ members = [
 
 == Modify the default program
 
-The next step is to replace the default source code in the `+src/rust_counter/main.mo+` file with a Rust program that implements the `+getSelf+`, `+update+`, `+get+`and `+search+` functions.
+The next step is to replace the default source code in the `+src/rust_counter/main.mo+` file with a Rust program that implements the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions.
 
 To modify the default template source code:
 
@@ -172,14 +172,14 @@ path = "profile.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../cdk-rs/src/ic_cdk", version = "0.1.0" }
-ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
+ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.1" }
+ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.1" }
 ic-types = "0.1.1"
 candid = "0.6.4"
 serde = "1.0.111"
 ----
 +
-NOTE: Replace the path to the `+ic_cdk+` and `+ic_cdk_macros+` packages with the appropriate path for your local computer.
+NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
 
 . Save your changes and close the `+Cargo.toml+` file to continue.
 . Create a new file named `+profile.did+`.
