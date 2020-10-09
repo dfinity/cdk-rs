@@ -17,7 +17,7 @@ In this tutorial, you are going to write a program that provides a few basic fun
 This program supports the following functions:
 
 * The `+update+` function enables you to add a profile that consists of a `+name+`, a `+description+`, and `+keywords+`.
-* The `+getSelf+` function returns the profile associated with the function caller.
+* The `+getSelf+` function returns the profile for the principal associated with the function caller.
 * The `+get+` function performs a simple query to return the profile matching the `+name+` value passed to it.
 For this function, the name specified must match the `+name+` field exactly to return the record.
 * The `+search+` function performs a more complex query to return the profile matching all or part of the text specified in any profile field. For example, the `+search+` function can return a profile containing a specific keyword or that matches only part of a name or description.
