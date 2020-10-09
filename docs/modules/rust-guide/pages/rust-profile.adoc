@@ -305,6 +305,107 @@ This command finds the matching profile using the `+description+` and returns th
 
 In its current form, the program only stores one profile—the one associated with the principal invoking the commands. TO test that the get, getSelf, and search functions do what we want them to, we need to add some new identities that can have different profiles.
 
+To add identities for testing:
+
+. Create a new user identity by running the following command:
++
+[source,bash]
+----
+dfx identity new Miles
+----
++
+....
+Creating identity: "Miles".
+Created identity: "Miles".
+....
+
+. Call the `+update+` function to add a profile for the new identity.
++
+[source,bash]
+----
+dfx --identity Miles canister call rust_profile update '(record {name = "Miles"; description = "Great Dane"; keywords = vec {"Boston"; "mantle"; "three-legged"}})'
+----
+. Call the `+getSelf+` function to view the profile associated with the `+default+` user identity.
++
+[source,bash]
+----
+dfx canister call rust_profile getSelf
+----
++
+The command displays the profile currently associated with the default identity, in this example, the Dupree profile:
++
+....
+(
+  record {
+    name = "Dupree";
+    description = "black dog";
+    keywords = vec { "funny tail"; "white nose" };
+  },
+)
+....
+. Call the `+getSelf+` function using the `+Miles+` user identity by running the following command:
++
+[source,bash]
+----
+dfx --identity Miles canister call rust_profile getSelf
+----
++
+The command displays the profile currently associated with the Miles identity, in this example:
++
+....
+(
+  record {
+    name = "Miles";
+    description = "Great Dane";
+    keywords = vec { "Boston"; "mantle"; "three-legged" };
+  },
+)
+....
+. Call the `+search+` function using part of the description or a keyword to further test the whether the correct profile is returned.
++
+For example, to verify the `+Miles+` profile is returned, you might run the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile search '("Great")'
+----
++
+The command returns the `+Miles+` profile:
++
+....
+(
+  opt record {
+    name = "Miles";
+    description = "Great Dane";
+    keywords = vec { "Boston"; "mantle"; "three-legged" };
+  },
+)
+....
+. Call the `+search+` function to further test the whether the correct profile is returned.
++
+For example, to verify the `+Dupree+` profile is returned, you might run the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile search '("black")'
+----
++
+The command returns the `+Dupree+` profile:
++
+....
+(
+  opt record {
+    name = "Dupree";
+    description = "black dog";
+    keywords = vec { "funny tail"; "white nose" };
+  },
+)
+....
+
+== Extending the sample program
+
+This sample program only stores one profile for each unique user identity. If you were to extend this application by adding a second program for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
+
 ////
 == Modify the project to include another program
 
