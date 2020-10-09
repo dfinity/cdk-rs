@@ -152,7 +152,7 @@ For example:
 +
 [source,bash]
 ----
-cd  src/rust_profile
+cd src/rust_profile
 ----
 . Create a second file named `+Cargo.toml+` and open it in a text editor.
 . Configure settings for your project.
