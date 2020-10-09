@@ -242,9 +242,9 @@ dfx deploy
 After successfully deploying the canister, you can test the canister by invoking the functions it provides.
 For this tutorial:
 
-* Invoke the `+get+` function to query the value of the counter.
-* Invoke the `+increment+` function to increment the counter each time it is called.
-* Invoke the `+set+` function to pass an argument to update the counter to an arbitrary value you specify.
+* Invoke the `+update+` function to add a profile.
+* Invoke the `+getSelf+` function to display the profile for the principal identity.
+* Invoke the `+search+` function to look up the profile using a keyword.
 
 To test invoking methods on the deployed canister:
 
@@ -290,7 +290,7 @@ You can use the `+get+`, `+getSelf+`, and `+search+` functions, but they will on
 dfx canister call rust_profile search '("black")';
 ----
 +
-This command finds the matching profile using the description and returns the profile:
+This command finds the matching profile using the `+description+` and returns the profile:
 +
 ....
 (
@@ -304,7 +304,7 @@ This command finds the matching profile using the description and returns the pr
 == Modify the project to include another program
 
 In its current form, the program doesn't quite do what we want it to, but instead of modifying the existing program, let's expand its functionality by adding a second program that depends on this first one.
-By adding a second program, we can demonstrate service interoperability and composability.
+By adding a second program, we can demonstrate service interoperability and composability while reusing functions we've already defined.
 
 The steps are similar to the ones you just completed.
 
@@ -328,7 +328,7 @@ For this example, add a section for a canister named `+profile_interoperation+` 
     }
 ----
 . Save your change and close the `+dfx.json+` file to continue.
-. Open the `+Cargo.toml+` file if you created for the project and add the `+profile_interoperation+` package as a member.
+. Open the `+Cargo.toml+` file that you created for the project and add the `+profile_interoperation+` package as a member.
 +
 For example:
 +
