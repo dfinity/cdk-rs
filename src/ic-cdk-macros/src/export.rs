@@ -3,6 +3,7 @@ use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use syn::export::Formatter;
 use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
@@ -110,6 +111,13 @@ fn dfn_macro(
             _ => 1,
         },
     };
+    let return_types = match &signature.output {
+        ReturnType::Default => Vec::new(),
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Tuple(tuple) => tuple.elems.iter().collect::<Vec<_>>(),
+            _ => vec![ty.as_ref()],
+        },
+    };
 
     match method {
         MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
@@ -123,7 +131,7 @@ fn dfn_macro(
         _ => {}
     }
 
-    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
+    let (arg_tuple, ty_tuple): (Vec<Ident>, Vec<Box<Type>>) =
         get_args(method, signature)?.iter().cloned().unzip();
     let name = &signature.ident;
 
@@ -131,6 +139,17 @@ fn dfn_macro(
         &format!("{}_{}_", name.to_string(), crate::id()),
         Span::call_site(),
     );
+
+    let candid_function_ident =
+        Ident::new(&format!("{}_candid_", name.to_string()), Span::call_site());
+    let candid_name = format!("{}", name);
+    let candid_modes = match method {
+        MethodType::Query => quote! { vec![::candid::parser::types::FuncMode::Query] },
+        _ => quote! { Vec::new() },
+    };
+    if let Some(vec) = METHODS.lock().unwrap().as_mut() {
+        vec.push(candid_function_ident.to_string());
+    }
 
     let export_name = if method.is_lifecycle() {
         format!("{}", method)
@@ -183,7 +202,7 @@ fn dfn_macro(
         quote! {}
     };
 
-    Ok(quote! {
+    let res = quote! {
         #[export_name = #export_name]
         fn #outer_function_ident() {
             ic_cdk::setup();
@@ -197,8 +216,24 @@ fn dfn_macro(
             });
         }
 
+        pub fn #candid_function_ident() -> (String, ::candid::types::Type) {
+            use ::candid::types::{CandidType, Function, Type};
+            let mut args = Vec::new();
+            #(args.push(#ty_tuple::ty());)*
+            let mut rets = Vec::new();
+            #(rets.push(#return_types::ty());)*
+            let func = Function { modes: #candid_modes, args, rets };
+            (#candid_name.to_string(), Type::Func(func))
+        }
+
         #item
-    })
+    };
+    Ok(res)
+}
+use lazy_static::lazy_static;
+lazy_static! {
+    pub(crate) static ref METHODS: Mutex<Option<Vec<String>>> =
+        Mutex::new(Some(Default::default()));
 }
 
 pub(crate) fn ic_query(

@@ -8,7 +8,12 @@ edition = "2018"
 
 [lib]
 path = "lib.rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "candid"
+path = "main.rs"
+doc = false
 
 [dependencies]
 ic-cdk = { path = "../../../../src/ic-cdk", version = "0.1.0" }

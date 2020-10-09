@@ -68,3 +68,29 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }
+
+#[proc_macro]
+pub fn export_candid(_input: TokenStream) -> TokenStream {
+    use quote::quote;
+    let methods = export::METHODS.lock().unwrap().take();
+    if let Some(methods) = methods {
+        let methods: Vec<_> = methods
+            .iter()
+            .map(|m| syn::parse_str::<proc_macro2::TokenStream>(m).unwrap())
+            .collect();
+        quote! {
+            pub fn export_candid() {
+                let mut service = Vec::new();
+                #(
+                    service.push(#methods());
+                )*
+                let ty = ::candid::types::Type::Service(service);
+                println!("{}", ::candid::bindings::candid::pp_ty(&ty).pretty(80));
+            }
+            //pub const METHODS: &[&'static str] = &[#(#methods),*];
+        }
+    } else {
+        panic!("export_candid called twice")
+    }
+    .into()
+}
