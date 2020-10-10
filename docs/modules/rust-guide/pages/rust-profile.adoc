@@ -24,6 +24,11 @@ For this function, the name specified must match the `+name+` field exactly to r
 
 This tutorial provides a simple example of how you can use the Rust CDK interfaces and macros to simplify writing programs in Rust for the {IC}.
 
+This tutorial demonstrates:
+* How to represent slightly more complex data—in the form of a profile `+record+` and an `+array+`—using the Candid interface description language.
+* How to write a simple search function with partial string matching.
+* How profiles are associated with a specific principal.
+
 == Before you begin
 
 Before starting the tutorial, verify the following:
