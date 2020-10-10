@@ -71,23 +71,27 @@ pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn export_candid(_input: TokenStream) -> TokenStream {
-    use quote::quote;
     let methods = export::METHODS.lock().unwrap().take();
     if let Some(methods) = methods {
         let methods: Vec<_> = methods
             .iter()
             .map(|m| syn::parse_str::<proc_macro2::TokenStream>(m).unwrap())
             .collect();
-        quote! {
-            pub fn export_candid() {
+        quote::quote! {
+            fn export_candid() -> i32 {
                 let mut service = Vec::new();
                 #(
                     service.push(#methods());
                 )*
                 let ty = ::candid::types::Type::Service(service);
-                println!("{}", ::candid::bindings::candid::pp_ty(&ty).pretty(80));
+                let result = ::candid::bindings::candid::pp_ty(&ty).pretty(80).to_string();
+                unsafe { ::ic_cdk::api::wasi::print(&result) }
             }
-            //pub const METHODS: &[&'static str] = &[#(#methods),*];
+            #[no_mangle]
+            pub unsafe extern "C" fn _start() {
+                let ret = export_candid();
+                ic_cdk::api::wasi::proc_exit(ret as u32);
+            }
         }
     } else {
         panic!("export_candid called twice")

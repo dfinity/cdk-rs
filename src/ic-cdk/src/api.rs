@@ -2,6 +2,9 @@
 use ic_types::Principal;
 use std::convert::TryFrom;
 
+#[cfg(all(target_arch = "wasm32", feature = "wasi"))]
+pub mod wasi;
+
 pub mod call;
 pub mod stable;
 

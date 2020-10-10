@@ -9,3 +9,4 @@ fn test(name: String) -> (usize, String) {
 }
 
 ic_cdk_macros::export_candid!();
+

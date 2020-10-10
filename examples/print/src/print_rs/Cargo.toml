@@ -8,15 +8,14 @@ edition = "2018"
 
 [lib]
 path = "lib.rs"
-crate-type = ["cdylib", "lib"]
-
-[[bin]]
-name = "candid"
-path = "main.rs"
-doc = false
+crate-type = ["cdylib"]
 
 [dependencies]
 ic-cdk = { path = "../../../../src/ic-cdk", version = "0.1.0" }
 ic-cdk-macros = { path = "../../../../src/ic-cdk-macros", version = "0.1.0" }
 candid = "0.6.2"
 serde = "1.0.111"
+
+[features]
+default = []
+export_candid = ["ic-cdk/wasi"]

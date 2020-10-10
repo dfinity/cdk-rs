@@ -230,8 +230,8 @@ fn dfn_macro(
     };
     Ok(res)
 }
-use lazy_static::lazy_static;
-lazy_static! {
+
+lazy_static::lazy_static! {
     pub(crate) static ref METHODS: Mutex<Option<Vec<String>>> =
         Mutex::new(Some(Default::default()));
 }
