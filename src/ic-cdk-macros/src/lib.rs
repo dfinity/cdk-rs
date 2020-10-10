@@ -78,18 +78,23 @@ pub fn export_candid(_input: TokenStream) -> TokenStream {
             .map(|m| syn::parse_str::<proc_macro2::TokenStream>(m).unwrap())
             .collect();
         quote::quote! {
-            fn export_candid() -> i32 {
+            #[ic_cdk_macros::query(name = "__get_candid_interface_tmp_hack")]
+            fn export_candid() -> String {
                 let mut service = Vec::new();
                 #(
                     service.push(#methods());
                 )*
                 let ty = ::candid::types::Type::Service(service);
-                let result = ::candid::bindings::candid::pp_ty(&ty).pretty(80).to_string();
-                unsafe { ::ic_cdk::api::wasi::print(&result) }
+                let env = ::candid::TypeEnv::new();
+                let actor = Some(ty);
+                let result = ::candid::bindings::candid::compile(&env, &actor);
+                format!("{}", result)
             }
+            #[cfg(feature = "export_candid")]
             #[no_mangle]
             pub unsafe extern "C" fn _start() {
-                let ret = export_candid();
+                let result = export_candid();
+                let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
                 ic_cdk::api::wasi::proc_exit(ret as u32);
             }
         }

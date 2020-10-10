@@ -25,10 +25,10 @@ enum MethodType {
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
-        match self {
-            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
+        )
     }
 }
 
@@ -142,23 +142,21 @@ fn dfn_macro(
 
     let candid_function_ident =
         Ident::new(&format!("{}_candid_", name.to_string()), Span::call_site());
-    let candid_name = format!("{}", name);
+    let candid_name = attrs.name.unwrap_or_else(|| name.to_string());
     let candid_modes = match method {
         MethodType::Query => quote! { vec![::candid::parser::types::FuncMode::Query] },
         _ => quote! { Vec::new() },
     };
     if let Some(vec) = METHODS.lock().unwrap().as_mut() {
-        vec.push(candid_function_ident.to_string());
+        if !method.is_lifecycle() {
+            vec.push(candid_function_ident.to_string());
+        }
     }
 
     let export_name = if method.is_lifecycle() {
         format!("{}", method)
     } else {
-        format!(
-            "{0} {1}",
-            method,
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        format!("{0} {1}", method, candid_name)
     };
 
     let function_call = if is_async {
@@ -216,7 +214,7 @@ fn dfn_macro(
             });
         }
 
-        pub fn #candid_function_ident() -> (String, ::candid::types::Type) {
+        fn #candid_function_ident() -> (String, ::candid::types::Type) {
             use ::candid::types::{CandidType, Function, Type};
             let mut args = Vec::new();
             #(args.push(#ty_tuple::ty());)*
