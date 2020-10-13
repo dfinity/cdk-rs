@@ -4,7 +4,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toc: right
 :toc-title: TUTORIAL - SIMPLE DEPENDENCY
 :toclevels: 3
-;native: Motoko
+:native: Motoko
 :lang: Rust
 :platform: Internet Computer platform
 :IC: Internet Computer
