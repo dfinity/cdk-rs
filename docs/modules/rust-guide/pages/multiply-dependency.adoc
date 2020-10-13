@@ -1,4 +1,4 @@
-= Simple dependency
+= Basic dependency
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toc:
 :toc: right
