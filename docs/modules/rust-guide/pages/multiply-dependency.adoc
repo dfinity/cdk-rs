@@ -244,67 +244,48 @@ dfx deploy
 After successfully deploying the canister, you can test the canister by invoking the functions it provides.
 For this tutorial:
 
-* Invoke the `+get+` function to query the value of the counter.
-* Invoke the `+increment+` function to increment the counter each time it is called.
-* Invoke the `+set+` function to pass an argument to update the counter to an arbitrary value you specify.
+* Invoke the `+mul+` function to multiply the value of the `+cell+` variable by three each time it is called.
+* Invoke the `+read+` function to return the current value of the `+cell+` variable.
 
 To test invoking methods on the deployed canister:
 
 [arabic]
-. Run the following command to invoke the `+get+` function, which reads the current value of the `+COUNTER+` variable on the deployed canister:
+. Run the following command to invoke the `+read+` function from the {native} program, which reads the current value of the `+cell+` variable on the deployed canister:
 +
 [source,bash]
 ----
-dfx canister call rust_counter get
+dfx canister call multiply_deps read
 ----
 +
-The command returns the current value of the `+COUNTER+` variable as zero:
-+
-....
-(0)
-....
-[arabic]
-. Run the following command to invoke the `+increment+` function to increment the value of the `+COUNTER+` variable on the deployed canister by one:
-+
-[source,bash]
-----
-dfx canister call rust_counter increment
-----
-+
-This command increments the value of the variable—changing its state—but does not return the result.
-[arabic]
-. Rerun the following command to get the current value of the `+COUNTER+` variable on the deployed canister:
-+
-[source,bash]
-----
-dfx canister call rust_counter get
-----
-+
-The command returns the updated value of the `+COUNTER+` variable as one:
+The command returns the current value of the `+cell+` variable as one:
 +
 ....
 (1)
 ....
-[arabic]
-. Run additional commands to experiment with invoking the functions and using different values.
-+
-For example, try commands similar to the following to set and return the counter value:
+. Run the following command to invoke the `+mul+` function to multiply the input argument by three:
 +
 [source,bash]
 ----
-dfx canister call rust_counter set '(987)'
-dfx canister call rust_counter get
+dfx canister call multiply_deps mul '(3)'
 ----
 +
-Returns the current value of 987.
+The command returns the new value of the `+cell+` variable:
++
+....
+(9)
+....
+. Run the following command to invoke the `+read+` function using the `+rust_deps+` program that imports the `+multiply_deps+` canister:
 +
 [source,bash]
 ----
-dfx canister call rust_counter increment
-dfx canister call rust_counter get
+dfx canister call rust_deps read
 ----
 +
-Returns the incremented value of 988.
+The command returns the current value of the `+cell+` variable:
++
+....
+(9)
+....
 
 == Stop the local network
 
