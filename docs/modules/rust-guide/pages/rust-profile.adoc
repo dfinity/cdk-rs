@@ -95,7 +95,7 @@ The sample program for this tutorial doesn't use any front-end assets, so you ca
 For example, the configuration file looks like this after you modify the settings:
 +
 ....
-include::example$rust_profile1_dfx.json[]
+include::example$profile-tutorial/rust_profile1_dfx.json[]
 ....
 . Save your change and close the `+dfx.json+` file to continue.
 
@@ -136,7 +136,7 @@ mv src/rust_profile/main.mo src/rust_profile/profile.rs
 +
 [source,motoko]
 ----
-include::example$profile.rs[]
+include::example$profile-tutorial/profile.rs[]
 ----
 . Save your changes and close the file to continue.
 
@@ -486,7 +486,7 @@ mv profile_interoperation/profile.rs profile_interoperation/lib.rs
 +
 [source,rust]
 ----
-include::example$lib.rs[]
+include::example$intercanister-tutorial/profile-interoperation.rs[]
 ----
 . Rename the Candid `+profile_interoperation/profile.did+` file to `+profile_inter.did+` by running the following command:
 +

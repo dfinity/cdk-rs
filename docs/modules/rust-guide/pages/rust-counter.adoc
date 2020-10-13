@@ -97,7 +97,7 @@ The sample program for this tutorial doesn't use any front-end assets, so you ca
 For example, the configuration file looks like this after you modify the settings:
 +
 ....
-include::example$rust_counter_dfx.json[]
+include::example$counter-tutorial/rust_counter_dfx.json[]
 ....
 . Save your change and close the `+dfx.json+` file to continue.
 
@@ -138,7 +138,7 @@ mv src/rust_counter/main.mo src/rust_counter/counter.rs
 +
 [source,motoko]
 ----
-include::example$counter.rs[]
+include::example$counter-tutorial/counter.rs[]
 ----
 . Save your changes and close the file to continue.
 
