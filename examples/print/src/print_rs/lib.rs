@@ -11,7 +11,7 @@ fn test(name: String) -> (usize, String) {
 }
 
 #[derive(CandidType, Deserialize)]
-struct List { head: i8, tail: candid::Nat }
+struct List { head: i8, tail: Option<Box<List>> }
 
 #[derive(CandidType, Deserialize)]
 enum A { A1(u16), A2(List), A3(String, candid::Principal) }

@@ -71,35 +71,19 @@ pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn export_candid(_input: TokenStream) -> TokenStream {
-    let methods = export::METHODS.lock().unwrap().take();
-    if let Some(methods) = methods {
-        let methods: Vec<_> = methods
-            .iter()
-            .map(|m| syn::parse_str::<proc_macro2::TokenStream>(m).unwrap())
-            .collect();
-        quote::quote! {
-            #[ic_cdk_macros::query(name = "__get_candid_interface_tmp_hack")]
-            fn export_candid() -> String {
-                let mut service = Vec::new();
-                #(
-                    service.push(#methods());
-                )*
-                let ty = ::candid::types::Type::Service(service);
-                let env = ::candid::TypeEnv::new();
-                let actor = Some(ty);
-                let result = ::candid::bindings::candid::compile(&env, &actor);
-                format!("{}", result)
-            }
-            #[cfg(feature = "export_candid")]
-            #[no_mangle]
-            pub unsafe extern "C" fn _start() {
-                let result = export_candid();
-                let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
-                ic_cdk::api::wasi::proc_exit(ret as u32);
-            }
+    let res = quote::quote! {
+        #[ic_cdk_macros::query(name = "__get_candid_interface_tmp_hack")]
+        fn export_candid() -> String {
+            candid::export_service!();
+            __export_service()
         }
-    } else {
-        panic!("export_candid called twice")
-    }
-    .into()
+        #[cfg(feature = "export_candid")]
+        #[no_mangle]
+        pub unsafe extern "C" fn _start() {
+            let result = export_candid();
+            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
+            ic_cdk::api::wasi::proc_exit(ret as u32);
+        }
+    };
+    res.into()
 }
