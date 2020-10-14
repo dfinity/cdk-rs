@@ -18,7 +18,7 @@
       "bind": "127.0.0.1:8000",
       "type": "ephemeral"
     },
-    "tungsten": {
+    "ic": {
       "providers": [
         "https://gw.dfinity.network"
       ],
