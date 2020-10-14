@@ -5,7 +5,7 @@ fn print() {
     ic_cdk::print("Hello World");
 }
 
-#[ic_cdk_macros::update(name = "TEST")]
+#[ic_cdk_macros::update(name = "🐂")]
 fn test(name: String) -> (usize, String) {
     (name.len(), name)
 }

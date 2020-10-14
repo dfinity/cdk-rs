@@ -72,9 +72,10 @@ pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn export_candid(_input: TokenStream) -> TokenStream {
     let res = quote::quote! {
+        candid::export_service!();
+
         #[ic_cdk_macros::query(name = "__get_candid_interface_tmp_hack")]
         fn export_candid() -> String {
-            candid::export_service!();
             __export_service()
         }
         #[cfg(feature = "export_candid")]

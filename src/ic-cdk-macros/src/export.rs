@@ -131,15 +131,16 @@ fn dfn_macro(
         &format!("{}_{}_", name.to_string(), crate::id()),
         Span::call_site(),
     );
-
+    let rename = attrs.name.unwrap_or_else(|| name.to_string());
     let export_name = if method.is_lifecycle() {
         format!("{}", method)
     } else {
-        format!(
-            "{0} {1}",
-            method,
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        format!("{0} {1}", method, rename,)
+    };
+    let candid_method_attr = match method {
+        MethodType::Query => quote! { #[candid::candid_method(query, rename = #rename)] },
+        MethodType::Update => quote! { #[candid::candid_method(update, rename = #rename)] },
+        _ => quote! {},
     };
 
     let function_call = if is_async {
@@ -197,7 +198,7 @@ fn dfn_macro(
             });
         }
 
-        #[candid::candid_method]
+        #candid_method_attr
         #item
     };
     Ok(res)
