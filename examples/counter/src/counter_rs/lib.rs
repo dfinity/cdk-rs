@@ -1,33 +1,46 @@
 use ic_cdk_macros::*;
-use ic_types::Principal;
 
-static mut COUNTER: Option<candid::Nat> = None;
-static mut OWNER: Option<Principal> = None;
-
-#[init]
-fn init() {
-    unsafe {
-        OWNER = Some(ic_cdk::caller());
-        COUNTER = Some(candid::Nat::from(0));
+struct Service {
+    counter: candid::Nat,
+}
+impl Service {
+    fn init() -> Self {
+        Service { counter: 0.into() }
+    }
+    pub fn read(&self) -> &candid::Nat {
+        &self.counter
+    }
+    pub fn inc(&mut self) -> () {
+        self.counter += 1;
     }
 }
 
-#[update]
-fn inc() -> () {
-    unsafe {
-        ic_cdk::println!("{:?}", OWNER);
-        COUNTER.as_mut().unwrap().0 += 1u64;
-    }
+static mut SERVICE: Option<Service> = None;
+
+#[export_name = "canister_init"]
+fn init_2_() {
+    ic_cdk::setup();
+    ic_cdk::block_on(async {
+        unsafe { SERVICE = Some(Service::init()) };
+    });
 }
 
-#[query]
-fn read() -> candid::Nat {
-    unsafe { COUNTER.as_mut().unwrap().clone() }
+#[export_name = "canister_query read"]
+fn read_0_() {
+    ic_cdk::setup();
+    ic_cdk::block_on(async {
+        let () = ic_cdk::api::call::arg_data();
+        let result = unsafe { SERVICE.as_mut().unwrap().read() };
+        ic_cdk::api::call::reply((result,))
+    });
 }
 
-#[update]
-fn write(input: candid::Nat) -> () {
-    unsafe {
-        COUNTER.as_mut().unwrap().0 = input.0;
-    }
+#[export_name = "canister_update inc"]
+fn inc_1_() {
+    ic_cdk::setup();
+    ic_cdk::block_on(async {
+        let () = ic_cdk::api::call::arg_data();
+        let result = unsafe { SERVICE.as_mut().unwrap().inc() };
+        ic_cdk::api::call::reply(())
+    });
 }
