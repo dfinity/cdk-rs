@@ -33,7 +33,7 @@ pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
 }
 
 /// Format and then print the formatted message
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "wasi")))]
 #[macro_export]
 macro_rules! println {
     ($fmt:expr) => (ic_cdk::print(format!($fmt)));

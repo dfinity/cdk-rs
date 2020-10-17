@@ -24,10 +24,10 @@ enum MethodType {
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
-        match self {
-            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
+        )
     }
 }
 
@@ -131,15 +131,16 @@ fn dfn_macro(
         &format!("{}_{}_", name.to_string(), crate::id()),
         Span::call_site(),
     );
-
+    let rename = attrs.name.unwrap_or_else(|| name.to_string());
     let export_name = if method.is_lifecycle() {
         format!("{}", method)
     } else {
-        format!(
-            "{0} {1}",
-            method,
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        format!("{0} {1}", method, rename,)
+    };
+    let candid_method_attr = match method {
+        MethodType::Query => quote! { #[candid::candid_method(query, rename = #rename)] },
+        MethodType::Update => quote! { #[candid::candid_method(update, rename = #rename)] },
+        _ => quote! {},
     };
 
     let function_call = if is_async {
@@ -183,7 +184,7 @@ fn dfn_macro(
         quote! {}
     };
 
-    Ok(quote! {
+    let res = quote! {
         #[export_name = #export_name]
         fn #outer_function_ident() {
             ic_cdk::setup();
@@ -197,8 +198,10 @@ fn dfn_macro(
             });
         }
 
+        #candid_method_attr
         #item
-    })
+    };
+    Ok(res)
 }
 
 pub(crate) fn ic_query(

@@ -68,3 +68,23 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }
+
+#[proc_macro]
+pub fn export_candid(_input: TokenStream) -> TokenStream {
+    let res = quote::quote! {
+        candid::export_service!();
+
+        #[ic_cdk_macros::query(name = "__get_candid_interface_tmp_hack")]
+        fn export_candid() -> String {
+            __export_service()
+        }
+        #[cfg(feature = "export_candid")]
+        #[no_mangle]
+        pub unsafe extern "C" fn _start() {
+            let result = export_candid();
+            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
+            ic_cdk::api::wasi::proc_exit(ret as u32);
+        }
+    };
+    res.into()
+}
