@@ -1,4 +1,4 @@
-use candid::CandidType;
+use ic_cdk::candid::CandidType;
 use ic_cdk::storage;
 use ic_cdk_macros::*;
 use pleco::tools::Searcher;

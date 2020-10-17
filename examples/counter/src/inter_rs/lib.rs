@@ -1,4 +1,5 @@
 use ic_cdk_macros::*;
+use ic_cdk::candid;
 
 #[import(canister = "counter_mo")]
 struct CounterCanister;

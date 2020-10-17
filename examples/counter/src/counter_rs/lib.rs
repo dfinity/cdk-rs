@@ -1,5 +1,6 @@
 use ic_cdk_macros::*;
 use ic_types::Principal;
+use ic_cdk::candid;
 
 static mut COUNTER: Option<candid::Nat> = None;
 static mut OWNER: Option<Principal> = None;
