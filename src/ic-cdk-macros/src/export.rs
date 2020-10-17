@@ -43,19 +43,13 @@ impl std::fmt::Display for MethodType {
     }
 }
 
-fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Error> {
+fn get_args(_: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Error> {
     // We only need the tuple of arguments, not their types. Magic of type inference.
     let mut args = vec![];
     for ref arg in &signature.inputs {
         let (ident, ty) = match arg {
-            FnArg::Receiver(r) => {
-                return Err(Error::new(
-                    r.span(),
-                    format!(
-                        "#[{}] cannot be above functions with `self` as a parameter",
-                        method
-                    ),
-                ));
+            FnArg::Receiver(_) => {
+                continue;
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Pat::Ident(PatIdent { ident, .. }) = pat.as_ref() {
@@ -183,7 +177,7 @@ fn dfn_macro(
         quote! {}
     };
 
-    Ok(quote! {
+    let res = quote! {
         #[export_name = #export_name]
         fn #outer_function_ident() {
             ic_cdk::setup();
@@ -192,13 +186,14 @@ fn dfn_macro(
 
             ic_cdk::block_on(async {
                 #arg_decode
-                let result = #function_call;
+                let result = service.#function_call;
                 #return_encode
             });
         }
 
         #item
-    })
+    };
+    Ok(res)
 }
 
 pub(crate) fn ic_query(
