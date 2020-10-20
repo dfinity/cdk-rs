@@ -1,5 +1,5 @@
 use ic_cdk_macros::*;
-use ic_types::Principal;
+use ic_cdk::export::{candid, Principal};
 
 static mut COUNTER: Option<candid::Nat> = None;
 static mut OWNER: Option<Principal> = None;

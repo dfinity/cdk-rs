@@ -24,10 +24,10 @@ enum MethodType {
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
-        match self {
-            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
+        )
     }
 }
 
