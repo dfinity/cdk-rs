@@ -13,9 +13,9 @@ pub use api::{caller, id, print, trap};
 static mut DONE: bool = false;
 
 pub mod export {
+    pub use candid;
     pub use ic_types::Principal;
 }
-pub use candid;
 
 /// Setup the stdlib hooks.
 pub fn setup() {
