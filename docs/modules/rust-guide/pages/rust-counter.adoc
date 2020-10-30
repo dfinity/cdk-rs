@@ -92,7 +92,7 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 . Remove all of the `+rust_counter_assets+` configuration settings from the file.
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
-. Remove the `+dfx+` version setting.
+. Remove the `+defaults+` and `+dfx+` version settings.
 +
 For example, the configuration file looks like this after you modify the settings:
 +
