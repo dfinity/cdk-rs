@@ -92,7 +92,7 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 . Remove all of the `+rust_counter_assets+` configuration settings from the file.
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
-. Remove the `+defaults+` and `+dfx+` version settings.
+. Remove the `+defaults+` and `+dfx+` version settings because this tutorial doesn't use these settings.
 +
 For example, the configuration file looks like this after you modify the settings:
 +
@@ -127,7 +127,7 @@ The next step is to replace the default source code in the `+src/rust_counter/ma
 To modify the default template source code:
 
 . Check that you are still in the root directory for your project, if needed.
-. Rename the default `+src/rust_counter/main.mo+` file to use the Rust file extension by running the following command:
+. Rename the default `+src/rust_counter/main.mo+` file to use a more descriptive name and the Rust file extension by running the following command:
 +
 [source,bash]
 ----
@@ -140,7 +140,7 @@ mv src/rust_counter/main.mo src/rust_counter/counter.rs
 ----
 include::example$counter-tutorial/counter.rs[]
 ----
-. Save your changes and close the file to continue.
+. Save your changes and close the `+counter.rs+` file to continue.
 
 === Add required files to the source directory
 
@@ -159,7 +159,7 @@ For example:
 +
 [source,bash]
 ----
-cd  src/rust_counter
+cd src/rust_counter
 ----
 . Create a second file named `+Cargo.toml+` and open it in a text editor.
 . Configure settings for your project.
@@ -168,25 +168,10 @@ For example, you should have a `+Cargo.toml+` file with settings similar to the 
 +
 [source,toml]
 ----
-[package]
-name = "rust_counter"
-version = "0.1.0"
-authors = ["DFINITY <support@dfinity.org>"]
-edition = "2018"
-
-[lib]
-path = "counter.rs"
-crate-type = ["cdylib"]
-
-[dependencies]
-ic_cdk = { path = "../../../cdk-rs/src/ic_cdk", version = "0.1.0" }
-ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
-ic-types = "0.1.1"
-candid = "0.6.4"
-lazy_static = "1.4.0"
+include::example$counter-tutorial/counter_Cargo.toml[]
 ----
 +
-NOTE: Replace the path to the `+ic_cdk+` and `+ic_cdk_macros+` packages with the appropriate path for your local computer.
+NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
 
 . Save your changes and close the `+Cargo.toml+` file to continue.
 . Create a new file named `+counter.did+`.
