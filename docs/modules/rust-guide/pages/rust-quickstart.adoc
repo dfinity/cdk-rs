@@ -58,21 +58,21 @@ For example, you can clone the repository to a local working directory using SSH
 +
 [source,bash]
 ----
-git clone git@github.com:dfinity/rust_cdk.git
+git clone git@github.com:dfinity/cdk_rs.git
 ----
-. List the contents of the `+rust_cdk/src+` directory by running the following command:
+. List the contents of the `+cdk_rs/src+` directory by running the following command:
 +
 [source,bash]
 ----
-ls -l rust_cdk/src
+ls -l cdk_rs/src
 ----
 +
 . Verify you have the following packages available to used:
 +
 ....
-ic_cdk
-ic_cdk_macros
-ic_cdk_optimizer
+ic-cdk
+ic-cdk-macros
+ic-cdk-optimizer
 ....
 
 [[create-a-new-project]]
