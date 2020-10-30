@@ -357,7 +357,7 @@ Deployed canisters.
 dfx canister call rust_hello print
 ----
 . Switch to the terminal window that displays network operations.
-. Verify that the call to the rust_hello canister `+print+` function displays the `+Hello World from DFINITY!+` greeting.
+. Verify that the call to the `+rust_hello+` canister `+print+` function displays the `+Hello World from DFINITY!+` greeting.
 +
 For example:
 +
