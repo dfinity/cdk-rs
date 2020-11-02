@@ -1,8 +1,6 @@
-use candid::CandidType;
+use ic_cdk::export::{candid::{CandidType, Deserialize}, Principal};
 use ic_cdk::storage;
 use ic_cdk_macros::*;
-use ic_types::Principal;
-use serde::Deserialize;
 use std::collections::BTreeMap;
 
 type IdStore = BTreeMap<String, Principal>;

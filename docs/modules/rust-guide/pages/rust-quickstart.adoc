@@ -58,21 +58,21 @@ For example, you can clone the repository to a local working directory using SSH
 +
 [source,bash]
 ----
-git clone git@github.com:dfinity/rust_cdk.git
+git clone git@github.com:dfinity/cdk_rs.git
 ----
-. List the contents of the `+rust_cdk/src+` directory by running the following command:
+. List the contents of the `+cdk_rs/src+` directory by running the following command:
 +
 [source,bash]
 ----
-ls -l rust_cdk/src
+ls -l cdk_rs/src
 ----
 +
 . Verify you have the following packages available to used:
 +
 ....
-ic_cdk
-ic_cdk_macros
-ic_cdk_optimizer
+ic-cdk
+ic-cdk-macros
+ic-cdk-optimizer
 ....
 
 [[create-a-new-project]]
@@ -153,6 +153,8 @@ For example:
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
+Optionally, you can also remove the `+defaults+`, `+dfx+`, and `+network+` keys if you are deploying this tutorial program locally using the default local host and port number.
++
 For example, the configuration file looks like this after you remove the `+rust_hello_assets+` section:
 +
 ....
@@ -189,7 +191,7 @@ cd  src/rust_hello
 . Create a second file named `+Cargo.toml+` and open it in a text editor.
 . Configure settings for your project.
 +
-At a minimum, you need to configure the following sections with basic information about the package name, location of the main program to compile, and the location of the {cdk-short-name} libraries
+At a minimum, you need to configure the following sections with basic information about the package name, location of the main program to compile, and the location of the {cdk-short-name} libraries:
 +
 --
 * `+[package]+`
@@ -212,13 +214,11 @@ path = "main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic_cdk = { path = "../../../cdk-rs/src/ic_cdk", version = "0.1.0" }
-ic_cdk_macros = { path = "../../../cdk-rs/src/ic_cdk_macros", version = "0.1.0" }
-candid = "0.6.4"
-serde = "1.0.111"
+ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.0" }
+ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.0" }
 ----
 +
-NOTE: Replace the path to the `+ic_cdk+` and `+ic_cdk_macros+` packages with the appropriate path for your local computer.
+NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
 . Save your changes and close the file to continue.
 
 == Replace the default program
@@ -229,7 +229,7 @@ In this tutorial, you replace that file with a main.rs file to create a simple "
 To replace the default template source code:
 
 . Check that you are still in the source code directory, if needed.
-. Rename the template `+main.mo+` file to main.rs by running the following command:
+. Rename the template `+main.mo+` file to `+main.rs+` by running the following command:
 +
 [source,bash]
 ----
@@ -357,7 +357,7 @@ Deployed canisters.
 dfx canister call rust_hello print
 ----
 . Switch to the terminal window that displays network operations.
-. Verify that the call to the rust_hello canister `+print+` function displays the `+Hello World from DFINITY!+` greeting.
+. Verify that the call to the `+rust_hello+` canister `+print+` function displays the `+Hello World from DFINITY!+` greeting.
 +
 For example:
 +
