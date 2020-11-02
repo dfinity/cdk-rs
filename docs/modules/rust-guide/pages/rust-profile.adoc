@@ -90,12 +90,12 @@ For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` s
 . Remove all of the `+rust_profile_assets+` configuration settings from the file.
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
-. Remove the `+dfx+` version setting.
+. Remove the `+defaults+` and `+dfx+` version settings.
 +
 For example, the configuration file looks like this after you modify the settings:
 +
 ....
-include::example$profile-tutorial/rust_profile1_dfx.json[]
+include::example$profile-tutorial/profile-dfx.json[]
 ....
 . Save your change and close the `+dfx.json+` file to continue.
 
@@ -166,22 +166,7 @@ For example, you should have a `+Cargo.toml+` file with settings similar to the 
 +
 [source,toml]
 ----
-[package]
-name = "rust_profile"
-version = "0.1.0"
-authors = ["DFINITY <support@dfinity.org>"]
-edition = "2018"
-
-[lib]
-path = "profile.rs"
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.1" }
-ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.1" }
-ic-types = "0.1.1"
-candid = "0.6.4"
-serde = "1.0.111"
+include::example$profile-tutorial/profile-Cargo.toml[]
 ----
 +
 NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
@@ -192,19 +177,7 @@ NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the
 +
 [source,did]
 ----
-type Profile_2 = record {
-    "name": text;
-    "description": text;
-    "keywords": vec text;
-};
-type Profile = Profile_2;
-
-service : {
-    "getSelf": () -> (Profile_2) query;
-    "get": (text) -> (Profile_2) query;
-    "update": (Profile_2) -> ();
-    "search": (text) -> (opt Profile_2) query;
-}
+include::example$profile-tutorial/profile.did[]
 ----
 . Save your changes and close the `+profile.did+` file to continue.
 
@@ -215,7 +188,8 @@ Before you can build the `+rust_profile+` project, you need to connect to the {I
 To start the network locally:
 
 [arabic]
-. Open a new terminal window or tab on your local computer and navigate to your project directory.
+. Navigate back to the root directory of your project.
+. Open a new terminal window or tab on your local computer.
 +
 For example, you can do either of the following if running Terminal on macOS:
 +
