@@ -1,11 +1,15 @@
+use ic_cdk::export::candid::parser::types::IDLType;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::sync::atomic::{AtomicBool, Ordering};
-use syn::export::Formatter;
-use syn::Error;
-use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
+use syn::export::{Formatter, ToTokens};
+use syn::{
+    spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type, TypePath,
+    TypeTuple,
+};
+use syn::{Error, TypeArray, TypeReference};
 
 #[derive(Default, Deserialize)]
 struct ExportAttributes {
@@ -75,6 +79,112 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
     Ok(args)
 }
 
+fn get_rets(_method: MethodType, signature: &Signature) -> Result<Vec<Box<Type>>, Error> {
+    Ok(match &signature.output {
+        ReturnType::Default => vec![],
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Tuple(TypeTuple { elems, .. }) => {
+                elems.iter().map(|ty| Box::new(ty.clone())).collect()
+            }
+            x => vec![Box::new(x.clone())],
+        },
+    })
+}
+
+struct CandidOutput {
+    pub prog: candid::IDLProg,
+}
+
+impl Drop for CandidOutput {
+    fn drop(&mut self) {
+        eprintln!("HELOO!");
+    }
+}
+
+static mut CANDID_OUTPUT: CandidOutput = CandidOutput {
+    prog: candid::IDLProg {
+        decs: vec![],
+        actor: None,
+    },
+};
+
+fn build_type(ident: Option<Ident>, typ: Type) -> IDLType {
+    match typ {
+        Type::Array(TypeArray { elem, .. }) => {
+            let elem_ty = build_type(None, *elem);
+            IDLType::VecT(Box::new(elem_ty))
+        }
+        Type::Reference(TypeReference { elem, .. }) => build_type(ident, *elem),
+        Type::Path(TypePath { path, .. }) => {
+            use candid::parser::types::PrimType;
+            match path.to_token_stream().to_string().as_str() {
+                "candid :: Nat" => IDLType::PrimT(PrimType::Nat),
+                "u8" => IDLType::PrimT(PrimType::Nat8),
+                "u16" => IDLType::PrimT(PrimType::Nat16),
+                "u32" => IDLType::PrimT(PrimType::Nat32),
+                "u64" => IDLType::PrimT(PrimType::Nat64),
+                "candid :: Int" => IDLType::PrimT(PrimType::Int),
+                "i8" => IDLType::PrimT(PrimType::Int8),
+                "i16" => IDLType::PrimT(PrimType::Int16),
+                "i32" => IDLType::PrimT(PrimType::Int32),
+                "i64" => IDLType::PrimT(PrimType::Int64),
+                "f32" => IDLType::PrimT(PrimType::Float32),
+                "f64" => IDLType::PrimT(PrimType::Float64),
+                "bool" => IDLType::PrimT(PrimType::Bool),
+                "str" => IDLType::PrimT(PrimType::Text),
+                "String" => IDLType::PrimT(PrimType::Text),
+                "candid :: Null" => IDLType::PrimT(PrimType::Null),
+                x => panic!("Unrecognized type: '{}'. Use a fully qualified type.", x),
+            }
+        }
+        x => {
+            eprintln!("UNKNOWN type: {:?}", x);
+            panic!();
+        }
+    }
+}
+
+fn build_candid(
+    method: MethodType,
+    id: String,
+    args: Vec<(Ident, Box<Type>)>,
+    rets: Vec<Box<Type>>,
+) {
+    use candid::parser::types::{to_pretty, Binding, FuncMode, FuncType};
+    let prog: &mut candid::IDLProg = &mut unsafe { &mut CANDID_OUTPUT }.prog;
+
+    let actor = match prog.actor {
+        None => {
+            prog.actor = Some(IDLType::ServT(vec![]));
+            prog.actor.as_mut().unwrap()
+        }
+        Some(ref mut actor) => actor,
+    };
+
+    let bindings = match actor {
+        IDLType::ServT(ref mut bindings) => bindings,
+        _ => unreachable!("Service should be of type ServT."),
+    };
+
+    let typ = IDLType::FuncT(FuncType {
+        modes: match method {
+            MethodType::Query => vec![FuncMode::Query],
+            _ => vec![],
+        },
+        args: args
+            .iter()
+            .map(|(ident, ty)| build_type(Some(ident.clone()), ty.as_ref().clone()))
+            .collect(),
+        rets: rets
+            .iter()
+            .map(|ty| build_type(None, ty.as_ref().clone()))
+            .collect(),
+    });
+
+    bindings.push(Binding { id, typ });
+    eprintln!("BINDINGS:\n{}", to_pretty(prog, 100));
+}
+
 fn dfn_macro(
     method: MethodType,
     attr: TokenStream,
@@ -123,8 +233,9 @@ fn dfn_macro(
         _ => {}
     }
 
-    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
-        get_args(method, signature)?.iter().cloned().unzip();
+    let args = get_args(method, signature)?;
+    let rets = get_rets(method, signature)?;
+    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) = args.iter().cloned().unzip();
     let name = &signature.ident;
 
     let outer_function_ident = Ident::new(
@@ -159,6 +270,8 @@ fn dfn_macro(
             _ => quote! { ic_cdk::api::call::reply(result) },
         }
     };
+
+    build_candid(method, export_name.clone(), args, rets);
 
     // On initialization we can actually not receive any input and it's okay, only if
     // we don't have any arguments either.
