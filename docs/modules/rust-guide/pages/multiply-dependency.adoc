@@ -4,7 +4,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toc: right
 :toc-title: TUTORIAL - SIMPLE DEPENDENCY
 :toclevels: 3
-;native: Motoko
+:native: Motoko
 :lang: Rust
 :platform: Internet Computer platform
 :IC: Internet Computer
@@ -83,8 +83,7 @@ For example, add a new `+rust_deps+` key with settings like these:
 ----
 . Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} program.
 +
-The `+dependencies+` setting enables you to import function for the specifies program, in this case the `+multiply_deps
-+` program written in {native}.
+The `+dependencies+` setting enables you to import function from the specified program, in this case the `+multiply_deps+` program written in {native}.
 . Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
@@ -173,10 +172,10 @@ cd rust_deps
 +
 [source,bash]
 ----
-include::example$mul-deps/main.rs
+include::example$mul-deps/deps-main.rs[]
 ----
 . Save your changes and close the `+main.rs+` file to continue.
- Create a `+Cargo.toml+` in this directory and open it in a text editor.
+. Create a `+Cargo.toml+` in this directory and open it in a text editor.
 . Configure settings for your project.
 +
 For example, you should have a `+Cargo.toml+` file with settings similar to the following for this tutorial:
