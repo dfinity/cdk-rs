@@ -1,37 +1,62 @@
 use ic_cdk::storage;
-use ic_cdk_macros::{init, query, update};
+use ic_cdk_macros::*;
 use ic_types::Principal;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+
+type Users = BTreeSet<Principal>;
+type Store = BTreeMap<String, Vec<u8>>;
 
 #[init]
 fn init() {
-    // Because Principal does not implement default, we use Option<Principal>.
-    let owner = storage::get_mut::<Option<Principal>>();
-    *owner = Some(ic_cdk::api::caller());
+    let users = storage::get_mut::<Users>();
+    users.insert(ic_cdk::api::caller());
 }
 
-fn check_owner() -> Result<(), String> {
-    let owner = storage::get::<Option<Principal>>();
-    if let Some(o) = owner {
-        if o != &ic_cdk::api::caller() {
-            return Err("Store can only be set by the owner of the asset canister.".to_string());
-        }
+fn is_user() -> Result<(), String> {
+    let users = storage::get::<Users>();
+
+    if users.contains(&ic_cdk::api::caller()) {
+        Ok(())
+    } else {
+        Err("Store can only be set by the owner of the asset canister.".to_string())
     }
-    Ok(())
 }
 
-#[update(guard = "check_owner")]
+#[update(guard = "is_user")]
 fn store(path: String, contents: Vec<u8>) {
-    let store = storage::get_mut::<BTreeMap<String, Vec<u8>>>();
+    let store = storage::get_mut::<Store>();
     store.insert(path, contents);
 }
 
 #[query]
 fn retrieve(path: String) -> &'static Vec<u8> {
-    let store = storage::get::<BTreeMap<String, Vec<u8>>>();
+    let store = storage::get::<Store>();
 
     match store.get(&path) {
         Some(content) => content,
         None => panic!("Path {} not found.", path),
+    }
+}
+
+#[update(guard = "is_user")]
+fn add_user(principal: Principal) {
+    let users = storage::get_mut::<Users>();
+    users.insert(principal);
+}
+
+#[pre_upgrade]
+fn pre_upgrade() {
+    let mut vec = Vec::new();
+    for p in storage::get_mut::<Users>().iter() {
+        vec.push(p);
+    }
+    storage::stable_save((vec,)).unwrap();
+}
+
+#[post_upgrade]
+fn post_upgrade() {
+    let (old_users,): (Vec<Principal>,) = storage::stable_restore().unwrap();
+    for u in old_users {
+        storage::get_mut::<Users>().insert(u);
     }
 }

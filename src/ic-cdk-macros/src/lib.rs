@@ -55,6 +55,16 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(export::ic_pre_upgrade, "ic_pre_upgrade", attr, item)
+}
+
+#[proc_macro_attribute]
+pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(export::ic_post_upgrade, "ic_post_upgrade", attr, item)
+}
+
+#[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }
