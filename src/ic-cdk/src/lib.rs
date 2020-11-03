@@ -13,6 +13,7 @@ pub use api::{caller, id, print, trap};
 static mut DONE: bool = false;
 
 pub mod export {
+    pub use candid;
     pub use ic_types::Principal;
 }
 
