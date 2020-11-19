@@ -119,7 +119,9 @@ pub fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-        ic0::call_cycles_add(payment as i64);
+        if payment > 0 {
+            ic0::call_cycles_add(payment as i64);
+        }
         ic0::call_perform()
     };
 
