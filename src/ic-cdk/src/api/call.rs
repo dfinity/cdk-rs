@@ -201,25 +201,16 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
     }
 }
 
-/// Economics.
-///
-/// # Warning
-/// This section will be moved and breaking changes significantly before Mercury.
-/// The APIs behind it will stay the same, so deployed canisters will keep working.
-pub mod funds {
-    use super::ic0;
+pub fn msg_cycles_available() -> i64 {
+    unsafe { ic0::msg_cycles_available() }
+}
 
-    pub fn available() -> i64 {
-        unsafe { ic0::msg_cycles_available() }
-    }
+pub fn msg_cycles_refunded() -> i64 {
+    unsafe { ic0::msg_cycles_refunded() }
+}
 
-    pub fn refunded() -> i64 {
-        unsafe { ic0::msg_cycles_refunded() }
-    }
-
-    pub fn accept(max_amount: i64) -> i64 {
-        unsafe { ic0::msg_cycles_accept(max_amount) }
-    }
+pub fn msg_cycles_accept(max_amount: i64) -> i64 {
+    unsafe { ic0::msg_cycles_accept(max_amount) }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
