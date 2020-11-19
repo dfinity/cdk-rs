@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "canisters": {
+    "identity": {
+      "type": "custom",
+      "candid": "src/identity_rs/identity.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/identity_rs.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package identity_rs --release"
+    }
+  }
+}
