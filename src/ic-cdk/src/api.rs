@@ -48,7 +48,6 @@ pub fn id() -> Principal {
 }
 
 /// Get the amount of funds available in the canister.
-pub fn canister_balance(unit: call::funds::Unit) -> i64 {
-    let bytes = unit.to_bytes();
-    unsafe { ic0::canister_balance(bytes.as_ptr() as i32, bytes.len() as i32) }
+pub fn canister_balance() -> i64 {
+    unsafe { ic0::canister_cycle_balance() }
 }

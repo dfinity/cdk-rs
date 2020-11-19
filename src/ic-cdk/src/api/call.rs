@@ -119,12 +119,7 @@ pub fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-
-        if payment > 0 {
-            let bytes = vec![0u8];
-            ic0::call_funds_add(bytes.as_ptr() as i32, bytes.len() as i32, payment as i64);
-        }
-
+        ic0::call_cycles_add(payment as i64);
         ic0::call_perform()
     };
 
@@ -212,33 +207,16 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
 pub mod funds {
     use super::ic0;
 
-    pub enum Unit {
-        Cycle,
-        IcpToken,
+    pub fn available() -> i64 {
+        unsafe { ic0::msg_cycles_available() }
     }
 
-    impl Unit {
-        pub fn to_bytes(&self) -> Vec<u8> {
-            match self {
-                Unit::Cycle => vec![0],
-                Unit::IcpToken => vec![1],
-            }
-        }
+    pub fn refunded() -> i64 {
+        unsafe { ic0::msg_cycles_refunded() }
     }
 
-    pub fn available(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_available(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn refunded(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_refunded(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn accept(unit: Unit, amount: i64) {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_accept(bytes.as_ptr() as i32, bytes.len() as i32, amount) }
+    pub fn accept(max_amount: i64) -> i64 {
+        unsafe { ic0::msg_cycles_accept(max_amount) }
     }
 }
 
