@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
 description = "Canister Developer Kit for the Internet Computer."
