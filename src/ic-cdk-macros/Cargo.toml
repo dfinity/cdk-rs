@@ -18,7 +18,7 @@ proc-macro = true
 [dependencies]
 candid = { version = "0.6.8", features = ["cdk"] }
 ic-cdk = { path = "../ic-cdk", version = "0.2" }
-syn = { version = "1.0", features = ["fold", "full"] }
+syn = { version = "1.0.58", features = ["fold", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 serde_tokenstream = "0.1.0"
