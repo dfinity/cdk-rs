@@ -15,7 +15,7 @@ pub struct StableMemoryError();
 pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
     unsafe {
         match super::ic0::stable_grow(new_pages as i32) {
-            -1 => Err(()),
+            -1 => Err(StableMemoryError()),
             x => Ok(x as u32),
         }
     }
@@ -70,7 +70,7 @@ impl Default for StableWriter {
 
 impl StableWriter {
     /// Attempt to grow the memory by adding new pages.
-    pub fn grow(&mut self, added_pages: u32) -> Result<(), ()> {
+    pub fn grow(&mut self, added_pages: u32) -> Result<(), StableMemoryError> {
         let old_page_count = stable_grow(added_pages)?;
         self.capacity = old_page_count + added_pages;
         Ok(())
@@ -78,7 +78,7 @@ impl StableWriter {
 
     /// Write a byte slice to the buffer. The only condition where this will
     /// error out is if it cannot grow the memory.
-    pub fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+    pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
         if self.offset + buf.len() > ((self.capacity as usize) << 16) {
             self.grow((buf.len() >> 16) as u32 + 1)?;
         }
