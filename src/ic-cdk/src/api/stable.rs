@@ -4,13 +4,15 @@ pub fn stable_size() -> u32 {
     unsafe { super::ic0::stable_size() as u32 }
 }
 
+pub struct StableMemoryError();
+
 /// Attempt to grow the stable memory by `new_pages` (added pages).
 /// Returns an error if it wasn't possible. Otherwise, returns the previous
 /// size that was reserved.
 ///
 /// ## Notes
 /// Pages are 64KiB in WASM.
-pub fn stable_grow(new_pages: u32) -> Result<u32, ()> {
+pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
     unsafe {
         match super::ic0::stable_grow(new_pages as i32) {
             -1 => Err(()),
