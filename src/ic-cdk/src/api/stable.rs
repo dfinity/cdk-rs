@@ -115,7 +115,7 @@ impl Default for StableReader {
 }
 
 impl StableReader {
-    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, StableMemoryError> {
         stable_read(self.offset as u32, buf);
         self.offset += buf.len();
         Ok(buf.len())
