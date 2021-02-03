@@ -172,7 +172,7 @@ cd rust_deps
 +
 [source,bash]
 ----
-include::example$mul-deps/deps-main.rs[]
+include::example$mul-deps/main.rs[]
 ----
 . Save your changes and close the `+main.rs+` file to continue.
 . Create a `+Cargo.toml+` in this directory and open it in a text editor.
