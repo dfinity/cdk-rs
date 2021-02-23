@@ -58,9 +58,9 @@ For example, you can clone the repository to a local working directory using SSH
 +
 [source,bash]
 ----
-git clone git@github.com:dfinity/cdk_rs.git
+git clone git@github.com:dfinity/cdk-rs.git
 ----
-. List the contents of the `+cdk_rs/src+` directory by running the following command:
+. List the contents of the `+cdk-rs/src+` directory by running the following command:
 +
 [source,bash]
 ----
