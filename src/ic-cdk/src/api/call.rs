@@ -196,7 +196,7 @@ pub fn reject(message: &str) {
 /// An io::Writer for message replies.
 pub struct CallReplyWriter;
 
-impl std::io::Write for ReplyWriter {
+impl std::io::Write for CallReplyWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         unsafe {
             ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
