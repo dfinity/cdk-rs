@@ -1,5 +1,6 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
+use crate::export::candid::ser::write_args;
 use crate::export::Principal;
 use candid::de::ArgumentDecoder;
 use candid::ser::ArgumentEncoder;
@@ -192,11 +193,26 @@ pub fn reject(message: &str) {
     }
 }
 
+/// An io::Writer for message replies.
+pub struct CallReplyWriter;
+
+impl std::io::Write for CallReplyWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        unsafe {
+            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// Reply to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
-    let bytes = encode_args(reply).expect("Could not encode reply.");
+    write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
     unsafe {
-        ic0::msg_reply_data_append(bytes.as_ptr() as i32, bytes.len() as i32);
         ic0::msg_reply();
     }
 }
