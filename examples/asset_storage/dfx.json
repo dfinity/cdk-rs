@@ -4,8 +4,8 @@
     "asset_storage": {
       "type": "custom",
       "candid": "src/asset_storage_rs/asset_storage.did",
-      "wasm": "target/wasm32-unknown-unknown/debug/asset_storage_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package asset_storage_rs"
+      "wasm": "target/wasm32-unknown-unknown/release/asset_storage_rs-opt.wasm",
+      "build": "sh ../build.sh asset_storage asset_storage_rs"
     }
   }
 }
