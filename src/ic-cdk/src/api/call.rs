@@ -1,5 +1,5 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::{ic0, trap};
+use crate::api::{ic0, print, trap};
 use crate::export::candid::ser::write_args;
 use crate::export::Principal;
 use candid::de::ArgumentDecoder;
@@ -98,7 +98,7 @@ fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
 pub fn call_raw(
     id: Principal,
     method: &str,
-    args_raw: Vec<u8>,
+    args_raw: &Vec<u8>,
     payment: i64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
@@ -106,7 +106,13 @@ pub fn call_raw(
         result: None,
         waker: None,
     }));
-    let state_ptr = Rc::into_raw(state.clone());
+    print(format!(
+        "Initial strong_count of state {:?}",
+        Rc::strong_count(&state)
+    ));
+
+    let state_ptr = Rc::into_raw(state);
+
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
@@ -126,6 +132,8 @@ pub fn call_raw(
         ic0::call_perform()
     };
 
+    let state = unsafe { Rc::from_raw(state_ptr) };
+
     // 0 is a special error code meaning call_simple call succeeded.
     if err_code != 0 {
         let mut state = state.borrow_mut();
@@ -134,6 +142,10 @@ pub fn call_raw(
             "Couldn't send message".to_string(),
         )));
     }
+    print(format!(
+        "Ending strong_count of state {:?}",
+        Rc::strong_count(&state)
+    ));
     CallFuture { state }
 }
 
@@ -144,7 +156,7 @@ pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     args: T,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, args_raw, 0).await?;
+    let bytes = call_raw(id, method, &args_raw, 0).await?;
     decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
 }
 
@@ -155,7 +167,7 @@ pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a
     cycles: i64,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, args_raw, cycles).await?;
+    let bytes = call_raw(id, method, &args_raw, cycles).await?;
     decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
 }
 
