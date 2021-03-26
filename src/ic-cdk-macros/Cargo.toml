@@ -16,10 +16,14 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 proc-macro = true
 
 [dependencies]
-candid = { version = "0.6.17", features = ["cdk"] }
+candid = "0.6.19"
 ic-cdk = { path = "../ic-cdk", version = "0.2" }
 syn = { version = "1.0.58", features = ["fold", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 serde_tokenstream = "0.1.0"
 serde = "1.0.111"
+
+[features]
+default = ["redirect"]
+redirect = ["candid/cdk"]
