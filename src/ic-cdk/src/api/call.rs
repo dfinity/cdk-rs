@@ -41,6 +41,12 @@ impl From<i32> for RejectionCode {
     }
 }
 
+impl From<u32> for RejectionCode {
+    fn from(code: u32) -> Self {
+        RejectionCode::from(code as i32)
+    }
+}
+
 /// The result of a Call. Errors on the IC have two components; a Code and a message
 /// associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
@@ -99,7 +105,7 @@ pub fn call_raw(
     id: Principal,
     method: &str,
     args_raw: Vec<u8>,
-    payment: i64,
+    payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = Rc::new(RefCell::new(CallFutureState {
@@ -152,7 +158,7 @@ pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a
     id: Principal,
     method: &str,
     args: T,
-    cycles: i64,
+    cycles: u64,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let bytes = call_raw(id, method, args_raw, cycles).await?;
@@ -217,16 +223,16 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
     }
 }
 
-pub fn msg_cycles_available() -> i64 {
-    unsafe { ic0::msg_cycles_available() }
+pub fn msg_cycles_available() -> u64 {
+    unsafe { ic0::msg_cycles_available() as u64 }
 }
 
-pub fn msg_cycles_refunded() -> i64 {
-    unsafe { ic0::msg_cycles_refunded() }
+pub fn msg_cycles_refunded() -> u64 {
+    unsafe { ic0::msg_cycles_refunded() as u64 }
 }
 
-pub fn msg_cycles_accept(max_amount: i64) -> i64 {
-    unsafe { ic0::msg_cycles_accept(max_amount) }
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
