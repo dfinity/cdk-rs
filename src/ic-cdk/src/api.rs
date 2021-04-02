@@ -23,8 +23,8 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-pub fn time() -> i64 {
-    unsafe { ic0::time() }
+pub fn time() -> u64 {
+    unsafe { ic0::time() as u64 }
 }
 
 /// Returns the caller of the current call.
@@ -48,8 +48,8 @@ pub fn id() -> Principal {
 }
 
 /// Get the amount of funds available in the canister.
-pub fn canister_balance() -> i64 {
-    unsafe { ic0::canister_cycle_balance() }
+pub fn canister_balance() -> u64 {
+    unsafe { ic0::canister_cycle_balance() as u64 }
 }
 
 /// Sets the certified data of this canister.
