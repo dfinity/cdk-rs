@@ -1,0 +1,61 @@
+on:
+  push:
+    branches:
+      - next
+  pull_request:
+name: Publish Cargo docs
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+      - name: Build Docs
+        run: |
+          cargo doc --no-deps
+           # Add an index.html for the root of the netlify docs.
+          rustdoc README.md --output target/doc && mv target/doc/README.html target/doc/index.html
+
+      - if: github.ref == 'refs/heads/master'
+        name: Deploy to Netlify (master only)
+        uses: South-Paw/action-netlify-deploy@v1.0.4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          netlify-auth-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          netlify-site-id: ${{ secrets.NETLIFY_SITE_ID }}
+          build-dir: target/doc/
+          comment-on-commit: true
+
+      - if: github.ref != 'refs/heads/master'
+        name: Deploy to Netlify (PR only)
+        id: deploy_docs
+        uses: netlify/actions/cli@6c34c3fcafc69ac2e1d6dbf226560329c6dfc51b
+        with:
+          args: deploy --dir=target/doc/ --prod
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - if: github.ref != 'refs/heads/master'
+        name: Commenting on PR
+        uses: unsplash/comment-on-pr@v1.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          msg: |
+            Netlify deployed rust-cdk as draft
+
+            Link: ${{ steps.deploy_docs.outputs.NETLIFY_URL }}
