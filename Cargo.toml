@@ -4,3 +4,8 @@ members = [
     "src/ic-cdk-macros",
     "src/ic-cdk-optimizer",
 ]
+
+[patch.crates-io.candid]
+git = "https://github.com/dfinity/candid.git"
+branch = "binread"
+
