@@ -2,9 +2,6 @@
 :experimental:
 // Define unicode for Apple Command key.
 :commandkey: &#8984;
-:toc:
-:toc: right
-:toc-title: QUICK START
 :toclevels: 3
 :proglang: Rust
 :platform: Internet Computer platform
@@ -64,16 +61,22 @@ git clone git@github.com:dfinity/cdk-rs.git
 +
 [source,bash]
 ----
-ls -l cdk_rs/src
+ls -l cdk-rs/src
 ----
 +
-. Verify you have the following packages available to used:
+Verify you have the following packages available to used:
 +
 ....
 ic-cdk
 ic-cdk-macros
 ic-cdk-optimizer
 ....
+. Verify that you have Rust installed by running the following command:
++
+[source,bash]
+----
+rustc --version
+----
 
 [[create-a-new-project]]
 == Create a new project
@@ -162,13 +165,15 @@ include::example$rust-dfx.json[]
 ....
 . Save your changes and close the file to continue.
 
-=== Edit Cargo settings
+=== Edit Cargo settings for the project
 
-To modify the `+Cargo.toml+` configuration file:
+To create a `+Cargo.toml+` configuration file for a project:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+Cargo.toml+` if you created the project using `+dfx+` or open the default `+Cargo.toml+` file if you created the project using Cargo.
-. Use the [workspace] key to specify the source file directories for your program.
+. Create a new file named `+Cargo.toml+` if you created the project using `+dfx+`.
++
+If you created the project using Cargo, open the default `+Cargo.toml+` file.
+. Use the `+[workspace]+` key to specify the source file directories for your program.
 +
 For example:
 +
@@ -180,6 +185,9 @@ members = [
 ]
 ----
 . Save your changes and close the file to continue.
+
+=== Add Cargo settings for the main program
+
 . Change to the source code directory for your program.
 +
 For example:
@@ -214,8 +222,8 @@ path = "main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.0" }
-ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.0" }
+ic-cdk = { path = "../../../src/ic-cdk", version = "0.2.4" }
+ic-cdk-macros = { path = "../../../src/ic-cdk-macros", version = "0.2.4" }
 ----
 +
 NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
@@ -256,7 +264,7 @@ Candid files provide a language-independent description of  a canister's interfa
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
-To see details about the Candid interface description language syntax, see the link:../candid-spec/IDL{outfilesuffix}[Candid Specification] or the https://docs.rs/candid/[Candid crate documentation].
+To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
 To add a Candid file for this tutorial:
 
@@ -350,6 +358,33 @@ Installing canisters...
 Installing code for canister rust_hello, with canister_id 75hes-oqbaa-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-q
 Deployed canisters.
 ....
+
+== Optimize and test the program
+
+At this point, you have a program compiled to WebAssembly that has not been optimized for deployment on the {IC}. 
+
+To optimize and test the resulting canister:
+
+. Install the ic-cdk-optimizer crate by running the following command:
++
+[source,bash]
+----
+cargo install ic-cdk-optimizer
+----
++
+This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your program can be uploaded as a canister.
+. Create a release directory within the `+src/rust_hello+` directory by running the following command: 
++
+[source,bash]
+----
+mkdir -p target/wasm32-unknown-unknown/release/
+----
+. Optimize the codewithin the `+src/rust_hello+` directory by running the following command:
++
+[source,bash]
+----
+ic-cdk-optimizer target/wasm32-unknown-unknown/debug/rust_hello.wasm -o target/wasm32-unknown-unknown/release/rust_hello-opt.wasm
+----
 . Call the `+print+` function in the program by running the following command:
 +
 [source,bash]
