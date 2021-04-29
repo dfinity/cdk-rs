@@ -2,7 +2,9 @@
 setup() {
   cd examples/counter
   # Make sure the directory is clean.
-  dfx start --clean --background
+  dfx start --clean --background --host "127.0.0.1:0"
+  local webserver_port=$(cat .dfx/webserver-port)
+  cat <<<$(jq .networks.local.bind=\"127.0.0.1:${webserver_port}\" dfx.json) >dfx.json
 }
 
 # executed after each test

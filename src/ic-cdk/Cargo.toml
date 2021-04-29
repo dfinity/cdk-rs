@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.1.1"
+version = "0.2.4"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
 description = "Canister Developer Kit for the Internet Computer."
@@ -13,11 +13,12 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-candid = { version = "0.6.8", features = ["cdk"] }
+candid = "0.6.19"
 cfg-if = "0.1.10"
 ic-types = "0.1.1"
 serde = "1.0.110"
-wee_alloc = { version = "0.4.5" }
 
 [features]
+default = ["redirect"]
+redirect = ["candid/cdk"]
 experimental = []

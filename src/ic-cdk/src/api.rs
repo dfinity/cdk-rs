@@ -23,8 +23,8 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-pub fn time() -> i64 {
-    unsafe { ic0::time() }
+pub fn time() -> u64 {
+    unsafe { ic0::time() as u64 }
 }
 
 /// Returns the caller of the current call.
@@ -48,7 +48,45 @@ pub fn id() -> Principal {
 }
 
 /// Get the amount of funds available in the canister.
-pub fn canister_balance(unit: call::funds::Unit) -> i64 {
-    let bytes = unit.to_bytes();
-    unsafe { ic0::canister_balance(bytes.as_ptr() as i32, bytes.len() as i32) }
+pub fn canister_balance() -> u64 {
+    unsafe { ic0::canister_cycle_balance() as u64 }
+}
+
+/// Sets the certified data of this canister.
+///
+/// Canisters can store up to 32 bytes of data that is certified by
+/// the system on a regular basis.  One can call [data_certificate]
+/// function from a query call to get a certificate authenticating the
+/// value set by calling this function.
+///
+/// This function can only be called from the following contexts:
+///  * "canister_init", "canister_pre_upgrade" and "canister_post_upgrade"
+///    hooks.
+///  * "canister_update" calls.
+///  * reply or reject callbacks.
+///
+/// # Panics
+///
+/// * This function traps if data.len() > 32.
+/// * This function traps if it's called from an illegal context
+///   (e.g., from a query call).
+pub fn set_certified_data(data: &[u8]) {
+    unsafe { ic0::certified_data_set(data.as_ptr() as i32, data.len() as i32) }
+}
+
+/// When called from a query call, returns the data certificate authenticating
+/// certified_data set by this canister.
+///
+/// Returns None if called not from a query call.
+pub fn data_certificate() -> Option<Vec<u8>> {
+    if unsafe { ic0::data_certificate_present() } == 0 {
+        return None;
+    }
+
+    let n = unsafe { ic0::data_certificate_size() };
+    let mut buf = vec![0u8; n as usize];
+    unsafe {
+        ic0::data_certificate_copy(buf.as_mut_ptr() as i32, 0i32, n);
+    }
+    Some(buf)
 }

@@ -58,10 +58,10 @@ macro_rules! ic0_module {
 // This is a private module that can only be used internally in this file.
 // Copy-paste the spec section of the API here.
 ic0_module! {
-    ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry Lb
-    ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q Ry Lb
-    ic0.msg_caller_size : () -> (i32);                                          // I G U Q Lb
-    ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // I G U Q Lb
+    ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry
+    ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q Ry
+    ic0.msg_caller_size : () -> i32;                                            // I G U Q
+    ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // I G U Q
     ic0.msg_reject_code : () -> i32;                                            // Ry Rt
     ic0.msg_reject_msg_size : () -> i32;                                        // Rt
     ic0.msg_reject_msg_copy : (dst : i32, offset : i32, size : i32) -> ();      // Rt
@@ -70,44 +70,38 @@ ic0_module! {
     ic0.msg_reply : () -> ();                                                   // U Q Ry Rt
     ic0.msg_reject : (src : i32, size : i32) -> ();                             // U Q Ry Rt
 
-    ic0.msg_funds_available : ( unit_src : i32, unit_size : i32 ) -> i64;       // U Rt Ry Lb
-    ic0.msg_funds_refunded : ( unit_src : i32, unit_size : i32 ) -> i64;        // Rt Ry
-    ic0.msg_funds_accept :                                                      // U Rt Ry
-      ( unit_src : i32, unit_size : i32, amount : i64 ) -> ();
+    ic0.msg_cycles_available : () -> i64;                                       // U Rt Ry
+    ic0.msg_cycles_refunded : () -> i64;                                        // Rt Ry
+    ic0.msg_cycles_accept : ( max_amount : i64 ) -> ( amount : i64 );           // U Rt Ry
 
-    ic0.canister_self_size : () -> (i32);                                       // *
+    ic0.canister_self_size : () -> i32;                                         // *
     ic0.canister_self_copy : (dst : i32, offset : i32, size : i32) -> ();       // *
-    ic0.canister_balance : ( unit_src : i32, unit_size : i32 ) -> i64;           // *
-
-    ic0.ingress_rate_bucket_size : () -> i32;                                   // Ll
-    ic0.ingress_rate_bucket_copy : (dst : i32, offset : i32, size : i32) -> (); // Ll
-    ic0.return_ingress_bucket :
-      ( bucket_src : i32,
-        bucket_size : i32,
-        cost : i64
-      ) -> ();                                                                  // Lb
-    ic0.return_ingress_limit_per_second : (limit : i64) -> ();                  // Ll
+    ic0.canister_cycle_balance : () -> i64;                                     // *
+    ic0.canister_status : () -> i32;                                            // *
 
     ic0.call_new :                                                              // U Ry Rt
-      ( callee_src  : i32,
-        callee_size : i32,
-        name_src : i32,
-        name_size : i32,
-        reply_fun : i32,
-        reply_env : i32,
-        reject_fun : i32,
-        reject_env : i32
-      ) -> ();
-    ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt
+    ( callee_src  : i32,
+      callee_size : i32,
+      name_src : i32,
+      name_size : i32,
+      reply_fun : i32,
+      reply_env : i32,
+      reject_fun : i32,
+      reject_env : i32
+    ) -> ();
     ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt
-    ic0.call_funds_add :                                                        // U Ry Rt
-      (unit_src : i32, unit_size : i32,  amount : i64) -> ();
+    ic0.call_cycles_add : ( amount : i64 ) -> ();                               // U Ry Rt
     ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt
 
     ic0.stable_size : () -> (page_count : i32);                                 // *
     ic0.stable_grow : (new_pages : i32) -> (old_page_count : i32);              // *
     ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();             // *
     ic0.stable_read : (dst : i32, offset : i32, size : i32) -> ();              // *
+
+    ic0.certified_data_set : (src: i32, size: i32) -> ();                        // I G U Ry Rt
+    ic0.data_certificate_present : () -> i32;                                    // Q
+    ic0.data_certificate_size : () -> i32;                                       // Q
+    ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();        // Q
 
     ic0.time : () -> (timestamp : i64);                                         // *
 
