@@ -53,7 +53,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> AsHashTree for RbTree<K,
         if self.root.is_null() {
             Empty.reconstruct()
         } else {
-            unsafe { (*self.root).subtree_hash.clone() }
+            unsafe { (*self.root).subtree_hash }
         }
     }
     fn as_hash_tree(&self) -> HashTree<'_> {
@@ -78,6 +78,7 @@ pub struct Node<K, V> {
 }
 
 impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
+    #[allow(clippy::let_and_return)]
     fn new(key: K, value: V) -> *mut Self {
         let value_hash = value.root_hash();
         let data_hash = labeled_hash(key.as_ref(), &value_hash);
@@ -106,7 +107,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
         if (*n).left.is_null() {
             Empty
         } else {
-            Pruned((*(*n).left).subtree_hash.clone())
+            Pruned((*(*n).left).subtree_hash)
         }
     }
 
@@ -115,7 +116,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
         if (*n).right.is_null() {
             Empty
         } else {
-            Pruned((*(*n).right).subtree_hash.clone())
+            Pruned((*(*n).right).subtree_hash)
         }
     }
 
@@ -186,7 +187,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
         let h = Node::data_hash(n);
 
         match ((*n).left.is_null(), (*n).right.is_null()) {
-            (true, true) => h.clone(),
+            (true, true) => h,
             (false, true) => fork_hash(&(*(*n).left).subtree_hash, &h),
             (true, false) => fork_hash(&h, &(*(*n).right).subtree_hash),
             (false, false) => fork_hash(
@@ -432,7 +433,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
                     Pruned(Node::data_hash(n)),
                     go((*n).right, lo, hi),
                 ),
-                _ => Pruned((*n).subtree_hash.clone()),
+                _ => Pruned((*n).subtree_hash),
             }
         }
         unsafe { go(self.root, lo, hi) }
@@ -475,7 +476,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             if p.len() > x.len() {
                 return false;
             }
-            &x[0..p.len()] == &p[..]
+            &x[0..p.len()] == p
         }
         unsafe fn go<'a, K: 'static + AsRef<[u8]>, V>(
             n: *mut Node<K, V>,
@@ -487,7 +488,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             let node_key = (*n).key.as_ref();
             match node_key.cmp(prefix) {
                 Greater if is_prefix_of(prefix, node_key) => go((*n).right, prefix),
-                Greater => go((*n).left, prefix).or_else(|| Some(node_key)),
+                Greater => go((*n).left, prefix).or(Some(node_key)),
                 Less | Equal => go((*n).right, prefix),
             }
         }

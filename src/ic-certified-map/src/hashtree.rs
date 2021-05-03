@@ -36,7 +36,7 @@ pub fn fork_hash(l: &Hash, r: &Hash) -> Hash {
 
 pub fn leaf_hash(data: &[u8]) -> Hash {
     let mut h = domain_sep("ic-hashtree-leaf");
-    h.update(&data[..]);
+    h.update(data);
     h.finalize().into()
 }
 
@@ -57,7 +57,7 @@ impl HashTree<'_> {
                 labeled_hash(l, &thash)
             }
             Self::Leaf(data) => leaf_hash(data),
-            Self::Pruned(h) => h.clone(),
+            Self::Pruned(h) => *h,
         }
     }
 }
