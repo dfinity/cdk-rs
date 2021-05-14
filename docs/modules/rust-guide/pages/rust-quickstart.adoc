@@ -128,7 +128,7 @@ Creating a new project adds a default `+dfx.json+` configuration file to your pr
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
 You need to modify the default settings in both of these files to build Rust programs that run on the {IC} as canisters.
 
-== Delete the default program
+=== Delete the default program
 
 Creating a new project creates a default `+src+` directory with a template `+main.mo+`. We'll eventually replace this with a `+lib.rs+` file. 
 
@@ -234,6 +234,7 @@ For example, the configuration file looks like this after you remove the `+rust_
 ....
 include::example$rust-dfx.json[]
 ....
+
 . Save your changes and close the file to continue.
 
 == Modify the program file
