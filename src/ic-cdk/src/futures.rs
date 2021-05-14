@@ -22,11 +22,12 @@ pub fn block_on<F: 'static + Future<Output = ()>>(future: F) {
     let future_ptr = Box::into_raw(Box::new(future));
     let future_ptr_ptr: *mut *mut dyn Future<Output = ()> = Box::into_raw(Box::new(future_ptr));
     let mut pinned_future = unsafe { Pin::new_unchecked(&mut *future_ptr) };
-    if let Poll::Ready(_) = pinned_future
+    if pinned_future
         .as_mut()
         .poll(&mut Context::from_waker(&waker::waker(
             future_ptr_ptr as *const (),
         )))
+        .is_ready()
     {
         unsafe {
             let _ = Box::from_raw(future_ptr);
@@ -66,9 +67,10 @@ mod waker {
         let future_ptr: FuturePtr = *boxed_future_ptr_ptr;
         let boxed_future = Box::from_raw(future_ptr);
         let mut pinned_future = Pin::new_unchecked(&mut *future_ptr);
-        if let Poll::Pending = pinned_future
+        if pinned_future
             .as_mut()
             .poll(&mut Context::from_waker(&waker::waker(ptr)))
+            .is_pending()
         {
             Box::into_raw(boxed_future_ptr_ptr);
             Box::into_raw(boxed_future);

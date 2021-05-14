@@ -1,5 +1,6 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
+use crate::export::candid::ser::write_args;
 use crate::export::Principal;
 use candid::de::ArgumentDecoder;
 use candid::ser::ArgumentEncoder;
@@ -37,6 +38,12 @@ impl From<i32> for RejectionCode {
             5 => RejectionCode::CanisterError,
             _ => RejectionCode::Unknown,
         }
+    }
+}
+
+impl From<u32> for RejectionCode {
+    fn from(code: u32) -> Self {
+        RejectionCode::from(code as i32)
     }
 }
 
@@ -98,7 +105,7 @@ pub fn call_raw(
     id: Principal,
     method: &str,
     args_raw: Vec<u8>,
-    payment: i64,
+    payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = Rc::new(RefCell::new(CallFutureState {
@@ -119,12 +126,9 @@ pub fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-
         if payment > 0 {
-            let bytes = vec![0u8];
-            ic0::call_funds_add(bytes.as_ptr() as i32, bytes.len() as i32, payment as i64);
+            ic0::call_cycles_add(payment as i64);
         }
-
         ic0::call_perform()
     };
 
@@ -154,7 +158,7 @@ pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a
     id: Principal,
     method: &str,
     args: T,
-    cycles: i64,
+    cycles: u64,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let bytes = call_raw(id, method, args_raw, cycles).await?;
@@ -195,51 +199,40 @@ pub fn reject(message: &str) {
     }
 }
 
+/// An io::Writer for message replies.
+pub struct CallReplyWriter;
+
+impl std::io::Write for CallReplyWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        unsafe {
+            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// Reply to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
-    let bytes = encode_args(reply).expect("Could not encode reply.");
+    write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
     unsafe {
-        ic0::msg_reply_data_append(bytes.as_ptr() as i32, bytes.len() as i32);
         ic0::msg_reply();
     }
 }
 
-/// Economics.
-///
-/// # Warning
-/// This section will be moved and breaking changes significantly before Mercury.
-/// The APIs behind it will stay the same, so deployed canisters will keep working.
-pub mod funds {
-    use super::ic0;
+pub fn msg_cycles_available() -> u64 {
+    unsafe { ic0::msg_cycles_available() as u64 }
+}
 
-    pub enum Unit {
-        Cycle,
-        IcpToken,
-    }
+pub fn msg_cycles_refunded() -> u64 {
+    unsafe { ic0::msg_cycles_refunded() as u64 }
+}
 
-    impl Unit {
-        pub fn to_bytes(&self) -> Vec<u8> {
-            match self {
-                Unit::Cycle => vec![0],
-                Unit::IcpToken => vec![1],
-            }
-        }
-    }
-
-    pub fn available(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_available(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn refunded(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_refunded(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn accept(unit: Unit, amount: i64) {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_accept(bytes.as_ptr() as i32, bytes.len() as i32, amount) }
-    }
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {

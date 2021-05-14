@@ -2,8 +2,8 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
+use std::fmt::Formatter;
 use std::sync::atomic::{AtomicBool, Ordering};
-use syn::export::Formatter;
 use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
