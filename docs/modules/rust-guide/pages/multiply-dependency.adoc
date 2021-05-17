@@ -1,0 +1,302 @@
+= Basic dependency
+ifdef::env-github,env-browser[:outfilesuffix:.adoc]
+:toc:
+:toc: right
+:toc-title: TUTORIAL - SIMPLE DEPENDENCY
+:toclevels: 3
+:native: Motoko
+:lang: Rust
+:platform: Internet Computer platform
+:IC: Internet Computer
+:company-id: DFINITY
+:sdk-short-name: DFINITY Canister SDK
+:sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+
+One common approach to application design is to calculate or store data in one program that you can then use in another program. 
+This ability to share and use functions defined in different application canisters, even if the underlying programs are written in different languages, is an important strategy for building applications to run the {IC}.
+This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
+
+For this tutorial, both programs are in the same project. 
+
+* The {native} program creates an actor with a `+cell+` variable to contain the current value that results from an operation.
+* The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
+* The `+lang+` program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+
+== Before you begin
+
+Before starting the tutorial, verify the following:
+
+* You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
+
+* You have downloaded and installed the {sdk-short-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
+
+* You have downloaded the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/cdk-rs[Rust CDK] repository.
+
+* You have stopped any {IC} network processes running on the local
+computer.
+
+This tutorial takes approximately 20 minutes to complete.
+
+== Create a new project
+
+To create a new project directory for this tutorial:
+
+[arabic]
+. Open a terminal shell on your local computer, if you don’t already have one open.
+. Change to the folder you are using for your {IC} sample projects.
+. Create a new project by running the following command:
++
+[source,bash]
+----
+dfx new multiply_deps
+----
+. Change to your project directory by running the following command:
++
+[source,bash]
+----
+cd multiply_deps
+----
+
+== Modify the default configuration
+
+Because this sample project is going to consist of two programs-the {native} program and the {lang} program—you need to modify the default `+dfx.json+` configuration file include information for a {lang} program.
+To build the {lang} program using the command you specify in the `+dfx.json+` configuration file, you also need to add a `+Cargo.toml+` file to the project directory.
+
+=== Edit canister settings
+
+To modify the default `+dfx.json+` configuration file to include the Rust program:
+
+. Open the `+dfx.json+` configuration file in a text editor.
+. Insert a new section after the `+canisters.multiply_deps+` settings with settings for building a {lang} program using the `+cargo build+` command.
++
+For example, add a new `+rust_deps+` key with settings like these:
++
+[source,json]
+----
+"rust_deps": {
+  "build": "cargo build --target wasm32-unknown-unknown --package  rust_deps --release",
+  "candid": "src/rust_deps/deps.did",
+  "wasm": "target/wasm32-unknown-unknown/release/rust_deps.wasm",
+  "type": "custom"
+  }
+----
+. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} program.
++
+The `+dependencies+` setting enables you to import function from the specified program, in this case the `+multiply_deps+` program written in {native}.
+. Remove all of the `+multiply_deps_assets+` configuration settings from the file.
++
+The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
++
+Optionally, you can also remove the `+dfx+` version and remove or modify the `+network+` settings.
++
+For example, your configuration file might look like this after you modify the settings:
++
+....
+include::example$mul-deps/mul-deps-dfx.json[]
+....
+. Save your change and close the `+dfx.json+` file to continue.
+
+=== Add Cargo.toml settings to the project
+
+To add `+Cargo.toml+` settings for the project:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file named `+Cargo.toml+`.
+. Use the [workspace] key to specify the source file directories for your program.
++
+For example:
++
+[source,toml]
+----
+[workspace]
+members = [
+    "src/rust_deps",
+]
+----
+. Save your changes and close the `+Cargo.toml+` file to continue.
+
+== Modify the default program
+
+The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with the program that implements the `+mul+` and `+read+` functions.
+
+To modify the default template source code:
+
+. Check that you are still in the root directory for your project, if needed.
+. Open the `+src/multiply_deps/main.mo+` file in a text editor and delete the existing content.
+. Copy and paste the following sample code into the `+main.mo+` file:
++
+[source,motoko]
+----
+include::example$mul-deps/mul-deps.mo[]
+----
+. Save your changes and close the file to continue.
+
+== Add the {lang} program
+
+Now that we have the {native} program that the {lang} program depends upon, let's add the {lang} program to the project.
+
+This step involves updating the source code directory and adding some required files.
+For example, before you build this projects to be deployed on the {IC}, you need to do the following:
+
+* Add the `+main.rs+` that contain the {lang} program.
+* Add a second `+Cargo.toml+` file for building the program.
+* Add a Candid interface description file to describe the type signatures for the program.
+
+=== Add a directory for the {lang} program
+
+. Change to the src source code directory for the project by running the following command:
++
+[source,bash]
+----
+cd src
+----
++
+If you want to keep your workspace tidy, you might want to remove the `+multiply_deps_assets+` directory for front-end assets by running the `+rm -rf multiply_deps_assets+` command.
+. Add a directory for the {lang} program by running the following command:
++
+[source,bash]
+----
+mkdir rust_deps
+----
+. Change to the source code directory for your program.
++
+For example:
++
+[source,bash]
+----
+cd rust_deps
+----
+. Add a new `+main.rs+` {lang} program file to import the {native} program functions.
+. Open the `+main.rs+` file in a text editor, then copy and paste the following sample code into the `+main.rs+` file:
++
+[source,bash]
+----
+include::example$mul-deps/main.rs[]
+----
+. Save your changes and close the `+main.rs+` file to continue.
+. Create a `+Cargo.toml+` in this directory and open it in a text editor.
+. Configure settings for your project.
++
+For example, you should have a `+Cargo.toml+` file with settings similar to the following for this tutorial:
++
+[source,toml]
+----
+include::example$mul-deps/Cargo.toml[]
+----
++
+NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
+
+. Save your changes and close the `+Cargo.toml+` file to continue.
+. Create a new file named `+deps.did+`.
+. Open the file in a text editor, then copy and paste the following `+service+` definition for the `+read+` function:
++
+[source,did]
+----
+service : {
+  "read": () -> (nat) query;
+}
+----
+. Save your changes and close the `+deps.did+` file to continue.
+. List the contents of the `+src/rust_deps+` directory to verify you have the following files:
++
+....
+Cargo.toml	deps.did	main.rs
+....
+
+== Start the network and deploy locally
+
+Before you can build the project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+
+To start the network locally:
+
+[arabic]
+. Open a new terminal window or tab on your local computer and navigate to your project directory.
++
+For example, you can do either of the following if running Terminal on macOS:
++
+--
+* Click *Shell*, then select *New Tab* to open a new terminal in your current working directory.
+* Click *Shell* and select *New Window*, then run `+cd ~/ic-projects/multiply_deps+` in the new terminal if your `+multiply_deps+` project is in the `+ic-projects+` working folder.
+--
++
+You should now have two terminals open with your project directory as your current working directory.
+. Start the {IC} network on your local computer by running the following command:
++
+[source,bash]
+----
+dfx start
+----
++
+After you start the local network, the terminal displays messages about network operations.
+. Leave the terminal that displays network operations open.
+. Switch to your second terminal window or tab.
+. Register, build, and deploy the canister for the project by running the following command:
++
+[source,bash]
+----
+dfx deploy
+----
+
+== Invoke functions on the deployed canister
+
+After successfully deploying the canister, you can test the canister by invoking the functions it provides.
+For this tutorial:
+
+* Invoke the `+mul+` function to multiply the value of the `+cell+` variable by three each time it is called.
+* Invoke the `+read+` function to return the current value of the `+cell+` variable.
+
+To test invoking methods on the deployed canister:
+
+[arabic]
+. Run the following command to invoke the `+read+` function from the {native} program, which reads the current value of the `+cell+` variable on the deployed canister:
++
+[source,bash]
+----
+dfx canister call multiply_deps read
+----
++
+The command returns the current value of the `+cell+` variable as one:
++
+....
+(1)
+....
+. Run the following command to invoke the `+mul+` function to multiply the input argument by three:
++
+[source,bash]
+----
+dfx canister call multiply_deps mul '(3)'
+----
++
+The command returns the new value of the `+cell+` variable:
++
+....
+(9)
+....
+. Run the following command to invoke the `+read+` function using the `+rust_deps+` program that imports the `+multiply_deps+` canister:
++
+[source,bash]
+----
+dfx canister call rust_deps read
+----
++
+The command returns the current value of the `+cell+` variable:
++
+....
+(9)
+....
+
+== Stop the local network
+
+After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+
+To stop the local network:
+
+. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+
+. Stop the {IC} network by running the following command:
++
+[source,bash]
+----
+dfx stop
+----
