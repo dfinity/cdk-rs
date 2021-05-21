@@ -37,18 +37,18 @@ curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
-* You have cmake installed. For example, use Homebrew with the following command:
-
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
 +
 [source,bash]
 ----
 brew install cmake
 ----
-For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation]
++
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
 * You have stopped any {IC} network processes running on the local computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 //[[download-cdk]]
@@ -98,11 +98,8 @@ However, creating a new project with `+cargo new+` adds some default files to th
 * If you decide to use Cargo to create your project, you will need to manually add some files that the {cdk-long-name} requires.
 * If you decide to use {sdk-short-name} to create your project, you will need to manually add some files that Cargo requires.
 
-NOTE: Please make sure you have installed all of the prerequisites listed in the previous section. 
-
 To create a new project using the {sdk-short-name}:
 
-[arabic]
 . Open a terminal shell on your local computer, if you don’t already have one open.
 . Create a new project named `+rust_hello+` by running the following command:
 +
@@ -121,24 +118,33 @@ cd rust_hello
 
 == Modify the default configuration
 
-Creating a new project adds a default `+dfx.json+` configuration file to your project directory.
-This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in both of these files to build Rust programs that run on the {IC} as canisters.
+Creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
 
-=== Delete the default program
+=== Replace the default program
 
-Creating a new project creates a default `+src+` directory with a template `+main.mo+`. We'll eventually replace this with a `+lib.rs+` file. 
+Creating a new project creates a default `+src+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
 
-. Delete the `+main.mo+` file. 
+To replace the default program:
 
-. In the terminal, run the following command:
+. In the terminal, check that you are in the root directory for your project, if needed.
+
+. Delete the template `+main.mo+` file by running the following command:
++
+[source,bash]
+---- 
+rm src/rust_hello/main.mo
+----
+. Create a new cargo package using a library template by running the following command:
 +
 [source, bash]
 ----
 cargo init --lib
 ----
++
+This command creates a `+src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the project directory.
 
-=== Edit cargo settings
+=== Edit cargo settings in the project directory
 
 Modify the `+Cargo.toml+` configuration file:
 
@@ -166,7 +172,7 @@ ic-cdk = "0.2.4"
 ic-cdk-macros = "0.2.4"
 ----
 +
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependecy version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in this file to that version. 
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in this file to that version. 
 . Save and close the file.
 . Create a second `+Cargo.toml+` in the root directory of your project. 
 . Use the [workspace] key to specify the source file directories for your program.
@@ -183,6 +189,10 @@ members = [
 . Save your changes and close the file to continue.
 
 === Edit canister settings
+
+Creating a new project adds a default `+dfx.json+` configuration file to your project directory.
+This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
 
 To modify the `+dfx.json+` configuration file:
 
