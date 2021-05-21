@@ -49,7 +49,6 @@ curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 * You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
 * You have cmake installed. For example, use Homebrew with the following command:
-
 +
 [source,bash]
 ----
