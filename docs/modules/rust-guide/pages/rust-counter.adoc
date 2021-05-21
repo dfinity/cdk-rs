@@ -54,7 +54,7 @@ curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 ----
 brew install cmake
 ----
-For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation]
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
 * You have stopped any {IC} network processes running on the local computer.
 
