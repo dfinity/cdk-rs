@@ -9,7 +9,7 @@ path = "counter.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.0" }
-ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.0" }
+ic-cdk = { version = "0.2.4" }
+ic-cdk-macros = { version = "0.2.4" }
 ic-types = "0.1.1"
 lazy_static = "1.4.0"

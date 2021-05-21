@@ -23,7 +23,7 @@ This simple program has just one function that prints text to a terminal, but it
 [[before-you-begin]]
 == Before you begin
 
-Before you download and install the {cdk-long-name}, verify the following:
+Before you start your project, verify the following:
 
 * You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
 

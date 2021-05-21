@@ -31,18 +31,36 @@ Like the other sample programs, this tutorial demonstrates a simple, but realist
 * Deploy the canister on the local {IC} network.
 * Invoke the canister methods to increment then read the value of a counter.
 
+[[before-you-begin]]
 == Before you begin
 
-Before starting the tutorial, verify the following:
+Before you start your project, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
 
 * You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
 
-* You have downloaded and installed the {sdk-short-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
 
-* You have downloaded the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/cdk-rs[Rust CDK] repository.
+* You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
-* You have stopped any {IC} network processes running on the local
-computer.
+* You have cmake installed. For example, use Homebrew with the following command:
+
++
+[source,bash]
+----
+brew install cmake
+----
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation]
+
+* You have stopped any {IC} network processes running on the local computer.
+
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 This tutorial takes approximately 20 minutes to complete.
 
@@ -171,7 +189,7 @@ For example, you should have a `+Cargo.toml+` file with settings similar to the 
 include::example$counter-tutorial/counter_Cargo.toml[]
 ----
 +
-NOTE: Replace the path to the `+ic-cdk+` and `+ic-cdk-macros+` packages with the appropriate path for your local computer.
+NOTE: If you get an error telling you to specify a more recent version of the CDK, manually change the version numbers to the latest version for `+ic-cdk+` and `+cd-cdk-macros+`.
 
 . Save your changes and close the `+Cargo.toml+` file to continue.
 . Create a new file named `+counter.did+`.
