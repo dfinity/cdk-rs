@@ -149,7 +149,7 @@ Modify the `+Cargo.toml+` configuration file:
 At a minimum, you need to configure the following sections with basic information about the package name, location of the main program to compile, and the location of the {cdk-short-name} libraries. This step will also install the {cdk-short-name} when the app is deployed:
 +
 --
-* `+[package]+`
+* `+[lib]+`
 * `+[dependencies]+`
 --
 +
