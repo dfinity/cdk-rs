@@ -87,7 +87,7 @@ You need to modify these default files and add some Rust-specific files to your 
 
 === Replace the default program
 
-Creating a new project creates a default `+src+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
 
 To replace the default program:
 
@@ -111,7 +111,7 @@ This command creates a `+src+` directory with a library (`+lib.rs+`) package and
 
 To modify `+Cargo.toml+` configuration file for the project:
 
-. Check that you are still in the source directory for your project, if needed.
+. Check that you are still in the root directory for your project, if needed.
 . Open the default `+Cargo.toml+` file you created by running the `+cargo init+` command in a text editor.
 . Delete the current content.
 . Use the `+[workspace]+` key to specify the source file directories for your program.
@@ -127,7 +127,7 @@ members = [
 ----
 . Save your changes and close the file to continue.
 
-=== Add Cargo settings for the main program
+=== Add Cargo settings for the Rust package
 
 To add a `+Cargo.toml+` configuration file for the main program:
 
@@ -148,7 +148,7 @@ At a minimum, you need to configure the following sections with basic informatio
 +
 --
 * `+[package]+`
-* `+lib+`
+* `+[lib]+`
 * `+[dependencies]+`
 --
 . Delete the existing `+[dependencies]+` section and replace it with the following:
