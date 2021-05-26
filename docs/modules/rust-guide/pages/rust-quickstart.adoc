@@ -85,90 +85,16 @@ cd rust_hello
 Creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
 You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
 
-=== Replace the default program
+To modify the default configuration for a {lang} project, you'll need to complete the following steps:
 
-Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+* <<Edit the default canister settings>>
+* <<Add a Cargo.toml file to the project>>
+* <<Add Rust files to the source directory>>
+* <<Replace the default program>>
 
-To replace the default program:
+=== Edit the default canister settings
 
-. In the terminal, check that you are in the root directory for your project, if needed.
-. Delete the template `+main.mo+` file by running the following command:
-+
-[source,bash]
----- 
-rm src/rust_hello/main.mo
-----
-. Create a new cargo package using a library template by running the following command:
-+
-[source, bash]
-----
-cargo init --lib
-----
-+
-This command creates a `+src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the project directory.
-
-=== Edit Cargo settings for the project
-
-To modify `+Cargo.toml+` configuration file for the project:
-
-. Check that you are still in the root directory for your project, if needed.
-. Open the default `+Cargo.toml+` file you created by running the `+cargo init+` command in a text editor.
-. Delete the current content.
-. Use the `+[workspace]+` key to specify the source file directories for your program.
-+
-For example:
-+
-[source,toml]
-----
-[workspace]
-members = [
-    "src/rust_hello",
-]
-----
-. Save your changes and close the file to continue.
-
-=== Add Cargo settings for the Rust package
-
-To add a `+Cargo.toml+` configuration file for the main program:
-
-. Check that you are still in the root directory for your project, if needed.
-. Create a new Cargo package using a library template by running the following command:
-+
-[source, bash]
-----
-cargo init --lib src/rust_hello
-----
-+
-This command creates a `+src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_hello+` directory.
-. Open the `+src/rust_hello/Cargo.toml+` file in a text editor.
-+
-You use this file to configure the details used to build the Rust package.
-+
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
-+
---
-* `+[package]+`
-* `+[lib]+`
-* `+[dependencies]+`
---
-. Delete the existing `+[dependencies]+` section and replace it with the following:
-+
-[source,toml]
-----
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.2.4"
-ic-cdk-macros = "0.2.4"
-----
-+
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in this file to that version. 
-. Save your changes and close the file to continue.
-
-=== Edit canister settings
-
-Your project directory includes a default `+dfx.json+` configuration file.
+One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
 You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
 
@@ -213,21 +139,93 @@ For example:
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
-Optionally, you can also remove the `+defaults+`, `+dfx+`, and `+network+` keys if you are deploying this tutorial program locally using the default local host and port number.
+You can also remove the `+defaults+` and `+dfx+` keys for this tutorial.
 +
-For example, the configuration file looks like this after you remove the `+rust_hello_assets+` section:
+For example, the configuration file looks like this after you remove the `unused sections:
 +
 ....
-include::example$rust-dfx.json[]
+include::example$hello-dfx.json[]
 ....
 
 . Save your changes and close the file to continue.
 
-== Modify the program file
+=== Add a Cargo.toml file to the project
 
-To replace the default template source code:
+Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
+Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
+
+To add a `+Cargo.toml+` configuration file for the project:
 
 . Check that you are still in the root directory for your project, if needed.
+. Create a new file in the current directory named `+Cargo.toml+`.
+. Open the `+Cargo.toml+` in a text editor.
+. Use the `+[workspace]+` key to specify the source file directory for your program.
++
+For example:
++
+[source,toml]
+----
+[workspace]
+members = [
+    "src/rust_hello",
+]
+----
+. Save your changes and close the file to continue.
+
+=== Add Rust files to the source directory
+
+Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+
+To prepare the source directory with Rust files:
+
+. Check that you are in the root directory for your project, if needed.
+. Create a new cargo package using a library template by running the following command:
++
+[source, bash]
+----
+cargo init --lib src/rust_hello
+----
++
+This command creates a `+src/rust_hello/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_hello+` directory.
+. Open the `+src/rust_hello/Cargo.toml+` file in a text editor.
++
+You use this file to configure the details used to build the Rust package.
++
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
++
+--
+* `+[package]+`
+* `+[lib]+`
+* `+[dependencies]+`
+--
+. Delete the existing `+[dependencies]+` section and replace it with the following:
++
+[source,toml]
+----
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.2.4"
+ic-cdk-macros = "0.2.4"
+----
++
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_hello/Cargo.toml+` file to match the latest version. 
+. Save your changes and close the file to continue.
+
+=== Replace the default program
+
+Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+
+To replace the default program:
+
+. Check that you are still in the root directory for your project, if needed.
+. Delete the template `+src/rust_hello/main.mo+` file by running the following command:
++
+[source,bash]
+---- 
+rm src/rust_hello/main.mo
+----
 . Open the template `+src/rust_hello/src/lib.rs+` file in a text editor and delete the existing content.
 . Write a simple `+print+` function that uses the {cdk-short-name} `+query+` macro.
 +
@@ -305,31 +303,29 @@ dfx deploy
 The `+dfx deploy+` command output displays information about each of the operations it performs similar to the following excerpt:
 +
 ....
-Creating the "default" identity.
-  - migrating key from /Users/lisagunn/.dfinity/identity/creds.pem to /Users/lisagunn/.config/dfx/identity/default/identity.pem
-Created the "default" identity.
+Creating a wallet canister on the local network.
+The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
 Deploying all canisters.
 Creating canisters...
 Creating canister "rust_hello"...
-"rust_hello" canister created with canister id: "75hes-oqbaa-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-q"
+"rust_hello" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
 Building canisters...
-Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello'
+Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello --release'
     Updating crates.io index
-  Downloaded generic-array v0.14.4
-  ...
-  Downloaded 36 crates (1.7 MB) in 2.32s
-   Compiling proc-macro2 v1.0.21
+   Compiling unicode-xid v0.2.2
    ...
-   Compiling candid v0.6.4
-   Compiling ic_cdk v0.1.0 (/Users/pubs/cdk-rs/src/ic_cdk)
-   Compiling ic_cdk_macros v0.1.0 (/Users/pubs/cdk-rs/src/ic_cdk_macros)
-   Compiling rust_hello v0.1.0 (/Users/pubs/rust_hello/src/rust_hello)
-    Finished dev [unoptimized + debuginfo] target(s) in 2m 44s
+Building canisters...
+Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello --release'
+   Compiling rust_hello v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_hello/src/rust_hello)
+    Finished release [optimized] target(s) in 1.26s
 Installing canisters...
-Installing code for canister rust_hello, with canister_id 75hes-oqbaa-aaaaa-aaaaa-aaaaa-aaaaa-aaaaa-q
+Creating UI canister on the local network.
+The UI canister on the "local" network is "rkp4c-7iaaa-aaaaa-aaaca-cai"
+Installing code for canister rust_hello, with canister_id r7inp-6aaaa-aaaaa-aaabq-cai
 Deployed canisters.
 ....
 
+////
 == Optimize and test the program
 
 At this point, you have a program compiled to WebAssembly that has not been optimized for deployment on the {IC}. 
@@ -357,6 +353,13 @@ mkdir -p src/rust_hello/target/wasm32-unknown-unknown/release/
 ----
 ic-cdk-optimizer target/wasm32-unknown-unknown/release/rust_hello.wasm -o target/wasm32-unknown-unknown/release/rust_hello-opt.wasm
 ----
+////
+
+== Test the program
+
+To test the deployed program locally:
+
+. Check that you are still in root directory for your project directory, if needed.
 . Call the `+print+` function in the program by running the following command:
 +
 [source,bash]
@@ -368,7 +371,8 @@ dfx canister call rust_hello print
 For example:
 +
 ....
-[Canister rrkah-fqaaa-aaaaa-aaaaq-cai] Hello World from DFINITY!
+[Canister ryjl3-tyaaa-aaaaa-aaaba-cai] Hello World from DFINITY!
+()
 ....
 
 == Stop the local network
