@@ -1,7 +1,5 @@
 = Basic dependency
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
-:toc:
-:toc: right
 :toc-title: TUTORIAL - SIMPLE DEPENDENCY
 :toclevels: 3
 :native: Motoko
@@ -21,7 +19,7 @@ For this tutorial, both programs are in the same project.
 
 * The {native} program creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The `+lang+` program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
 
 == Before you begin
 
@@ -39,7 +37,7 @@ curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
-* You have cmake installed. For example, use Homebrew with the following command:
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
 
 +
 [source,bash]
@@ -58,8 +56,7 @@ To create a new project directory for this tutorial:
 
 [arabic]
 . Open a terminal shell on your local computer, if you don’t already have one open.
-. Change to the folder you are using for your {IC} sample projects.
-. Create a new project by running the following command:
+. Create a new project named `+multiply_deps+` by running the following command:
 +
 [source,bash]
 ----
@@ -74,7 +71,7 @@ cd multiply_deps
 
 == Modify the default configuration
 
-Because this sample project is going to consist of two programs-the {native} program and the {lang} program—you need to modify the default `+dfx.json+` configuration file include information for a {lang} program.
+Because this sample project is going to consist of two programs-the {native} program and the {lang} program—you need to modify the default `+dfx.json+` configuration file to include information for a {lang} program.
 To build the {lang} program using the command you specify in the `+dfx.json+` configuration file, you also need to add a `+Cargo.toml+` file to the project directory.
 
 === Edit canister settings
