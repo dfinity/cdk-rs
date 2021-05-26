@@ -253,7 +253,7 @@ To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the `+src/rust_hello/+` directory named `+rust_hello.did+`.
-. Open the `+src/rust_hello/src/rust_hello.did+`file in a text editor.
+. Open the `+src/rust_hello/src/rust_hello.did+` file in a text editor.
 . Copy and paste the following `+service+` definition for the `+print+` function:
 +
 [source,did]
