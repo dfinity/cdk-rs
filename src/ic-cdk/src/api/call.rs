@@ -57,7 +57,8 @@ mod rc {
     impl<O, T: Future<Output = O>> Future for WasmCell<T> {
         type Output = O;
 
-        fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
             unsafe { Pin::new_unchecked(&mut *self.0.borrow_mut()) }.poll(ctx)
         }
     }
@@ -108,7 +109,8 @@ mod rc {
     impl<O, T: Future<Output = O>> Future for WasmCell<T> {
         type Output = O;
 
-        fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
             unsafe { Pin::new_unchecked(&mut *self.0.lock().unwrap()) }.poll(ctx)
         }
     }
