@@ -288,9 +288,9 @@ Executing 'cargo build --target wasm32-unknown-unknown --package  rust_counter -
   Downloaded thiserror v1.0.25
   Downloaded libc v0.2.95
   ...
-     Compiling ic-cdk v0.2.4
-   Compiling ic-cdk-macros v0.2.4
-   Compiling rust_counter v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_counter/src/rust_counter)
+  Compiling ic-cdk v0.2.4
+  Compiling ic-cdk-macros v0.2.4
+  Compiling rust_counter v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_counter/src/rust_counter)
     Finished release [optimized] target(s) in 1m 10s
 Installing canisters...
 Creating UI canister on the local network.
