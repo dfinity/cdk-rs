@@ -85,7 +85,7 @@ cd rust_hello
 Creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
 You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
 
-To modify the default configuration for a {lang} project, you'll need to complete the following steps:
+To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
