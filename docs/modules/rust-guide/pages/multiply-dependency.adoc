@@ -1,7 +1,5 @@
 = Basic dependency
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
-:toc:
-:toc: right
 :toc-title: TUTORIAL - SIMPLE DEPENDENCY
 :toclevels: 3
 :native: Motoko
@@ -21,7 +19,7 @@ For this tutorial, both programs are in the same project.
 
 * The {native} program creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The `+lang+` program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
 
 == Before you begin
 
