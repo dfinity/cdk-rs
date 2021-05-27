@@ -6,12 +6,12 @@
       "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
       "type": "custom"
       }
-    },
-    "networks": {
-      "local": {
-        "bind": "127.0.0.1:8000",
-        "type": "ephemeral"
-      }
-    },
-    "version": 1
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
 }
