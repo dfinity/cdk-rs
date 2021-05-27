@@ -9,7 +9,7 @@ path = "main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../cdk-rs/src/ic-cdk", version = "0.1.1" }
-ic-cdk-macros = { path = "../../../cdk-rs/src/ic-cdk-macros", version = "0.1.1" }
+ic-cdk = { version="0.2.4" }
+ic-cdk-macros = { version="0.2.4" }
 ic-types = "0.1.1"
 

@@ -1,14 +1,128 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
+use crate::export::candid::ser::write_args;
 use crate::export::Principal;
 use candid::de::ArgumentDecoder;
 use candid::ser::ArgumentEncoder;
 use candid::{decode_args, encode_args};
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
+
+#[cfg(target_arch = "wasm32-unknown-unknown")]
+#[allow(dead_code)]
+mod rc {
+    use std::cell::{RefCell, RefMut};
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::rc::Rc;
+    use std::task::{Context, Poll};
+
+    pub(crate) type InnerCell<T> = RefCell<T>;
+
+    /// A reference counted cell. This is a specific implementation that is
+    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
+    /// the actual implementation of Mutex can break in async flows.
+    pub(crate) struct WasmCell<T>(Rc<InnerCell<T>>);
+
+    /// In order to be able to have an async method that returns the
+    /// result of a call to another canister, we need that result to
+    /// be Send + Sync, but Rc and RefCell are not.
+    ///
+    /// Since inside a canister there isn't actual concurrent access to
+    /// the referenced cell or the reference counted container, it is
+    /// safe to force these to be Send/Sync.
+    unsafe impl<T> Send for WasmCell<T> {}
+    unsafe impl<T> Sync for WasmCell<T> {}
+
+    impl<T> WasmCell<T> {
+        pub fn new(val: T) -> Self {
+            WasmCell(Rc::new(InnerCell::new(val)))
+        }
+        pub fn into_raw(self) -> *const InnerCell<T> {
+            Rc::into_raw(self.0)
+        }
+        #[allow(clippy::missing_safety_doc)]
+        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
+            Self(Rc::from_raw(ptr))
+        }
+        pub fn borrow_mut(&self) -> RefMut<'_, T> {
+            self.0.borrow_mut()
+        }
+        pub fn as_ptr(&self) -> *const InnerCell<T> {
+            self.0.as_ptr() as *const _
+        }
+    }
+
+    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
+        type Output = O;
+
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            unsafe { Pin::new_unchecked(&mut *self.0.borrow_mut()) }.poll(ctx)
+        }
+    }
+
+    impl<T> Clone for WasmCell<T> {
+        fn clone(&self) -> Self {
+            WasmCell(Rc::clone(&self.0))
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32-unknown-unknown"))]
+#[allow(dead_code)]
+mod rc {
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::{Arc, Mutex, MutexGuard};
+    use std::task::{Context, Poll};
+
+    pub(crate) type InnerCell<T> = Mutex<T>;
+
+    /// A reference counted cell. This is a specific implementation that is
+    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
+    /// the actual implementation of Mutex can break in async flows.
+    ///
+    /// The RefCell is for
+    pub(crate) struct WasmCell<T>(Arc<InnerCell<T>>);
+
+    impl<T> WasmCell<T> {
+        pub fn new(val: T) -> Self {
+            WasmCell(Arc::new(InnerCell::new(val)))
+        }
+        pub fn into_raw(self) -> *const InnerCell<T> {
+            Arc::into_raw(self.0)
+        }
+        #[allow(clippy::missing_safety_doc)]
+        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
+            Self(Arc::from_raw(ptr))
+        }
+        pub fn borrow_mut(&self) -> MutexGuard<'_, T> {
+            self.0.lock().unwrap()
+        }
+        pub fn as_ptr(&self) -> *const InnerCell<T> {
+            Arc::<_>::as_ptr(&self.0)
+        }
+    }
+
+    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
+        type Output = O;
+
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            unsafe { Pin::new_unchecked(&mut *self.0.lock().unwrap()) }.poll(ctx)
+        }
+    }
+
+    impl<T> Clone for WasmCell<T> {
+        fn clone(&self) -> Self {
+            WasmCell(Arc::clone(&self.0))
+        }
+    }
+}
+
+use rc::{InnerCell, WasmCell};
 
 /// Rejection code from calling another canister.
 /// These can be obtained either using `reject_code()` or `reject_result()`.
@@ -40,6 +154,12 @@ impl From<i32> for RejectionCode {
     }
 }
 
+impl From<u32> for RejectionCode {
+    fn from(code: u32) -> Self {
+        RejectionCode::from(code as i32)
+    }
+}
+
 /// The result of a Call. Errors on the IC have two components; a Code and a message
 /// associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
@@ -53,7 +173,7 @@ struct CallFutureState<R: serde::de::DeserializeOwned> {
 struct CallFuture<R: serde::de::DeserializeOwned> {
     // We basically use Rc instead of Arc (since we're single threaded), and use
     // RefCell instead of Mutex (because we cannot lock in WASM).
-    state: Rc<RefCell<CallFutureState<R>>>,
+    state: rc::WasmCell<CallFutureState<R>>,
 }
 
 impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
@@ -76,8 +196,8 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
 /// The callback from IC dereferences the future from a raw pointer, assigns the
 /// result and calls the waker. We cannot use a closure here because we pass raw
 /// pointers to the System and back.
-fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
-    let state = unsafe { Rc::from_raw(state_ptr) };
+fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    let state = unsafe { WasmCell::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
     {
         state.borrow_mut().result = Some(match reject_code() {
@@ -98,14 +218,14 @@ pub fn call_raw(
     id: Principal,
     method: &str,
     args_raw: Vec<u8>,
-    payment: i64,
+    payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
-    let state = Rc::new(RefCell::new(CallFutureState {
+    let state = WasmCell::new(CallFutureState {
         result: None,
         waker: None,
-    }));
-    let state_ptr = Rc::into_raw(state.clone());
+    });
+    let state_ptr = WasmCell::into_raw(state.clone());
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
@@ -119,12 +239,9 @@ pub fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-
         if payment > 0 {
-            let bytes = vec![0u8];
-            ic0::call_funds_add(bytes.as_ptr() as i32, bytes.len() as i32, payment as i64);
+            ic0::call_cycles_add(payment as i64);
         }
-
         ic0::call_perform()
     };
 
@@ -154,7 +271,7 @@ pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a
     id: Principal,
     method: &str,
     args: T,
-    cycles: i64,
+    cycles: u64,
 ) -> CallResult<R> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let bytes = call_raw(id, method, args_raw, cycles).await?;
@@ -195,51 +312,40 @@ pub fn reject(message: &str) {
     }
 }
 
+/// An io::Writer for message replies.
+pub struct CallReplyWriter;
+
+impl std::io::Write for CallReplyWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        unsafe {
+            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// Reply to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
-    let bytes = encode_args(reply).expect("Could not encode reply.");
+    write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
     unsafe {
-        ic0::msg_reply_data_append(bytes.as_ptr() as i32, bytes.len() as i32);
         ic0::msg_reply();
     }
 }
 
-/// Economics.
-///
-/// # Warning
-/// This section will be moved and breaking changes significantly before Mercury.
-/// The APIs behind it will stay the same, so deployed canisters will keep working.
-pub mod funds {
-    use super::ic0;
+pub fn msg_cycles_available() -> u64 {
+    unsafe { ic0::msg_cycles_available() as u64 }
+}
 
-    pub enum Unit {
-        Cycle,
-        IcpToken,
-    }
+pub fn msg_cycles_refunded() -> u64 {
+    unsafe { ic0::msg_cycles_refunded() as u64 }
+}
 
-    impl Unit {
-        pub fn to_bytes(&self) -> Vec<u8> {
-            match self {
-                Unit::Cycle => vec![0],
-                Unit::IcpToken => vec![1],
-            }
-        }
-    }
-
-    pub fn available(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_available(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn refunded(unit: Unit) -> i64 {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_refunded(bytes.as_ptr() as i32, bytes.len() as i32) }
-    }
-
-    pub fn accept(unit: Unit, amount: i64) {
-        let bytes = unit.to_bytes();
-        unsafe { ic0::msg_funds_accept(bytes.as_ptr() as i32, bytes.len() as i32, amount) }
-    }
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {

@@ -1,0 +1,31 @@
+{
+  "canisters": {
+    "rust_profile": {
+      "type": "custom",
+      "candid": "src/rust_profile/profile.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/rust_profile.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package rust_profile"
+    },
+    "profile_interoperation": {
+      "type": "custom",
+      "candid": "src/profile_interoperation/profile_inter.did",
+      "wasm": "target/wasm32-unknown-unknown/debug/profile_interoperation.wasm",
+      "build": "cargo build --target wasm32-unknown-unknown --package profile_interoperation",
+      "dependencies": [
+        "rust_profile"
+      ]
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
