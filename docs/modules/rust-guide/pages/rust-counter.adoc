@@ -69,7 +69,6 @@ To create a new project directory for this tutorial:
 
 [arabic]
 . Open a terminal shell on your local computer, if you don’t already have one open.
-. Change to the folder you are using for your {IC} sample projects.
 . Create a new project by running the following command:
 +
 [source,bash]
@@ -77,7 +76,6 @@ To create a new project directory for this tutorial:
 dfx new rust_counter
 ----
 +
-The command creates a new `+rust_counter+` project and Git repository for your project.
 . Change to your project directory by running the following command:
 +
 [source,bash]
@@ -87,7 +85,7 @@ cd rust_counter
 
 == Modify the default configuration
 
-In the link:rust-quickstart{outfilesuffix}[Rust Canister Developer Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
 You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
 
 === Replace the default program
