@@ -10,6 +10,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+:cdk-short-name: DFINITY Rust CDK
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
 In this tutorial, you are going to write a program that provides a few basic functions to increment a counter and illustrates the persistence of a value.
@@ -46,7 +47,7 @@ Before you start your project, verify the following:
 curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 ----
 
-* You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
+* You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
 
 * You have `+cmake+` installed. For example, use Homebrew with the following command:
 +
