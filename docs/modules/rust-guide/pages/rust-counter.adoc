@@ -333,7 +333,6 @@ dfx canister call rust_counter increment
 ----
 +
 This command increments the value of the variable—changing its state—but does not return the result.
-[arabic]
 . Rerun the command to call the `+get+` function to see the current value of the `+COUNTER+` variable:
 +
 [source,bash]
