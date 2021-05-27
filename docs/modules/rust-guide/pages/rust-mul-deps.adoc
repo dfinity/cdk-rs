@@ -25,16 +25,30 @@ For this tutorial, both programs are in the same project.
 
 == Before you begin
 
-Before starting the tutorial, verify the following:
+Before you start your project, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
 
 * You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
 
-* You have downloaded and installed the {sdk-short-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
 
-* You have downloaded the latest version of the {cdk-long-name} from the link:https://crates.io/[Rust community’s crate registry] or from the link:https://github.com/dfinity/cdk-rs[Rust CDK] repository.
+* You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
-* You have stopped any {IC} network processes running on the local
-computer.
+* You have cmake installed. For example, use Homebrew with the following command:
+
++
+[source,bash]
+----
+brew install cmake
+----
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation]
+
+* You have stopped any {IC} network processes running on the local computer.
 
 This tutorial takes approximately 20 minutes to complete.
 
@@ -83,8 +97,7 @@ For example, add a new `+rust_deps+` key with settings like these:
 ----
 . Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} program.
 +
-The `+dependencies+` setting enables you to import function for the specifies program, in this case the `+multiply_deps
-+` program written in {native}.
+The `+dependencies+` setting enables you to import function for the specifies program, in this case the `+multiply_deps+` program written in {native}.
 . Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
 The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
