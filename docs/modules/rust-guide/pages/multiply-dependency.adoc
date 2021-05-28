@@ -254,7 +254,7 @@ To start the network locally:
 +
 [source,bash]
 ----
-dfx start --background
+dfx start --clean --background
 ----
 +
 Depending on your platform and local security settings, you might see a warning displayed. 
