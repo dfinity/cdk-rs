@@ -5,11 +5,124 @@ use crate::export::Principal;
 use candid::de::ArgumentDecoder;
 use candid::ser::ArgumentEncoder;
 use candid::{decode_args, encode_args};
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
+
+#[cfg(target_arch = "wasm32-unknown-unknown")]
+#[allow(dead_code)]
+mod rc {
+    use std::cell::{RefCell, RefMut};
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::rc::Rc;
+    use std::task::{Context, Poll};
+
+    pub(crate) type InnerCell<T> = RefCell<T>;
+
+    /// A reference counted cell. This is a specific implementation that is
+    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
+    /// the actual implementation of Mutex can break in async flows.
+    pub(crate) struct WasmCell<T>(Rc<InnerCell<T>>);
+
+    /// In order to be able to have an async method that returns the
+    /// result of a call to another canister, we need that result to
+    /// be Send + Sync, but Rc and RefCell are not.
+    ///
+    /// Since inside a canister there isn't actual concurrent access to
+    /// the referenced cell or the reference counted container, it is
+    /// safe to force these to be Send/Sync.
+    unsafe impl<T> Send for WasmCell<T> {}
+    unsafe impl<T> Sync for WasmCell<T> {}
+
+    impl<T> WasmCell<T> {
+        pub fn new(val: T) -> Self {
+            WasmCell(Rc::new(InnerCell::new(val)))
+        }
+        pub fn into_raw(self) -> *const InnerCell<T> {
+            Rc::into_raw(self.0)
+        }
+        #[allow(clippy::missing_safety_doc)]
+        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
+            Self(Rc::from_raw(ptr))
+        }
+        pub fn borrow_mut(&self) -> RefMut<'_, T> {
+            self.0.borrow_mut()
+        }
+        pub fn as_ptr(&self) -> *const InnerCell<T> {
+            self.0.as_ptr() as *const _
+        }
+    }
+
+    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
+        type Output = O;
+
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            unsafe { Pin::new_unchecked(&mut *self.0.borrow_mut()) }.poll(ctx)
+        }
+    }
+
+    impl<T> Clone for WasmCell<T> {
+        fn clone(&self) -> Self {
+            WasmCell(Rc::clone(&self.0))
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32-unknown-unknown"))]
+#[allow(dead_code)]
+mod rc {
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::{Arc, Mutex, MutexGuard};
+    use std::task::{Context, Poll};
+
+    pub(crate) type InnerCell<T> = Mutex<T>;
+
+    /// A reference counted cell. This is a specific implementation that is
+    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
+    /// the actual implementation of Mutex can break in async flows.
+    ///
+    /// The RefCell is for
+    pub(crate) struct WasmCell<T>(Arc<InnerCell<T>>);
+
+    impl<T> WasmCell<T> {
+        pub fn new(val: T) -> Self {
+            WasmCell(Arc::new(InnerCell::new(val)))
+        }
+        pub fn into_raw(self) -> *const InnerCell<T> {
+            Arc::into_raw(self.0)
+        }
+        #[allow(clippy::missing_safety_doc)]
+        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
+            Self(Arc::from_raw(ptr))
+        }
+        pub fn borrow_mut(&self) -> MutexGuard<'_, T> {
+            self.0.lock().unwrap()
+        }
+        pub fn as_ptr(&self) -> *const InnerCell<T> {
+            Arc::<_>::as_ptr(&self.0)
+        }
+    }
+
+    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
+        type Output = O;
+
+        #[allow(unused_mut)]
+        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            unsafe { Pin::new_unchecked(&mut *self.0.lock().unwrap()) }.poll(ctx)
+        }
+    }
+
+    impl<T> Clone for WasmCell<T> {
+        fn clone(&self) -> Self {
+            WasmCell(Arc::clone(&self.0))
+        }
+    }
+}
+
+use rc::{InnerCell, WasmCell};
 
 /// Rejection code from calling another canister.
 /// These can be obtained either using `reject_code()` or `reject_result()`.
@@ -60,7 +173,7 @@ struct CallFutureState<R: serde::de::DeserializeOwned> {
 struct CallFuture<R: serde::de::DeserializeOwned> {
     // We basically use Rc instead of Arc (since we're single threaded), and use
     // RefCell instead of Mutex (because we cannot lock in WASM).
-    state: Rc<RefCell<CallFutureState<R>>>,
+    state: rc::WasmCell<CallFutureState<R>>,
 }
 
 impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
@@ -83,8 +196,8 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
 /// The callback from IC dereferences the future from a raw pointer, assigns the
 /// result and calls the waker. We cannot use a closure here because we pass raw
 /// pointers to the System and back.
-fn callback(state_ptr: *const RefCell<CallFutureState<Vec<u8>>>) {
-    let state = unsafe { Rc::from_raw(state_ptr) };
+fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    let state = unsafe { WasmCell::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
     {
         state.borrow_mut().result = Some(match reject_code() {
@@ -108,11 +221,11 @@ pub fn call_raw(
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
-    let state = Rc::new(RefCell::new(CallFutureState {
+    let state = WasmCell::new(CallFutureState {
         result: None,
         waker: None,
-    }));
-    let state_ptr = Rc::into_raw(state.clone());
+    });
+    let state_ptr = WasmCell::into_raw(state.clone());
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
