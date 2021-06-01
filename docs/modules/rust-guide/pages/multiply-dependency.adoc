@@ -8,6 +8,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :IC: Internet Computer
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
+:cdk-short-name: DFINITY Rust CDK
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
