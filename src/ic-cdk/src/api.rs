@@ -90,3 +90,34 @@ pub fn data_certificate() -> Option<Vec<u8>> {
     }
     Some(buf)
 }
+
+/// Returns the name of the method to be invoked if the message being
+/// inspected is accepted.  This function can only be called in the
+/// context of inspect_message method.
+///
+/// # Traps
+///
+/// This function traps if it's called not in the context of
+/// inspect_message method.
+pub fn method_name() -> String {
+    let n = unsafe { ic0::msg_method_name_size() };
+    let mut buf = String::with_capacity(n as usize);
+    unsafe {
+        ic0::msg_method_name_copy(buf.as_mut_ptr() as i32, 0i32, n);
+        buf.as_mut_vec().set_len(n as usize);
+    }
+    buf
+}
+
+/// Accepts the message being inspected.  This function can only be
+/// called in the context of inspect_message method.
+///
+/// # Traps
+///
+/// This function traps if
+///
+///   1. it's called more than once.
+///   2. it's called outside of inspect_message method.
+pub fn accept_message() {
+    unsafe { ic0::accept_message() }
+}
