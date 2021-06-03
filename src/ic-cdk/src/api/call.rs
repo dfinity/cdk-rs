@@ -160,9 +160,18 @@ impl From<u32> for RejectionCode {
     }
 }
 
+/// Describes an outcome of an unsuccessful inter-canister call.
+pub enum CallError {
+    /// The message was accepted by the system API call, but was later
+    /// rejected either by the system or by the receiver.
+    Rejected(RejectionCode, String),
+    /// The message was rejected by the system API call.
+    SendFailed,
+}
+
 /// The result of a Call. Errors on the IC have two components; a Code and a message
 /// associated with it.
-pub type CallResult<R> = Result<R, (RejectionCode, String)>;
+pub type CallResult<R> = Result<R, CallError>;
 
 /// Internal state for the Future when sending a call.
 struct CallFutureState<R: serde::de::DeserializeOwned> {
@@ -177,7 +186,7 @@ struct CallFuture<R: serde::de::DeserializeOwned> {
 }
 
 impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
-    type Output = Result<R, (RejectionCode, String)>;
+    type Output = Result<R, CallError>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_ref(self);
@@ -202,7 +211,7 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     {
         state.borrow_mut().result = Some(match reject_code() {
             RejectionCode::NoError => unsafe { Ok(arg_data_raw()) },
-            n => Err((n, reject_message())),
+            n => Err(CallError::Rejected(n, reject_message())),
         });
     }
     let w = state.borrow_mut().waker.take();
@@ -248,10 +257,7 @@ pub fn call_raw(
     // 0 is a special error code meaning call_simple call succeeded.
     if err_code != 0 {
         let mut state = state.borrow_mut();
-        state.result = Some(Err((
-            RejectionCode::from(err_code),
-            "Couldn't send message".to_string(),
-        )));
+        state.result = Some(Err(CallError::SendFailed));
     }
     CallFuture { state }
 }
