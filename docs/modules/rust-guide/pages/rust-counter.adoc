@@ -112,11 +112,12 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 +
 [source,json]
 ----
-"build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
-"candid": "src/rust_counter/counter.did",
-"wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
-"type": "custom"
-}
+  "rust_counter": {
+    "build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
+    "candid": "src/rust_counter/counter.did",
+    "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
+    "type": "custom"
+    }
 ----
 . Remove all of the `+rust_counter_assets+` configuration settings from the file.
 +
