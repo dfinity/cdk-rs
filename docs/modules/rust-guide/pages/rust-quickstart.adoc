@@ -117,7 +117,7 @@ For example:
 +
 [source, json]
 ----
-"candid": "src/rust_hello/rust_hello.did",
+"candid": "src/rust_hello/src/rust_hello.did",
 ----
 . Add a `+canisters.rust_hello.wasm+` key and specify the location of the compiled WebAssembly file to use for the canister.
 +
@@ -252,7 +252,7 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file in the `+src/rust_hello/+` directory named `+rust_hello.did+`.
+. Create a new file in the `+src/rust_hello/src/+` directory named `+rust_hello.did+`.
 . Open the `+src/rust_hello/src/rust_hello.did+` file in a text editor.
 . Copy and paste the following `+service+` definition for the `+print+` function:
 +

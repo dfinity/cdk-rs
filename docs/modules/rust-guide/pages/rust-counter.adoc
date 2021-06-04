@@ -113,7 +113,7 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 [source,json]
 ----
 "build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
-"candid": "src/rust_counter/counter.did",
+"candid": "src/rust_counter/src/counter.did",
 "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
 "type": "custom"
 }
@@ -230,8 +230,8 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+counter.did+` in the `+src/rust_counter+` directory.
-. Open the `+src/rust_counter/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
+. Create a new file named `+counter.did+` in the `+src/rust_counter/src+` directory.
+. Open the `+src/rust_counter/src/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
 +
 [source,did]
 ----

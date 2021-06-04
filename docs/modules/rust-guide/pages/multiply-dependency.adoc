@@ -101,7 +101,7 @@ For example, in the `+canisters+` section, add a new `+rust_deps+` key with sett
 ----
 "rust_deps": {
   "build": "cargo build --target wasm32-unknown-unknown --package  rust_deps --release",
-  "candid": "src/rust_deps/deps.did",
+  "candid": "src/rust_deps/src/deps.did",
   "wasm": "target/wasm32-unknown-unknown/release/rust_deps.wasm",
   "type": "custom"
   }
@@ -232,8 +232,8 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+deps.did+` in the `+src/rust_deps+` directory.
-. Open the `+src/rust_deps/deps.did+` file in a text editor.
+. Create a new file named `+deps.did+` in the `+src/rust_deps/src+` directory.
+. Open the `+src/rust_deps/src/deps.did+` file in a text editor.
 . Copy and paste the following `+service+` definition for the `+read+` function:
 +
 [source,did]

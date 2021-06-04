@@ -106,7 +106,7 @@ For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` s
 [source,json]
 ----
 "build": "cargo build --target wasm32-unknown-unknown --package  rust_profile --release",
-"candid": "src/rust_profile/profile.did",
+"candid": "src/rust_profile/src/profile.did",
 "wasm": "target/wasm32-unknown-unknown/release/rust_profile.wasm",
 "type": "custom"
 }
@@ -223,8 +223,8 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+profile.did+` in the `+src/rust_profile+` directory.
-. Open the `+src/rust_profile/profile.did+`file in a text editor.
+. Create a new file named `+profile.did+` in the `+src/rust_profile/src+` directory.
+. Open the `+src/rust_profile/src/profile.did+`file in a text editor.
 . Copy and paste the following `+type+` declaration and `+service+` definition for the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions:
 +
 [source,did]
