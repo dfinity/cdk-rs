@@ -35,6 +35,8 @@ Before you start your project, verify the following:
 ----
 curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 ----
++
+The Rust tool chain must be at version 1.46.0, or later.
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
 
