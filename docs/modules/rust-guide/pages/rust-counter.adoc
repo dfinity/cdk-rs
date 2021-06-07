@@ -46,6 +46,8 @@ Before you start your project, verify the following:
 ----
 curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 ----
++
+The Rust tool chain must be at version 1.46.0, or later.
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
 
@@ -188,8 +190,8 @@ At a minimum, you need to configure the following sections with basic informatio
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.2.4"
-ic-cdk-macros = "0.2.4"
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
 ----
 +
 NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version. 
@@ -231,8 +233,8 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+counter.did+` in the `+src/rust_counter+` directory.
-. Open the `+src/rust_counter/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
+. Create a new file named `+counter.did+` in the `+src/rust_counter/src+` directory.
+. Open the `+src/rust_counter/src/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
 +
 [source,did]
 ----
@@ -290,8 +292,8 @@ Executing 'cargo build --target wasm32-unknown-unknown --package  rust_counter -
   Downloaded thiserror v1.0.25
   Downloaded libc v0.2.95
   ...
-  Compiling ic-cdk v0.2.4
-  Compiling ic-cdk-macros v0.2.4
+  Compiling ic-cdk v0.3
+  Compiling ic-cdk-macros v0.3
   Compiling rust_counter v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_counter/src/rust_counter)
     Finished release [optimized] target(s) in 1m 10s
 Installing canisters...

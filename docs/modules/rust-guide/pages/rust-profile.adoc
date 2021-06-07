@@ -40,6 +40,8 @@ Before you start your project, verify the following:
 ----
 curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 ----
++
+The Rust tool chain must be at version 1.46.0, or later.
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
 
@@ -106,7 +108,7 @@ For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` s
 [source,json]
 ----
 "build": "cargo build --target wasm32-unknown-unknown --package  rust_profile --release",
-"candid": "src/rust_profile/profile.did",
+"candid": "src/rust_profile/src/profile.did",
 "wasm": "target/wasm32-unknown-unknown/release/rust_profile.wasm",
 "type": "custom"
 }
@@ -178,8 +180,8 @@ At a minimum, you need to configure the following sections with basic informatio
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.2.4"
-ic-cdk-macros = "0.2.4"
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
 ic-types = "0.1.1"
 serde = "1.0.111"
 ----
@@ -223,8 +225,8 @@ To see details about the Candid interface description language syntax, see the l
 To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+profile.did+` in the `+src/rust_profile+` directory.
-. Open the `+src/rust_profile/profile.did+`file in a text editor.
+. Create a new file named `+profile.did+` in the `+src/rust_profile/src+` directory.
+. Open the `+src/rust_profile/src/profile.did+`file in a text editor.
 . Copy and paste the following `+type+` declaration and `+service+` definition for the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions:
 +
 [source,did]
