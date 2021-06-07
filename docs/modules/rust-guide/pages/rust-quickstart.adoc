@@ -206,8 +206,8 @@ At a minimum, you need to configure the following sections with basic informatio
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.2.4"
-ic-cdk-macros = "0.2.4"
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
 ----
 +
 NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_hello/Cargo.toml+` file to match the latest version. 
