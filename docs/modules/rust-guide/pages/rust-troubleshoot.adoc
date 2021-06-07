@@ -1,0 +1,24 @@
+= Troubleshooting issues with Rust
+:cdk-short-name: DFINITY Rust CDK
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+:cdk: Rust Canister Development Kit (CDK)
+
+Depending on the version of Rust and the Rust tool chain that you have installed, you might encounter errors or unexpected behavior when you try to build and deploy Rust-based canisters.
+
+In many cases, you can resolve issues by upgrading Rust or specific crates.
+For example, running the `+dfx deploy+` command might fail with an error similar to the following:
+
+....
+error[E0463]: can't find crate for `core`
+  |
+  = note: the `wasm32-unknown-unknown` target may not be installed
+....
+
+You can fix this error by first running the following command to add or update the WebAssembly target:
+
+[source,bash]
+----
+rustup target add --toolchain stable wasm32-unknown-unknown
+----
+
+You can re-run the `+dfx deploy+` command to build and deploy the canister.
