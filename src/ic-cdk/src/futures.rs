@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::task::Context;
 
 /// Must be called on every top-level future corresponding to a method call of a
 /// canister by the IC.

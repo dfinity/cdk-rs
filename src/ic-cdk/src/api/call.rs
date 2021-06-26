@@ -3,7 +3,6 @@ use crate::api::{ic0, trap};
 use crate::export::Principal;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, write_args};
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
