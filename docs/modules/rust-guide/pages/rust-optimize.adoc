@@ -1,0 +1,68 @@
+= Optimize a Rust program
+:proglang: Rust
+:platform: Internet Computer platform
+:IC: Internet Computer
+:company-id: DFINITY
+:cdk-short-name: DFINITY Rust CDK
+:sdk-short-name: DFINITY Canister SDK
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+:sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+ifdef::env-github,env-browser[:outfilesuffix:.adoc]
+
+Compiling Rust programs to WebAssembly often increases the file size of the program significantly. The {cdk-short-name} includes a helper library—`+ic-cdk-optimizer+`—that you can use to reduce the size of Rust-based canisters before deploying them on the {IC}.
+
+[[before-you-begin]]
+== Before you begin
+
+Before you optimize your program, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
+
+* You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
+
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
++
+The Rust tool chain must be at version 1.46.0, or later.
+
+* You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
+
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
++
+[source,bash]
+----
+brew install cmake
+----
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
+
+* You have successfully compiled your program to a WebAssembly module (WASM) and deployed it on the {IC} running locally.
+
+== Install and run the optimizer
+
+To optimize a canister that resulted from compiling a Rust program:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Install the `+ic-cdk-optimizer+` crate, if you have not previously installed it, by running the following command:
++
+[source,bash]
+----
+cargo install ic-cdk-optimizer
+----
++
+This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your program can be uploaded to the {IC} network as a canister.
+. Create a release directory within the `+src+` directory for your program by running a command similar to the following:
++
+[source,bash,subs=quotes]
+----
+mkdir -p src/_rust-canister_/target/wasm32-unknown-unknown/release/
+----
+. Optimize the code within the `+target+` directory by running a command similar to the following:
++
+[source,bash,subs-quotes]
+----
+ic-cdk-optimizer target/wasm32-unknown-unknown/release/_rust_canister_.wasm -o target/wasm32-unknown-unknown/release/_rust_canister_-opt.wasm
+----
+

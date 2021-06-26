@@ -1,0 +1,471 @@
+= Adding and searching simple records
+ifdef::env-github,env-browser[:outfilesuffix:.adoc]
+:toc-title: TUTORIAL - SAMPLE PROFILE
+:proglang: Rust
+:platform: Internet Computer platform
+:IC: Internet Computer
+:company-id: DFINITY
+:sdk-short-name: DFINITY Canister SDK
+:cdk-short-name: DFINITY Rust CDK
+:sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+
+In this tutorial, you are going to write a program that provides a few basic functions to add and retrieve simple profile records that consist of a name, description, and an array of keywords.
+
+This program supports the following functions:
+
+* The `+update+` function enables you to add a profile that consists of a `+name+`, a `+description+`, and `+keywords+`.
+* The `+getSelf+` function returns the profile for the principal associated with the function caller.
+* The `+get+` function performs a simple query to return the profile matching the `+name+` value passed to it.
+For this function, the name specified must match the `+name+` field exactly to return the record.
+* The `+search+` function performs a more complex query to return the profile matching all or part of the text specified in any profile field. For example, the `+search+` function can return a profile containing a specific keyword or that matches only part of a name or description.
+
+This tutorial provides a simple example of how you can use the Rust CDK interfaces and macros to simplify writing programs in Rust for the {IC}.
+
+This tutorial demonstrates:
+* How to represent slightly more complex data—in the form of a profile as a `+record+` and an `+array+` of keywords—using the Candid interface description language.
+* How to write a simple search function with partial string matching.
+* How profiles are associated with a specific principal.
+
+== Before you begin
+
+Before you start your project, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
+
+* You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
+
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
++
+The Rust tool chain must be at version 1.46.0, or later.
+
+* You have downloaded and installed the {sdk-long-name} package as described in link:../../quickstart/quickstart{outfilesuffix}#download-and-install[Download and install].
+
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
++
+[source,bash]
+----
+brew install cmake
+----
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
+
+* You have stopped any {IC} network processes running on the local computer.
+
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
+
+This tutorial takes approximately 20 minutes to complete.
+
+== Create a new project
+
+To create a new project directory for this tutorial:
+
+[arabic]
+. Open a terminal shell on your local computer, if you don’t already have one open.
+. Create a new project by running the following command:
++
+[source,bash]
+----
+dfx new rust_profile
+----
+. Change to your project directory by running the following command:
++
+[source,bash]
+----
+cd rust_profile
+----
+
+== Modify the default configuration
+
+In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+
+To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
+
+* <<Edit the default canister settings>>
+* <<Add a Cargo.toml file to the project>>
+* <<Add Rust files to the source directory>>
+* <<Replace the default program>>
+
+=== Edit the default canister settings
+
+One of the template files included in your project directory is a default `+dfx.json+` configuration file.
+This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
+
+To modify the default `+dfx.json+` configuration file:
+
+. Check that you are still in the root directory for your project, if needed.
+. Open the `+dfx.json+` configuration file in a text editor.
+. Replace the `+canisters.rust_profile+` settings with settings for building a canister using the `+cargo build+` command.
++
+For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` settings with settings like these:
++
+[source,json]
+----
+"build": "cargo build --target wasm32-unknown-unknown --package  rust_profile --release",
+"candid": "src/rust_profile/src/profile.did",
+"wasm": "target/wasm32-unknown-unknown/release/rust_profile.wasm",
+"type": "custom"
+}
+----
+. Remove all of the `+rust_profile_assets+` configuration settings from the file.
++
+The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+. Remove the `+defaults+` and `+dfx+` version settings.
++
+For example, the configuration file looks like this after you modify the settings:
++
+....
+include::example$profile-tutorial/profile-dfx.json[]
+....
+. Save your change and close the `+dfx.json+` file to continue.
+
+=== Add a Cargo.toml file to the project
+
+Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
+Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
+
+To add a `+Cargo.toml+` configuration file for the project:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file in the current directory named `+Cargo.toml+`.
+. Open the `+Cargo.toml+` in a text editor.
+. Use the `+[workspace]+` key to specify the source file directory for your program.
++
+For example:
++
+[source,toml]
+----
+[workspace]
+members = [
+  "src/rust_profile",
+]
+----
+. Save your changes and close the file to continue.
+
+=== Add Rust files to the source directory
+
+Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+
+To prepare the source directory with Rust files:
+
+. Check that you are in the root directory for your project, if needed.
+. Create a new cargo package using a library template by running the following command:
++
+[source, bash]
+----
+cargo init --lib src/rust_profile
+----
++
+This command creates a `+src/rust_profile/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_profile+` directory.
+. Open the `+src/rust_profile/Cargo.toml+` file in a text editor.
++
+You use this file to configure the details used to build the Rust package.
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
++
+--
+* `+[lib]+`
+* `+[dependencies]+`
+--
+. Delete the existing `+[dependencies]+` section and replace it with the following:
++
+[source,toml]
+----
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+ic-types = "0.1.1"
+serde = "1.0.111"
+----
++
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version. 
+. Save your changes and close the file to continue.
+
+=== Replace the default program
+
+Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+
+To replace the default program:
+
+. Check that you are still in the root directory for your project, if needed.
+. Delete the template `+src/rust_profile/main.mo+` file by running the following command:
++
+[source,bash]
+---- 
+rm src/rust_profile/main.mo
+----
+. Open the template `+src/rust_profile/src/lib.rs+` file in a text editor and delete the existing content.
++
+The next step is to add a Rust program that implements the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions.
+. Copy and paste the following sample code into the `+profile.rs+` file:
++
+[source,motoko]
+----
+include::example$profile-tutorial/profile.rs[]
+----
+. Save your changes and close the file to continue.
+
+== Add an interface description file
+
+Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
+Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+
+By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
+
+To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
+
+To add a Candid file for this tutorial:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file named `+profile.did+` in the `+src/rust_profile/src+` directory.
+. Open the `+src/rust_profile/src/profile.did+`file in a text editor.
+. Copy and paste the following `+type+` declaration and `+service+` definition for the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions:
++
+[source,did]
+----
+include::example$profile-tutorial/profile.did[]
+----
+. Save your changes and close the `+profile.did+` file to continue.
+
+== Start the local network
+
+Before you can build the `+rust_profile+` project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+
+To start the network locally:
+
+. Check that you are still in the root directory for your project, if needed.
+. Start the {IC} network on your local computer in the background by running the following command:
++
+[source,bash]
+----
+dfx start --background --clean
+----
++
+Depending on your platform and local security settings, you might see a warning displayed. 
+If you are prompted to allow or deny incoming network connections, click *Allow*.
+
+== Register, build, and deploy your project
+
+After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+
+To register, build, and deploy:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Register, build, and deploy the canisters specified in the `+dfx.json+` file by running the following command:
++
+[source,bash]
+----
+dfx deploy
+----
++
+The `+dfx deploy+` command output displays information about each of the operations it performs similar to the following excerpt:
++
+....
+Creating a wallet canister on the local network.
+The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
+Deploying all canisters.
+Creating canisters...
+Creating canister "rust_profile"...
+"rust_profile" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
+Building canisters...
+Executing 'cargo build --target wasm32-unknown-unknown --package  rust_profile --release'
+   Compiling rust_profile v0.1.0 (/Users/pubs/rust_profile/src/rust_profile)
+    Finished release [optimized] target(s) in 2.83s
+Installing canisters...
+Creating UI canister on the local network.
+The UI canister on the "local" network is "ryjl3-tyaaa-aaaaa-aaaba-cai"
+Installing code for canister rust_profile, with canister_id rrkah-fqaaa-aaaaa-aaaaq-cai
+Deployed canisters.
+....
+
+== Call functions on the deployed canister
+
+After successfully deploying the canister, you can test the canister by calling the functions it provides.
+
+For this tutorial:
+
+* Call the `+update+` function to add a profile.
+* Call the `+getSelf+` function to display the profile for the principal identity.
+* Call the `+search+` function to look up the profile using a keyword.
+
+To test the deployed canister:
+
+. Call the `+update+` function to create a profile record by running the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile update '(record {name = "Luxi"; description = "mountain dog"; keywords = vec {"scars"; "toast"}})'
+----
+. Call the `+getSelf+` function to retrieve a profile record by running the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile getSelf
+----
++
+The command returns the profile you used the `+update+` function to add.
+For example:
++
+....
+(  record {
+    name = "Luxi";
+    description = "mountain dog";
+    keywords = vec { "scars"; "toast" };
+  },
+)
+....
++
+In its current form, the program only stores and returns one profile. 
+If you run the following command to add a second profile using the `+update+` function, the command replaces the `+Luxi+` profile with the `+Dupree+` profile:
++
+[source,bash]
+----
+dfx canister call rust_profile update '(record {name = "Dupree"; description = "black dog"; keywords = vec {"funny tail"; "white nose"}})'
+----
++
+You can use the `+get+`, `+getSelf+`, and `+search+` functions, but they will only return results for the `+Dupree+` profile.
+. Run the following command to call the `+search+` function:
++
+[source,bash]
+----
+dfx canister call rust_profile search '("black")';
+----
++
+This command finds the matching profile using the `+description+` and returns the profile:
++
+....
+(
+  opt record {
+    name = "Dupree";
+    description = "black dog";
+    keywords = vec { "funny tail"; "white nose" };
+  },
+....
+
+== Adding profiles for new identities
+
+In its current form, the program only stores one profile—the one associated with the principal invoking the commands. To test that the `+get+`, `+getSelf+`, and `+search+` functions do what we want them to, we need to add some new identities that can have different profiles.
+
+To add identities for testing:
+
+. Create a new user identity by running the following command:
++
+[source,bash]
+----
+dfx identity new Miles
+----
++
+....
+Creating identity: "Miles".
+Created identity: "Miles".
+....
+
+. Call the `+update+` function to add a profile for the new identity.
++
+[source,bash]
+----
+dfx --identity Miles canister call rust_profile update '(record {name = "Miles"; description = "Great Dane"; keywords = vec {"Boston"; "mantle"; "three-legged"}})'
+----
+. Call the `+getSelf+` function to view the profile associated with the `+default+` user identity.
++
+[source,bash]
+----
+dfx canister call rust_profile getSelf
+----
++
+The command displays the profile currently associated with the default identity, in this example, the Dupree profile:
++
+....
+(
+  record {
+    name = "Dupree";
+    description = "black dog";
+    keywords = vec { "funny tail"; "white nose" };
+  },
+)
+....
+. Call the `+getSelf+` function using the `+Miles+` user identity by running the following command:
++
+[source,bash]
+----
+dfx --identity Miles canister call rust_profile getSelf
+----
++
+The command displays the profile currently associated with the Miles identity, in this example:
++
+....
+(
+  record {
+    name = "Miles";
+    description = "Great Dane";
+    keywords = vec { "Boston"; "mantle"; "three-legged" };
+  },
+)
+....
+. Call the `+search+` function using part of the description or a keyword to further test the whether the correct profile is returned.
++
+For example, to verify the `+Miles+` profile is returned, you might run the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile search '("Great")'
+----
++
+The command returns the `+Miles+` profile:
++
+....
+(
+  opt record {
+    name = "Miles";
+    description = "Great Dane";
+    keywords = vec { "Boston"; "mantle"; "three-legged" };
+  },
+)
+....
+. Call the `+search+` function to further test the whether the correct profile is returned.
++
+For example, to verify the `+Dupree+` profile is returned, you might run the following command:
++
+[source,bash]
+----
+dfx canister call rust_profile search '("black")'
+----
++
+The command returns the `+Dupree+` profile:
++
+....
+(
+  opt record {
+    name = "Dupree";
+    description = "black dog";
+    keywords = vec { "funny tail"; "white nose" };
+  },
+)
+....
+
+== Extending the sample program
+
+This sample program only stores one profile for each unique user identity. If you were to extend this application by adding a second program for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
+
+== Stop the local network
+
+After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+
+To stop the local network:
+
+. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+
+. Stop the {IC} network by running the following command:
++
+[source,bash]
+----
+dfx stop
+----
