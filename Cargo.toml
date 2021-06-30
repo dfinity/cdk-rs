@@ -6,7 +6,3 @@ members = [
     "src/ic-certified-map",
 ]
 
-[patch.crates-io.candid]
-git = "https://github.com/dfinity/candid.git"
-branch = "ic-types"
-
