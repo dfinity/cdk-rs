@@ -1,5 +1,5 @@
 //! System API and low level functions for it.
-use ic_types::Principal;
+use crate::export::Principal;
 use std::convert::TryFrom;
 
 pub mod call;

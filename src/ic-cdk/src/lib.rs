@@ -10,7 +10,7 @@ static mut DONE: bool = false;
 
 pub mod export {
     pub use candid;
-    pub use ic_types::Principal;
+    pub use candid::types::ic_types::Principal;
 }
 
 /// Setup the stdlib hooks.
