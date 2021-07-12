@@ -16,7 +16,7 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 proc-macro = true
 
 [dependencies]
-candid = "0.6.19"
+candid = "0.7.1"
 ic-cdk = { path = "../ic-cdk", version = "0.3" }
 syn = { version = "1.0.58", features = ["fold", "full"] }
 quote = "1.0"

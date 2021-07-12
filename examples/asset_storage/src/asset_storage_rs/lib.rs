@@ -1,6 +1,5 @@
-use ic_cdk::storage;
+use ic_cdk::{storage, export::Principal};
 use ic_cdk_macros::*;
-use ic_types::Principal;
 use std::collections::{BTreeMap, BTreeSet};
 
 type Users = BTreeSet<Principal>;

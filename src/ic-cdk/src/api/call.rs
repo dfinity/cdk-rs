@@ -1,10 +1,8 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
-use crate::export::candid::ser::write_args;
 use crate::export::Principal;
-use candid::de::ArgumentDecoder;
-use candid::ser::ArgumentEncoder;
-use candid::{decode_args, encode_args};
+use candid::utils::{ArgumentDecoder, ArgumentEncoder};
+use candid::{decode_args, encode_args, write_args};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll, Waker};

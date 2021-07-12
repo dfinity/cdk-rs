@@ -637,7 +637,6 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
                     h = move_red_left(h);
                 }
                 (*h).left = go((*h).left, key);
-                (*h).subtree_hash = Node::subtree_hash(h);
             } else {
                 if is_red((*h).left) {
                     h = rotate_right(h);
@@ -657,12 +656,11 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
                     std::mem::swap(&mut (*h).key, &mut (*m).key);
                     std::mem::swap(&mut (*h).value, &mut (*m).value);
                     (*h).right = delete_min((*h).right);
-                    (*h).subtree_hash = Node::subtree_hash(h);
                 } else {
                     (*h).right = go((*h).right, key);
-                    (*h).subtree_hash = Node::subtree_hash(h);
                 }
             }
+            (*h).subtree_hash = Node::subtree_hash(h);
             balance(h)
         }
 
