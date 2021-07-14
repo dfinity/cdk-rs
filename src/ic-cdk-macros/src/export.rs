@@ -190,7 +190,7 @@ fn dfn_macro(
 
             #guard
 
-            ic_cdk::block_on(async {
+            ic_cdk::spawn(async {
                 #arg_decode
                 let result = #function_call;
                 #return_encode

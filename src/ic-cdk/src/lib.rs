@@ -25,8 +25,18 @@ pub fn setup() {
 }
 
 /// Block on a promise in a WASM-friendly way (no multithreading!).
+#[deprecated(
+    since = "0.3.1",
+    note = "Please use the spawn() function instead, it does the same thing but is more appropriately named"
+)]
 pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::block_on(future);
+    futures::spawn(future);
+}
+
+/// Spawn an asynchronous task that drives the provided future to
+/// completion.
+pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
+    futures::spawn(future);
 }
 
 /// Format and then print the formatted message
