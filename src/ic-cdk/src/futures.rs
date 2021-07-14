@@ -18,7 +18,7 @@ use std::task::Context;
 /// API requires us to pass one thin pointer, while a a pointer to a `dyn Trait`
 /// can only be fat. So we create one additional thin pointer, pointing to the
 /// fat pointer and pass it instead.
-pub fn block_on<F: 'static + Future<Output = ()>>(future: F) {
+pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let future_ptr = Box::into_raw(Box::new(future));
     let future_ptr_ptr: *mut *mut dyn Future<Output = ()> = Box::into_raw(Box::new(future_ptr));
     let mut pinned_future = unsafe { Pin::new_unchecked(&mut *future_ptr) };
