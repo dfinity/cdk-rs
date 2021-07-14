@@ -58,10 +58,10 @@ macro_rules! ic0_module {
 // This is a private module that can only be used internally in this file.
 // Copy-paste the spec section of the API here.
 ic0_module! {
-    ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry
-    ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q Ry
-    ic0.msg_caller_size : () -> i32;                                            // I G U Q
-    ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // I G U Q
+    ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry F
+    ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q Ry F
+    ic0.msg_caller_size : () -> i32;                                            // I G U Q F
+    ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // I G U Q F
     ic0.msg_reject_code : () -> i32;                                            // Ry Rt
     ic0.msg_reject_msg_size : () -> i32;                                        // Rt
     ic0.msg_reject_msg_copy : (dst : i32, offset : i32, size : i32) -> ();      // Rt
@@ -79,6 +79,10 @@ ic0_module! {
     ic0.canister_cycle_balance : () -> i64;                                     // *
     ic0.canister_status : () -> i32;                                            // *
 
+    ic0.msg_method_name_size : () -> i32;                                       // F
+    ic0.msg_method_name_copy : (dst : i32, offset : i32, size : i32) -> ();     // F
+    ic0.accept_message : () -> ();                                              // F
+
     ic0.call_new :                                                              // U Ry Rt
     ( callee_src  : i32,
       callee_size : i32,
@@ -89,6 +93,7 @@ ic0_module! {
       reject_fun : i32,
       reject_env : i32
     ) -> ();
+    ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt
     ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt
     ic0.call_cycles_add : ( amount : i64 ) -> ();                               // U Ry Rt
     ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt
@@ -98,10 +103,10 @@ ic0_module! {
     ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();             // *
     ic0.stable_read : (dst : i32, offset : i32, size : i32) -> ();              // *
 
-    ic0.certified_data_set : (src: i32, size: i32) -> ();                        // I G U Ry Rt
-    ic0.data_certificate_present : () -> i32;                                    // Q
-    ic0.data_certificate_size : () -> i32;                                       // Q
-    ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();        // Q
+    ic0.certified_data_set : (src: i32, size: i32) -> ();                       // I G U Ry Rt
+    ic0.data_certificate_present : () -> i32;                                   // *
+    ic0.data_certificate_size : () -> i32;                                      // *
+    ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();       // *
 
     ic0.time : () -> (timestamp : i64);                                         // *
 
