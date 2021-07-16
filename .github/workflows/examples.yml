@@ -1,7 +1,16 @@
 
 name: Examples
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
 
 jobs:
   test:
@@ -13,7 +22,7 @@ jobs:
           - build: linux-stable
             os: ubuntu-latest
             rust: 1.47.0
-            dfx: 0.6.15
+            dfx: 0.7.7
 
     steps:
       - uses: actions/checkout@v2

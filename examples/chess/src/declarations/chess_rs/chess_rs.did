@@ -1,0 +1,7 @@
+service : {
+    "new": (text, bool) -> ();
+    "move": (text, text) -> (bool);
+    "aiMove": (text) -> ();
+
+    "getFen": (text) -> (opt text) query;
+}
