@@ -1,8 +1,7 @@
 import React, { ChangeEvent, Component } from "react";
 import PropTypes from "prop-types";
 import Chess, { ChessInstance } from "chess.js"; // import Chess from  "chess.js"(default) if recieving an error about new Chess() not being a constructor
-import chessActor from "ic:canisters/chess_rs";
-
+import { chess_rs as chessActor } from "../declarations/chess_rs";
 import Chessboard from "chessboardjsx";
 
 type Props = { children: (...args: any[]) => any };
@@ -102,9 +101,9 @@ class HumanVsActor extends Component<Props, State> {
         return;
       }
 
-      chessActor.getFen().then(([fen]: [string]) => {
+      chessActor.getFen(this.state.name).then(([fen]) => {
         this.setState(({ history, pieceSquare }) => ({
-          fen,
+          fen: fen ? ('' + fen) : "start",
           history: this.game!.history({ verbose: true }),
           squareStyles: squareStyling({ pieceSquare, history })
         }));
@@ -163,7 +162,7 @@ class HumanVsActor extends Component<Props, State> {
   reload = () => {
     this.setState({ disabled: true });
 
-    chessActor.getFen().then(([fen]: [string]) => {
+    chessActor.getFen(this.state.name).then(([fen]) => {
       this.game!.load(fen || "start");
       this.setState({
         disabled: false,
@@ -175,12 +174,12 @@ class HumanVsActor extends Component<Props, State> {
 
   ai = () => {
     this.setState({ disabled: true });
-    chessActor.generateMove(this.state.name).then(() => this.reload());
+    chessActor.aiMove(this.state.name).then(() => this.reload());
   };
 
   reset = () => {
     this.setState({ disabled: true });
-    chessActor.new(this.state.name).then(() => this.reload());
+    chessActor.new(this.state.name, true).then(() => this.reload());
   };
 
   changeName = (ev: ChangeEvent) => {
