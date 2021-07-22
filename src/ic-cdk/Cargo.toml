@@ -13,7 +13,7 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-candid = "0.7.1"
+candid = "0.7.4"
 cfg-if = "0.1.10"
 serde = "1.0.110"
 
