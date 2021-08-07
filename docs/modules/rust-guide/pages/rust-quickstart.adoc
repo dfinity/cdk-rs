@@ -119,7 +119,7 @@ For example:
 +
 [source, json]
 ----
-"candid": "src/rust_hello/src/rust_hello.did",
+"candid": "src/rust_hello/rust_hello.did",
 ----
 . Add a `+canisters.rust_hello.wasm+` key and specify the location of the compiled WebAssembly file to use for the canister.
 +
