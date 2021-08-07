@@ -218,7 +218,7 @@ The next step is to write a Rust program that imports the {native} canister and 
 +
 [source,bash]
 ----
-include::example$mul-deps/deps-main.rs[]
+include::example$mul-deps/main.rs[]
 ----
 . Save your changes and close the `+src/rust_deps/src/lib.rs+` file to continue.
 
