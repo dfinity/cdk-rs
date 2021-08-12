@@ -1,6 +1,6 @@
 [package]
 name = "ic-certified-map"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Merkleized map data structure."
@@ -10,7 +10,7 @@ license = "Apache-2.0"
 readme = "README.md"
 categories = ["data-structures"]
 keywords = ["internet-computer", "types", "dfinity", "map"]
-include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [dependencies]
 serde = "1"
