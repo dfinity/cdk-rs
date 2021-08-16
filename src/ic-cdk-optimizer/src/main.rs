@@ -28,7 +28,9 @@ fn main() {
     }
 
     let matches = app.get_matches();
-    let opts = <CommandLineOpts as FromArgMatches>::from_arg_matches(&matches);
+    let opts = (<CommandLineOpts as FromArgMatches>::from_arg_matches(&matches)
+        as Option<CommandLineOpts>)
+        .unwrap();
 
     let content = if let Some(i) = opts.input {
         std::fs::read(&i).expect("Could not read the file.")
