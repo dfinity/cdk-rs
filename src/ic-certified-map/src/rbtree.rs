@@ -543,7 +543,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             }
             let node_key = (*n).key.as_ref();
             match node_key.cmp(key) {
-                Less => go((*n).right, key).or_else(|| Some(KeyBound::Neighbor(node_key))),
+                Less => go((*n).right, key).or(Some(KeyBound::Neighbor(node_key))),
                 Equal => Some(KeyBound::Exact(node_key)),
                 Greater => go((*n).left, key),
             }
@@ -563,7 +563,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             match node_key.cmp(key) {
                 Less => go((*n).right, key),
                 Equal => Some(KeyBound::Exact(node_key)),
-                Greater => go((*n).left, key).or_else(|| Some(KeyBound::Neighbor(node_key))),
+                Greater => go((*n).left, key).or(Some(KeyBound::Neighbor(node_key))),
             }
         }
         unsafe { go(self.root, key) }
