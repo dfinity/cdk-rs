@@ -364,5 +364,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
 }
 
 pub fn accept_message() {
-    unsafe { ic0::accept_message(); }
+    unsafe {
+        ic0::accept_message();
+    }
 }

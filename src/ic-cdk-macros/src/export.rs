@@ -21,14 +21,18 @@ enum MethodType {
     Update,
     Query,
     Heartbeat,
-    InspectMessage
+    InspectMessage,
 }
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
         matches!(
             self,
-            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade | MethodType::Heartbeat | MethodType::InspectMessage
+            MethodType::Init
+                | MethodType::PreUpgrade
+                | MethodType::PostUpgrade
+                | MethodType::Heartbeat
+                | MethodType::InspectMessage
         )
     }
 }
