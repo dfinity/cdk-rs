@@ -368,3 +368,12 @@ pub fn accept_message() {
         ic0::accept_message();
     }
 }
+
+pub fn method_name() -> String {
+    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
+    let mut bytes = vec![0; len as usize];
+    unsafe {
+        ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+    }
+    String::from_utf8_lossy(&bytes).to_string()
+}
