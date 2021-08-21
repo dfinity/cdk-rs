@@ -362,3 +362,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
         Ok(r) => r,
     }
 }
+
+pub fn accept_message() {
+    unsafe { ic0::accept_message(); }
+}
