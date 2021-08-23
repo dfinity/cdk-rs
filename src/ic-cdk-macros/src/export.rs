@@ -20,13 +20,19 @@ enum MethodType {
     PostUpgrade,
     Update,
     Query,
+    Heartbeat,
+    InspectMessage,
 }
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
         matches!(
             self,
-            MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
+            MethodType::Init
+                | MethodType::PreUpgrade
+                | MethodType::PostUpgrade
+                | MethodType::Heartbeat
+                | MethodType::InspectMessage
         )
     }
 }
@@ -39,6 +45,8 @@ impl std::fmt::Display for MethodType {
             MethodType::PostUpgrade => f.write_str("canister_post_upgrade"),
             MethodType::Query => f.write_str("canister_query"),
             MethodType::Update => f.write_str("canister_update"),
+            MethodType::Heartbeat => f.write_str("canister_heartbeat"),
+            MethodType::InspectMessage => f.write_str("canister_inspect_message"),
         }
     }
 }
@@ -111,16 +119,11 @@ fn dfn_macro(
         },
     };
 
-    match method {
-        MethodType::Init | MethodType::PreUpgrade | MethodType::PostUpgrade
-            if return_length > 0 =>
-        {
-            return Err(Error::new(
-                Span::call_site(),
-                format!("#[{}] function cannot have a return value.", method),
-            ));
-        }
-        _ => {}
+    if method.is_lifecycle() && return_length > 0 {
+        return Err(Error::new(
+            Span::call_site(),
+            format!("#[{}] function cannot have a return value.", method),
+        ));
     }
 
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
@@ -284,6 +287,48 @@ pub(crate) fn ic_post_upgrade(
 
     dfn_macro(
         MethodType::PostUpgrade,
+        TokenStream::from(attr),
+        TokenStream::from(item),
+    )
+    .map(proc_macro::TokenStream::from)
+}
+
+static HAS_HEARTBEAT: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ic_heartbeat(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> Result<proc_macro::TokenStream, Error> {
+    if HAS_HEARTBEAT.swap(true, Ordering::SeqCst) {
+        return Err(Error::new(
+            Span::call_site(),
+            "Heartbeat function already declared.",
+        ));
+    }
+
+    dfn_macro(
+        MethodType::Heartbeat,
+        TokenStream::from(attr),
+        TokenStream::from(item),
+    )
+    .map(proc_macro::TokenStream::from)
+}
+
+static HAS_INSPECT_MESSAGE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn ic_inspect_message(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> Result<proc_macro::TokenStream, Error> {
+    if HAS_INSPECT_MESSAGE.swap(true, Ordering::SeqCst) {
+        return Err(Error::new(
+            Span::call_site(),
+            "Inspect-message function already declared.",
+        ));
+    }
+
+    dfn_macro(
+        MethodType::InspectMessage,
         TokenStream::from(attr),
         TokenStream::from(item),
     )
