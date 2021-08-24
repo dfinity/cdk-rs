@@ -65,6 +65,16 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(export::ic_heartbeat, "ic_heartbeat", attr, item)
+}
+
+#[proc_macro_attribute]
+pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
+}
+
+#[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }
