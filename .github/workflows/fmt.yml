@@ -6,6 +6,9 @@ jobs:
   test:
     name: fmt
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [ 1.52.1 ]
 
     steps:
       - uses: actions/checkout@v2
