@@ -4,6 +4,7 @@ mod test;
 use serde::{ser::SerializeSeq, Serialize, Serializer};
 use serde_bytes::Bytes;
 use sha2::{Digest, Sha256};
+use std::borrow::Cow;
 
 /// SHA-256 hash bytes.
 pub type Hash = [u8; 32];
@@ -15,7 +16,7 @@ pub enum HashTree<'a> {
     Empty,
     Fork(Box<(HashTree<'a>, HashTree<'a>)>),
     Labeled(&'a [u8], Box<HashTree<'a>>),
-    Leaf(&'a [u8]),
+    Leaf(Cow<'a, [u8]>),
     Pruned(Hash),
 }
 
@@ -90,7 +91,7 @@ impl Serialize for HashTree<'_> {
             HashTree::Leaf(leaf_bytes) => {
                 let mut seq = serializer.serialize_seq(Some(2))?;
                 seq.serialize_element(&3u8)?;
-                seq.serialize_element(Bytes::new(leaf_bytes))?;
+                seq.serialize_element(Bytes::new(leaf_bytes.as_ref()))?;
                 seq.end()
             }
             HashTree::Pruned(digest) => {
