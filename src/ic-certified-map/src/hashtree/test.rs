@@ -2,6 +2,7 @@ use super::{
     fork, labeled,
     HashTree::{Empty, Leaf},
 };
+use std::borrow::Cow;
 
 //─┬─┬╴"a" ─┬─┬╴"x" ─╴"hello"
 // │ │      │ └╴Empty
@@ -16,13 +17,16 @@ fn test_public_spec_example() {
             labeled(
                 b"a",
                 fork(
-                    fork(labeled(b"x", Leaf(b"hello")), Empty),
-                    labeled(b"y", Leaf(b"world")),
+                    fork(labeled(b"x", Leaf(Cow::Borrowed(b"hello"))), Empty),
+                    labeled(b"y", Leaf(Cow::Borrowed(b"world"))),
                 ),
             ),
-            labeled(b"b", Leaf(b"good")),
+            labeled(b"b", Leaf(Cow::Borrowed(b"good"))),
         ),
-        fork(labeled(b"c", Empty), labeled(b"d", Leaf(b"morning"))),
+        fork(
+            labeled(b"c", Empty),
+            labeled(b"d", Leaf(Cow::Borrowed(b"morning"))),
+        ),
     );
 
     assert_eq!(
