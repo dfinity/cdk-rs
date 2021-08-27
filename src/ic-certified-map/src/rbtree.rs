@@ -300,14 +300,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     ///
     /// If the key is not in the map, returns a proof of absence.
     pub fn witness<'a>(&'a self, key: &[u8]) -> HashTree<'a> {
-        if let Some(t) = self.lookup_and_build_witness(key, |v| v.as_hash_tree()) {
-            return t;
-        }
-        self.range_witness(
-            self.lower_bound(key),
-            self.upper_bound(key),
-            Node::witness_tree,
-        )
+        self.nested_witness(key, |v| v.as_hash_tree())
     }
 
     /// Like `witness`, but gives the caller more control over the
@@ -499,7 +492,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
                         (_, KeyBound::Exact(_)) => f(n),
                         _ => Node::witness_tree(n),
                     },
-                    go((*n).right, lo, hi, f),
+                    Node::right_hash_tree(n),
                 ),
                 (_, Equal) => three_way_fork(
                     go((*n).left, lo, hi, f),
