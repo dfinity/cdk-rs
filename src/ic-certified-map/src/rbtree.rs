@@ -2,6 +2,7 @@ use crate::hashtree::{
     fork, fork_hash, labeled, labeled_hash, leaf_hash, Hash,
     HashTree::{self, Empty, Leaf, Pruned},
 };
+use std::borrow::Cow;
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::fmt;
 
@@ -38,7 +39,7 @@ impl AsHashTree for Vec<u8> {
     }
 
     fn as_hash_tree(&self) -> HashTree<'_> {
-        Leaf(&self[..])
+        Leaf(Cow::from(&self[..]))
     }
 }
 
@@ -48,7 +49,7 @@ impl AsHashTree for Hash {
     }
 
     fn as_hash_tree(&self) -> HashTree<'_> {
-        Leaf(&self[..])
+        Leaf(Cow::from(&self[..]))
     }
 }
 

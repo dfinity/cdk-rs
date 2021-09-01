@@ -6,6 +6,9 @@ jobs:
   test:
     name: lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [ 1.52.1 ]
 
     steps:
       - uses: actions/checkout@v2
@@ -21,8 +24,9 @@ jobs:
       - name: Install Rust
         run: |
           rustup update ${{ matrix.rust }} --no-self-update
-          rustup component add clippy
           rustup default ${{ matrix.rust }}
+          rustup component add clippy
+
       - name: Run Lint
         run: cargo clippy --tests --benches -- -D clippy::all
         env:
