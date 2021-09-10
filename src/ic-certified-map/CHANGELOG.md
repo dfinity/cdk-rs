@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- RbTree::value_range() method to get a witness for a range of keys with values.
+- `RbTree::value_range()` method to get a witness for a range of keys with values.
+- `RbTree::iter()` method.
+- impls of `Clone`, `PartialEq`, `Eq`, `PartialOrd`, `Ord`, `FromIterator`, and `Debug` for `RbTree`.
 
 ### Changed
 - RbTree::key_range() method returns tighter key bounds which reduces the size of witnesses.

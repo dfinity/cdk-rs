@@ -3,7 +3,7 @@ use crate::hashtree::{
     HashTree::{self, Empty, Leaf, Pruned},
 };
 use std::borrow::Cow;
-use std::cmp::Ordering::{Equal, Greater, Less};
+use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -88,6 +88,7 @@ type NodeRef<K, V> = Option<Box<Node<K, V>>>;
 // 2. Children of a red node are black.
 // 3. Every path from a node goes through the same number of black
 //    nodes.
+#[derive(Clone)]
 struct Node<K, V> {
     key: K,
     value: V,
@@ -189,15 +190,158 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
     }
 }
 
-/// Implements mutable Leaf-leaning red-black trees as defined in
+enum Position {
+    Left,
+    Middle,
+    Right,
+}
+
+enum IterState<'a, K, V> {
+    AtRoot(&'a Node<K, V>),
+    Deep(Vec<(&'a Node<K, V>, Position)>),
+    Done,
+}
+
+pub struct Iter<'a, K, V>(IterState<'a, K, V>);
+
+impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        fn descend_left<'a, K, V>(
+            parents: &mut Vec<(&'a Node<K, V>, Position)>,
+            mut p: &'a Node<K, V>,
+        ) -> Option<(&'a K, &'a V)> {
+            loop {
+                match (p.left.as_ref(), p.right.as_ref()) {
+                    (None, None) => {
+                        return Some((&p.key, &p.value));
+                    }
+                    (Some(l), _) => {
+                        parents.push((p, Position::Left));
+                        p = l;
+                    }
+                    (None, Some(_)) => {
+                        parents.push((p, Position::Middle));
+                        return Some((&p.key, &p.value));
+                    }
+                }
+            }
+        }
+
+        match &mut self.0 {
+            IterState::AtRoot(n) => {
+                let mut parents = vec![];
+                let result = descend_left(&mut parents, n);
+                self.0 = IterState::Deep(parents);
+                result
+            }
+            IterState::Deep(ref mut parents) => loop {
+                match parents.pop() {
+                    Some((_, Position::Right)) => {
+                        continue;
+                    }
+                    Some((p, Position::Left)) => {
+                        parents.push((p, Position::Middle));
+                        return Some((&p.key, &p.value));
+                    }
+                    Some((p, Position::Middle)) => match &p.right {
+                        None => {
+                            continue;
+                        }
+                        Some(r) => {
+                            parents.push((p, Position::Right));
+                            return descend_left(parents, r);
+                        }
+                    },
+                    None => {
+                        self.0 = IterState::Done;
+                        return None;
+                    }
+                }
+            },
+            IterState::Done => None,
+        }
+    }
+}
+
+/// Implements mutable left-leaning red-black trees as defined in
 /// https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf
+#[derive(Default, Clone)]
 pub struct RbTree<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> {
     root: NodeRef<K, V>,
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Default for RbTree<K, V> {
-    fn default() -> Self {
-        Self::new()
+impl<K, V> PartialEq for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + PartialEq,
+    V: 'static + AsHashTree + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
+}
+
+impl<K, V> Eq for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + Eq,
+    V: 'static + AsHashTree + Eq,
+{
+}
+
+impl<K, V> PartialOrd for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + PartialOrd,
+    V: 'static + AsHashTree + PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.iter().partial_cmp(other.iter())
+    }
+}
+
+impl<K, V> Ord for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + Ord,
+    V: 'static + AsHashTree + Ord,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.iter().cmp(other.iter())
+    }
+}
+
+impl<K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]>,
+    V: 'static + AsHashTree,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (K, V)>,
+    {
+        let mut t = RbTree::<K, V>::new();
+        for (k, v) in iter.into_iter() {
+            t.insert(k, v);
+        }
+        t
+    }
+}
+
+impl<K, V> std::fmt::Debug for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + std::fmt::Debug,
+    V: 'static + AsHashTree + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        let mut first = true;
+        for (k, v) in self.iter() {
+            if !first {
+                write!(f, ", ")?;
+            }
+            first = false;
+            write!(f, "({:?}, {:?})", k, v)?;
+        }
+        write!(f, "]")
     }
 }
 
@@ -328,6 +472,13 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             self.right_prefix_neighbor(prefix),
             Node::witness_tree,
         )
+    }
+
+    pub fn iter(&self) -> Iter<'_, K, V> {
+        match &self.root {
+            None => Iter(IterState::Done),
+            Some(n) => Iter(IterState::AtRoot(n)),
+        }
     }
 
     /// Enumerates all the key-value pairs in the tree.
