@@ -1,0 +1,393 @@
+= Hello, World! Rust CDK Quick Start
+:experimental:
+// Define unicode for Apple Command key.
+:commandkey: &#8984;
+:toclevels: 3
+:proglang: Rust
+:platform: Internet Computer platform
+:IC: Internet Computer
+:company-id: DFINITY
+:cdk-short-name: DFINITY Rust CDK
+:sdk-short-name: DFINITY Canister SDK
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+:sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+ifdef::env-github,env-browser[:outfilesuffix:.adoc]
+
+[[quick-start-intro]]
+The {cdk-long-name} provides tools, sample code, and documentation to help you create programs to run on the {IC} network.
+This _Hello, World! Rust CDK Quick Start_ assumes that you are installing the {cdk-short-name} for the first time. 
+
+To help you get started, this tutorial illustrates how to modify the traditional "Hello World" first program to use the {cdk-short-name}. 
+This simple program has just one function that prints text to a terminal, but it provides a good model for understanding the workflow when writing programs in Rust that you want to deploy on the {IC}.
+
+[[before-you-begin]]
+== Before you begin
+
+Before you start your project, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
+
+* You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
+
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
++
+The Rust tool chain must be at version 1.46.0, or later.
+
+* You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
+
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
++
+[source,bash]
+----
+brew install cmake
+----
++
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
+
+* You have stopped any {IC} network processes running on the local computer.
+
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
+
+[[create-a-new-project]]
+== Create a new project 
+
+Applications for the {IC} start as **projects**.
+You can create new projects for the {IC} using either Cargo or the {sdk-short-name}.
+Because you are building this project to be deployed on the {IC}, this tutorial focuses on how to create, build, and deploy a Rust program by using the `+dfx+` parent command and its subcommands.
+However, creating a new project with `+cargo new+` adds some default files to the project directory structure—such as the `+Cargo.lock+` and `+Cargo.toml+` files—that you will need in your development environment.
+
+* If you decide to use Cargo to create your project, you will need to manually add some files that the {cdk-long-name} requires.
+* If you decide to use {sdk-short-name} to create your project, you will need to manually add some files that Cargo requires.
+
+To create a new project using the {sdk-short-name}:
+
+. Open a terminal shell on your local computer, if you don’t already have one open.
+. Create a new project named `+rust_hello+` by running the following command:
++
+[source,bash]
+----
+dfx new rust_hello
+----
++
+The `+dfx new rust_hello+` command creates a new `+rust_hello+` project directory, template files, and a new `+rust_hello+` Git repository for your project.
+. Change to your project directory by running the following command:
++
+[source,bash]
+----
+cd rust_hello
+----
+
+== Modify the default configuration
+
+Creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+
+To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
+
+* <<Edit the default canister settings>>
+* <<Add a Cargo.toml file to the project>>
+* <<Add Rust files to the source directory>>
+* <<Replace the default program>>
+
+=== Edit the default canister settings
+
+One of the template files included in your project directory is a default `+dfx.json+` configuration file.
+This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
+
+To modify the `+dfx.json+` configuration file:
+
+. Check that you are still in the root directory for your project, if needed.
+. Open the `+dfx.json+` configuration file in a text editor.
+. Notice that under the `+canisters+` key, you have some default settings for the `+rust_hello+` canister such as the default path to the main program file and a default type of `+motoko+`.
+. Replace the `+canisters.rust_hello.main+` key and setting with a `+canisters.rust_hello.build+` key and specify the `+cargo build+` command to execute.
++
+For example:
++
+[source, json]
+----
+"build": "cargo build --target wasm32-unknown-unknown --package rust_hello --release",
+----
+. Add a `+canisters.rust_hello.candid+` key and specify the location of the Candid interface description file to use for the canister.
++
+For example:
++
+[source, json]
+----
+"candid": "src/rust_hello/src/rust_hello.did",
+----
+. Add a `+canisters.rust_hello.wasm+` key and specify the location of the compiled WebAssembly file to use for the canister.
++
+For example:
++
+[source, json]
+----
+"wasm": "target/wasm32-unknown-unknown/release/rust_hello.wasm",
+----
+. Modify the `+canisters.rust_hello.type+` key and specify `+custom+` as the canister type.
++
+For example:
++
+[source, json]
+----
+"type": "custom"
+----
+. Remove all of the `+rust_hello_assets+` configuration settings from the file.
++
+The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
++
+You can also remove the `+defaults+` and `+dfx+` keys for this tutorial.
++
+For example, the configuration file looks like this after you remove the `unused sections:
++
+....
+include::example$hello-dfx.json[]
+....
+
+. Save your changes and close the file to continue.
+
+=== Add a Cargo.toml file to the project
+
+Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
+Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
+
+To add a `+Cargo.toml+` configuration file for the project:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file in the current directory named `+Cargo.toml+`.
+. Open the `+Cargo.toml+` in a text editor.
+. Use the `+[workspace]+` key to specify the source file directory for your program.
++
+For example:
++
+[source,toml]
+----
+[workspace]
+members = [
+    "src/rust_hello",
+]
+----
+. Save your changes and close the file to continue.
+
+=== Add Rust files to the source directory
+
+Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+
+To prepare the source directory with Rust files:
+
+. Check that you are in the root directory for your project, if needed.
+. Create a new cargo package using a library template by running the following command:
++
+[source, bash]
+----
+cargo init --lib src/rust_hello
+----
++
+This command creates a `+src/rust_hello/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_hello+` directory.
+. Open the `+src/rust_hello/Cargo.toml+` file in a text editor.
++
+You use this file to configure the details used to build the Rust package.
++
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
++
+--
+* `+[package]+`
+* `+[lib]+`
+* `+[dependencies]+`
+--
+. Delete the existing `+[dependencies]+` section and replace it with the following:
++
+[source,toml]
+----
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+----
++
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_hello/Cargo.toml+` file to match the latest version. 
+. Save your changes and close the file to continue.
+
+=== Replace the default program
+
+Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+
+To replace the default program:
+
+. Check that you are still in the root directory for your project, if needed.
+. Delete the template `+src/rust_hello/main.mo+` file by running the following command:
++
+[source,bash]
+---- 
+rm src/rust_hello/main.mo
+----
+. Open the template `+src/rust_hello/src/lib.rs+` file in a text editor and delete the existing content.
+. Write a simple `+print+` function that uses the {cdk-short-name} `+query+` macro.
++
+For example:
++
+[source,rust]
+----
+#[ic_cdk_macros::query]
+fn print() {
+    ic_cdk::print("Hello World from DFINITY!");
+}
+----
+. Save your changes and close the file to continue.
+
+== Add an interface description file
+
+Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
+Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+
+By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
+
+To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
+
+To add a Candid file for this tutorial:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file in the `+src/rust_hello/src/+` directory named `+rust_hello.did+`.
+. Open the `+src/rust_hello/src/rust_hello.did+` file in a text editor.
+. Copy and paste the following `+service+` definition for the `+print+` function:
++
+[source,did]
+----
+service : {
+    "print": () -> () query;
+}
+----
++
+This definition specifies that the data passed to the `+print+` function is returned unchanged as a `+query+` result.
+. Save your changes and close the file to continue.
+
+[[start-the-local-network]]
+== Start the local network
+
+Before you can build your project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+
+To start the network locally:
+
+[arabic]
+. Check that you are still in the root directory for your project, if needed.
+. Start the {IC} network on your local computer in the background by running the following command:
++
+[source,bash]
+----
+dfx start --background
+----
++
+Depending on your platform and local security settings, you might see a warning displayed. 
+If you are prompted to allow or deny incoming network connections, click *Allow*.
+
+[[register-ids]]
+== Register, build, and deploy your project
+
+After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+
+To register, build, and deploy:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Register, build, and deploy the canisters specified in the `+dfx.json+` file by running the following command:
++
+[source,bash]
+----
+dfx deploy
+----
++
+The `+dfx deploy+` command output displays information about each of the operations it performs similar to the following excerpt:
++
+....
+Creating a wallet canister on the local network.
+The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
+Deploying all canisters.
+Creating canisters...
+Creating canister "rust_hello"...
+"rust_hello" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
+Building canisters...
+Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello --release'
+    Updating crates.io index
+   Compiling unicode-xid v0.2.2
+   ...
+Building canisters...
+Executing 'cargo build --target wasm32-unknown-unknown --package rust_hello --release'
+   Compiling rust_hello v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_hello/src/rust_hello)
+    Finished release [optimized] target(s) in 1.26s
+Installing canisters...
+Creating UI canister on the local network.
+The UI canister on the "local" network is "rkp4c-7iaaa-aaaaa-aaaca-cai"
+Installing code for canister rust_hello, with canister_id r7inp-6aaaa-aaaaa-aaabq-cai
+Deployed canisters.
+....
+
+////
+== Optimize and test the program
+
+At this point, you have a program compiled to WebAssembly that has not been optimized for deployment on the {IC}. 
+
+To optimize and test the resulting canister:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Install the `+ic-cdk-optimizer+` crate by running the following command:
++
+[source,bash]
+----
+cargo install ic-cdk-optimizer
+----
++
+This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your program can be uploaded as a canister.
+. Create a release directory within the `+src/rust_hello+` directory by running the following command:
++
+[source,bash]
+----
+mkdir -p src/rust_hello/target/wasm32-unknown-unknown/release/
+----
+. Optimize the code within the `+target/rust_hello+` directory by running the following command:
++
+[source,bash]
+----
+ic-cdk-optimizer target/wasm32-unknown-unknown/release/rust_hello.wasm -o target/wasm32-unknown-unknown/release/rust_hello-opt.wasm
+----
+////
+
+== Test the program
+
+To test the deployed program locally:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Call the `+print+` function in the program by running the following command:
++
+[source,bash]
+----
+dfx canister call rust_hello print
+----
+. Verify that the call to the `+rust_hello+` canister `+print+` function displays the `+Hello World from DFINITY!+` greeting.
++
+For example:
++
+....
+[Canister ryjl3-tyaaa-aaaaa-aaaba-cai] Hello World from DFINITY!
+()
+....
+
+== Stop the local network
+
+After testing the application, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+
+To stop the local network:
+
+. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+
+. Stop the local {IC} network running on your local computer by running the following command:
++
+[source,bash]
+----
+dfx stop
+----

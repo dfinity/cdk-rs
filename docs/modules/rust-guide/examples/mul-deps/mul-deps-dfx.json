@@ -1,0 +1,35 @@
+{
+  "canisters": {
+    "multiply_deps": {
+      "main": "src/multiply_deps/main.mo",
+      "type": "motoko"
+    },
+    "rust_deps": {
+      "build": "cargo build --target wasm32-unknown-unknown --package  rust_deps --release",
+      "candid": "src/rust_deps/deps.did",
+      "wasm": "target/wasm32-unknown-unknown/release/rust_deps.wasm",
+      "type": "custom",
+      "dependencies": [
+        "multiply_deps"
+      ]
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "ic-pubs": {
+      "providers": [
+        "https://gw.dfinity.network"
+      ],
+      "type": "persistent"
+    }
+  },
+  "version": 1
+}

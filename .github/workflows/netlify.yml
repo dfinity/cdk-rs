@@ -29,8 +29,8 @@ jobs:
            # Add an index.html for the root of the netlify docs.
           rustdoc README.md --output target/doc && mv target/doc/README.html target/doc/index.html
 
-      - if: github.ref == 'refs/heads/master'
-        name: Deploy to Netlify (master only)
+      - if: github.ref == 'refs/heads/main'
+        name: Deploy to Netlify (main only)
         uses: South-Paw/action-netlify-deploy@v1.0.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -39,7 +39,7 @@ jobs:
           build-dir: target/doc/
           comment-on-commit: true
 
-      - if: github.ref != 'refs/heads/master'
+      - if: github.ref != 'refs/heads/main'
         name: Deploy to Netlify (PR only)
         id: deploy_docs
         uses: netlify/actions/cli@6c34c3fcafc69ac2e1d6dbf226560329c6dfc51b
@@ -49,7 +49,7 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
-      - if: github.ref != 'refs/heads/master'
+      - if: github.ref != 'refs/heads/main'
         name: Commenting on PR
         uses: unsplash/comment-on-pr@v1.2.0
         env:

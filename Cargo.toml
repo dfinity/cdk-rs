@@ -3,4 +3,6 @@ members = [
     "src/ic-cdk",
     "src/ic-cdk-macros",
     "src/ic-cdk-optimizer",
+    "src/ic-certified-map",
 ]
+

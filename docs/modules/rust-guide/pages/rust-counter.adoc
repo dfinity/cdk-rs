@@ -1,0 +1,384 @@
+= Incrementing a counter
+ifdef::env-github,env-browser[:outfilesuffix:.adoc]
+:toc:
+:toc: right
+:toc-title: TUTORIAL - SIMPLE PERSISTENCE
+:toclevels: 3
+:proglang: Rust
+:platform: Internet Computer platform
+:IC: Internet Computer
+:company-id: DFINITY
+:sdk-short-name: DFINITY Canister SDK
+:sdk-long-name: DFINITY Canister Software Development Kit (SDK)
+:cdk-short-name: DFINITY Rust CDK
+:cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
+
+In this tutorial, you are going to write a program that provides a few basic functions to increment a counter and illustrates the persistence of a value.
+
+For this tutorial, the program declares a `+COUNTER+` as a mutable variable to contain a natural number that represents the current value of the counter.
+This program supports the following functions:
+
+* The `+increment+` function updates the current value, incrementing by 1 with no return value.
+* The `+get+` function is a simple query that returns the current value of the counter.
+* The `+set+` function updates the current value to the numeric value you specify as an argument.
+
+This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed canister.
+By calling the function to increment a value multiple times, you can verify that the variable state—that is, the value of the variable between calls—persists.
+
+Like the other sample programs, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
+
+* Create a new project.
+* Write a program that compile into a WebAssembly module.
+* Deploy the canister on the local {IC} network.
+* Invoke the canister methods to increment then read the value of a counter.
+
+[[before-you-begin]]
+== Before you begin
+
+Before you start your project, verify the following:
+
+* You have an internet connection and access to a shell terminal on your local macOS or Linux computer.
+
+* You have downloaded and installed the Rust programming language and Cargo as described in the link:https://doc.rust-lang.org/book/ch01-01-installation.html[Rust installation instructions] for your operating system.
+
++
+[source,bash]
+----
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+----
++
+The Rust tool chain must be at version 1.46.0, or later.
+
+* You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
+
+* You have `+cmake+` installed. For example, use Homebrew with the following command:
++
+[source,bash]
+----
+brew install cmake
+----
+For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
+
+* You have stopped any {IC} network processes running on the local computer.
+
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
+
+This tutorial takes approximately 20 minutes to complete.
+
+== Create a new project
+
+To create a new project directory for this tutorial:
+
+[arabic]
+. Open a terminal shell on your local computer, if you don’t already have one open.
+. Create a new project by running the following command:
++
+[source,bash]
+----
+dfx new rust_counter
+----
++
+. Change to your project directory by running the following command:
++
+[source,bash]
+----
+cd rust_counter
+----
+
+== Modify the default configuration
+
+In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+
+To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
+
+* <<Edit the default canister settings>>
+* <<Add a Cargo.toml file to the project>>
+* <<Add Rust files to the source directory>>
+* <<Replace the default program>>
+
+=== Edit the default canister settings
+
+One of the template files included in your project directory is a default `+dfx.json+` configuration file.
+This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
+
+To modify the `+dfx.json+` configuration file:
+
+. Check that you are still in the root directory for your project, if needed.
+. Open the `+dfx.json+` configuration file in a text editor.
+. Replace the `+canisters.rust_counter+` settings with settings for building a canister using the `+cargo build+` command.
++
+For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` settings with settings like these:
++
+[source,json]
+----
+  "rust_counter": {
+    "build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
+    "candid": "src/rust_counter/counter.did",
+    "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
+    "type": "custom"
+    }
+----
+. Remove all of the `+rust_counter_assets+` configuration settings from the file.
++
+The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+. Remove the `+defaults+` and `+dfx+` version settings because this tutorial doesn't use these settings.
++
+For example, the configuration file looks like this after you modify the settings:
++
+....
+include::example$counter-tutorial/rust_counter_dfx.json[]
+....
+. Save your change and close the `+dfx.json+` file to continue.
+
+=== Add a Cargo.toml file to the project
+
+Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
+Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
+
+To add a `+Cargo.toml+` configuration file for the project:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file in the current directory named `+Cargo.toml+`.
+. Open the `+Cargo.toml+` in a text editor.
+. Use the `+[workspace]+` key to specify the source file directory for your program.
++
+For example:
++
+[source,toml]
+----
+[workspace]
+members = [
+    "src/rust_counter",
+]
+----
+. Save your changes and close the file to continue.
+
+=== Add Rust files to the source directory
+
+Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+
+To prepare the source directory with Rust files:
+
+. Check that you are in the root directory for your project, if needed.
+. Create a new cargo package using a library template by running the following command:
++
+[source, bash]
+----
+cargo init --lib src/rust_counter
+----
++
+This command creates a `+src/rust_counter/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_counter+` directory.
+. Open the `+src/rust_counter/Cargo.toml+` file in a text editor.
++
+You use this file to configure the details used to build the Rust package.
++
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
++
+--
+* `+[package]+`
+* `+[lib]+`
+* `+[dependencies]+`
+--
+. Delete the existing `+[dependencies]+` section and replace it with the following:
++
+[source,toml]
+----
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+----
++
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version. 
+. Save your changes and close the file to continue.
+
+=== Replace the default program
+
+Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+
+To replace the default program:
+
+. Check that you are still in the root directory for your project, if needed.
+. Delete the template `+src/rust_counter/main.mo+` file by running the following command:
++
+[source,bash]
+---- 
+rm src/rust_counter/main.mo
+----
+. Open the template `+src/rust_counter/src/lib.rs+` file in a text editor and delete the existing content.
++
+The next step is to write a Rust program that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
+. Copy and paste the following sample code into the `+lib.rs+` file:
++
+[source,motoko]
+----
+include::example$counter-tutorial/counter.rs[]
+----
+. Save your changes and close the `+counter.rs+` file to continue.
+
+== Add an interface description file
+
+Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
+Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+
+By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
+
+To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
+
+To add a Candid file for this tutorial:
+
+. Check that you are still in the root directory for your project, if needed.
+. Create a new file named `+counter.did+` in the `+src/rust_counter/src+` directory.
+. Open the `+src/rust_counter/src/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
++
+[source,did]
+----
+service : {
+  "increment": () -> ();
+  "get": () -> (nat) query;
+  "set": (nat) -> ();
+}
+----
+. Save your changes and close the `+counter.did+` file to continue.
+
+== Start the local network
+
+Before you can build the `+rust_counter+` project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+
+To start the network locally:
+
+. Check that you are still in the root directory for your project, if needed.
+. Start the {IC} network on your local computer in the background by running the following command:
++
+[source,bash]
+----
+dfx start --background
+----
++
+Depending on your platform and local security settings, you might see a warning displayed. 
+If you are prompted to allow or deny incoming network connections, click *Allow*.
+
+== Register, build, and deploy your project
+
+After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+
+To register, build, and deploy:
+
+. Check that you are still in root directory for your project directory, if needed.
+. Register, build, and deploy the canisters specified in the `+dfx.json+` file by running the following command:
++
+[source,bash]
+----
+dfx deploy
+----
++
+The `+dfx deploy+` command output displays information about each of the operations it performs similar to the following excerpt:
++
+....
+Creating a wallet canister on the local network.
+The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
+Deploying all canisters.
+Creating canisters...
+Creating canister "rust_counter"...
+"rust_counter" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
+Building canisters...
+Executing 'cargo build --target wasm32-unknown-unknown --package  rust_counter --release'
+    Updating crates.io index
+  Downloaded thiserror v1.0.25
+  Downloaded libc v0.2.95
+  ...
+  Compiling ic-cdk v0.3
+  Compiling ic-cdk-macros v0.3
+  Compiling rust_counter v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_counter/src/rust_counter)
+    Finished release [optimized] target(s) in 1m 10s
+Installing canisters...
+Creating UI canister on the local network.
+The UI canister on the "local" network is "ryjl3-tyaaa-aaaaa-aaaba-cai"
+Installing code for canister rust_counter, with canister_id rrkah-fqaaa-aaaaa-aaaaq-cai
+Deployed canisters.
+....
+
+== Call functions and test the program
+
+After successfully deploying the canister, you can test the canister by invoking the functions it provides.
+For this tutorial:
+
+* Call the `+get+` function to query the value of the counter.
+* Call the `+increment+` function to increment the counter each time it is called.
+* Call the `+set+` function to pass an argument to update the counter to an arbitrary value you specify.
+
+To test the program:
+
+[arabic]
+. Call the `+get+` function to read the current value of the `+COUNTER+` variable by running the following command:
++
+[source,bash]
+----
+dfx canister call rust_counter get
+----
++
+The command returns the current value of the `+COUNTER+` variable as zero:
++
+....
+(0)
+....
+[arabic]
+. Call the `+increment+` function to increment the value of the `+COUNTER+` variable by one:
++
+[source,bash]
+----
+dfx canister call rust_counter increment
+----
++
+This command increments the value of the variable—changing its state—but does not return the result.
+. Rerun the command to call the `+get+` function to see the current value of the `+COUNTER+` variable:
++
+[source,bash]
+----
+dfx canister call rust_counter get
+----
++
+The command returns the updated value of the `+COUNTER+` variable as one:
++
+....
+(1)
+....
+. Run additional commands to experiment with call the functions and using different values.
++
+For example, try commands similar to the following to set and return the counter value:
++
+[source,bash]
+----
+dfx canister call rust_counter set '(987)'
+dfx canister call rust_counter get
+----
++
+Returns the current value of 987.
++
+[source,bash]
+----
+dfx canister call rust_counter increment
+dfx canister call rust_counter get
+----
++
+Returns the incremented value of 988.
+
+== Stop the local network
+
+After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+
+To stop the local network:
+
+. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+
+. Stop the {IC} network by running the following command:
++
+[source,bash]
+----
+dfx stop
+----

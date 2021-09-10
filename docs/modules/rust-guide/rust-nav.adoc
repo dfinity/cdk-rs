@@ -1,0 +1,7 @@
+* xref:rust-intro.adoc[Working with Rust]
+** xref:rust-quickstart.adoc[Hello, World! Quick Start]
+** xref:rust-counter.adoc[Simple counter tutorial]
+** xref:multiply-dependency.adoc[Basic dependency tutorial]
+** xref:rust-profile.adoc[Profile tutorial]
+//** xref:rust-asset-storage.adoc[Asset storage tutorial] 
+//** xref:rust-chess-autonomous.adoc[Autonomous game tutorial]
