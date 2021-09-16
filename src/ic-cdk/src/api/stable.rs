@@ -4,6 +4,10 @@ pub fn stable_size() -> u32 {
     unsafe { super::ic0::stable_size() as u32 }
 }
 
+pub fn stable64_size() -> u64 {
+    unsafe { super::ic0::stable64_size() as u64 }
+}
+
 pub struct StableMemoryError();
 
 /// Attempt to grow the stable memory by `new_pages` (added pages).
@@ -21,15 +25,37 @@ pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
     }
 }
 
+/// Similar to `stable_grow` but with support for 64-bit addressed memory.
+pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
+    unsafe {
+        match super::ic0::stable64_grow(new_pages as i64) {
+            -1 => Err(StableMemoryError()),
+            x => Ok(x as u64),
+        }
+    }
+}
+
 pub fn stable_write(offset: u32, buf: &[u8]) {
     unsafe {
         super::ic0::stable_write(offset as i32, buf.as_ptr() as i32, buf.len() as i32);
     }
 }
 
+pub fn stable64_write(offset: u64, buf: &[u8]) {
+    unsafe {
+        super::ic0::stable64_write(offset as i64, buf.as_ptr() as i64, buf.len() as i64);
+    }
+}
+
 pub fn stable_read(offset: u32, buf: &mut [u8]) {
     unsafe {
         super::ic0::stable_read(buf.as_ptr() as i32, offset as i32, buf.len() as i32);
+    }
+}
+
+pub fn stable64_read(offset: u64, buf: &mut [u8]) {
+    unsafe {
+        super::ic0::stable64_read(buf.as_ptr() as i64, offset as i64, buf.len() as i64);
     }
 }
 
