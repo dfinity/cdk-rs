@@ -15,9 +15,9 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-binaryen = "0.12.0"
+binaryen = "0.12"
 clap = "=3.0.0-beta.2"
 clap_derive = "=3.0.0-beta.2"
-humansize = "1.1.0"
-tempfile = "3.1.0"
-wabt = "0.10.0"
+humansize = "1.1"
+tempfile = "3.2"
+wabt = "0.10"
