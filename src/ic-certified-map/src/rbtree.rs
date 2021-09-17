@@ -190,78 +190,75 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
     }
 }
 
-enum Position {
-    Left,
-    Middle,
-    Right,
+#[derive(PartialEq)]
+enum Visit {
+    Pre,
+    In,
+    Post,
 }
 
-enum IterState<'a, K, V> {
-    AtRoot(&'a Node<K, V>),
-    Deep(Vec<(&'a Node<K, V>, Position)>),
-    Done,
+/// Iterator over a RbTree.
+pub struct Iter<'a, K, V> {
+    visit: Visit,
+    parents: Vec<&'a Node<K, V>>,
 }
 
-pub struct Iter<'a, K, V>(IterState<'a, K, V>);
+impl<'a, K, V> Iter<'a, K, V> {
+    /// This function is an adaptation of the traverse_step procedure described in
+    /// section 7.2 "Bidirectional Bifurcate Coordinates" of
+    /// "Elements of Programming" by A. Stepanov and P. McJones, p. 118.
+    /// http://elementsofprogramming.com/eop.pdf
+    ///
+    /// The main difference is that our nodes don't have parent links for two reasons:
+    /// 1. They don't play well with safe Rust ownership model.
+    /// 2. Iterating a tree shouldn't be an operation common enough to complicate the code.
+    fn step(&mut self) -> bool {
+        match self.parents.last() {
+            Some(p) => {
+                match self.visit {
+                    Visit::Pre => {
+                        if let Some(l) = &p.left {
+                            self.parents.push(l);
+                        } else {
+                            self.visit = Visit::In;
+                        }
+                    }
+                    Visit::In => {
+                        if let Some(r) = &p.right {
+                            self.parents.push(r);
+                            self.visit = Visit::Pre;
+                        } else {
+                            self.visit = Visit::Post;
+                        }
+                    }
+                    Visit::Post => {
+                        let p = self.parents.pop().unwrap();
+                        if let Some(pp) = self.parents.last() {
+                            if pp.left.as_ref().map(|l| l.as_ref() as *const Node<K, V>)
+                                == Some(p as *const Node<K, V>)
+                            {
+                                self.visit = Visit::In;
+                            }
+                        }
+                    }
+                }
+                true
+            }
+            None => false,
+        }
+    }
+}
 
 impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        fn descend_left<'a, K, V>(
-            parents: &mut Vec<(&'a Node<K, V>, Position)>,
-            mut p: &'a Node<K, V>,
-        ) -> Option<(&'a K, &'a V)> {
-            loop {
-                match (p.left.as_ref(), p.right.as_ref()) {
-                    (None, None) => {
-                        return Some((&p.key, &p.value));
-                    }
-                    (Some(l), _) => {
-                        parents.push((p, Position::Left));
-                        p = l;
-                    }
-                    (None, Some(_)) => {
-                        parents.push((p, Position::Middle));
-                        return Some((&p.key, &p.value));
-                    }
-                }
+        while self.step() {
+            if self.visit == Visit::In {
+                return self.parents.last().map(|n| (&n.key, &n.value));
             }
         }
-
-        match &mut self.0 {
-            IterState::AtRoot(n) => {
-                let mut parents = vec![];
-                let result = descend_left(&mut parents, n);
-                self.0 = IterState::Deep(parents);
-                result
-            }
-            IterState::Deep(ref mut parents) => loop {
-                match parents.pop() {
-                    Some((_, Position::Right)) => {
-                        continue;
-                    }
-                    Some((p, Position::Left)) => {
-                        parents.push((p, Position::Middle));
-                        return Some((&p.key, &p.value));
-                    }
-                    Some((p, Position::Middle)) => match &p.right {
-                        None => {
-                            continue;
-                        }
-                        Some(r) => {
-                            parents.push((p, Position::Right));
-                            return descend_left(parents, r);
-                        }
-                    },
-                    None => {
-                        self.0 = IterState::Done;
-                        return None;
-                    }
-                }
-            },
-            IterState::Done => None,
-        }
+        None
     }
 }
 
@@ -476,8 +473,14 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
 
     pub fn iter(&self) -> Iter<'_, K, V> {
         match &self.root {
-            None => Iter(IterState::Done),
-            Some(n) => Iter(IterState::AtRoot(n)),
+            None => Iter {
+                visit: Visit::Pre,
+                parents: vec![],
+            },
+            Some(n) => Iter {
+                visit: Visit::Pre,
+                parents: vec![&n],
+            },
         }
     }
 
