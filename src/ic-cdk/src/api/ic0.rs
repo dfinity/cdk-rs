@@ -116,6 +116,11 @@ ic0_module! {
     ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();             // *
     ic0.stable_read : (dst : i32, offset : i32, size : i32) -> ();              // *
 
+    ic0.stable64_size : () -> (page_count : i64);                               // *
+    ic0.stable64_grow : (new_pages : i64) -> (old_page_count : i64);            // *
+    ic0.stable64_write : (offset : i64, src : i64, size : i64) -> ();           // *
+    ic0.stable64_read : (dst : i64, offset : i64, size : i64) -> ();            // *
+
     ic0.certified_data_set : (src: i32, size: i32) -> ();                       // I G U Ry Rt
     ic0.data_certificate_present : () -> i32;                                   // *
     ic0.data_certificate_size : () -> i32;                                      // *

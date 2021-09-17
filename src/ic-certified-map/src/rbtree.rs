@@ -108,8 +108,8 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
         Box::new(Self {
             key,
             value,
-            left: Node::null(),
-            right: Node::null(),
+            left: None,
+            right: None,
             color: Color::Red,
             subtree_hash: data_hash,
         })
@@ -131,10 +131,6 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
             None => Empty,
             Some(r) => Pruned(r.subtree_hash),
         }
-    }
-
-    fn null() -> NodeRef<K, V> {
-        None
     }
 
     fn visit<'a, F>(n: &'a NodeRef<K, V>, f: &mut F)
@@ -345,7 +341,7 @@ where
 impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     /// Constructs a new empty tree.
     pub fn new() -> Self {
-        Self { root: Node::null() }
+        Self { root: None }
     }
 
     /// Returns true if the map is empty.
@@ -808,7 +804,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             if h.left.is_none() {
                 debug_assert!(h.right.is_none());
                 drop(h);
-                return Node::null();
+                return None;
             }
             if !is_red(&h.left) && !is_red(&h.left.as_ref().unwrap().left) {
                 h = move_red_left(h);
@@ -823,6 +819,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             key: &[u8],
         ) -> NodeRef<K, V> {
             if key < h.key.as_ref() {
+                debug_assert!(h.left.is_some(), "the key must be present in the tree");
                 if !is_red(&h.left) && !is_red(&h.left.as_ref().unwrap().left) {
                     h = move_red_left(h);
                 }
@@ -834,7 +831,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
                 if key == h.key.as_ref() && h.right.is_none() {
                     debug_assert!(h.left.is_none());
                     drop(h);
-                    return Node::null();
+                    return None;
                 }
 
                 if !is_red(&h.right) && !is_red(&h.right.as_ref().unwrap().left) {
