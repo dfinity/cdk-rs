@@ -3,7 +3,7 @@ use crate::hashtree::{
     HashTree::{self, Empty, Leaf, Pruned},
 };
 use std::borrow::Cow;
-use std::cmp::Ordering::{Equal, Greater, Less};
+use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -88,6 +88,7 @@ type NodeRef<K, V> = Option<Box<Node<K, V>>>;
 // 2. Children of a red node are black.
 // 3. Every path from a node goes through the same number of black
 //    nodes.
+#[derive(Clone)]
 struct Node<K, V> {
     key: K,
     value: V,
@@ -185,15 +186,162 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
     }
 }
 
-/// Implements mutable Leaf-leaning red-black trees as defined in
+#[derive(PartialEq)]
+enum Visit {
+    Pre,
+    In,
+    Post,
+}
+
+/// Iterator over a RbTree.
+pub struct Iter<'a, K, V> {
+    /// Invariants:
+    /// 1. visit == Pre: none of the nodes in parents were visited yet.
+    /// 2. visit == In:  the last node in parents and all its left children are visited.
+    /// 3. visit == Post: all the nodes reachable from the last node in parents are visited.
+    visit: Visit,
+    parents: Vec<&'a Node<K, V>>,
+}
+
+impl<'a, K, V> Iter<'a, K, V> {
+    /// This function is an adaptation of the traverse_step procedure described in
+    /// section 7.2 "Bidirectional Bifurcate Coordinates" of
+    /// "Elements of Programming" by A. Stepanov and P. McJones, p. 118.
+    /// http://elementsofprogramming.com/eop.pdf
+    ///
+    /// The main difference is that our nodes don't have parent links for two reasons:
+    /// 1. They don't play well with safe Rust ownership model.
+    /// 2. Iterating a tree shouldn't be an operation common enough to complicate the code.
+    fn step(&mut self) -> bool {
+        match self.parents.last() {
+            Some(tip) => {
+                match self.visit {
+                    Visit::Pre => {
+                        if let Some(l) = &tip.left {
+                            self.parents.push(l);
+                        } else {
+                            self.visit = Visit::In;
+                        }
+                    }
+                    Visit::In => {
+                        if let Some(r) = &tip.right {
+                            self.parents.push(r);
+                            self.visit = Visit::Pre;
+                        } else {
+                            self.visit = Visit::Post;
+                        }
+                    }
+                    Visit::Post => {
+                        let tip = self.parents.pop().unwrap();
+                        if let Some(parent) = self.parents.last() {
+                            if parent
+                                .left
+                                .as_ref()
+                                .map(|l| l.as_ref() as *const Node<K, V>)
+                                == Some(tip as *const Node<K, V>)
+                            {
+                                self.visit = Visit::In;
+                            }
+                        }
+                    }
+                }
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.step() {
+            if self.visit == Visit::In {
+                return self.parents.last().map(|n| (&n.key, &n.value));
+            }
+        }
+        None
+    }
+}
+
+/// Implements mutable left-leaning red-black trees as defined in
 /// https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf
+#[derive(Default, Clone)]
 pub struct RbTree<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> {
     root: NodeRef<K, V>,
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Default for RbTree<K, V> {
-    fn default() -> Self {
-        Self::new()
+impl<K, V> PartialEq for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + PartialEq,
+    V: 'static + AsHashTree + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
+}
+
+impl<K, V> Eq for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + Eq,
+    V: 'static + AsHashTree + Eq,
+{
+}
+
+impl<K, V> PartialOrd for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + PartialOrd,
+    V: 'static + AsHashTree + PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.iter().partial_cmp(other.iter())
+    }
+}
+
+impl<K, V> Ord for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + Ord,
+    V: 'static + AsHashTree + Ord,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.iter().cmp(other.iter())
+    }
+}
+
+impl<K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]>,
+    V: 'static + AsHashTree,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (K, V)>,
+    {
+        let mut t = RbTree::<K, V>::new();
+        for (k, v) in iter.into_iter() {
+            t.insert(k, v);
+        }
+        t
+    }
+}
+
+impl<K, V> std::fmt::Debug for RbTree<K, V>
+where
+    K: 'static + AsRef<[u8]> + std::fmt::Debug,
+    V: 'static + AsHashTree + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        let mut first = true;
+        for (k, v) in self.iter() {
+            if !first {
+                write!(f, ", ")?;
+            }
+            first = false;
+            write!(f, "({:?}, {:?})", k, v)?;
+        }
+        write!(f, "]")
     }
 }
 
@@ -324,6 +472,19 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             self.right_prefix_neighbor(prefix),
             Node::witness_tree,
         )
+    }
+
+    pub fn iter(&self) -> Iter<'_, K, V> {
+        match &self.root {
+            None => Iter {
+                visit: Visit::Pre,
+                parents: vec![],
+            },
+            Some(n) => Iter {
+                visit: Visit::Pre,
+                parents: vec![&n],
+            },
+        }
     }
 
     /// Enumerates all the key-value pairs in the tree.

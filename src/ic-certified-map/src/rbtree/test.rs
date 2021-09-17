@@ -1,7 +1,9 @@
 use super::*;
 use std::convert::AsRef;
 
-fn insert(t: &mut RbTree<Vec<u8>, Vec<u8>>, k: impl AsRef<[u8]>, v: impl AsRef<[u8]>) {
+type TreeOfBytes = RbTree<Vec<u8>, Vec<u8>>;
+
+fn insert(t: &mut TreeOfBytes, k: impl AsRef<[u8]>, v: impl AsRef<[u8]>) {
     t.insert(k.as_ref().to_vec(), v.as_ref().to_vec())
 }
 
@@ -46,7 +48,7 @@ fn get_leaf_values<'a>(ht: &'a HashTree<'a>) -> Vec<&'a [u8]> {
 
 #[test]
 fn test_witness() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     for i in 0u64..10 {
         let key = (1 + 2 * i).to_be_bytes();
         let val = (1 + 2 * i).to_le_bytes();
@@ -139,7 +141,7 @@ fn test_witness() {
 
 #[test]
 fn test_key_bounds() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     t.insert(vec![1], vec![10]);
     t.insert(vec![3], vec![30]);
 
@@ -158,7 +160,7 @@ fn test_key_bounds() {
 
 #[test]
 fn test_prefix_neighbor() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     insert(&mut t, b"a/b", vec![0]);
     insert(&mut t, b"a/b/c", vec![1]);
     insert(&mut t, b"a/b/d", vec![2]);
@@ -178,7 +180,7 @@ fn test_prefix_neighbor() {
 
 #[test]
 fn simple_delete_test() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     insert(&mut t, b"x", b"a");
     insert(&mut t, b"y", b"b");
     insert(&mut t, b"z", b"c");
@@ -198,7 +200,7 @@ fn simple_delete_test() {
 
 #[test]
 fn simple_delete_test_2() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     insert(&mut t, b"x", b"y");
     insert(&mut t, b"z", b"w");
 
@@ -212,7 +214,7 @@ fn map_model_test() {
     use std::collections::HashMap;
 
     let mut hm: HashMap<Vec<u8>, Vec<u8>> = HashMap::new();
-    let mut rb = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut rb = TreeOfBytes::new();
 
     for i in 0..100u64 {
         hm.insert(i.to_be_bytes().to_vec(), i.to_be_bytes().to_vec());
@@ -239,7 +241,7 @@ fn map_model_test() {
 
 #[test]
 fn test_nested_witness() {
-    let mut rb: RbTree<Vec<u8>, RbTree<Vec<u8>, Vec<u8>>> = RbTree::new();
+    let mut rb: RbTree<Vec<u8>, TreeOfBytes> = RbTree::new();
     let mut nested = RbTree::new();
     nested.insert(b"bottom".to_vec(), b"data".to_vec());
     rb.insert(b"top".to_vec(), nested);
@@ -267,7 +269,7 @@ fn test_nested_witness() {
 
 #[test]
 fn test_witness_key_range() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     insert(&mut t, b"b", b"x");
     insert(&mut t, b"d", b"y");
     insert(&mut t, b"f", b"z");
@@ -293,7 +295,7 @@ fn test_witness_key_range() {
 
 #[test]
 fn test_witness_value_range() {
-    let mut t = RbTree::<Vec<u8>, Vec<u8>>::new();
+    let mut t = TreeOfBytes::new();
     insert(&mut t, b"b", b"x");
     insert(&mut t, b"d", b"y");
     insert(&mut t, b"f", b"z");
@@ -318,4 +320,58 @@ fn test_witness_value_range() {
         get_leaf_values(&t.value_range(b"a", b"z")),
         vec![b"x", b"y", b"z"]
     );
+}
+
+#[test]
+fn test_iter() {
+    let mut t = TreeOfBytes::new();
+    let mut v = vec![];
+    for k in 0..100u64 {
+        insert(&mut t, k.to_be_bytes(), (k + 10).to_be_bytes());
+        v.push((k.to_be_bytes().to_vec(), (k + 10).to_be_bytes().to_vec()));
+        assert!(
+            t.iter().eq(v.iter().map(|(k, v)| (k, v))),
+            "iterators aren't equal {:?} vs {:?}",
+            &t.iter().collect::<Vec<_>>(),
+            v
+        );
+    }
+}
+
+#[test]
+fn test_equality() {
+    let mut t1 = TreeOfBytes::new();
+    for k in (0..100u64).rev() {
+        insert(&mut t1, k.to_be_bytes(), (k + 10).to_be_bytes());
+    }
+    let t2 = (0..100u64)
+        .map(|k| (k.to_be_bytes().to_vec(), (k + 10).to_be_bytes().to_vec()))
+        .collect();
+
+    assert_eq!(t1, t2);
+    assert_eq!(t1.cmp(&t2), Equal);
+
+    insert(&mut t1, 200u64.to_be_bytes(), 210u64.to_be_bytes());
+    assert_ne!(t1, t2);
+    assert_ne!(t1.cmp(&t2), Equal);
+}
+
+#[test]
+fn test_ordering() {
+    let t1: TreeOfBytes = (0..10u64)
+        .map(|k| (k.to_be_bytes().to_vec(), k.to_be_bytes().to_vec()))
+        .collect();
+    let t2: TreeOfBytes = (0..10u64)
+        .map(|k| (k.to_be_bytes().to_vec(), (k + 1).to_be_bytes().to_vec()))
+        .collect();
+    let t3: TreeOfBytes = (0..5u64)
+        .map(|k| (k.to_be_bytes().to_vec(), k.to_be_bytes().to_vec()))
+        .collect();
+    let t4: TreeOfBytes = (1..5u64)
+        .map(|k| (k.to_be_bytes().to_vec(), k.to_be_bytes().to_vec()))
+        .collect();
+
+    assert_eq!(t1.cmp(&t2), Less);
+    assert_eq!(t1.cmp(&t3), Greater);
+    assert_eq!(t1.cmp(&t4), Less);
 }
