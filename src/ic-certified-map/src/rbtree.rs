@@ -195,6 +195,10 @@ enum Visit {
 
 /// Iterator over a RbTree.
 pub struct Iter<'a, K, V> {
+    /// Invariants:
+    /// 1. visit == Pre: none of the nodes in parents were visited yet.
+    /// 2. visit == In:  the last node in parents and all its left children are visited.
+    /// 3. visit == Post: all the nodes reachable from the last node in parents are visited.
     visit: Visit,
     parents: Vec<&'a Node<K, V>>,
 }
@@ -210,17 +214,17 @@ impl<'a, K, V> Iter<'a, K, V> {
     /// 2. Iterating a tree shouldn't be an operation common enough to complicate the code.
     fn step(&mut self) -> bool {
         match self.parents.last() {
-            Some(p) => {
+            Some(tip) => {
                 match self.visit {
                     Visit::Pre => {
-                        if let Some(l) = &p.left {
+                        if let Some(l) = &tip.left {
                             self.parents.push(l);
                         } else {
                             self.visit = Visit::In;
                         }
                     }
                     Visit::In => {
-                        if let Some(r) = &p.right {
+                        if let Some(r) = &tip.right {
                             self.parents.push(r);
                             self.visit = Visit::Pre;
                         } else {
@@ -228,10 +232,13 @@ impl<'a, K, V> Iter<'a, K, V> {
                         }
                     }
                     Visit::Post => {
-                        let p = self.parents.pop().unwrap();
-                        if let Some(pp) = self.parents.last() {
-                            if pp.left.as_ref().map(|l| l.as_ref() as *const Node<K, V>)
-                                == Some(p as *const Node<K, V>)
+                        let tip = self.parents.pop().unwrap();
+                        if let Some(parent) = self.parents.last() {
+                            if parent
+                                .left
+                                .as_ref()
+                                .map(|l| l.as_ref() as *const Node<K, V>)
+                                == Some(tip as *const Node<K, V>)
                             {
                                 self.visit = Visit::In;
                             }
