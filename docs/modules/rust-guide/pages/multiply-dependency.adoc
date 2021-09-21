@@ -12,15 +12,15 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-One common approach to application design is to calculate or store data in one program that you can then use in another program. 
-This ability to share and use functions defined in different application canisters, even if the underlying programs are written in different languages, is an important strategy for building applications to run the {IC}.
+One common approach to Dapp design is to calculate or store data in one smart contract that you can then use in another smart contract. 
+This ability to share and use functions defined in different smart contract canisters, even if the underlying smart contracts are written in different languages, is an important strategy for building Dapps to run the {IC} blockchain network.
 This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
 
-For this tutorial, both programs are in the same project. 
+For this tutorial, both smart contract canisters are in the same project. 
 
-* The {native} program creates an actor with a `+cell+` variable to contain the current value that results from an operation.
+* The {native} smart contract canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The {lang} program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} smart contract canister provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
 
 == Before you begin
 
@@ -77,19 +77,19 @@ cd multiply_deps
 == Modify the default configuration
 
 creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC} blockchain network.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default {native} program>>
-* <<Replace the default {lang} program>>
+* <<Replace the default {native} smart contract canister>>
+* <<Replace the default {lang} smart contract canister>>
 
 === Edit the default canister settings
 
-Because this sample project is going to consist of two programs-the {native} program and the {lang} program—you need to modify the default `+dfx.json+` configuration file to include information for building both the {native} program and a {lang} program.
+Because this sample project is going to consist of two canisters-the {native} canister and the {lang} canister—you need to modify the default `+dfx.json+` configuration file to include information for building both the {native} canister and a {lang} canister.
 
 To modify the `+dfx.json+` configuration file:
 
@@ -108,12 +108,12 @@ For example, in the `+canisters+` section, add a new `+rust_deps+` key with sett
   "type": "custom"
   }
 ----
-. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} program.
+. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} canister.
 +
-The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` program—written in {native}—and use it from the `+rust_deps+` program written in Rust.
+The `+dependencies+` setting enables you to import functions from one smart contract canisters for use in another smart contract canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
 . Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
-The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample Dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
 You can also remove the `+defaults+` and `+dfx+` version settings.
 +
@@ -126,14 +126,14 @@ include::example$mul-deps/mul-deps-dfx.json[]
 
 === Add a Cargo.toml file to the project
 
-To build the {lang} program using the `+cargo build+` command we added to the `+dfx.json+` configuration file, we also need to add a `+Cargo.toml+` file to the project directory.
+To build the {lang} canister using the `+cargo build+` command we added to the `+dfx.json+` configuration file, we also need to add a `+Cargo.toml+` file to the project directory.
 
 To add `+Cargo.toml+` settings for the project:
 
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the current directory named `+Cargo.toml+`.
 . Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your program.
+. Use the `+[workspace]+` key to specify the source file directory for your canister.
 +
 For example:
 +
@@ -148,8 +148,8 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} program. 
-For this tutorial, we want to add the files for building a {lang} program.
+Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} smart contract canister. 
+For this tutorial, we want to add the files for building a {lang} smart contract canister.
 
 To prepare the source directory with Rust files:
 
@@ -185,12 +185,12 @@ ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 ----
 +
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the Dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version. 
 . Save your changes and close the file to continue.
 
-=== Replace the default {native} programs
+=== Replace the default {native} smart contract canister
 
-The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with the program that implements the `+mul+` and `+read+` functions.
+The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with code that implements the `+mul+` and `+read+` functions.
 
 To modify the default {native} source code:
 
@@ -204,11 +204,11 @@ include::example$mul-deps/mul-deps.mo[]
 ----
 . Save your changes and close the file to continue.
 
-== Replace the default {lang} program
+== Replace the default {lang} smart contract canister
 
-Now that we have the {native} program that the {lang} program depends upon, let's add the {lang} program to the project.
+Now that we have the {native} smart contract canister that the {lang} smart contract canister depends upon, let's add the {lang} canister to the project.
 
-To replace the default {lang} program:
+To replace the default {lang} smart contract canister:
 
 . Check that you are still in the root directory for your project, if needed.
 . Open the template `+src/rust_deps/src/lib.rs+` file in a text editor and delete the existing content.
@@ -224,10 +224,10 @@ include::example$mul-deps/deps-main.rs[]
 
 == Add an interface description file
 
-Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
-Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+Candid is an interface description language (IDL) for interacting with smart contract canisters running on the Internet Computer blockchain network.
+Candid files provide a language-independent description of a smart contract canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
-By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
+By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC} blockchain netowrk.
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
@@ -248,7 +248,7 @@ service : {
 
 == Start the local network
 
-Before you can build the project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+Before you can build the project, you need to connect to the {IC} network either running locally in your development environment or the decentralized {IC} mainnet.
 
 To start the network locally:
 
@@ -313,7 +313,7 @@ For this tutorial:
 
 To test the deployed canister:
 
-. Call the `+read+` function from the {native} program, which reads the current value of the `+cell+` variable on the deployed canister:
+. Call the `+read+` function from the {native} caniser, which reads the current value of the `+cell+` variable on the deployed canister:
 +
 [source,bash]
 ----
@@ -352,7 +352,7 @@ The command returns the current value of the `+cell+` variable:
 
 == Stop the local network
 
-After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your Dapp, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
 
 To stop the local network:
 
