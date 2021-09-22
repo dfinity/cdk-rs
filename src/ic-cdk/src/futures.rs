@@ -7,8 +7,8 @@ use std::task::Context;
 ///
 /// Saves the pointer to the future on the heap and kickstarts the future by
 /// polling it once. During the polling we also need to provide the waker
-/// callback which is triggered after the future made progress. The waker would
-/// then. The waker would then poll the future one last time to advance it to
+/// callback which is triggered after the future made progress.
+/// The waker would then poll the future one last time to advance it to
 /// the final state. For that, we pass the future pointer to the waker, so that
 /// it can be restored into a box from a raw pointer and then dropped if not
 /// needed anymore.
