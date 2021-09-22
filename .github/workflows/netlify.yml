@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - next
+      - main
   pull_request_target:
 name: Publish Cargo docs
 jobs:
