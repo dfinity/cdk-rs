@@ -234,7 +234,7 @@ include::example$profile-tutorial/profile.did[]
 ----
 . Save your changes and close the `+profile.did+` file to continue.
 
-== Start the local network
+== Start the local {IC}
 
 Before you can build the `+rust_profile+` project, you need to connect to the {IC} either running locally in your development environment or the decentralized {IC} mainnet.
 
@@ -454,13 +454,13 @@ The command returns the `+Dupree+` profile:
 
 This sample dapp only stores one profile for each unique user identity. If you were to extend this dapp by adding a second method for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
 
-== Stop the local network
+== Stop the local {IC}
 
 After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the local {IC}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the local {IC} process.
 
 . Stop the {IC} by running the following command:
 +

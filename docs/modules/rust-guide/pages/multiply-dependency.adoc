@@ -224,7 +224,7 @@ include::example$mul-deps/deps-main.rs[]
 
 == Add an interface description file
 
-Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer blockchain network.
+Candid is an interface description language (IDL) for interacting with canisters running on the {IC}.
 Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
@@ -246,7 +246,7 @@ service : {
 ----
 . Save your changes and close the `+deps.did+` file to continue.
 
-== Start the local network
+== Start the local {IC}
 
 Before you can build the project, you need to connect to the {IC} either running locally in your development environment or the {IC} mainnet.
 
@@ -350,13 +350,13 @@ The command returns the current value of the `+cell+` variable:
 (9)
 ....
 
-== Stop the local network
+== Stop the local {IC}
 
-After you finish experimenting with your dapp, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your dapp, you can stop the local {IC} so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the local {IC}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the local {IC} process.
 
 . Stop the {IC} by running the following command:
 +

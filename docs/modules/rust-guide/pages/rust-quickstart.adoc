@@ -269,7 +269,7 @@ This definition specifies that the data passed to the `+print+` function is retu
 . Save your changes and close the file to continue.
 
 [[start-the-local-network]]
-== Start the local network
+== Start the local {IC}
 
 Before you can build your project, you need to connect to the {IC} either running locally in your development environment or the decentralized {IC} mainnet.
 
@@ -377,13 +377,13 @@ For example:
 ()
 ....
 
-== Stop the local network
+== Stop the local {IC}
 
 After testing the application, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the local {IC}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the local {IC} process.
 
 . Stop the local {IC} running on your local computer by running the following command:
 +
