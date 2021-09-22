@@ -52,6 +52,12 @@ pub fn canister_balance() -> u64 {
     unsafe { ic0::canister_cycle_balance() as u64 }
 }
 
+/// Get the amount of funds available in the canister.
+pub unsafe fn canister_balance128() -> (u64, u64) {
+    let balance = ic0::canister_cycle_balance128();
+    (balance.0 as u64, balance.1 as u64)
+}
+
 /// Sets the certified data of this canister.
 ///
 /// Canisters can store up to 32 bytes of data that is certified by
