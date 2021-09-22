@@ -42,7 +42,7 @@ For instructions on how to install Homebrew, see the link:https://docs.brew.sh/I
 
 == Install and run the optimizer
 
-To optimize a smart contract canister that resulted from compiling a Rust dapp:
+To optimize a canister that resulted from compiling a Rust dapp:
 
 . Check that you are still in root directory for your project directory, if needed.
 . Install the `+ic-cdk-optimizer+` crate, if you have not previously installed it, by running the following command:
@@ -52,7 +52,7 @@ To optimize a smart contract canister that resulted from compiling a Rust dapp:
 cargo install ic-cdk-optimizer
 ----
 +
-This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your dapp can be uploaded to the {IC} mainnet as a smart contract canister.
+This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your dapp can be uploaded to the {IC} mainnet as a canister.
 . Create a release directory within the `+src+` directory for your program by running a command similar to the following:
 +
 [source,bash,subs=quotes]

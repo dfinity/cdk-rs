@@ -18,9 +18,9 @@ This tutorial provides a basic introduction to how you can write functions in on
 
 For this tutorial, both smart contract canisters are in the same project. 
 
-* The {native} smart contract canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
+* The {native} canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The {lang} smart contract canister provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} canister provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
 
 == Before you begin
 
@@ -77,15 +77,15 @@ cd multiply_deps
 == Modify the default configuration
 
 creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default {native} smart contract canister>>
-* <<Replace the default {lang} smart contract canister>>
+* <<Replace the default {native} canister>>
+* <<Replace the default {lang} canister>>
 
 === Edit the default canister settings
 
@@ -110,7 +110,7 @@ For example, in the `+canisters+` section, add a new `+rust_deps+` key with sett
 ----
 . Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} canister.
 +
-The `+dependencies+` setting enables you to import functions from one smart contract canisters for use in another smart contract canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
+The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
 . Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
 The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
@@ -148,8 +148,8 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} smart contract canister. 
-For this tutorial, we want to add the files for building a {lang} smart contract canister.
+Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} canister. 
+For this tutorial, we want to add the files for building a {lang} canister.
 
 To prepare the source directory with Rust files:
 
@@ -206,9 +206,9 @@ include::example$mul-deps/mul-deps.mo[]
 
 == Replace the default {lang} smart contract canister
 
-Now that we have the {native} smart contract canister that the {lang} smart contract canister depends upon, let's add the {lang} canister to the project.
+Now that we have the {native} canister that the {lang} canister depends upon, let's add the {lang} canister to the project.
 
-To replace the default {lang} smart contract canister:
+To replace the default {lang} canister:
 
 . Check that you are still in the root directory for your project, if needed.
 . Open the template `+src/rust_deps/src/lib.rs+` file in a text editor and delete the existing content.
@@ -224,8 +224,8 @@ include::example$mul-deps/deps-main.rs[]
 
 == Add an interface description file
 
-Candid is an interface description language (IDL) for interacting with smart contract canisters running on the Internet Computer blockchain network.
-Candid files provide a language-independent description of a smart contract canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer blockchain network.
+Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
