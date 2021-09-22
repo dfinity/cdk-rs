@@ -6,7 +6,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toclevels: 3
 :proglang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
@@ -29,7 +29,7 @@ Like the other sample dapps, this tutorial demonstrates a simple, but realistic,
 
 * Create a new project.
 * Write a dapp that compiles into a WebAssembly module.
-* Deploy the smart contract canister on the local {IC} network.
+* Deploy the smart contract canister on the local {IC}.
 * Invoke the smart contract methods to increment then read the value of a counter.
 
 [[before-you-begin]]
@@ -59,7 +59,7 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} network processes running on the local computer.
+* You have stopped any {IC} processes running on the local computer.
 
 If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
@@ -248,12 +248,12 @@ service : {
 
 == Start the local network
 
-Before you can build the `+rust_counter+` project, you need to connect to the {IC} network either running locally in your development environment or the decentralized {IC} mainnet.
+Before you can build the `+rust_counter+` project, you need to connect to the {IC} either running locally in your development environment or the decentralized {IC} mainnet.
 
 To start the network locally:
 
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} network on your local computer in the background by running the following command:
+. Start the {IC} on your local computer in the background by running the following command:
 +
 [source,bash]
 ----
@@ -265,7 +265,7 @@ If you are prompted to allow or deny incoming network connections, click *Allow*
 
 == Register, build, and deploy your project
 
-After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {IC} running locally in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -376,7 +376,7 @@ To stop the local network:
 
 . In the terminal that displays network operations, press Control-C to interrupt the local network process.
 
-. Stop the {IC} network by running the following command:
+. Stop the {IC} by running the following command:
 +
 [source,bash]
 ----

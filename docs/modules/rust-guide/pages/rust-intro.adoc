@@ -2,6 +2,7 @@
 :cdk-short-name: DFINITY Rust CDK
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 :cdk: Rust Canister Development Kit (CDK)
+:IC: Internet Computer blockchain
 
 Rust is a powerful and type sound modern programming language with an active developer community.
 Because Rust compiles to WebAssembly, it offers a rich development environment for writing dapps to run on the {IC}.
@@ -13,9 +14,9 @@ Collectively, these tools are referred to as the {cdk-long-name} and consist of 
 |===
 |Package |Description
 
-|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the decentralized {IC} network, and when building dapps to be deployed as smart contract canisters on the {IC} network.
+|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the decentralized {IC}, and when building dapps to be deployed as smart contract canisters on the {IC}.
 
-|`+ic-agent+` |The `+ic-agent+` library enables direct communication with the {IC} network.
+|`+ic-agent+` |The `+ic-agent+` library enables direct communication with the {IC}.
 
 |`+ic-utils+` |The `+ic-utils+` library provides utilities for managing calls and dapps deployed as smart contract canisters.
 

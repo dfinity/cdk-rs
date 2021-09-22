@@ -1,7 +1,7 @@
 = Optimize a Rust program
 :proglang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :cdk-short-name: DFINITY Rust CDK
 :sdk-short-name: DFINITY Canister SDK

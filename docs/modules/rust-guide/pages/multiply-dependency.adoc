@@ -5,7 +5,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :native: Motoko
 :lang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
 :cdk-short-name: DFINITY Rust CDK
@@ -13,7 +13,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
 One common approach to dapp design is to calculate or store data in one smart contract that you can then use in another smart contract. 
-This ability to share and use functions defined in different smart contract canisters, even if the underlying smart contracts are written in different languages, is an important strategy for building dapps to run the {IC} blockchain network.
+This ability to share and use functions defined in different smart contract canisters, even if the underlying smart contracts are written in different languages, is an important strategy for building dapps to run the {IC}.
 This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
 
 For this tutorial, both smart contract canisters are in the same project. 
@@ -48,7 +48,7 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} network processes running on the local computer.
+* You have stopped any {IC} processes running on the local computer.
 
 If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
@@ -77,7 +77,7 @@ cd multiply_deps
 == Modify the default configuration
 
 creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC} blockchain network.
+You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
@@ -227,7 +227,7 @@ include::example$mul-deps/deps-main.rs[]
 Candid is an interface description language (IDL) for interacting with smart contract canisters running on the Internet Computer blockchain network.
 Candid files provide a language-independent description of a smart contract canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
-By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC} blockchain netowrk.
+By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
@@ -248,12 +248,12 @@ service : {
 
 == Start the local network
 
-Before you can build the project, you need to connect to the {IC} network either running locally in your development environment or the decentralized {IC} mainnet.
+Before you can build the project, you need to connect to the {IC} either running locally in your development environment or the {IC} mainnet.
 
 To start the network locally:
 
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} network on your local computer in the background by running the following command:
+. Start the {IC} on your local computer in the background by running the following command:
 +
 [source,bash]
 ----
@@ -265,7 +265,7 @@ If you are prompted to allow or deny incoming network connections, click *Allow*
 
 == Register, build, and deploy your project
 
-After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {IC} running locally in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -358,7 +358,7 @@ To stop the local network:
 
 . In the terminal that displays network operations, press Control-C to interrupt the local network process.
 
-. Stop the {IC} network by running the following command:
+. Stop the {IC} by running the following command:
 +
 [source,bash]
 ----
