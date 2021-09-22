@@ -22,7 +22,7 @@ This dapp supports the following functions:
 * The `+get+` function is a simple query that returns the current value of the counter.
 * The `+set+` function updates the current value to the numeric value you specify as an argument.
 
-This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed smart contract canister.
+This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed canister smart contract.
 By calling the function to increment a value multiple times, you can verify that the variable state—that is, the value of the variable between calls—persists.
 
 Like the other sample dapps, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
@@ -89,7 +89,7 @@ cd rust_counter
 == Modify the default configuration
 
 In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
@@ -102,7 +102,7 @@ To modify the default configuration for a {proglang} project, you'll need to com
 
 One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as smart contract canisters.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as canister smart contracts.
 
 To modify the `+dfx.json+` configuration file:
 

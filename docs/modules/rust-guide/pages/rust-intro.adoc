@@ -14,11 +14,11 @@ Collectively, these tools are referred to as the {cdk-long-name} and consist of 
 |===
 |Package |Description
 
-|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the decentralized {IC}, and when building dapps to be deployed as smart contract canisters on the {IC}.
+|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the decentralized {IC}, and when building dapps to be deployed as canister smart contracts on the {IC}.
 
 |`+ic-agent+` |The `+ic-agent+` library enables direct communication with the {IC}.
 
-|`+ic-utils+` |The `+ic-utils+` library provides utilities for managing calls and dapps deployed as smart contract canisters.
+|`+ic-utils+` |The `+ic-utils+` library provides utilities for managing calls and dapps deployed as canister smart contracts.
 
 
 |`+ic-cdk+` |The `+ic-cdk+` provides the core methods that enable Rust programs to interact with the {IC} system API. This library serves as the runtime core of the Rust CDK.

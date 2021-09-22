@@ -9,7 +9,7 @@
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 
-Compiling Rust to WebAssembly often increases the file size significantly. The {cdk-short-name} includes a helper library—`+ic-cdk-optimizer+`—that you can use to reduce the size of Rust-based smart contract canisters before deploying them on the {IC} mainnet.
+Compiling Rust to WebAssembly often increases the file size significantly. The {cdk-short-name} includes a helper library—`+ic-cdk-optimizer+`—that you can use to reduce the size of Rust-based canister smart contracts before deploying them on the {IC} mainnet.
 
 [[before-you-begin]]
 == Before you begin

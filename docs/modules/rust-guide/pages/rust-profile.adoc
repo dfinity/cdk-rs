@@ -82,7 +82,7 @@ cd rust_profile
 == Modify the default configuration
 
 In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build smart contract canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
@@ -95,7 +95,7 @@ To modify the default configuration for a {proglang} project, you'll need to com
 
 One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as smart contract canisters.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canister smart contracts.
 
 To modify the default `+dfx.json+` configuration file:
 
@@ -214,8 +214,8 @@ include::example$profile-tutorial/profile.rs[]
 
 == Add an interface description file
 
-Candid is an interface description language (IDL) for interacting with smart contract canisters running on the Internet Computer.
-Candid files provide a language-independent description of a smart contract canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+Candid is an interface description language (IDL) for interacting with canister smart contracts running on the Internet Computer.
+Candid files provide a language-independent description of a canister smart contract's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
