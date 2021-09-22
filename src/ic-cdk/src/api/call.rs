@@ -338,12 +338,23 @@ pub fn msg_cycles_available() -> u64 {
     unsafe { ic0::msg_cycles_available() as u64 }
 }
 
+pub unsafe fn msg_cycles_available128() -> (u64, u64) {
+    let result = ic0::msg_cycles_available128();
+    (result.0 as u64, result.1 as u64)
+}
+
+
 pub fn msg_cycles_refunded() -> u64 {
     unsafe { ic0::msg_cycles_refunded() as u64 }
 }
 
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
+}
+
+pub unsafe fn msg_cycles_accept128(max_amount_high: u64, max_amount_low: u64) -> (u64, u64) {
+    let result = ic0::msg_cycles_accept128(max_amount_high as i64, max_amount_low as i64);
+    (result.0 as u64, result.1 as u64)
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
