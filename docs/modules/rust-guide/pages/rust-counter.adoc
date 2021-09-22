@@ -13,10 +13,10 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :cdk-short-name: DFINITY Rust CDK
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-In this tutorial, you are going to write a Dapp that provides a few basic functions to increment a counter and illustrates the persistence of a value.
+In this tutorial, you are going to write a dapp that provides a few basic functions to increment a counter and illustrates the persistence of a value.
 
-For this tutorial, the Dapp declares a `+COUNTER+` as a mutable variable to contain a natural number that represents the current value of the counter.
-This Dapp supports the following functions:
+For this tutorial, the dapp declares a `+COUNTER+` as a mutable variable to contain a natural number that represents the current value of the counter.
+This dapp supports the following functions:
 
 * The `+increment+` function updates the current value, incrementing by 1 with no return value.
 * The `+get+` function is a simple query that returns the current value of the counter.
@@ -25,10 +25,10 @@ This Dapp supports the following functions:
 This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed smart contract canister.
 By calling the function to increment a value multiple times, you can verify that the variable state—that is, the value of the variable between calls—persists.
 
-Like the other sample Dapps, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
+Like the other sample dapps, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
 
 * Create a new project.
-* Write a Dapp that compiles into a WebAssembly module.
+* Write a dapp that compiles into a WebAssembly module.
 * Deploy the smart contract canister on the local {IC} network.
 * Invoke the smart contract methods to increment then read the value of a counter.
 
@@ -96,13 +96,13 @@ To modify the default configuration for a {proglang} project, you'll need to com
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default Dapp>>
+* <<Replace the default dapp>>
 
 === Edit the default canister settings
 
 One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust Dapps that run on the {IC} as smart contract canisters.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as smart contract canisters.
 
 To modify the `+dfx.json+` configuration file:
 
@@ -123,7 +123,7 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 ----
 . Remove all of the `+rust_counter_assets+` configuration settings from the file.
 +
-The sample Dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 . Remove the `+defaults+` and `+dfx+` version settings because this tutorial doesn't use these settings.
 +
 For example, the configuration file looks like this after you modify the settings:
@@ -143,7 +143,7 @@ To add a `+Cargo.toml+` configuration file for the project:
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the current directory named `+Cargo.toml+`.
 . Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your Dapp.
+. Use the `+[workspace]+` key to specify the source file directory for your dapp.
 +
 For example:
 +
@@ -158,7 +158,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default Dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
 
 To prepare the source directory with Rust files:
 
@@ -197,11 +197,11 @@ ic-cdk-macros = "0.3"
 NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version. 
 . Save your changes and close the file to continue.
 
-=== Replace the default Dapp
+=== Replace the default dapp
 
-Now that you have the files in place for your Rust Dapp, we can replace the template `+main.mo+` Dapp with the Rust Dapp we want to deploy on the {IC}.
+Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` dapp with the Rust dapp we want to deploy on the {IC}.
 
-To replace the default Dapp:
+To replace the default dapp:
 
 . Check that you are still in the root directory for your project, if needed.
 . Delete the template `+src/rust_counter/main.mo+` file by running the following command:
@@ -212,7 +212,7 @@ rm src/rust_counter/main.mo
 ----
 . Open the template `+src/rust_counter/src/lib.rs+` file in a text editor and delete the existing content.
 +
-The next step is to write a Rust Dapp that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
+The next step is to write a Rust dapp that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
 . Copy and paste the following sample code into the `+lib.rs+` file:
 +
 [source,motoko]
@@ -303,7 +303,7 @@ Installing code for canister rust_counter, with canister_id rrkah-fqaaa-aaaaa-aa
 Deployed canisters.
 ....
 
-== Call functions and test the Dapp
+== Call functions and test the dapp
 
 After successfully deploying the smart contract canister, you can test the canister by invoking the functions it provides.
 For this tutorial:
@@ -312,7 +312,7 @@ For this tutorial:
 * Call the `+increment+` function to increment the counter each time it is called.
 * Call the `+set+` function to pass an argument to update the counter to an arbitrary value you specify.
 
-To test the Dapp:
+To test the dapp:
 
 [arabic]
 . Call the `+get+` function to read the current value of the `+COUNTER+` variable by running the following command:
@@ -370,7 +370,7 @@ Returns the incremented value of 988.
 
 == Stop the local network
 
-After you finish experimenting with your Dapp, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your dapp, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
 
 To stop the local network:
 

@@ -14,11 +14,11 @@
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 
 [[quick-start-intro]]
-The {cdk-long-name} provides tools, sample code, and documentation to help you create Dapps to run on the decentralized {IC} mainnet.
+The {cdk-long-name} provides tools, sample code, and documentation to help you create dapps to run on the decentralized {IC} mainnet.
 This _Hello, World! Rust CDK Quick Start_ assumes that you are installing the {cdk-short-name} for the first time. 
 
-To help you get started, this tutorial illustrates how to modify the traditional "Hello World" first Dapp to use the {cdk-short-name}.
-This simple program has just one function that prints text to a terminal, but it provides a good model for understanding the workflow when writing Dapps in Rust that you want to deploy on the {IC} network.
+To help you get started, this tutorial illustrates how to modify the traditional "Hello World" first dapp to use the {cdk-short-name}.
+This simple program has just one function that prints text to a terminal, but it provides a good model for understanding the workflow when writing dapps in Rust that you want to deploy on the {IC} network.
 
 [[before-you-begin]]
 == Before you begin

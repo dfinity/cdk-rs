@@ -10,7 +10,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-In this tutorial, you are going to write a Dapp that provides a few basic functions to add and retrieve simple profile records that consist of a name, description, and an array of keywords.
+In this tutorial, you are going to write a dapp that provides a few basic functions to add and retrieve simple profile records that consist of a name, description, and an array of keywords.
 
 This program supports the following functions:
 
@@ -20,7 +20,7 @@ This program supports the following functions:
 For this function, the name specified must match the `+name+` field exactly to return the record.
 * The `+search+` function performs a more complex query to return the profile matching all or part of the text specified in any profile field. For example, the `+search+` function can return a profile containing a specific keyword or that matches only part of a name or description.
 
-This tutorial provides a simple example of how you can use the Rust CDK interfaces and macros to simplify writing Dapps in Rust for the {IC} blockchain network.
+This tutorial provides a simple example of how you can use the Rust CDK interfaces and macros to simplify writing dapps in Rust for the {IC} blockchain network.
 
 This tutorial demonstrates:
 * How to represent slightly more complex data—in the form of a profile as a `+record+` and an `+array+` of keywords—using the Candid interface description language.
@@ -115,7 +115,7 @@ For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` s
 ----
 . Remove all of the `+rust_profile_assets+` configuration settings from the file.
 +
-The sample Dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 . Remove the `+defaults+` and `+dfx+` version settings.
 +
 For example, the configuration file looks like this after you modify the settings:
@@ -150,7 +150,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default Dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
 
 To prepare the source directory with Rust files:
 
@@ -185,12 +185,12 @@ ic-cdk-macros = "0.3"
 serde = "1.0.111"
 ----
 +
-NOTE: When you deploy the Dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version. 
 . Save your changes and close the file to continue.
 
-=== Replace the default Dapp
+=== Replace the default dapp
 
-Now that you have the files in place for your Rust Dapp, we can replace the template `+main.mo+` program with the Rust Dapp we want to deploy on the {IC} blockchain network.
+Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` program with the Rust dapp we want to deploy on the {IC} blockchain network.
 
 To replace the default program:
 
@@ -322,7 +322,7 @@ For example:
 )
 ....
 +
-In its current form, the Dapp only stores and returns one profile.
+In its current form, the dapp only stores and returns one profile.
 If you run the following command to add a second profile using the `+update+` function, the command replaces the `+Luxi+` profile with the `+Dupree+` profile:
 +
 [source,bash]
@@ -351,7 +351,7 @@ This command finds the matching profile using the `+description+` and returns th
 
 == Adding profiles for new identities
 
-In its current form, the Dapp only stores one profile—the one associated with the principal invoking the commands. To test that the `+get+`, `+getSelf+`, and `+search+` functions do what we want them to, we need to add some new identities that can have different profiles.
+In its current form, the dapp only stores one profile—the one associated with the principal invoking the commands. To test that the `+get+`, `+getSelf+`, and `+search+` functions do what we want them to, we need to add some new identities that can have different profiles.
 
 To add identities for testing:
 
@@ -450,9 +450,9 @@ The command returns the `+Dupree+` profile:
 )
 ....
 
-== Extending the sample Dapp
+== Extending the sample dapp
 
-This sample Dapp only stores one profile for each unique user identity. If you were to extend this Dapp by adding a second method for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
+This sample dapp only stores one profile for each unique user identity. If you were to extend this dapp by adding a second method for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
 
 == Stop the local network
 
