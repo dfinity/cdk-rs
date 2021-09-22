@@ -313,7 +313,7 @@ For this tutorial:
 
 To test the deployed canister:
 
-. Call the `+read+` function from the {native} caniser, which reads the current value of the `+cell+` variable on the deployed canister:
+. Call the `+read+` function from the {native} canister, which reads the current value of the `+cell+` variable on the deployed canister:
 +
 [source,bash]
 ----
