@@ -55,7 +55,7 @@ For instructions on how to install Homebrew, see the link:https://docs.brew.sh/I
 
 * You have stopped any {IC} processes running on the local computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 This tutorial takes approximately 20 minutes to complete.
@@ -150,7 +150,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files.
 
 To prepare the source directory with Rust files:
 
@@ -166,7 +166,7 @@ This command creates a `+src/rust_profile/src+` directory with a library (`+lib.
 . Open the `+src/rust_profile/Cargo.toml+` file in a text editor.
 +
 You use this file to configure the details used to build the Rust package.
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
 +
 --
 * `+[lib]+`
@@ -185,7 +185,7 @@ ic-cdk-macros = "0.3"
 serde = "1.0.111"
 ----
 +
-NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version.
 . Save your changes and close the file to continue.
 
 === Replace the default dapp
@@ -198,7 +198,7 @@ To replace the default program:
 . Delete the template `+src/rust_profile/main.mo+` file by running the following command:
 +
 [source,bash]
----- 
+----
 rm src/rust_profile/main.mo
 ----
 . Open the template `+src/rust_profile/src/lib.rs+` file in a text editor and delete the existing content.
@@ -248,7 +248,7 @@ To start the network locally:
 dfx start --background --clean
 ----
 +
-Depending on your platform and local security settings, you might see a warning displayed. 
+Depending on your platform and local security settings, you might see a warning displayed.
 If you are prompted to allow or deny incoming network connections, click *Allow*.
 
 == Register, build, and deploy your project

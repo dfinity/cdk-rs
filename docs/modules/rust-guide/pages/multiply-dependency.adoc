@@ -12,11 +12,11 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-One common approach to dapp design is to calculate or store data in one smart contract that you can then use in another smart contract. 
+One common approach to dapp design is to calculate or store data in one smart contract that you can then use in another smart contract.
 This ability to share and use functions defined in different smart contract canisters, even if the underlying smart contracts are written in different languages, is an important strategy for building dapps to run the {IC}.
 This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
 
-For this tutorial, both smart contract canisters are in the same project. 
+For this tutorial, both smart contract canisters are in the same project.
 
 * The {native} canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
@@ -50,7 +50,7 @@ For instructions on how to install Homebrew, see the link:https://docs.brew.sh/I
 
 * You have stopped any {IC} processes running on the local computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 This tutorial takes approximately 20 minutes to complete.
@@ -148,7 +148,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} canister. 
+Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} canister.
 For this tutorial, we want to add the files for building a {lang} canister.
 
 To prepare the source directory with Rust files:
@@ -166,7 +166,7 @@ This command creates a `+src/rust_deps/src+` directory with a library (`+lib.rs+
 +
 You use this file to configure the details used to build the Rust package.
 +
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
 +
 --
 * `+[package]+`
@@ -179,13 +179,13 @@ At a minimum, you need to configure the following sections with basic informatio
 ----
 [lib]
 crate-type = ["cdylib"]
-   
+
 [dependencies]
 ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 ----
 +
-NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version.
 . Save your changes and close the file to continue.
 
 === Replace the default {native} smart contract canister
@@ -260,7 +260,7 @@ To start the network locally:
 dfx start --clean --background
 ----
 +
-Depending on your platform and local security settings, you might see a warning displayed. 
+Depending on your platform and local security settings, you might see a warning displayed.
 If you are prompted to allow or deny incoming network connections, click *Allow*.
 
 == Register, build, and deploy your project
