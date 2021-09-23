@@ -1,6 +1,7 @@
 = Optimize a Rust program
 :proglang: Rust
 :platform: Internet Computer platform
+:LEE: local canister excecution environment
 :IC: Internet Computer blockchain
 :company-id: DFINITY
 :cdk-short-name: DFINITY Rust CDK
@@ -38,7 +39,7 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have successfully compiled your dapp to a WebAssembly module (WASM) and deployed it on the {IC} running locally.
+* You have successfully compiled your dapp to a WebAssembly module (WASM) and deployed it on the {LEE}.
 
 == Install and run the optimizer
 

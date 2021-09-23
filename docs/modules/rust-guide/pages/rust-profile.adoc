@@ -3,6 +3,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toc-title: TUTORIAL - SAMPLE PROFILE
 :proglang: Rust
 :platform: Internet Computer platform
+:LEE: local execution environment
 :IC: Internet Computer blockchain
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
@@ -53,7 +54,7 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} processes running on the local computer.
+* You have stopped any {LEE} processes running on your computer.
 
 If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
@@ -234,14 +235,14 @@ include::example$profile-tutorial/profile.did[]
 ----
 . Save your changes and close the `+profile.did+` file to continue.
 
-== Start the local {IC}
+== Start the {LEE}
 
-Before you can build the `+rust_profile+` project, you need to connect to the {IC} either running locally in your development environment or the decentralized {IC} mainnet.
+Before you can build the `+rust_profile+` project, you need to connect to the {LEE} running in your development environment or the decentralized {IC} mainnet.
 
-To start the network locally:
+To start {LEE}:
 
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} on your local computer in the background by running the following command:
+. Start the {LEE} on your computer in the background by running the following command:
 +
 [source,bash]
 ----
@@ -253,7 +254,7 @@ If you are prompted to allow or deny incoming network connections, click *Allow*
 
 == Register, build, and deploy your project
 
-After you connect to the {IC} running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {LEE} running in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -454,15 +455,15 @@ The command returns the `+Dupree+` profile:
 
 This sample dapp only stores one profile for each unique user identity. If you were to extend this dapp by adding a second method for linking social connections to each users profile, you would be well on your way to recreating the LinkedUp sample application using Rust.
 
-== Stop the local {IC}
+== Stop the {LEE}
 
-After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your program, you can stop the {LEE} so that it doesn’t continue running in the background.
 
-To stop the local {IC}:
+To stop the {LEE}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local {IC} process.
+. In the terminal that displays network operations, press Control-C to interrupt the {LEE} process.
 
-. Stop the {IC} by running the following command:
+. Stop the {LEE} by running the following command:
 +
 [source,bash]
 ----
