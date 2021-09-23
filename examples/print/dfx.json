@@ -4,8 +4,8 @@
     "print": {
       "type": "custom",
       "candid": "src/print_rs/print.did",
-      "wasm": "target/wasm32-unknown-unknown/debug/print_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package print_rs"
+      "wasm": "target/wasm32-unknown-unknown/release/print_rs-opt.wasm",
+      "build": "sh ../build.sh print print_rs"
     }
   }
 }

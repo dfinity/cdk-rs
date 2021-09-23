@@ -4,8 +4,8 @@
     "counter_rs": {
       "type": "custom",
       "candid": "src/counter_rs/counter.did",
-      "wasm": "target/wasm32-unknown-unknown/release/counter_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package counter_rs --release"
+      "wasm": "target/wasm32-unknown-unknown/release/counter_rs-opt.wasm",
+      "build": "sh ../build.sh counter counter_rs"
     },
     "counter_mo": {
       "type": "motoko",
@@ -14,8 +14,8 @@
     "inter_rs": {
       "type": "custom",
       "candid": "src/inter_rs/lib.did",
-      "wasm": "target/wasm32-unknown-unknown/release/inter_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package inter_rs --release",
+      "wasm": "target/wasm32-unknown-unknown/release/inter_rs-opt.wasm",
+      "build": "sh ../build.sh counter inter_rs",
       "dependencies": [
         "counter_mo"
       ]
@@ -27,8 +27,8 @@
     "inter2_rs": {
       "type": "custom",
       "candid": "src/inter2_rs/lib.did",
-      "wasm": "target/wasm32-unknown-unknown/release/inter2_rs.wasm",
-      "build": "cargo build --target wasm32-unknown-unknown --package inter2_rs --release",
+      "wasm": "target/wasm32-unknown-unknown/release/inter2_rs-opt.wasm",
+      "build": "sh ../build.sh counter inter2_rs",
       "dependencies": [
         "inter_mo"
       ]
