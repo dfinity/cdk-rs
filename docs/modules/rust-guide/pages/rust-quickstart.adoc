@@ -378,9 +378,9 @@ For example:
 ()
 ....
 
-== Stop the [LEE}
+== Stop the {LEE}
 
-After testing the application, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After testing the application, you can stop the {LEE} so that it doesn’t continue running in the background.
 
 To stop the {LEE}:
 
