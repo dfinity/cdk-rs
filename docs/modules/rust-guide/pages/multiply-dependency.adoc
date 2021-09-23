@@ -359,7 +359,7 @@ To stop the {LEE}:
 
 . In the terminal that displays network operations, press Control-C to interrupt the {LEE} process.
 
-. Stop the {IC} by running the following command:
+. Stop the {LEE} by running the following command:
 +
 [source,bash]
 ----
