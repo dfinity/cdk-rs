@@ -31,7 +31,7 @@ Like the other sample dapps, this tutorial demonstrates a simple, but realistic,
 * Create a new project.
 * Write a dapp that compiles into a WebAssembly module.
 * Deploy the canister on the {LEE}.
-* Invoke the smart contract methods to increment then read the value of a counter.
+* Invoke the canister smart contract methods to increment then read the value of a counter.
 
 [[before-you-begin]]
 == Before you begin
