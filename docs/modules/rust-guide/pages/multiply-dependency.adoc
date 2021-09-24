@@ -13,7 +13,7 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-One common approach to dapp design is to calculate or store data in one smart contract that you can then use in another smart contract.
+One common approach to dapp design is to calculate or store data in one canister smart contract – or canister for short – that you can then use in another canister.
 This ability to share and use functions defined in different canister smart contracts, even if the underlying smart contracts are written in different languages, is an important strategy for building dapps to run the {IC}.
 This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
 
