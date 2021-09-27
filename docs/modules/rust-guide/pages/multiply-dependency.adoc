@@ -5,22 +5,23 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :native: Motoko
 :lang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:LEE: local canister execution environment
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
 :cdk-short-name: DFINITY Rust CDK
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-One common approach to application design is to calculate or store data in one program that you can then use in another program. 
-This ability to share and use functions defined in different application canisters, even if the underlying programs are written in different languages, is an important strategy for building applications to run the {IC}.
+One common approach to dapp design is to calculate or store data in one canister smart contract – or canister for short – that you can then use in another canister.
+This ability to share and use functions defined in different canister smart contracts, even if the underlying smart contracts are written in different languages, is an important strategy for building dapps to run the {IC}.
 This tutorial provides a basic introduction to how you can write functions in one language—in the example, {native}—then use the data in another—in this case, {lang}.
 
-For this tutorial, both programs are in the same project. 
+For this tutorial, both canister smart contracts are in the same project.
 
-* The {native} program creates an actor with a `+cell+` variable to contain the current value that results from an operation.
+* The {native} canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The {lang} program provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} canister provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
 
 == Before you begin
 
@@ -48,9 +49,9 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} network processes running on the local computer.
+* You have stopped any {LEE} processes running on your computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 This tutorial takes approximately 20 minutes to complete.
@@ -84,12 +85,12 @@ To modify the default configuration for a {proglang} project, you'll need to com
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default {native} program>>
-* <<Replace the default {lang} program>>
+* <<Replace the default {native} canister>>
+* <<Replace the default {lang} canister>>
 
 === Edit the default canister settings
 
-Because this sample project is going to consist of two programs-the {native} program and the {lang} program—you need to modify the default `+dfx.json+` configuration file to include information for building both the {native} program and a {lang} program.
+Because this sample project is going to consist of two canisters-the {native} canister and the {lang} canister—you need to modify the default `+dfx.json+` configuration file to include information for building both the {native} canister and a {lang} canister.
 
 To modify the `+dfx.json+` configuration file:
 
@@ -108,12 +109,12 @@ For example, in the `+canisters+` section, add a new `+rust_deps+` key with sett
   "type": "custom"
   }
 ----
-. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} program.
+. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} canister.
 +
-The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` program—written in {native}—and use it from the `+rust_deps+` program written in Rust.
+The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
 . Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
-The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
 You can also remove the `+defaults+` and `+dfx+` version settings.
 +
@@ -126,14 +127,14 @@ include::example$mul-deps/mul-deps-dfx.json[]
 
 === Add a Cargo.toml file to the project
 
-To build the {lang} program using the `+cargo build+` command we added to the `+dfx.json+` configuration file, we also need to add a `+Cargo.toml+` file to the project directory.
+To build the {lang} canister using the `+cargo build+` command we added to the `+dfx.json+` configuration file, we also need to add a `+Cargo.toml+` file to the project directory.
 
 To add `+Cargo.toml+` settings for the project:
 
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the current directory named `+Cargo.toml+`.
 . Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your program.
+. Use the `+[workspace]+` key to specify the source file directory for your canister.
 +
 For example:
 +
@@ -148,8 +149,8 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} program. 
-For this tutorial, we want to add the files for building a {lang} program.
+Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} canister.
+For this tutorial, we want to add the files for building a {lang} canister.
 
 To prepare the source directory with Rust files:
 
@@ -166,7 +167,7 @@ This command creates a `+src/rust_deps/src+` directory with a library (`+lib.rs+
 +
 You use this file to configure the details used to build the Rust package.
 +
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
 +
 --
 * `+[package]+`
@@ -179,18 +180,18 @@ At a minimum, you need to configure the following sections with basic informatio
 ----
 [lib]
 crate-type = ["cdylib"]
-   
+
 [dependencies]
 ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 ----
 +
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version.
 . Save your changes and close the file to continue.
 
-=== Replace the default {native} programs
+=== Replace the default {native} canister smart contract
 
-The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with the program that implements the `+mul+` and `+read+` functions.
+The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with code that implements the `+mul+` and `+read+` functions.
 
 To modify the default {native} source code:
 
@@ -204,11 +205,11 @@ include::example$mul-deps/mul-deps.mo[]
 ----
 . Save your changes and close the file to continue.
 
-== Replace the default {lang} program
+== Replace the default {lang} canister smart contract
 
-Now that we have the {native} program that the {lang} program depends upon, let's add the {lang} program to the project.
+Now that we have the {native} canister that the {lang} canister depends upon, let's add the {lang} canister to the project.
 
-To replace the default {lang} program:
+To replace the default {lang} canister:
 
 . Check that you are still in the root directory for your project, if needed.
 . Open the template `+src/rust_deps/src/lib.rs+` file in a text editor and delete the existing content.
@@ -224,8 +225,8 @@ include::example$mul-deps/deps-main.rs[]
 
 == Add an interface description file
 
-Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
-Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+Candid is an interface description language (IDL) for interacting with canisters running on the {IC}.
+Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
@@ -246,26 +247,26 @@ service : {
 ----
 . Save your changes and close the `+deps.did+` file to continue.
 
-== Start the local network
+== Start the {LEE}
 
-Before you can build the project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+Before you can build the project, you need to connect to the {LEE} in your development environment or the {IC} mainnet.
 
 To start the network locally:
 
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} network on your local computer in the background by running the following command:
+. Start the {LEE} on your computer in the background by running the following command:
 +
 [source,bash]
 ----
 dfx start --clean --background
 ----
 +
-Depending on your platform and local security settings, you might see a warning displayed. 
+Depending on your platform and local security settings, you might see a warning displayed.
 If you are prompted to allow or deny incoming network connections, click *Allow*.
 
 == Register, build, and deploy your project
 
-After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {LEE} running in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -313,7 +314,7 @@ For this tutorial:
 
 To test the deployed canister:
 
-. Call the `+read+` function from the {native} program, which reads the current value of the `+cell+` variable on the deployed canister:
+. Call the `+read+` function from the {native} canister, which reads the current value of the `+cell+` variable on the deployed canister:
 +
 [source,bash]
 ----
@@ -350,15 +351,15 @@ The command returns the current value of the `+cell+` variable:
 (9)
 ....
 
-== Stop the local network
+== Stop the {LEE}
 
-After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your dapp, you can stop the {LEE} so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the {LEE}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the {LEE} process.
 
-. Stop the {IC} network by running the following command:
+. Stop the {LEE} by running the following command:
 +
 [source,bash]
 ----

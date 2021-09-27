@@ -5,7 +5,8 @@
 :toclevels: 3
 :proglang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:LEE: local execution environment
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :cdk-short-name: DFINITY Rust CDK
 :sdk-short-name: DFINITY Canister SDK
@@ -14,11 +15,11 @@
 ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 
 [[quick-start-intro]]
-The {cdk-long-name} provides tools, sample code, and documentation to help you create programs to run on the {IC} network.
-This _Hello, World! Rust CDK Quick Start_ assumes that you are installing the {cdk-short-name} for the first time. 
+The {cdk-long-name} provides tools, sample code, and documentation to help you create dapps to run on the decentralized {IC} mainnet.
+This _Hello, World! Rust CDK Quick Start_ assumes that you are installing the {cdk-short-name} for the first time.
 
-To help you get started, this tutorial illustrates how to modify the traditional "Hello World" first program to use the {cdk-short-name}. 
-This simple program has just one function that prints text to a terminal, but it provides a good model for understanding the workflow when writing programs in Rust that you want to deploy on the {IC}.
+To help you get started, this tutorial illustrates how to modify the traditional "Hello World" first dapp to use the {cdk-short-name}.
+This simple dapp has just one function that prints text to a terminal, but it provides a good model for understanding the workflow when writing dapps in Rust that you want to deploy on the {IC}.
 
 [[before-you-begin]]
 == Before you begin
@@ -48,13 +49,13 @@ brew install cmake
 +
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} network processes running on the local computer.
+* You have stopped any {LEE} processes running on your computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 [[create-a-new-project]]
-== Create a new project 
+== Create a new project
 
 Applications for the {IC} start as **projects**.
 You can create new projects for the {IC} using either Cargo or the {sdk-short-name}.
@@ -85,26 +86,26 @@ cd rust_hello
 == Modify the default configuration
 
 Creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default program>>
+* <<Replace the default dapp>>
 
 === Edit the default canister settings
 
 One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as canister smart contracts.
 
 To modify the `+dfx.json+` configuration file:
 
 . Check that you are still in the root directory for your project, if needed.
 . Open the `+dfx.json+` configuration file in a text editor.
-. Notice that under the `+canisters+` key, you have some default settings for the `+rust_hello+` canister such as the default path to the main program file and a default type of `+motoko+`.
+. Notice that under the `+canisters+` key, you have some default settings for the `+rust_hello+` canister such as the default path to the main dapp file and a default type of `+motoko+`.
 . Replace the `+canisters.rust_hello.main+` key and setting with a `+canisters.rust_hello.build+` key and specify the `+cargo build+` command to execute.
 +
 For example:
@@ -139,7 +140,7 @@ For example:
 ----
 . Remove all of the `+rust_hello_assets+` configuration settings from the file.
 +
-The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
 You can also remove the `+defaults+` and `+dfx+` keys for this tutorial.
 +
@@ -161,7 +162,7 @@ To add a `+Cargo.toml+` configuration file for the project:
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the current directory named `+Cargo.toml+`.
 . Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your program.
+. Use the `+[workspace]+` key to specify the source file directory for your dapp.
 +
 For example:
 +
@@ -176,7 +177,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_hello+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files.
 
 To prepare the source directory with Rust files:
 
@@ -193,7 +194,7 @@ This command creates a `+src/rust_hello/src+` directory with a library (`+lib.rs
 +
 You use this file to configure the details used to build the Rust package.
 +
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
 +
 --
 * `+[package]+`
@@ -212,20 +213,20 @@ ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 ----
 +
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_hello/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_hello/Cargo.toml+` file to match the latest version.
 . Save your changes and close the file to continue.
 
-=== Replace the default program
+=== Replace the default dapp
 
-Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` dapp with the Rust dapp we want to deploy on the {IC}.
 
-To replace the default program:
+To replace the default dapp:
 
 . Check that you are still in the root directory for your project, if needed.
 . Delete the template `+src/rust_hello/main.mo+` file by running the following command:
 +
 [source,bash]
----- 
+----
 rm src/rust_hello/main.mo
 ----
 . Open the template `+src/rust_hello/src/lib.rs+` file in a text editor and delete the existing content.
@@ -269,28 +270,28 @@ This definition specifies that the data passed to the `+print+` function is retu
 . Save your changes and close the file to continue.
 
 [[start-the-local-network]]
-== Start the local network
+== Start the {LEE}
 
-Before you can build your project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+Before you can build your project, you need to connect to the {LEE} running in your development environment or the decentralized {IC} mainnet.
 
-To start the network locally:
+To start the {LEE}:
 
 [arabic]
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} network on your local computer in the background by running the following command:
+. Start the {LEE} on your computer in the background by running the following command:
 +
 [source,bash]
 ----
 dfx start --background
 ----
 +
-Depending on your platform and local security settings, you might see a warning displayed. 
+Depending on your platform and local security settings, you might see a warning displayed.
 If you are prompted to allow or deny incoming network connections, click *Allow*.
 
 [[register-ids]]
 == Register, build, and deploy your project
 
-After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {LEE} running in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -328,9 +329,9 @@ Deployed canisters.
 ....
 
 ////
-== Optimize and test the program
+== Optimize and test the dapp
 
-At this point, you have a program compiled to WebAssembly that has not been optimized for deployment on the {IC}. 
+At this point, you have a dapp compiled to WebAssembly that has not been optimized for deployment on the {IC}.
 
 To optimize and test the resulting canister:
 
@@ -342,7 +343,7 @@ To optimize and test the resulting canister:
 cargo install ic-cdk-optimizer
 ----
 +
-This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your program can be uploaded as a canister.
+This package optimizes your Rust code to reduce the size of the WebAssembly output to ensure your dapp can be uploaded as a canister.
 . Create a release directory within the `+src/rust_hello+` directory by running the following command:
 +
 [source,bash]
@@ -357,12 +358,12 @@ ic-cdk-optimizer target/wasm32-unknown-unknown/release/rust_hello.wasm -o target
 ----
 ////
 
-== Test the program
+== Test the dapp
 
-To test the deployed program locally:
+To test the deployed dapp locally:
 
 . Check that you are still in root directory for your project directory, if needed.
-. Call the `+print+` function in the program by running the following command:
+. Call the `+print+` function in the dapp by running the following command:
 +
 [source,bash]
 ----
@@ -377,15 +378,15 @@ For example:
 ()
 ....
 
-== Stop the local network
+== Stop the {LEE}
 
-After testing the application, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After testing the application, you can stop the {LEE} so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the {LEE}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the {LEE} process.
 
-. Stop the local {IC} network running on your local computer by running the following command:
+. Stop the {LEE} running on your computer by running the following command:
 +
 [source,bash]
 ----

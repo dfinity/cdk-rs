@@ -6,31 +6,32 @@ ifdef::env-github,env-browser[:outfilesuffix:.adoc]
 :toclevels: 3
 :proglang: Rust
 :platform: Internet Computer platform
-:IC: Internet Computer
+:LEE: local canister execution environment
+:IC: Internet Computer blockchain
 :company-id: DFINITY
 :sdk-short-name: DFINITY Canister SDK
 :sdk-long-name: DFINITY Canister Software Development Kit (SDK)
 :cdk-short-name: DFINITY Rust CDK
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 
-In this tutorial, you are going to write a program that provides a few basic functions to increment a counter and illustrates the persistence of a value.
+In this tutorial, you are going to write a dapp that provides a few basic functions to increment a counter and illustrates the persistence of a value.
 
-For this tutorial, the program declares a `+COUNTER+` as a mutable variable to contain a natural number that represents the current value of the counter.
-This program supports the following functions:
+For this tutorial, the dapp declares a `+COUNTER+` as a mutable variable to contain a natural number that represents the current value of the counter.
+This dapp supports the following functions:
 
 * The `+increment+` function updates the current value, incrementing by 1 with no return value.
 * The `+get+` function is a simple query that returns the current value of the counter.
 * The `+set+` function updates the current value to the numeric value you specify as an argument.
 
-This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed canister.
+This tutorial provides a simple example of how you can increment a counter by calling functions on a deployed canister smart contract.
 By calling the function to increment a value multiple times, you can verify that the variable state—that is, the value of the variable between calls—persists.
 
-Like the other sample programs, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
+Like the other sample dapps, this tutorial demonstrates a simple, but realistic, workflow in which you perform the following steps:
 
 * Create a new project.
-* Write a program that compile into a WebAssembly module.
-* Deploy the canister on the local {IC} network.
-* Invoke the canister methods to increment then read the value of a counter.
+* Write a dapp that compiles into a WebAssembly module.
+* Deploy the canister on the {LEE}.
+* Invoke the canister smart contract methods to increment then read the value of a counter.
 
 [[before-you-begin]]
 == Before you begin
@@ -59,9 +60,9 @@ brew install cmake
 ----
 For instructions on how to install Homebrew, see the link:https://docs.brew.sh/Installation[Homebrew Documentation].
 
-* You have stopped any {IC} network processes running on the local computer.
+* You have stopped any {LEE} processes running on your computer.
 
-If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers]. 
+If you aren’t sure how to open a new terminal shell on your local computer, run commands in a terminal, or how to check for and install packages, see link:../quickstart/newcomers{outfilesuffix}[Preliminary steps for newcomers].
 If you are comfortable meeting the prerequisites without instructions, continue to <<Create a new project,Create a new project>>.
 
 This tutorial takes approximately 20 minutes to complete.
@@ -89,20 +90,20 @@ cd rust_counter
 == Modify the default configuration
 
 In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
 
 To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
 * <<Add a Cargo.toml file to the project>>
 * <<Add Rust files to the source directory>>
-* <<Replace the default program>>
+* <<Replace the default dapp>>
 
 === Edit the default canister settings
 
 One of the template files included in your project directory is a default `+dfx.json+` configuration file.
 This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canisters.
+You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as canister smart contracts.
 
 To modify the `+dfx.json+` configuration file:
 
@@ -123,7 +124,7 @@ For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` s
 ----
 . Remove all of the `+rust_counter_assets+` configuration settings from the file.
 +
-The sample program for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
+The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 . Remove the `+defaults+` and `+dfx+` version settings because this tutorial doesn't use these settings.
 +
 For example, the configuration file looks like this after you modify the settings:
@@ -143,7 +144,7 @@ To add a `+Cargo.toml+` configuration file for the project:
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file in the current directory named `+Cargo.toml+`.
 . Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your program.
+. Use the `+[workspace]+` key to specify the source file directory for your dapp.
 +
 For example:
 +
@@ -158,7 +159,7 @@ members = [
 
 === Add Rust files to the source directory
 
-Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default program with a Rust library `+lib.rs+` package and `+Cargo.toml+` files. 
+Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files.
 
 To prepare the source directory with Rust files:
 
@@ -175,7 +176,7 @@ This command creates a `+src/rust_counter/src+` directory with a library (`+lib.
 +
 You use this file to configure the details used to build the Rust package.
 +
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use. 
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
 +
 --
 * `+[package]+`
@@ -194,25 +195,25 @@ ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 ----
 +
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version. 
+NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version.
 . Save your changes and close the file to continue.
 
-=== Replace the default program
+=== Replace the default dapp
 
-Now that you have the files in place for your Rust program, we can replace the template `+main.mo+` program with the Rust program we want to deploy on the {IC}.
+Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` dapp with the Rust dapp we want to deploy on the {IC}.
 
-To replace the default program:
+To replace the default dapp:
 
 . Check that you are still in the root directory for your project, if needed.
 . Delete the template `+src/rust_counter/main.mo+` file by running the following command:
 +
 [source,bash]
----- 
+----
 rm src/rust_counter/main.mo
 ----
 . Open the template `+src/rust_counter/src/lib.rs+` file in a text editor and delete the existing content.
 +
-The next step is to write a Rust program that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
+The next step is to write a Rust dapp that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
 . Copy and paste the following sample code into the `+lib.rs+` file:
 +
 [source,motoko]
@@ -224,7 +225,7 @@ include::example$counter-tutorial/counter.rs[]
 == Add an interface description file
 
 Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
-Candid files provide a language-independent description of  a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
+Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
 
 By adding Candid files to your project, you can ensure that data is properly converted from its definition in Rust to run safely on the {IC}.
 
@@ -246,26 +247,26 @@ service : {
 ----
 . Save your changes and close the `+counter.did+` file to continue.
 
-== Start the local network
+== Start the {LEE}
 
-Before you can build the `+rust_counter+` project, you need to connect to the {IC} network either running locally in your development environment or running remotely on a sub-network that you can access.
+Before you can build the `+rust_counter+` project, you need to connect to the {LEE} running in your development environment or the decentralized {IC} mainnet.
 
-To start the network locally:
+To start the {LEE}:
 
 . Check that you are still in the root directory for your project, if needed.
-. Start the {IC} network on your local computer in the background by running the following command:
+. Start the {LEE} on your computer in the background by running the following command:
 +
 [source,bash]
 ----
 dfx start --background
 ----
 +
-Depending on your platform and local security settings, you might see a warning displayed. 
+Depending on your platform and local security settings, you might see a warning displayed.
 If you are prompted to allow or deny incoming network connections, click *Allow*.
 
 == Register, build, and deploy your project
 
-After you connect to the {IC} network running locally in your development environment, you can register, build, and deploy your project locally.
+After you connect to the {LEE} running in your development environment, you can register, build, and deploy your project locally.
 
 To register, build, and deploy:
 
@@ -303,7 +304,7 @@ Installing code for canister rust_counter, with canister_id rrkah-fqaaa-aaaaa-aa
 Deployed canisters.
 ....
 
-== Call functions and test the program
+== Call functions and test the dapp
 
 After successfully deploying the canister, you can test the canister by invoking the functions it provides.
 For this tutorial:
@@ -312,7 +313,7 @@ For this tutorial:
 * Call the `+increment+` function to increment the counter each time it is called.
 * Call the `+set+` function to pass an argument to update the counter to an arbitrary value you specify.
 
-To test the program:
+To test the dapp:
 
 [arabic]
 . Call the `+get+` function to read the current value of the `+COUNTER+` variable by running the following command:
@@ -368,15 +369,15 @@ dfx canister call rust_counter get
 +
 Returns the incremented value of 988.
 
-== Stop the local network
+== Stop the {LEE}
 
-After you finish experimenting with your program, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
+After you finish experimenting with your dapp, you can stop the local Internet Computer network so that it doesn’t continue running in the background.
 
-To stop the local network:
+To stop the {LEE}:
 
-. In the terminal that displays network operations, press Control-C to interrupt the local network process.
+. In the terminal that displays network operations, press Control-C to interrupt the {LEE} process.
 
-. Stop the {IC} network by running the following command:
+. Stop the {LEE} by running the following command:
 +
 [source,bash]
 ----

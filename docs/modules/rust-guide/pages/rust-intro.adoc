@@ -2,10 +2,11 @@
 :cdk-short-name: DFINITY Rust CDK
 :cdk-long-name: DFINITY Canister Development Kit (CDK) for Rust
 :cdk: Rust Canister Development Kit (CDK)
+:IC: Internet Computer blockchain
 
 Rust is a powerful and type sound modern programming language with an active developer community.
-Because Rust compiles to WebAssembly, it offers a rich development environment for writing applications to run on the {IC}.
-To help pave the way for writing applications in Rust that can be deployed on the {IC}, {company-id} provides some tools to simplify the process.
+Because Rust compiles to WebAssembly, it offers a rich development environment for writing dapps to run on the {IC}.
+To help pave the way for writing dapps in Rust that can be deployed on the {IC}, {company-id} provides some tools to simplify the process.
 
 Collectively, these tools are referred to as the {cdk-long-name} and consist of the following main libraries:
 
@@ -13,16 +14,16 @@ Collectively, these tools are referred to as the {cdk-long-name} and consist of 
 |===
 |Package |Description
 
-|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the {IC} replica, and when building applications to be deployed as canisters on the {IC}.
+|`+ic-types+` |The `+ic-types+` crate defines the types used to communicate with the decentralized {IC}, and when building dapps to be deployed as canister smart contracts on the {IC}.
 
-|`+ic-agent+` |The `+ic-agent+` library enables direct communication with the {IC} replica.
+|`+ic-agent+` |The `+ic-agent+` library enables direct communication with the {IC}.
 
-|`+ic-utils+` |The `+ic-utils+` library provides utilities for managing calls and applications deployed as canisters.
+|`+ic-utils+` |The `+ic-utils+` library provides utilities for managing calls and dapps deployed as canister smart contracts.
 
 
-|`+ic-cdk+` |The `+ic-cdk+` provides the core methods that enable Rust programs to interact with the {IC} main system API. This library serves as the runtime core of the Rust CDK.
+|`+ic-cdk+` |The `+ic-cdk+` provides the core methods that enable Rust programs to interact with the {IC} system API. This library serves as the runtime core of the Rust CDK.
 
-|`+ic-cdk-macros+` |The `+ic-cdk-macros+` library defines the procedural macros that facilitate building operation endpoints and API. This library includes key macros for `+update+`, `+query+`, `+import+` and other important operations.
+|`+ic-cdk-macros+` |The `+ic-cdk-macros+` library defines the procedural macros that facilitate building operation endpoints and APIs. This library includes macros for `+update+`, `+query+`, `+import+` and other important operations.
 
 |`+ic-cdk-optimizer+` |The `+ic-cdk-optimizer+` is a helper library used to reduce the size of WebAssembly modules.
 
