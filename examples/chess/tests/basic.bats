@@ -1,6 +1,6 @@
 # Executed before each test.
 setup() {
-  cd examples/asset_storage
+  cd examples/chess
   # Make sure the directory is clean.
   npm install
 
