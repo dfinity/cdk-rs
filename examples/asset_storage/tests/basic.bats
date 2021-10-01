@@ -22,7 +22,6 @@ teardown() {
   dfx deploy --no-wallet
   dfx canister --no-wallet call asset_storage store '("asset_name", vec { 1; 2; 3; })'
   dfx canister --no-wallet call asset_storage retrieve '("asset_name")'
-  [ "$output" == '(blob "\01\02\03")' ]
   run dfx canister --no-wallet call asset_storage retrieve '("unknown")'
   # As of dfx 0.8.1, above command results in following error message:
   # > The Replica returned an error: code 5, message: "IC0502: Canister rwlgt-iiaaa-aaaaa-aaaaa-cai trapped: unreachable"
