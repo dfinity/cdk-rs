@@ -53,6 +53,14 @@ macro_rules! ic0_module {
         }
         )*
     };
+    ( $( ic0. $name: ident : ( $( $argname: ident : $argtype: ty ),*  ) -> { ($( $rettype: ty, )*) }; )+ ) => {
+
+        #[cfg(target_arch = "wasm32")]
+        #[link(wasm_import_module = "ic0")]
+        extern "C" {
+            $(pub(super) fn $name($( $argname: $argtype, )*) -> { (_ic0_module_ret!($rettype_1), _ic0_module_ret!($rettype_2)) } ;)*
+        }
+    };
 }
 
 // This is a private module that can only be used internally in this file.
