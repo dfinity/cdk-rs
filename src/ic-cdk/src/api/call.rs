@@ -343,7 +343,6 @@ pub unsafe fn msg_cycles_available128() -> (u64, u64) {
     (result.0 as u64, result.1 as u64)
 }
 
-
 pub fn msg_cycles_refunded() -> u64 {
     unsafe { ic0::msg_cycles_refunded() as u64 }
 }
