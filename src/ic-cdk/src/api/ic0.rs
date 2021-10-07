@@ -42,6 +42,7 @@ macro_rules! _ic0_module_ret {
 macro_rules! ic0_module {
     ( $(     ic0. $name: ident : ( $( $argname: ident : $argtype: ty ),* ) -> $rettype: tt ; )+ ) => {
 
+        #[allow(improper_ctypes)]
         #[cfg(target_arch = "wasm32")]
         #[link(wasm_import_module = "ic0")]
         extern "C" {
