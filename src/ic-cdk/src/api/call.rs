@@ -339,7 +339,8 @@ pub fn msg_cycles_available() -> u64 {
 }
 
 pub fn msg_cycles_available128() -> (u64, u64) {
-    unsafe { ic0::msg_cycles_available128() as (u64, u64) }
+    let (high, low) = unsafe { ic0::msg_cycles_available128() };
+    (high as u64, low as u64)
 }
 
 pub fn msg_cycles_refunded() -> u64 {
@@ -347,7 +348,8 @@ pub fn msg_cycles_refunded() -> u64 {
 }
 
 pub fn msg_cycles_refunded128() -> (u64, u64) {
-    unsafe { ic0::msg_cycles_refunded128() as (u64, u64) }
+    let (high, low) = unsafe { ic0::msg_cycles_refunded128() };
+    (high as u64, low as u64)
 }
 
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
@@ -357,9 +359,10 @@ pub fn msg_cycles_accept(max_amount: u64) -> u64 {
 
 pub fn msg_cycles_accept128(max_amount_high: u64, max_amount_low: u64) -> (u64, u64) {
     // TODO: should we assert the u64 input is within the range of i64?
-    unsafe {
-        ic0::msg_cycles_accept128(max_amount_high as i64, max_amount_low as i64) as (u64, u64)
-    }
+    let (amount_high, amount_low) = unsafe {
+        ic0::msg_cycles_accept128(max_amount_high as i64, max_amount_low as i64)
+    };
+    (amount_high as u64, amount_low as u64)
 }
 
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
