@@ -146,7 +146,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             .join(" , ");
         Ok(format!(
             r#"
-                #[derive(Clone, Debug, Default, candid::CandidType, serde::Deserialize)]
+                #[derive(Clone, Debug, Default, ic_cdk::export::candid::CandidType, serde::Deserialize)]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields
