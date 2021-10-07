@@ -28,7 +28,7 @@ macro_rules! _ic0_module_ret {
         $t
     };
     ( ( $_i1: ident : $t1: ty , $_i2: ident : $t2: ty) ) => {
-        ( $t1, $t2)
+        ($t1, $t2)
     };
     ( ( $t: ty ) ) => {
         $t
