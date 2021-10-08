@@ -27,6 +27,9 @@ macro_rules! _ic0_module_ret {
     ( ( $_: ident : $t: ty ) ) => {
         $t
     };
+    ( ( $_i1: ident : $t1: ty , $_i2: ident : $t2: ty) ) => {
+        ($t1, $t2)
+    };
     ( ( $t: ty ) ) => {
         $t
     };
@@ -37,8 +40,9 @@ macro_rules! _ic0_module_ret {
 
 // Declare the module itself as a list of API endpoints.
 macro_rules! ic0_module {
-    ( $( ic0. $name: ident : ( $( $argname: ident : $argtype: ty ),* ) -> $rettype: tt ; )+ ) => {
+    ( $(     ic0. $name: ident : ( $( $argname: ident : $argtype: ty ),* ) -> $rettype: tt ; )+ ) => {
 
+        #[allow(improper_ctypes)]
         #[cfg(target_arch = "wasm32")]
         #[link(wasm_import_module = "ic0")]
         extern "C" {
@@ -57,6 +61,7 @@ macro_rules! ic0_module {
 
 // This is a private module that can only be used internally in this file.
 // Copy-paste the spec section of the API here.
+// Current spec version: 0.18.2
 /*
 The comment after each function lists from where these functions may be invoked:
 I: from canister_init or canister_post_upgrade
@@ -84,19 +89,24 @@ ic0_module! {
     ic0.msg_reject : (src : i32, size : i32) -> ();                             // U Q Ry Rt
 
     ic0.msg_cycles_available : () -> i64;                                       // U Rt Ry
+    ic0.msg_cycles_available128 : () -> (high : i64, low : i64);                // U Rt Ry
     ic0.msg_cycles_refunded : () -> i64;                                        // Rt Ry
-    ic0.msg_cycles_accept : ( max_amount : i64 ) -> ( amount : i64 );           // U Rt Ry
+    ic0.msg_cycles_refunded128 : () -> (high : i64, low: i64);                  // Rt Ry
+    ic0.msg_cycles_accept : ( max_amount : i64) -> ( amount : i64 );            // U Rt Ry
+    ic0.msg_cycles_accept128 : ( max_amount_high : i64, max_amount_low: i64)
+                       -> ( amount_high : i64, amount_low: i64 );               // U Rt Ry
 
     ic0.canister_self_size : () -> i32;                                         // *
     ic0.canister_self_copy : (dst : i32, offset : i32, size : i32) -> ();       // *
     ic0.canister_cycle_balance : () -> i64;                                     // *
+    ic0.canister_cycle_balance128 : () -> (high : i64, low : i64);              // *
     ic0.canister_status : () -> i32;                                            // *
 
     ic0.msg_method_name_size : () -> i32;                                       // F
     ic0.msg_method_name_copy : (dst : i32, offset : i32, size : i32) -> ();     // F
     ic0.accept_message : () -> ();                                              // F
 
-    ic0.call_new :                                                              // U Ry Rt
+    ic0.call_new :                                                              // U Ry Rt H
       ( callee_src  : i32,
         callee_size : i32,
         name_src : i32,
@@ -106,27 +116,28 @@ ic0_module! {
         reject_fun : i32,
         reject_env : i32
       ) -> ();
-    ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt
-    ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt
-    ic0.call_cycles_add : ( amount : i64 ) -> ();                               // U Ry Rt
-    ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt
+    ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt H
+    ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt H
+    ic0.call_cycles_add : ( amount : i64 ) -> ();                               // U Ry Rt H
+    ic0.call_cycles_add128 : ( amount_high : i64, amount_low: i64 ) -> ();      // U Ry Rt H
+    ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt H
 
     ic0.stable_size : () -> (page_count : i32);                                 // *
     ic0.stable_grow : (new_pages : i32) -> (old_page_count : i32);              // *
     ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();             // *
     ic0.stable_read : (dst : i32, offset : i32, size : i32) -> ();              // *
-
     ic0.stable64_size : () -> (page_count : i64);                               // *
     ic0.stable64_grow : (new_pages : i64) -> (old_page_count : i64);            // *
     ic0.stable64_write : (offset : i64, src : i64, size : i64) -> ();           // *
     ic0.stable64_read : (dst : i64, offset : i64, size : i64) -> ();            // *
 
-    ic0.certified_data_set : (src: i32, size: i32) -> ();                       // I G U Ry Rt
+    ic0.certified_data_set : (src: i32, size: i32) -> ();                       // I G U Ry Rt H
     ic0.data_certificate_present : () -> i32;                                   // *
     ic0.data_certificate_size : () -> i32;                                      // *
     ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();       // *
 
     ic0.time : () -> (timestamp : i64);                                         // *
+    ic0.performance_counter : () -> (counter : i64);                            // * s
 
     ic0.debug_print : (src : i32, size : i32) -> ();                            // * s
     ic0.trap : (src : i32, size : i32) -> ();                                   // * s
