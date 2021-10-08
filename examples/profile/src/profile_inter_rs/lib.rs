@@ -1,5 +1,4 @@
 use ic_cdk_macros::*;
-use ic_cdk::export::candid;
 
 #[import(canister = "profile_rs")]
 struct ProfileCanister;

@@ -11,6 +11,7 @@ static mut DONE: bool = false;
 pub mod export {
     pub use candid;
     pub use candid::types::ic_types::Principal;
+    pub use serde;
 }
 
 /// Setup the stdlib hooks.

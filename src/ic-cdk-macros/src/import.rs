@@ -144,9 +144,12 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
             .map(|(name, ty)| format!("pub {} : {}", name, ty))
             .collect::<Vec<String>>()
             .join(" , ");
+        // The following #[serde(crate = ...)] line was from https://github.com/serde-rs/serde/issues/1465#issuecomment-800686252
+        // It is necessary when use re-exported serde
         Ok(format!(
             r#"
-                #[derive(Clone, Debug, Default, candid::CandidType, serde::Deserialize)]
+                #[derive(Clone, Debug, Default, ic_cdk::export::candid::CandidType, ic_cdk::export::serde::Deserialize)]
+                #[serde(crate = "ic_cdk::export::serde")]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields
