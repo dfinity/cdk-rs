@@ -13,4 +13,3 @@ crate-type = ["cdylib"]
 [dependencies]
 ic-cdk = { path = "../../../../src/ic-cdk", version = "0.3" }
 ic-cdk-macros = { path = "../../../../src/ic-cdk-macros", version = "0.3" }
-serde = "1.0.111"
