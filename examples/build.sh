@@ -7,7 +7,7 @@ root="$(dirname "$0")/.."
 example_root="$(dirname "$0")/$name"
 
 # This script builds an example project (passed as $1) and then run the ic-cdk-optimizer on it.
-cargo +nightly-2021-09-20 build --manifest-path="$example_root/Cargo.toml" \
+cargo build --manifest-path="$example_root/Cargo.toml" \
     --target wasm32-unknown-unknown \
     --release \
     --package "$package"
