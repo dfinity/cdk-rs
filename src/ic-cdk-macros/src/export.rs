@@ -136,10 +136,10 @@ fn dfn_macro(
     );
 
     let export_name = if method.is_lifecycle() {
-        format!("{}", method)
+        format!("canister_{}", method)
     } else {
         format!(
-            "{0} {1}",
+            "canister_{0} {1}",
             method,
             attrs.name.unwrap_or_else(|| name.to_string())
         )
