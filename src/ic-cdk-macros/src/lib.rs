@@ -18,14 +18,17 @@ fn handle_debug_and_errors<F>(
     item: TokenStream,
 ) -> TokenStream
 where
-    F: FnOnce(TokenStream, TokenStream) -> Result<TokenStream, Error>,
+    F: FnOnce(
+        proc_macro2::TokenStream,
+        proc_macro2::TokenStream,
+    ) -> Result<proc_macro2::TokenStream, Error>,
 {
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--- IC_CDK_MACROS DEBUG ---");
         eprintln!("{}\n    attr: {}\n    item: {}", name, attr, item);
     }
 
-    let result = cb(attr, item);
+    let result = cb(attr.into(), item.into());
 
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--------- RESULT  ---------");

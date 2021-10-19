@@ -1,4 +1,4 @@
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
@@ -157,11 +157,8 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
     }
 }
 
-pub(crate) fn ic_import(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
-    let config = from_tokenstream::<ImportAttributes>(&proc_macro2::TokenStream::from(attr))?;
+pub(crate) fn ic_import(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+    let config = from_tokenstream::<ImportAttributes>(&attr)?;
 
     // We expect both fields to have values for now.
     let (canister_id, candid_path) = {
@@ -184,7 +181,7 @@ pub(crate) fn ic_import(
         }
     };
 
-    let item = syn::parse2::<syn::Item>(proc_macro2::TokenStream::from(item))?;
+    let item = syn::parse2::<syn::Item>(item)?;
 
     // Validate that the item is a struct.
     let item = match item {
@@ -227,5 +224,5 @@ pub(crate) fn ic_import(
 
     let rust_str = format!("{} {}", "type principal = Vec<u8>;", rust_str);
 
-    Ok(proc_macro::TokenStream::from_str(&rust_str).unwrap())
+    Ok(TokenStream::from_str(&rust_str).unwrap())
 }

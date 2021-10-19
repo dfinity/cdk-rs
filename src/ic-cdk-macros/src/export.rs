@@ -204,27 +204,12 @@ fn dfn_macro(
     })
 }
 
-pub(crate) fn ic_query(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
-    dfn_macro(
-        MethodType::Query,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+pub(crate) fn ic_query(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+    dfn_macro(MethodType::Query, attr, item)
 }
-pub(crate) fn ic_update(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
-    dfn_macro(
-        MethodType::Update,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+
+pub(crate) fn ic_update(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+    dfn_macro(MethodType::Update, attr, item)
 }
 
 #[derive(Default, Deserialize)]
@@ -232,10 +217,7 @@ struct InitAttributes {}
 
 static IS_INIT: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_init(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if IS_INIT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
@@ -243,20 +225,12 @@ pub(crate) fn ic_init(
         ));
     }
 
-    dfn_macro(
-        MethodType::Init,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::Init, attr, item)
 }
 
 static HAS_PRE_UPGRADE: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_pre_upgrade(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_pre_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_PRE_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
@@ -264,20 +238,12 @@ pub(crate) fn ic_pre_upgrade(
         ));
     }
 
-    dfn_macro(
-        MethodType::PreUpgrade,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::PreUpgrade, attr, item)
 }
 
 static HAS_POST_UPGRADE: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_post_upgrade(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_post_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_POST_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
@@ -285,20 +251,12 @@ pub(crate) fn ic_post_upgrade(
         ));
     }
 
-    dfn_macro(
-        MethodType::PostUpgrade,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::PostUpgrade, attr, item)
 }
 
 static HAS_HEARTBEAT: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_heartbeat(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_heartbeat(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_HEARTBEAT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
@@ -306,20 +264,15 @@ pub(crate) fn ic_heartbeat(
         ));
     }
 
-    dfn_macro(
-        MethodType::Heartbeat,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::Heartbeat, attr, item)
 }
 
 static HAS_INSPECT_MESSAGE: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn ic_inspect_message(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+    attr: TokenStream,
+    item: TokenStream,
+) -> Result<TokenStream, Error> {
     if HAS_INSPECT_MESSAGE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
@@ -327,10 +280,5 @@ pub(crate) fn ic_inspect_message(
         ));
     }
 
-    dfn_macro(
-        MethodType::InspectMessage,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::InspectMessage, attr, item)
 }
