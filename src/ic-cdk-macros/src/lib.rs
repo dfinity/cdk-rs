@@ -79,13 +79,6 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Import data type from another canister as a struct.
-///
-/// # Examples
-///
-/// ```no_run
-/// #[import(canister = "another_canister")]
-/// struct DataTypeThere;
-/// ```
 #[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
