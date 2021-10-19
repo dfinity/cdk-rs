@@ -40,13 +40,13 @@ impl MethodType {
 impl std::fmt::Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MethodType::Init => f.write_str("canister_init"),
-            MethodType::PreUpgrade => f.write_str("canister_pre_upgrade"),
-            MethodType::PostUpgrade => f.write_str("canister_post_upgrade"),
-            MethodType::Query => f.write_str("canister_query"),
-            MethodType::Update => f.write_str("canister_update"),
-            MethodType::Heartbeat => f.write_str("canister_heartbeat"),
-            MethodType::InspectMessage => f.write_str("canister_inspect_message"),
+            MethodType::Init => f.write_str("init"),
+            MethodType::PreUpgrade => f.write_str("pre_upgrade"),
+            MethodType::PostUpgrade => f.write_str("post_upgrade"),
+            MethodType::Query => f.write_str("query"),
+            MethodType::Update => f.write_str("update"),
+            MethodType::Heartbeat => f.write_str("heartbeat"),
+            MethodType::InspectMessage => f.write_str("inspect_message"),
         }
     }
 }
