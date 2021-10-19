@@ -5,6 +5,7 @@ use syn::Error;
 mod export;
 mod import;
 
+// To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 pub(crate) fn id() -> u32 {
     NEXT_ID.fetch_add(1, Ordering::SeqCst)
