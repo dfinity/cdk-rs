@@ -1,4 +1,4 @@
-error: #[query] must be above a function,
+error: #[query] must be above a function.
 expected `fn`
  --> tests/compile_fail/only_function.rs:4:1
   |

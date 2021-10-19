@@ -60,7 +60,7 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
                 return Err(Error::new(
                     r.span(),
                     format!(
-                        "#[{}] cannot be above functions with `self` as a parameter",
+                        "#[{}] cannot be above functions with `self` as a parameter.",
                         method
                     ),
                 ));
@@ -93,7 +93,7 @@ fn dfn_macro(
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Error::new(
             item.span(),
-            format!("#[{0}] must be above a function, \n{1}", method, e),
+            format!("#[{0}] must be above a function. \n{1}", method, e),
         )
     })?;
     let signature = &fun.sig;
@@ -103,7 +103,7 @@ fn dfn_macro(
         return Err(Error::new(
             generics.span(),
             format!(
-                "#[{}] must be above a function with no generic parameters",
+                "#[{}] must be above a function with no generic parameters.",
                 method
             ),
         ));
