@@ -221,7 +221,7 @@ pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStrea
     if IS_INIT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Init function already declared.",
+            "[init] function already declared.",
         ));
     }
 
@@ -234,7 +234,7 @@ pub(crate) fn ic_pre_upgrade(attr: TokenStream, item: TokenStream) -> Result<Tok
     if HAS_PRE_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Pre-upgrade function already declared.",
+            "[pre_upgrade] function already declared.",
         ));
     }
 
@@ -247,7 +247,7 @@ pub(crate) fn ic_post_upgrade(attr: TokenStream, item: TokenStream) -> Result<To
     if HAS_POST_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Post-upgrade function already declared.",
+            "[post_upgrade] function already declared.",
         ));
     }
 
@@ -260,7 +260,7 @@ pub(crate) fn ic_heartbeat(attr: TokenStream, item: TokenStream) -> Result<Token
     if HAS_HEARTBEAT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Heartbeat function already declared.",
+            "[heartbeat] function already declared.",
         ));
     }
 
@@ -276,7 +276,7 @@ pub(crate) fn ic_inspect_message(
     if HAS_INSPECT_MESSAGE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Inspect-message function already declared.",
+            "[inspect_message] function already declared.",
         ));
     }
 
