@@ -282,3 +282,206 @@ pub(crate) fn ic_inspect_message(
 
     dfn_macro(MethodType::InspectMessage, attr, item)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn ic_query_empty() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_return_one_value() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() -> u32 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply((result,))
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_return_tuple() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() -> (u32, u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(result)
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_one_arg() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a);
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_two_args() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32, b: u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a, b);
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_export_name() {
+        let generated = ic_query(
+            quote!(name = "custome_query"),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+
+        let expected = quote! {
+            #[export_name = "canister_query custome_query"]
+            fn query_0_() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+}
