@@ -108,7 +108,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// This attribute macro will export the function `canister_init`
 /// in the canister module.
 ///
-/// The function under this attribute must have return value.
+/// The function under this attribute must have no return value.
 ///
 /// Each canister can only have one `canister_init` entry point.
 ///
@@ -132,7 +132,7 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// This attribute macro will export the function `canister_pre_upgrade`
 /// in the canister module.
 ///
-/// The function under this attribute must have return value.
+/// The function under this attribute must have no return value.
 ///
 /// Each canister can only have one `canister_pre_upgrade` entry point.
 ///
@@ -156,7 +156,7 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// This attribute macro will export the function `canister_post_upgrade`
 /// in the canister module.
 ///
-/// The function under this attribute must have return value.
+/// The function under this attribute must have no return value.
 ///
 /// Each canister can only have one `canister_post_upgrade` entry point.
 ///
@@ -180,7 +180,7 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// This attribute macro will export the function `canister_heartbeat`
 /// in the canister module.
 ///
-/// The function under this attribute must have return value.
+/// The function under this attribute must have no return value.
 ///
 /// Each canister can only have one `canister_heartbeat` entry point.
 ///
@@ -204,7 +204,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// This attribute macro will export the function `canister_inspect_message`
 /// in the canister module.
 ///
-/// The function under this attribute must have return value.
+/// The function under this attribute must have no return value.
 ///
 /// Each canister can only have one `canister_inspect_message` entry point.
 ///
