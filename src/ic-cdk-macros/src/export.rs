@@ -473,6 +473,43 @@ mod test {
     }
 
     #[test]
+    fn ic_query_two_args_return_value() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32, b: u32) -> u64 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a, b);
+                    ic_cdk::api::call::reply((result,))
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
     fn ic_query_export_name() {
         let generated = ic_query(
             quote!(name = "custom_query"),
