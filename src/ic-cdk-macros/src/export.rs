@@ -297,10 +297,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let () = ic_cdk::api::call::arg_data();
@@ -330,10 +334,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let () = ic_cdk::api::call::arg_data();
@@ -363,10 +371,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let () = ic_cdk::api::call::arg_data();
@@ -396,10 +408,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let (a, ) = ic_cdk::api::call::arg_data();
@@ -429,10 +445,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let (a, b, ) = ic_cdk::api::call::arg_data();
@@ -462,10 +482,14 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
 
         let expected = quote! {
             #[export_name = "canister_query custome_query"]
-            fn query_0_() {
+            fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
                     let () = ic_cdk::api::call::arg_data();
