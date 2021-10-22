@@ -1,3 +1,27 @@
+//! # ic-cdk-macros
+//!
+//! This crate provide a set of attribute macros to faciliate canister development.
+//!
+//! The macros fall into two categories:
+//! * To register functions as canister entry points
+//! * To import data structure from other canisters for inter-canister operation.
+//!
+//! ## Register functions as canister entry points
+//!
+//! These macros are directly related to the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#_entry_points).
+//!
+//! * [`init`](attr.init.html)
+//! * [`pre_upgrade`](attr.pre_upgrade.html)
+//! * [`post_upgrade`](attr.post_upgrade.html)
+//! * [`inspect_message`](attr.inspect_message.html)
+//! * [`heartbeat`](attr.heartbeat.html)
+//! * [`update`](attr.update.html)
+//! * [`query`](attr.query.html)
+//!
+//! ## Import data structure from other canisters
+//!
+//! * [`import`](attr.import.html)
+
 use proc_macro::TokenStream;
 use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
