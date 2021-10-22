@@ -40,13 +40,13 @@ impl MethodType {
 impl std::fmt::Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MethodType::Init => f.write_str("canister_init"),
-            MethodType::PreUpgrade => f.write_str("canister_pre_upgrade"),
-            MethodType::PostUpgrade => f.write_str("canister_post_upgrade"),
-            MethodType::Query => f.write_str("canister_query"),
-            MethodType::Update => f.write_str("canister_update"),
-            MethodType::Heartbeat => f.write_str("canister_heartbeat"),
-            MethodType::InspectMessage => f.write_str("canister_inspect_message"),
+            MethodType::Init => f.write_str("init"),
+            MethodType::PreUpgrade => f.write_str("pre_upgrade"),
+            MethodType::PostUpgrade => f.write_str("post_upgrade"),
+            MethodType::Query => f.write_str("query"),
+            MethodType::Update => f.write_str("update"),
+            MethodType::Heartbeat => f.write_str("heartbeat"),
+            MethodType::InspectMessage => f.write_str("inspect_message"),
         }
     }
 }
@@ -60,7 +60,7 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
                 return Err(Error::new(
                     r.span(),
                     format!(
-                        "#[{}] cannot be above functions with `self` as a parameter",
+                        "#[{}] cannot be above functions with `self` as a parameter.",
                         method
                     ),
                 ));
@@ -93,7 +93,7 @@ fn dfn_macro(
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Error::new(
             item.span(),
-            format!("#[{0}] must be above a function, \n{1}", method, e),
+            format!("#[{0}] must be above a function. \n{1}", method, e),
         )
     })?;
     let signature = &fun.sig;
@@ -103,7 +103,7 @@ fn dfn_macro(
         return Err(Error::new(
             generics.span(),
             format!(
-                "#[{}] must be above a function with no generic parameters",
+                "#[{}] must be above a function with no generic parameters.",
                 method
             ),
         ));
@@ -136,10 +136,10 @@ fn dfn_macro(
     );
 
     let export_name = if method.is_lifecycle() {
-        format!("{}", method)
+        format!("canister_{}", method)
     } else {
         format!(
-            "{0} {1}",
+            "canister_{0} {1}",
             method,
             attrs.name.unwrap_or_else(|| name.to_string())
         )
@@ -204,27 +204,12 @@ fn dfn_macro(
     })
 }
 
-pub(crate) fn ic_query(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
-    dfn_macro(
-        MethodType::Query,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+pub(crate) fn ic_query(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+    dfn_macro(MethodType::Query, attr, item)
 }
-pub(crate) fn ic_update(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
-    dfn_macro(
-        MethodType::Update,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+
+pub(crate) fn ic_update(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
+    dfn_macro(MethodType::Update, attr, item)
 }
 
 #[derive(Default, Deserialize)]
@@ -232,105 +217,332 @@ struct InitAttributes {}
 
 static IS_INIT: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_init(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if IS_INIT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Init function already declared.",
+            "[init] function already declared.",
         ));
     }
 
-    dfn_macro(
-        MethodType::Init,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::Init, attr, item)
 }
 
 static HAS_PRE_UPGRADE: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_pre_upgrade(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_pre_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_PRE_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Pre-upgrade function already declared.",
+            "[pre_upgrade] function already declared.",
         ));
     }
 
-    dfn_macro(
-        MethodType::PreUpgrade,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::PreUpgrade, attr, item)
 }
 
 static HAS_POST_UPGRADE: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_post_upgrade(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_post_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_POST_UPGRADE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Post-upgrade function already declared.",
+            "[post_upgrade] function already declared.",
         ));
     }
 
-    dfn_macro(
-        MethodType::PostUpgrade,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::PostUpgrade, attr, item)
 }
 
 static HAS_HEARTBEAT: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn ic_heartbeat(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+pub(crate) fn ic_heartbeat(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     if HAS_HEARTBEAT.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Heartbeat function already declared.",
+            "[heartbeat] function already declared.",
         ));
     }
 
-    dfn_macro(
-        MethodType::Heartbeat,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::Heartbeat, attr, item)
 }
 
 static HAS_INSPECT_MESSAGE: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn ic_inspect_message(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream, Error> {
+    attr: TokenStream,
+    item: TokenStream,
+) -> Result<TokenStream, Error> {
     if HAS_INSPECT_MESSAGE.swap(true, Ordering::SeqCst) {
         return Err(Error::new(
             Span::call_site(),
-            "Inspect-message function already declared.",
+            "[inspect_message] function already declared.",
         ));
     }
 
-    dfn_macro(
-        MethodType::InspectMessage,
-        TokenStream::from(attr),
-        TokenStream::from(item),
-    )
-    .map(proc_macro::TokenStream::from)
+    dfn_macro(MethodType::InspectMessage, attr, item)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn ic_query_empty() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_return_one_value() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() -> u32 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply((result,))
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_return_tuple() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query() -> (u32, u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(result)
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_one_arg() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a);
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_two_args() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32, b: u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a, b);
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_two_args_return_value() {
+        let generated = ic_query(
+            quote!(),
+            quote! {
+                fn query(a: u32, b: u32) -> u64 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let result = query(a, b);
+                    ic_cdk::api::call::reply((result,))
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_export_name() {
+        let generated = ic_query(
+            quote!(name = "custom_query"),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[export_name = "canister_query custom_query"]
+            fn #fn_name() {
+                ic_cdk::setup();
+                ic_cdk::block_on(async {
+                    let () = ic_cdk::api::call::arg_data();
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
 }

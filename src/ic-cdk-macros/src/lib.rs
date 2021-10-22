@@ -5,6 +5,7 @@ use syn::Error;
 mod export;
 mod import;
 
+// To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 pub(crate) fn id() -> u32 {
     NEXT_ID.fetch_add(1, Ordering::SeqCst)
@@ -17,14 +18,17 @@ fn handle_debug_and_errors<F>(
     item: TokenStream,
 ) -> TokenStream
 where
-    F: FnOnce(TokenStream, TokenStream) -> Result<TokenStream, Error>,
+    F: FnOnce(
+        proc_macro2::TokenStream,
+        proc_macro2::TokenStream,
+    ) -> Result<proc_macro2::TokenStream, Error>,
 {
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--- IC_CDK_MACROS DEBUG ---");
         eprintln!("{}\n    attr: {}\n    item: {}", name, attr, item);
     }
 
-    let result = cb(attr, item);
+    let result = cb(attr.into(), item.into());
 
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--------- RESULT  ---------");
@@ -75,13 +79,6 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Import data type from another canister as a struct.
-///
-/// # Examples
-///
-/// ```no_run
-/// #[import(canister = "another_canister")]
-/// struct DataTypeThere;
-/// ```
 #[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
