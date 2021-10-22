@@ -475,7 +475,7 @@ mod test {
     #[test]
     fn ic_query_export_name() {
         let generated = ic_query(
-            quote!(name = "custome_query"),
+            quote!(name = "custom_query"),
             quote! {
                 fn query() {}
             },
@@ -488,7 +488,7 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query custome_query"]
+            #[export_name = "canister_query custom_query"]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::block_on(async {
