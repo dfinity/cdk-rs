@@ -1,10 +1,8 @@
-//! # ic-cdk-macros
-//!
 //! This crate provide a set of attribute macros to faciliate canister development.
 //!
 //! The macros fall into two categories:
 //! * To register functions as canister entry points
-//! * To import data structure from other canisters for inter-canister operation.
+//! * To import another canister as a rust struct for inter-canister operation.
 //!
 //! ## Register functions as canister entry points
 //!
@@ -18,7 +16,7 @@
 //! * [`update`](attr.update.html)
 //! * [`query`](attr.query.html)
 //!
-//! ## Import data structure from other canisters
+//! ## Import another canister as a rust struct
 //!
 //! * [`import`](attr.import.html)
 
@@ -211,7 +209,7 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk_macros::heartbeat;
 /// #[heartbeat]
 /// fn heartbeat_function() {
 ///     // ...
@@ -235,7 +233,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk_macros::inspect_message;
 /// #[inspect_message]
 /// fn inspect_message_function() {
 ///     // ...
@@ -247,7 +245,31 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
 }
 
-/// Import data type from another canister as a struct.
+/// Import another canister as a rust struct.
+///
+/// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
+///
+/// # Example
+///
+/// You can specify the canister with it's name.
+/// 
+/// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
+/// 
+/// During `dfx build`, the imported canister will be correctly resolved.
+/// 
+/// ```rust,ignore
+/// # use ic_cdk_macros::import;
+/// #[import(canister = "some_canister")]
+/// struct SomeCanister;
+/// ```
+///
+/// Or you can specify both the `canister_id` and the `candid_path`.
+/// 
+/// ```rust,ignore
+/// # use ic_cdk_macros::import;
+/// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
+/// struct SomeCanister;
+/// ```
 #[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
