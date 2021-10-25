@@ -1,3 +1,9 @@
+//! This crate provide the rust wrappers of the system API functions that are 
+//! available in the Internet Computer Canister execution environment.
+//! 
+//! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
+//! for a full list of the system API functions.
+
 pub mod api;
 mod futures;
 mod printer;
