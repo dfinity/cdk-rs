@@ -252,11 +252,11 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// You can specify the canister with it's name.
-/// 
+///
 /// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
-/// 
+///
 /// During `dfx build`, the imported canister will be correctly resolved.
-/// 
+///
 /// ```rust,ignore
 /// # use ic_cdk_macros::import;
 /// #[import(canister = "some_canister")]
@@ -264,7 +264,7 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Or you can specify both the `canister_id` and the `candid_path`.
-/// 
+///
 /// ```rust,ignore
 /// # use ic_cdk_macros::import;
 /// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
