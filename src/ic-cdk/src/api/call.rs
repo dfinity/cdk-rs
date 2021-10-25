@@ -356,7 +356,7 @@ pub fn msg_cycles_available128() -> (u64, u64) {
 }
 
 /// Returns the amount of cycles that came back with the response as a refund.
-/// 
+///
 /// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded() -> u64 {
     unsafe { ic0::msg_cycles_refunded() as u64 }
@@ -373,7 +373,7 @@ pub fn msg_cycles_refunded128() -> (u64, u64) {
 }
 
 /// Moves cycles from the call to the canister balance.
-/// 
+///
 /// The actual amounts moved will be returned
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     // TODO: should we assert the u64 input is within the range of i64?

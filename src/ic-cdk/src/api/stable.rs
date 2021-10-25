@@ -116,8 +116,8 @@ impl StableWriter {
         Ok(())
     }
 
-    /// Writes a byte slice to the buffer. 
-    /// 
+    /// Writes a byte slice to the buffer.
+    ///
     /// The only condition where this will
     /// error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
@@ -144,7 +144,7 @@ impl io::Write for StableWriter {
 }
 
 /// A reader to the stable memory.
-/// 
+///
 /// Keeps an offset and reads off stable memory consecutively.
 pub struct StableReader {
     /// The offset of the next write.
