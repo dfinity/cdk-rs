@@ -125,6 +125,7 @@ use rc::{InnerCell, WasmCell};
 /// Rejection code from calling another canister.
 ///
 /// These can be obtained either using `reject_code()` or `reject_result()`.
+#[allow(missing_docs)]
 #[repr(i32)]
 #[derive(Debug)]
 pub enum RejectionCode {

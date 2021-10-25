@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This crate provides building blocks for developing Internet Computer Canister.
 //!
 //! You can check the [Internet Computer Specification](
