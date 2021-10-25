@@ -1,3 +1,6 @@
+//! Tools for managing storage of data types in canister.
+//!
+//! Each data type `T` will have one storage for it.
 use crate::api::stable;
 use std::any::{Any, TypeId};
 use std::collections::BTreeMap;
@@ -17,12 +20,16 @@ fn storage() -> &'static mut StorageTree {
     }
 }
 
+/// Deletes the storage.
 pub fn delete<T: Sized + Default + 'static>() -> bool {
     let type_id = std::any::TypeId::of::<T>();
 
     storage().remove(&type_id).is_some()
 }
 
+/// Returns a mutable reference of the storage.
+///
+/// This will create the storage if it doesn't exist.
 pub fn get_mut<T: Sized + Default + 'static>() -> &'static mut T {
     let type_id = std::any::TypeId::of::<T>();
 
@@ -35,12 +42,16 @@ pub fn get_mut<T: Sized + Default + 'static>() -> &'static mut T {
         .expect("Unexpected value of invalid type.")
 }
 
+/// Returns a share reference of the storage.
+///
+/// This will create the storage if it doesn't exist.
 pub fn get<T: Sized + Default + 'static>() -> &'static T {
     get_mut::<T>()
 }
 
-/// Save the storage to the stable memory, from storage.
-/// This will override any value previously stored to stable memory.
+/// Saves the storage into the stable memory.
+///
+/// This will override any value previously stored in stable memory.
 pub fn stable_save<T>(t: T) -> Result<(), candid::Error>
 where
     T: candid::utils::ArgumentEncoder,
@@ -48,7 +59,8 @@ where
     candid::write_args(&mut stable::StableWriter::default(), t)
 }
 
-/// Restore a value to the storage, from the stable memory.
+/// Restores a value from the stable memory to the storage.
+///
 /// There can only be one value in stable memory, currently.
 pub fn stable_restore<T>() -> Result<T, String>
 where
