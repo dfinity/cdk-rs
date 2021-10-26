@@ -123,7 +123,9 @@ mod rc {
 use rc::{InnerCell, WasmCell};
 
 /// Rejection code from calling another canister.
+///
 /// These can be obtained either using `reject_code()` or `reject_result()`.
+#[allow(missing_docs)]
 #[repr(i32)]
 #[derive(Debug)]
 pub enum RejectionCode {
@@ -158,11 +160,12 @@ impl From<u32> for RejectionCode {
     }
 }
 
-/// The result of a Call. Errors on the IC have two components; a Code and a message
-/// associated with it.
+/// The result of a Call.
+///
+/// Errors on the IC have two components; a Code and a message associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
-/// Internal state for the Future when sending a call.
+// Internal state for the Future when sending a call.
 struct CallFutureState<R: serde::de::DeserializeOwned> {
     result: Option<CallResult<R>>,
     waker: Option<Waker>,
@@ -211,7 +214,7 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     }
 }
 
-/// Same as 'call', but without serialization.
+/// Similar to `call`, but without serialization.
 pub fn call_raw(
     id: Principal,
     method: &str,
@@ -254,7 +257,7 @@ pub fn call_raw(
     CallFuture { state }
 }
 
-/// Perform an asynchronous call to another canister via ic0.
+/// Performs an asynchronous call to another canister via ic0.
 pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -265,6 +268,7 @@ pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
 }
 
+/// Performs an asynchronous call to another canister and pay cycles at the same time
 pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -276,8 +280,10 @@ pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a
     decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
 }
 
-/// Returns a result that maps over the call; it will be Ok(T) if
-/// the call succeeded (with T being the arg_data), and [reject_message()] if it failed.
+/// Returns a result that maps over the call
+///
+/// It will be Ok(T) if the call succeeded (with T being the arg_data),
+/// and [reject_message()] if it failed.
 pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
     match reject_code() {
         RejectionCode::NoError => decode_args(&unsafe { arg_data_raw() })
@@ -286,7 +292,7 @@ pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
     }
 }
 
-/// Get the rejection code for the call.
+/// Returns the rejection code for the call.
 pub fn reject_code() -> RejectionCode {
     let code = unsafe { ic0::msg_reject_code() };
     RejectionCode::from(code)
@@ -302,7 +308,7 @@ pub fn reject_message() -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
-/// Reject the current call with the message.
+/// Rejects the current call with the message.
 pub fn reject(message: &str) {
     let err_message = message.as_bytes();
     unsafe {
@@ -326,7 +332,7 @@ impl std::io::Write for CallReplyWriter {
     }
 }
 
-/// Reply to the current call with a candid argument.
+/// Replies to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
     write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
     unsafe {
@@ -334,29 +340,48 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
     }
 }
 
+/// Returns the amount of cycles that were transferred by the caller
+/// of the current call, and is still available in this message.
 pub fn msg_cycles_available() -> u64 {
     unsafe { ic0::msg_cycles_available() as u64 }
 }
 
+/// Similar to [`msg_cycles_available`] but returns in 128-bit.
+///
+/// *Note*: Cycles are represented by 128-bit values.
+/// The amount of cycles transferred can be obtained by
+/// combining the return values: high * 264 + low.
 pub fn msg_cycles_available128() -> (u64, u64) {
     let (high, low) = unsafe { ic0::msg_cycles_available128() };
     (high as u64, low as u64)
 }
 
+/// Returns the amount of cycles that came back with the response as a refund.
+///
+/// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded() -> u64 {
     unsafe { ic0::msg_cycles_refunded() as u64 }
 }
 
+/// Similar to [`msg_cycles_refunded`] but returns in 128-bit.
+///
+/// *Note*: Cycles are represented by 128-bit values.
+/// The amount of cycles transferred can be obtained by
+/// combining the return values: high * 264 + low.
 pub fn msg_cycles_refunded128() -> (u64, u64) {
     let (high, low) = unsafe { ic0::msg_cycles_refunded128() };
     (high as u64, low as u64)
 }
 
+/// Moves cycles from the call to the canister balance.
+///
+/// The actual amounts moved will be returned
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     // TODO: should we assert the u64 input is within the range of i64?
     unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
+/// Similar to [`msg_cycles_accept`] but the inputs and returns are in 128-bit.
 pub fn msg_cycles_accept128(max_amount_high: u64, max_amount_low: u64) -> (u64, u64) {
     // TODO: should we assert the u64 input is within the range of i64?
     let (amount_high, amount_low) =
@@ -364,6 +389,7 @@ pub fn msg_cycles_accept128(max_amount_high: u64, max_amount_low: u64) -> (u64, 
     (amount_high as u64, amount_low as u64)
 }
 
+/// Returns the argument data as bytes.
 pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
     let len: usize = ic0::msg_arg_data_size() as usize;
     let mut bytes = vec![0u8; len as usize];
@@ -371,7 +397,7 @@ pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
-/// Get the argument data in the current call.
+/// Returns the argument data in the current call.
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = unsafe { arg_data_raw() };
 
@@ -381,12 +407,14 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     }
 }
 
+/// Accepts the ingress message.
 pub fn accept_message() {
     unsafe {
         ic0::accept_message();
     }
 }
 
+/// Returns the name of current canister method.
 pub fn method_name() -> String {
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
     let mut bytes = vec![0; len as usize];

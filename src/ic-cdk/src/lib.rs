@@ -1,3 +1,11 @@
+#![warn(missing_docs)]
+
+//! This crate provides building blocks for developing Internet Computer Canister.
+//!
+//! You can check the [Internet Computer Specification](
+//! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
+//! for a full list of the system API functions.
+
 pub mod api;
 mod futures;
 mod printer;
@@ -8,6 +16,7 @@ pub use api::{caller, id, print, trap};
 
 static mut DONE: bool = false;
 
+/// Re-exports crates those are necessary for using ic-cdk
 pub mod export {
     pub use candid;
     pub use candid::types::ic_types::Principal;

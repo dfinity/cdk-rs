@@ -1,3 +1,25 @@
+//! This crate provide a set of attribute macros to faciliate canister development.
+//!
+//! The macros fall into two categories:
+//! * To register functions as canister entry points
+//! * To import another canister as a rust struct for inter-canister operation.
+//!
+//! ## Register functions as canister entry points
+//!
+//! These macros are directly related to the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#_entry_points).
+//!
+//! * [`init`](attr.init.html)
+//! * [`pre_upgrade`](attr.pre_upgrade.html)
+//! * [`post_upgrade`](attr.post_upgrade.html)
+//! * [`inspect_message`](attr.inspect_message.html)
+//! * [`heartbeat`](attr.heartbeat.html)
+//! * [`update`](attr.update.html)
+//! * [`query`](attr.query.html)
+//!
+//! ## Import another canister as a rust struct
+//!
+//! * [`import`](attr.import.html)
+
 use proc_macro::TokenStream;
 use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
@@ -41,44 +63,213 @@ where
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
 }
 
-/// Create a query call endpoint.
+/// Register a query call entry point.
+///
+/// This attribute macro will export a function with name `canister_query <name>`
+/// in the canister module.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::query;
+/// #[query]
+/// fn query_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can also specify the name of the exported function.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// #[query(name = "some_name")]
+/// fn query_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_query, "ic_query", attr, item)
 }
 
-/// Create an update call endpoint.
+/// Register an update call entry point.
+///
+/// This attribute macro will export a function with name `canister_update <name>`
+/// in the canister module.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::update;
+/// #[update]
+/// fn update_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can also specify the name of the exported function.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// #[update(name = "some_name")]
+/// fn update_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_update, "ic_update", attr, item)
 }
 
+/// Register the `canister_init` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_init`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_init` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::init;
+/// #[init]
+/// fn init_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_init, "ic_init", attr, item)
 }
 
+/// Register the `canister_pre_upgrade` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_pre_upgrade`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_pre_upgrade` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::pre_upgrade;
+/// #[pre_upgrade]
+/// fn pre_upgrade_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_pre_upgrade, "ic_pre_upgrade", attr, item)
 }
 
+/// Register the `canister_post_upgrade` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_post_upgrade`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_post_upgrade` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::post_upgrade;
+/// #[post_upgrade]
+/// fn post_upgrade_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_post_upgrade, "ic_post_upgrade", attr, item)
 }
 
+/// Register the `canister_heartbeat` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_heartbeat`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_heartbeat` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::heartbeat;
+/// #[heartbeat]
+/// fn heartbeat_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_heartbeat, "ic_heartbeat", attr, item)
 }
 
+/// Register the `canister_inspect_message` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_inspect_message`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_inspect_message` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk_macros::inspect_message;
+/// #[inspect_message]
+/// fn inspect_message_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
 }
 
-/// Import data type from another canister as a struct.
+/// Import another canister as a rust struct.
+///
+/// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
+///
+/// # Example
+///
+/// You can specify the canister with it's name.
+///
+/// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
+///
+/// During `dfx build`, the imported canister will be correctly resolved.
+///
+/// ```rust,ignore
+/// # use ic_cdk_macros::import;
+/// #[import(canister = "some_canister")]
+/// struct SomeCanister;
+/// ```
+///
+/// Or you can specify both the `canister_id` and the `candid_path`.
+///
+/// ```rust,ignore
+/// # use ic_cdk_macros::import;
+/// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
+/// struct SomeCanister;
+/// ```
 #[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)

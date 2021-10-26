@@ -23,6 +23,7 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
+/// Get current timestamp
 pub fn time() -> u64 {
     unsafe { ic0::time() as u64 }
 }
