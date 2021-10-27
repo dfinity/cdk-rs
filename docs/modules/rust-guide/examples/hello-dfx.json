@@ -2,7 +2,7 @@
   "canisters": {
     "rust_hello": {
       "build": "cargo build --target wasm32-unknown-unknown --package rust_hello --release",
-      "candid": "src/rust_hello/rust_hello.did",
+      "candid": "src/rust_hello/src/rust_hello.did",
       "wasm": "target/wasm32-unknown-unknown/release/rust_hello.wasm",
       "type": "custom"
     }

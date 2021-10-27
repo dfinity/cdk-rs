@@ -2,7 +2,7 @@
   "canisters": {
     "rust_counter": {
       "build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
-      "candid": "src/rust_counter/counter.did",
+      "candid": "src/rust_counter/src/counter.did",
       "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
       "type": "custom"
       }
