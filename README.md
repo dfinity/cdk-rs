@@ -1,20 +1,59 @@
-# Introduction to the Rust canister development kit (cdk-rs)
+# Rust Canister Development Kit
 
-Rust is a powerful and type sound modern programming language with an active developer community.
-Because Rust compiles to WebAssembly, it offers a rich development environment for writing applications to run on the Internet Computer.
-To help pave the way for writing applications in Rust that can be deployed on the Internet Computer, DFINITY provides some tools to simplify the process.
+[![Documentation](https://docs.rs/ic-cdk/badge.svg)](https://docs.rs/ic-cdk/)
+[![Crates.io](https://img.shields.io/crates/v/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
+[![License](https://img.shields.io/crates/l/ic-cdk.svg)](https://github.com/dfinity/cdk-rs/blob/main/src/ic-cdk/LICENSE)
+[![Downloads](https://img.shields.io/crates/d/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
+[![Test Status](https://github.com/dfinity/cdk-rs/actions/workflows/test.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions)
 
-Collectively, these tools are referred to as the DFINITY Canister Development Kit (CDK) for Rust and consist of the following main libraries:
+**Rust CDK provides tools for building Canisters on Internet Computer (IC).**
 
-|Package |Description |
-|------- |----------- |
-|`ic-types` |The `ic-types` crate defines the types used to communicate with the {IC} replica, and when building applications to be deployed as canisters on the {IC}. |
-|`ic-agent` |The `ic-agent` library enables direct communication with the {IC} replica. |
-|`ic-utils` |The `ic-utils` library provides utilities for managing calls and applications deployed as canisters. |
-|`ic-cdk` |The `ic-cdk` provides the core methods that enable Rust programs to interact with the {IC} main system API. This library serves as the runtime core of the Rust CDK. |
-|`ic-cdk-macros` |The `ic-cdk-macros` library defines the procedural macros that facilitate building operation endpoints and API. This library includes key macros for `update`, `query`, `import` and other important operations. |
-|`ic-cdk-optimizer` |The `ic-cdk-optimizer` is a helper library used to reduce the size of WebAssembly modules. |
+You may be looking for:
 
-The following diagram provides a simplified view of the Rust Canister Development Kit (CDK) building blocks from the lowest to highest level of abstraction.
+- [Documentation Site of the Internet Computer](https://smartcontracts.org/)
+- [Tutorials of Rust CDK](https://smartcontracts.org/docs/rust-guide/rust-intro.html)
+- [Examples](https://github.com/dfinity/cdk-rs/tree/main/examples)
+- [`dfx` for managing IC projects](https://github.com/dfinity/sdk)
 
-![CDK for Rust Building Blocks](docs/modules/rust-guide/images/Rust-building-blocks.svg)
+If you are looking for a crate to communicate with existing canisters on IC,
+you may want to check [agent-rs](https://github.com/dfinity/agent-rs).
+
+# Introduction
+
+A `canister` is a WebAssembly (wasm) module that can run on the Internet Computer.
+
+To be a `canister`, a wasm module should communicate with the execution environment using [Canister interfaces (System API)](https://sdk.dfinity.org/docs/interface-spec/index.html#system-api).
+
+This repo provides libraries and tools to facilitate developing canisters in Rust.
+
+- [`ic-cdk`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk):
+Bindings of the System API.
+- [`ic-cdk-macros`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk-macros):
+Annotate functions with attribute macros to make them exposed public interfaces.
+- [`ic-cdk-optimizer`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk-optimizer):
+A binary tool to reduing size of the compiled wasm module.
+- [`ic-certified-map`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-certified-map): An implementation of map which support *certified queries*.
+
+## Rust CDK in Action
+
+In Cargo.toml:
+
+```toml
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+```
+
+Then in your rust source code:
+
+```rust
+#[ic_cdk_macros::query]
+fn print() {
+    ic_cdk::print("Hello World from DFINITY!");
+}
+```
+
+Check [tutorial](https://sdk.dfinity.org/docs/rust-guide/rust-quickstart.html) for a detailed guidance.
