@@ -1,3 +1,4 @@
+use super::encoding::Encode;
 use super::*;
 use std::convert::AsRef;
 
@@ -374,4 +375,19 @@ fn test_ordering() {
     assert_eq!(t1.cmp(&t2), Less);
     assert_eq!(t1.cmp(&t3), Greater);
     assert_eq!(t1.cmp(&t4), Less);
+}
+
+#[test]
+fn test_encoding() {
+    let mut t = TreeOfBytes::new();
+    for i in 0u64..10 {
+        let key = (1 + 2 * i).to_be_bytes();
+        let val = (1 + 2 * i).to_le_bytes();
+        insert(&mut t, key, val);
+        let mut buf = vec![];
+        t.encode(&mut buf);
+        let decoded = RbTree::decode(&buf).expect("failed to decode a tree");
+        assert_eq!(t, decoded, "incorrect tree encoding: {:?}", buf);
+        assert_eq!(t.root_hash(), decoded.root_hash());
+    }
 }
