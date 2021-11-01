@@ -112,7 +112,7 @@ where
         if buf.len() < MAGIC.len() {
             return Err(RbTreeDecodeError::BadMagic);
         }
-        if &buf[0..MAGIC.len()] != &MAGIC[..] {
+        if buf[0..MAGIC.len()] != MAGIC[..] {
             return Err(RbTreeDecodeError::BadMagic);
         }
         let buf = &buf[MAGIC.len()..];
@@ -240,8 +240,7 @@ fn decode_node<K: Encode, V: Encode>(
     if buf.len() < key_len as usize {
         return Err(RbTreeDecodeError::InputTooShort);
     }
-    let key =
-        K::decode(&buf[0..key_len as usize]).map_err(|e| RbTreeDecodeError::KeyDecodeError(e))?;
+    let key = K::decode(&buf[0..key_len as usize]).map_err(RbTreeDecodeError::KeyDecodeError)?;
     let buf = &buf[key_len as usize..];
 
     // Decode value.
@@ -249,7 +248,7 @@ fn decode_node<K: Encode, V: Encode>(
         return Err(RbTreeDecodeError::InputTooShort);
     }
     let value =
-        V::decode(&buf[0..val_len as usize]).map_err(|e| RbTreeDecodeError::ValueDecodeError(e))?;
+        V::decode(&buf[0..val_len as usize]).map_err(RbTreeDecodeError::ValueDecodeError)?;
     let buf = &buf[val_len as usize..];
 
     // Decode left child, if any.
