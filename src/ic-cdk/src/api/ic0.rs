@@ -89,17 +89,17 @@ ic0_module! {
     ic0.msg_reject : (src : i32, size : i32) -> ();                             // U Q Ry Rt
 
     ic0.msg_cycles_available : () -> i64;                                       // U Rt Ry
-    ic0.msg_cycles_available128 : () -> (high : i64, low : i64);                // U Rt Ry
+    ic0.msg_cycles_available128 : (dst : i32) -> ();                            // U Rt Ry
     ic0.msg_cycles_refunded : () -> i64;                                        // Rt Ry
-    ic0.msg_cycles_refunded128 : () -> (high : i64, low: i64);                  // Rt Ry
+    ic0.msg_cycles_refunded128 : (dst : i32) -> ();                             // Rt Ry
     ic0.msg_cycles_accept : ( max_amount : i64) -> ( amount : i64 );            // U Rt Ry
-    ic0.msg_cycles_accept128 : ( max_amount_high : i64, max_amount_low: i64)
-                       -> ( amount_high : i64, amount_low: i64 );               // U Rt Ry
+    ic0.msg_cycles_accept128 : ( max_amount_high : i64, max_amount_low: i64, dst : i32)
+                       -> ();                                                   // U Rt Ry
 
     ic0.canister_self_size : () -> i32;                                         // *
     ic0.canister_self_copy : (dst : i32, offset : i32, size : i32) -> ();       // *
     ic0.canister_cycle_balance : () -> i64;                                     // *
-    ic0.canister_cycle_balance128 : () -> (high : i64, low : i64);              // *
+    ic0.canister_cycle_balance128 : (dst : i32) -> ();                          // *
     ic0.canister_status : () -> i32;                                            // *
 
     ic0.msg_method_name_size : () -> i32;                                       // F
