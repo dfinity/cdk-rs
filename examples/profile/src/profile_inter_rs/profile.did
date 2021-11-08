@@ -1,13 +1,12 @@
-type Profile_2 = record {
+type Profile = record {
     "name": text;
     "description": text;
     "keywords": vec text;
 };
-type Profile = Profile_2;
 
 service : {
-    "getSelf": () -> (Profile_2);
-    "get": (text) -> (Profile_2);
-    "update": (Profile_2) -> ();
-    "search": (text) -> (opt Profile_2);
+    "getSelf": () -> (Profile);
+    "get": (text) -> (Profile);
+    "update": (Profile) -> ();
+    "search": (text) -> (opt Profile);
 }
