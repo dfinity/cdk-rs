@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 /// The subaccont that is used by default.
 pub const DEFAULT_SUBACCOUNT: Subaccount = Subaccount([0; 32]);
 
-/// The dafault fee for ledger transactions.
+/// The default fee for ledger transactions.
 pub const DEFAULT_FEE: ICP = ICP { e8s: 10_000 };
 
 /// Id of the ledger canister on the IC.
