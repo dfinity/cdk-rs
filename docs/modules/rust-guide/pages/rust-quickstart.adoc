@@ -296,6 +296,11 @@ After you connect to the {LEE} running in your development environment, you can 
 To register, build, and deploy:
 
 . Check that you are still in root directory for your project directory, if needed.
+. Make sure you have `wasm32-unknown-unknown` installed by running the command:
++
+[source,bash]
+rustup target add wasm32-unknown-unknown
++
 . Register, build, and deploy the canisters specified in the `+dfx.json+` file by running the following command:
 +
 [source,bash]
