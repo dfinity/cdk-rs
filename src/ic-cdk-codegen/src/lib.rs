@@ -2,7 +2,7 @@
 //! The intended use of this crate is indirectly via [`#[ic_cdk_macros::import]`](https://docs.rs/ic-cdk-macros/*/ic_cdk_macros/attr.import.html),
 //! but you can also use this in a build script to pregenerate the code.
 
-#![deny(missing_debug_implementations, rust_2018_idioms)]
+#![deny(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 
 #[macro_use]
 extern crate quote;
@@ -351,7 +351,7 @@ macro_rules! prim_funcs {
         }
         fn initial_prim_map() -> HashMap<String, TokenStream> {
             let mut map = HashMap::new();
-            $(map.insert(stringify!($name).to_string(), quote!(pub type $name = $type;));)* 
+            $(map.insert(stringify!($name).to_string(), quote!(pub type $name = $type;));)*
             map.insert(String::from("Principal"), quote!(pub type Principal = ::ic_cdk::export::Principal;));
             map
         }
@@ -543,11 +543,24 @@ fn ident_hash(name: &str) -> u32 {
     (a % 2u64.pow(32)).try_into().unwrap()
 }
 
-
-
 /// Quick convenience function to take a Candid file and write the bindings to an output file.
 ///
 /// The input file is relative to the manifest dir, and the output file is relative to `$OUT_DIR` if it exists, or the manifest dir if it doesn't.
+///
+/// # Examples
+///
+/// `build.rs`:
+/// ```rust
+/// fn main() {
+///     ic_cdk_codegen::process_file("ic.did", "ic.rs", "aaaaa-aa".parse().unwrap()).unwrap();
+/// }
+/// ```
+/// `lib.rs`:
+/// ```rust,ignore
+/// mod ic {
+///     include!(concat!(env!("OUT_DIR"), "ic.rs"));
+/// }
+/// ```
 pub fn process_file(
     in_file: impl AsRef<Path>,
     out_file: impl AsRef<Path>,

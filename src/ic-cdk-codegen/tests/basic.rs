@@ -14,7 +14,9 @@ fn test_mgmt() {
         Principal::from_str("aaaaa-aa").unwrap(),
     )
     .unwrap();
-    tempfile.write_all(b"#![allow(nonstandard_style, unused_parens, )] fn main() {} ").unwrap();
+    tempfile
+        .write_all(b"#![allow(nonstandard_style, unused_parens, )] fn main() {} ")
+        .unwrap();
     write!(tempfile, "{}", bindings).unwrap();
     let path = tempfile.into_temp_path();
     TestCases::new().pass(&path);

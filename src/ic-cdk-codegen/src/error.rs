@@ -1,13 +1,17 @@
-use std::fmt::{self, Display, Formatter};
-use std::error::Error;
-use syn::Error as SynError;
-use std::io::Error as IoError;
 use candid::Error as CandidError;
+use std::error::Error;
+use std::fmt::{self, Display, Formatter};
+use std::io::Error as IoError;
+use syn::Error as SynError;
 
+/// An error that can be returned from `process` or `process_file`.
 #[derive(Debug)]
 pub enum ProcessingError {
+    /// An IO error
     Io(IoError),
+    /// An error with processing or generating Rust code
     Syn(SynError),
+    /// An error with reading a Candid file
     Candid(CandidError),
 }
 
