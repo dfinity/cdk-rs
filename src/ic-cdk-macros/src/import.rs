@@ -1,5 +1,6 @@
 use candid::parser::types::Dec;
 use candid::parser::types::IDLType;
+use ic_cdk_codegen::Processor;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
@@ -10,7 +11,6 @@ use std::str::FromStr;
 use syn::Error;
 use syn::Result;
 use syn::Token;
-use ic_cdk_codegen::Processor;
 
 #[derive(Default, Deserialize)]
 struct ImportAttributes {
@@ -123,10 +123,8 @@ pub(crate) fn ic_import(attr: TokenStream, item: TokenStream) -> Result<TokenStr
             processor.add_decl(decl)?;
         }
     }
-    if let Some(actor) = prog.actor {
-        if let IDLType::ServT(bindings) = actor {
-            processor.add_primary_actor(bindings)?;
-        }
+    if let Some(IDLType::ServT(bindings)) = prog.actor {
+        processor.add_primary_actor(bindings)?;
     }
 
     let mod_body = processor.generate(principal)?;

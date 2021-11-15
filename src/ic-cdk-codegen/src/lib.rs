@@ -9,26 +9,28 @@ extern crate quote;
 pub use candid;
 pub use syn;
 
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::env;
-use std::path::PathBuf;
-use std::str::FromStr;
+use candid::parser::types::Dec;
+use candid::parser::types::{Binding, IDLType, PrimType};
+use candid::types::internal::Label;
 use candid::IDLProg;
 use candid::Principal;
-use candid::parser::types::Dec;
 use num_bigint::BigUint;
 use proc_macro2::Span;
-use syn::*;
 use proc_macro2::TokenStream;
-use candid::parser::types::{IDLType, PrimType, Binding};
-use candid::types::internal::Label;
-use syn::spanned::Spanned;
-use std::result::Result as StdResult;
-use std::error::Error as StdError;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::env;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
+use std::result::Result as StdResult;
+use std::str::FromStr;
+use syn::spanned::Spanned;
+use syn::*;
 
+mod error;
+pub use error::ProcessingError;
 
 /// Processes Candid declarations into Rust symbols.
 #[derive(Debug, Clone)]
@@ -41,7 +43,7 @@ pub struct Processor {
 
 impl Default for Processor {
     fn default() -> Self {
-        Self { 
+        Self {
             decls: initial_prim_map(),
             bindings: HashMap::new(),
             record_id: 0,
@@ -51,13 +53,13 @@ impl Default for Processor {
 }
 
 impl Processor {
-    /// Constructs a `Processor` from an existing set of symbols. 
-    /// 
+    /// Constructs a `Processor` from an existing set of symbols.
+    ///
     /// These symbols will override those in the Candid file, as well as built-in types like `Nat`.
     /// Buit-in type names draw from [`PrimType`], not the Candid language.
-    /// 
+    ///
     /// # Rules
-    /// 
+    ///
     /// - Symbols must be `struct`s, `enum`s, `type`s, `use`s, or `async fn`s.
     /// - All symbols must be `pub`.
     /// - `use`s must not be globs (`*`).
@@ -68,9 +70,14 @@ impl Processor {
         let (predecls, bindings) = body_to_decls(body)?;
         let mut decls = initial_prim_map();
         decls.extend(predecls);
-        Ok(Self { decls, bindings, record_id: 0, variant_id: 0 })
+        Ok(Self {
+            decls,
+            bindings,
+            record_id: 0,
+            variant_id: 0,
+        })
     }
-    
+
     fn next_record(&mut self) -> usize {
         let ret = self.record_id;
         self.record_id += 1;
@@ -83,9 +90,9 @@ impl Processor {
         ret
     }
 
-    /// Adds a [`Binding`] to the type declarations. 
-    /// 
-    /// These types will be attempted to be exported from the generated code, 
+    /// Adds a [`Binding`] to the type declarations.
+    ///
+    /// These types will be attempted to be exported from the generated code,
     /// but in the case of name conflicts, actor functions will override them.
     /// In this case the type will be accessible from a module named `t`.
     pub fn add_decl(&mut self, decl: Binding) -> Result<()> {
@@ -151,10 +158,10 @@ impl Processor {
             IDLType::VariantT(fields) => {
                 let name = name
                     .map(String::from)
-                    .unwrap_or_else(|| format!("_V{}",self.next_variant()));
+                    .unwrap_or_else(|| format!("_V{}", self.next_variant()));
                 let name_ident = format_ident!("{}", name);
                 let variants = fields
-                    .into_iter()
+                    .iter()
                     .map(|field| {
                         let (variant_name, idx) = label_to_ident(&field.label);
                         let attr = idx.map(|idx| {
@@ -251,9 +258,9 @@ impl Processor {
     }
 
     /// Adds the bindings for the primary actor (service).
-    /// 
+    ///
     /// These will be exported as free functions from the generated code.
-    /// 
+    ///
     /// In the case of naming conflicts (including if this function is called twice), the first function wins.
     pub fn add_primary_actor(&mut self, actor: Vec<Binding>) -> Result<()> {
         for binding in actor {
@@ -295,14 +302,14 @@ impl Processor {
     /// Generates the final `TokenStream` from all the bindings, with the actor functions referencing the provided principal.
     /// This token stream is not encased in a surrounding module.
     pub fn generate(self, principal: Principal) -> Result<TokenStream> {
-        let decls = self.decls.into_values();
+        let decls = self.decls.into_iter().map(|(_, decl)| decl);
         let type_mod = quote! {
             pub mod t {
                 #( #decls )*
             }
             pub use t::*;
         };
-        let funcs = self.bindings.into_values().map(|sig| {
+        let funcs = self.bindings.into_iter().map(|(_, sig)| {
             let args = sig.inputs.iter().map(|arg| match arg {
                 FnArg::Receiver(recv) => Err(Error::new(recv.span(), "Not valid here")),
                 FnArg::Typed(typed) => {
@@ -316,7 +323,7 @@ impl Processor {
             let name_str = name.to_string();
             let principal_bytes = principal.as_slice();
             let expr = (args.len() == 1).then(|| quote!(.0));
-            let qual = (args.len() == 1).then(|| quote!(::<_, (_,)>)); 
+            let qual = (args.len() == 1).then(|| quote!(::<_, (_,)>));
             let body = quote! {
                 pub #sig {
                     ::ic_cdk::call #qual (
@@ -343,7 +350,10 @@ macro_rules! prim_funcs {
             }
         }
         fn initial_prim_map() -> HashMap<String, TokenStream> {
-            HashMap::from_iter([$((stringify!($name).to_string(), quote!(pub type $name = $type;)),)* (String::from("Principal"), quote!(pub type Principal = ::ic_cdk::export::Principal;))])
+            let mut map = HashMap::new();
+            $(map.insert(stringify!($name).to_string(), quote!(pub type $name = $type;));)* 
+            map.insert(String::from("Principal"), quote!(pub type Principal = ::ic_cdk::export::Principal;));
+            map
         }
     };
 }
@@ -370,10 +380,7 @@ prim_funcs![
 
 fn body_to_decls(
     body: Vec<Item>,
-) -> Result<(
-    HashMap<String, TokenStream>,
-    HashMap<String, Signature>,
-)> {
+) -> Result<(HashMap<String, TokenStream>, HashMap<String, Signature>)> {
     let mut decls = HashMap::new();
     let mut bindings = HashMap::new();
     for item in body {
@@ -457,10 +464,20 @@ fn body_to_decls(
                         check_sig(&func.vis, &sig)?;
                         bindings.insert(sig.ident.to_string(), sig);
                     }
-                    Err(_) => return Err(Error::new(span, "Not valid here: Expected a function, import, or type")),
+                    Err(_) => {
+                        return Err(Error::new(
+                            span,
+                            "Not valid here: Expected a function, import, or type",
+                        ))
+                    }
                 }
             }
-            other => return Err(Error::new(other.span(), "Not valid here: Expected a function, import, or type")),
+            other => {
+                return Err(Error::new(
+                    other.span(),
+                    "Not valid here: Expected a function, import, or type",
+                ))
+            }
         }
         fn check_sig(vis: &Visibility, sig: &Signature) -> Result<()> {
             if !matches!(vis, Visibility::Public(_)) {
@@ -479,10 +496,7 @@ fn body_to_decls(
                 ));
             }
             if sig.abi.is_some() {
-                return Err(Error::new(
-                    sig.abi.span(),
-                    "Functions must not be `extern`",
-                ));
+                return Err(Error::new(sig.abi.span(), "Functions must not be `extern`"));
             }
             if sig.constness.is_some() {
                 return Err(Error::new(
@@ -529,14 +543,30 @@ fn ident_hash(name: &str) -> u32 {
     (a % 2u64.pow(32)).try_into().unwrap()
 }
 
+
+
 /// Quick convenience function to take a Candid file and write the bindings to an output file.
-/// 
+///
 /// The input file is relative to the manifest dir, and the output file is relative to `$OUT_DIR` if it exists, or the manifest dir if it doesn't.
-pub fn process_file(in_file: impl AsRef<Path>, out_file: impl AsRef<Path>, principal: Principal) -> StdResult<(), Box<dyn StdError>> {
+pub fn process_file(
+    in_file: impl AsRef<Path>,
+    out_file: impl AsRef<Path>,
+    principal: Principal,
+) -> StdResult<(), ProcessingError> {
     let mut candid_file = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     candid_file.extend(in_file.as_ref());
     let file = fs::read_to_string(candid_file)?;
     let prog = IDLProg::from_str(&file)?;
+    let mut include_file = PathBuf::from(
+        env::var_os("OUT_DIR").unwrap_or_else(|| env::var_os("CARGO_MANIFEST_DIR").unwrap()),
+    );
+    include_file.extend(out_file.as_ref());
+    fs::write(include_file, process(prog, principal)?.to_string())?;
+    Ok(())
+}
+
+/// Quick convenience function to take a Candid document and produce the bindings.
+pub fn process(prog: IDLProg, principal: Principal) -> StdResult<TokenStream, ProcessingError> {
     let mut processor = Processor::default();
     for dec in prog.decs {
         if let Dec::TypD(decl) = dec {
@@ -546,8 +576,6 @@ pub fn process_file(in_file: impl AsRef<Path>, out_file: impl AsRef<Path>, princ
     if let Some(IDLType::ServT(actor)) = prog.actor {
         processor.add_primary_actor(actor)?;
     }
-    let mut include_file = PathBuf::from(env::var_os("OUT_DIR").unwrap_or_else(|| env::var_os("CARGO_MANIFEST_DIR").unwrap()));
-    include_file.extend(out_file.as_ref());
-    fs::write(include_file, processor.generate(principal)?.to_string())?;
-    Ok(())
+    let bindings = processor.generate(principal)?;
+    Ok(bindings)
 }
