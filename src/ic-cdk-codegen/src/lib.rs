@@ -550,7 +550,7 @@ fn ident_hash(name: &str) -> u32 {
 /// # Examples
 ///
 /// `build.rs`:
-/// ```rust
+/// ```rust,no_run
 /// fn main() {
 ///     ic_cdk_codegen::process_file("ic.did", "ic.rs", "aaaaa-aa".parse().unwrap()).unwrap();
 /// }
