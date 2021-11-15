@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 pub const DEFAULT_SUBACCOUNT: Subaccount = Subaccount([0; 32]);
 
 /// The dafault fee for ledger transactions.
-pub const DEFAULT_FEE: ICP = ICP { e8s: 10_000 };
+pub const DEFAULT_FEE: Tokens = Tokens { e8s: 10_000 };
 
 /// Id of the ledger canister on the IC.
 pub const MAINNET_LEDGER_CANISTER_ID: Principal =
@@ -22,45 +22,45 @@ pub struct Timestamp {
     pub timestamp_nanos: u64,
 }
 
-/// A type for representing amounts of ICP.
+/// A type for representing amounts of Tokens.
 ///
 /// # Panics
 ///
-/// * Arithmetics (addition, subtraction) on the ICP type panics if the underlying type
+/// * Arithmetics (addition, subtraction) on the Tokens type panics if the underlying type
 ///   overflows.
 #[derive(
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
 )]
-pub struct ICP {
+pub struct Tokens {
     e8s: u64,
 }
 
-impl ICP {
-    /// The maximum number of ICP we can hold on a single account.
-    pub const MAX: Self = ICP { e8s: u64::MAX };
-    /// Zero ICP.
-    pub const ZERO: Self = ICP { e8s: 0 };
-    /// How many times can ICPs be divided
+impl Tokens {
+    /// The maximum number of Tokens we can hold on a single account.
+    pub const MAX: Self = Tokens { e8s: u64::MAX };
+    /// Zero Tokens.
+    pub const ZERO: Self = Tokens { e8s: 0 };
+    /// How many times can Tokenss be divided
     pub const SUBDIVIDABLE_BY: u64 = 100_000_000;
 
-    /// Constructs an amount of ICP from the number of 10^-8 ICP.
+    /// Constructs an amount of Tokens from the number of 10^-8 Tokens.
     pub fn from_e8s(e8s: u64) -> Self {
         Self { e8s }
     }
 
-    /// Returns the number of 10^-8 ICP in this amount.
+    /// Returns the number of 10^-8 Tokens in this amount.
     pub fn e8s(&self) -> u64 {
         self.e8s
     }
 }
 
-impl Add for ICP {
+impl Add for Tokens {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
         let e8s = self.e8s.checked_add(other.e8s).unwrap_or_else(|| {
             panic!(
-                "Add ICP {} + {} failed because the underlying u64 overflowed",
+                "Add Tokens {} + {} failed because the underlying u64 overflowed",
                 self.e8s, other.e8s
             )
         });
@@ -68,18 +68,18 @@ impl Add for ICP {
     }
 }
 
-impl AddAssign for ICP {
+impl AddAssign for Tokens {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
     }
 }
 
-impl Sub for ICP {
+impl Sub for Tokens {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         let e8s = self.e8s.checked_sub(other.e8s).unwrap_or_else(|| {
             panic!(
-                "Subtracting ICP {} - {} failed because the underlying u64 underflowed",
+                "Subtracting Tokens {} - {} failed because the underlying u64 underflowed",
                 self.e8s, other.e8s
             )
         });
@@ -87,19 +87,19 @@ impl Sub for ICP {
     }
 }
 
-impl SubAssign for ICP {
+impl SubAssign for Tokens {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other;
     }
 }
 
-impl fmt::Display for ICP {
+impl fmt::Display for Tokens {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}.{:08} ICP",
-            self.e8s / ICP::SUBDIVIDABLE_BY,
-            self.e8s % ICP::SUBDIVIDABLE_BY
+            "{}.{:08}",
+            self.e8s / Tokens::SUBDIVIDABLE_BY,
+            self.e8s % Tokens::SUBDIVIDABLE_BY
         )
     }
 }
@@ -112,19 +112,29 @@ impl fmt::Display for ICP {
 )]
 pub struct Subaccount(pub [u8; 32]);
 
+/// AccountIdentifier is a 32-byte array.
+/// The first 4 bytes is big-endian encoding of a CRC32 checksum of the last 28 bytes.
 #[derive(
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
 )]
-pub struct AccountIdentifier([u8; 28]);
+pub struct AccountIdentifier([u8; 32]);
 
 impl AccountIdentifier {
     pub fn new(owner: &Principal, subaccount: &Subaccount) -> Self {
-        let mut hash = sha2::Sha224::new();
-        hash.update(b"\x0Aaccount-id");
-        hash.update(owner.as_slice());
-        hash.update(&subaccount.0[..]);
+        let mut hasher = sha2::Sha224::new();
+        hasher.update(b"\x0Aaccount-id");
+        hasher.update(owner.as_slice());
+        hasher.update(&subaccount.0[..]);
+        let hash: [u8; 28] = hasher.finalize().into();
 
-        Self(hash.finalize().into())
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&hash);
+        let crc32_bytes = hasher.finalize().to_be_bytes();
+
+        let mut result = [0u8; 32];
+        result[0..4].copy_from_slice(&crc32_bytes[..]);
+        result[4..32].copy_from_slice(hash.as_ref());
+        Self(result)
     }
 }
 
@@ -134,39 +144,7 @@ impl AsRef<[u8]> for AccountIdentifier {
     }
 }
 
-/// Address is a 32-byte array.
-/// The first 4 bytes is big-endian encoding of a CRC32 checksum of the last 28 bytes.
-#[derive(
-    CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
-)]
-pub struct Address([u8; 32]);
-
-impl Address {
-    pub fn new(owner: &Principal, subaccount: &Subaccount) -> Self {
-        AccountIdentifier::new(owner, subaccount).into()
-    }
-}
-
-impl From<AccountIdentifier> for Address {
-    fn from(account_id: AccountIdentifier) -> Self {
-        let mut hasher = crc32fast::Hasher::new();
-        hasher.update(&account_id.0);
-        let crc32_bytes = hasher.finalize().to_be_bytes();
-
-        let mut result = [0u8; 32];
-        result[0..4].copy_from_slice(&crc32_bytes[..]);
-        result[4..32].copy_from_slice(account_id.as_ref());
-        Self(result)
-    }
-}
-
-impl AsRef<[u8]> for Address {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for Address {
+impl fmt::Display for AccountIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(self.as_ref()))
     }
@@ -177,15 +155,15 @@ impl fmt::Display for Address {
 /// ```ignore
 /// use ic_cdk::api::{caller, call::call};
 /// use ic_cdk_macros::update;
-/// use ic_ledger_types::{Address, AccountBalanceArgs, ICP, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID};
+/// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID};
 ///
 /// #[update]
-/// async fn check_callers_balance() -> ICP {
+/// async fn check_callers_balance() -> Tokens {
 ///   let (icp,) = call(
 ///     MAINNET_LEDGER_CANISTER_ID,
 ///     "account_balance",
 ///     (AccountBalanceArgs {
-///       account: Address::new(caller(), &DEFAULT_SUBACCOUNT)
+///       account: AccountIdentifier::new(caller(), &DEFAULT_SUBACCOUNT)
 ///     },)
 ///   ).await.expect("call to ledger failed");
 ///   icp
@@ -193,7 +171,7 @@ impl fmt::Display for Address {
 /// ```
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct AccountBalanceArgs {
-    pub account: Address,
+    pub account: AccountIdentifier,
 }
 
 /// An arbitrary number associated with a transaction.
@@ -207,14 +185,14 @@ pub struct Memo(pub u64);
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct TransferArgs {
     pub memo: Memo,
-    pub amount: ICP,
-    pub fee: ICP,
+    pub amount: Tokens,
+    pub fee: Tokens,
     pub from_subaccount: Option<Subaccount>,
-    pub to: Address,
+    pub to: AccountIdentifier,
     pub created_at_time: Option<Timestamp>,
 }
 
-/// The sequence number of a block in the ICP ledger blockchain.
+/// The sequence number of a block in the Tokens ledger blockchain.
 pub type BlockIndex = u64;
 
 /// Result of the `transfer` call.
@@ -223,8 +201,8 @@ pub type TransferResult = Result<BlockIndex, TransferError>;
 /// Error of the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TransferError {
-    BadFee { expected_fee: ICP },
-    InsufficientFunds { balance: ICP },
+    BadFee { expected_fee: Tokens },
+    InsufficientFunds { balance: Tokens },
     TxTooOld { allowed_window_nanos: u64 },
     TxCreatedInFuture,
     TxDuplicate { duplicate_of: BlockIndex },
@@ -269,7 +247,7 @@ mod tests {
     fn test_account_id() {
         assert_eq!(
             "bdc4ee05d42cd0669786899f256c8fd7217fa71177bd1fa7b9534f568680a938".to_string(),
-            Address::new(
+            AccountIdentifier::new(
                 &Principal::from_text(
                     "iooej-vlrze-c5tme-tn7qt-vqe7z-7bsj5-ebxlc-hlzgs-lueo3-3yast-pae"
                 )
