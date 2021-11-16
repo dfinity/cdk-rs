@@ -10,9 +10,8 @@ syn = { version = "1", default-features = false, features = ["full", "parsing", 
 quote = "1"
 proc-macro2 = "1"
 candid = "0.7"
-num-bigint = "0.4"
 
 [dev-dependencies]
 trybuild = "1"
-ic-cdk = { path = "../ic-cdk" }
+ic-cdk = { version = "0.4", path = "../ic-cdk" }
 tempfile = "3"

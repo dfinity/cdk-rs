@@ -1,9 +1,14 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{ic0, trap};
 use crate::export::Principal;
+use candid::parser::value::IDLValue;
+use candid::types::{Serializer, Type};
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args};
+use candid::{decode_args, encode_args, write_args, CandidType, Deserialize};
+use serde::de::Error;
+use serde::Deserializer;
 use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 
@@ -394,4 +399,62 @@ pub fn method_name() -> String {
         ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
     String::from_utf8_lossy(&bytes).to_string()
+}
+
+/// A container type for methods.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MethodRef<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>> {
+    /// The method name.
+    pub name: String,
+    /// The ID of the owning canister.
+    pub canister: Principal,
+    _phantom: PhantomData<fn(T) -> R>,
+}
+
+impl<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>> CandidType for MethodRef<T, R> {
+    fn _ty() -> Type {
+        Type::Unknown
+    }
+    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_function(self.canister.as_slice(), &self.name)
+    }
+}
+
+impl<'de, T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>> Deserialize<'de> for MethodRef<T, R> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = IDLValue::deserialize(deserializer)?;
+        if let IDLValue::Func(canister, name) = value {
+            Ok(Self {
+                canister,
+                name,
+                _phantom: PhantomData,
+            })
+        } else {
+            Err(D::Error::custom(&format!(
+                "Expected function, got {:?}",
+                value
+            )))
+        }
+    }
+}
+
+impl<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>> MethodRef<T, R> {
+    /// Constructs a new `MethodRef` from a method name and owning canister.
+    pub fn new(canister: Principal, name: String) -> Self {
+        Self {
+            canister,
+            name,
+            _phantom: PhantomData,
+        }
+    }
+    /// Invokes this function with the provided args. Equivalent to calling [`call`] with the same parameter and this type's fields.
+    pub async fn invoke(&self, args: T) -> CallResult<R> {
+        call(self.canister, &self.name, args).await
+    }
 }
