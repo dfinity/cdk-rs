@@ -20,6 +20,11 @@ fn test_recursion() {
 }
 
 #[test]
+fn test_corecursion() {
+    build_shim("type bar = opt record { foo }; type foo = bar;", FAKE)
+}
+
+#[test]
 fn test_service_types() {
     build_shim(
         "type greeter = service { greet: (text) -> (text) query; }; type cb = func () -> ()",

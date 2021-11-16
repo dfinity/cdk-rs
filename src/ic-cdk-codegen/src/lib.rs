@@ -16,10 +16,12 @@ use candid::IDLProg;
 use candid::Principal;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::fmt::Arguments;
 use std::fs;
+use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
 use std::result::Result as StdResult;
@@ -37,8 +39,12 @@ pub struct Processor {
     /// Map of Candid name (not necessarily a valid ident, use `str_to_ident`) to full declaration in code
     decls: HashMap<String, TokenStream>,
     bindings: HashMap<String, Signature>,
-    /// Stack measurer for `idl_to_rust`, used to handle recursion
-    current_stack: Vec<String>,
+    /// List of types already being defined in the current `idl_to_rust` pass; used to resolve recursion
+    current_pass: Vec<String>,
+    /// Map of unresolved `IDLType::VarT`s to the type that contains them, used to handle mutual recursion
+    unresolved: HashMap<String, Vec<String>>,
+    /// Inverse of `unresolved`
+    unresolved_containers: HashMap<String, Vec<String>>,
 }
 
 impl Default for Processor {
@@ -46,7 +52,9 @@ impl Default for Processor {
         Self {
             decls: initial_prim_map(),
             bindings: HashMap::new(),
-            current_stack: Vec::new(),
+            current_pass: Vec::new(),
+            unresolved: HashMap::new(),
+            unresolved_containers: HashMap::new(),
         }
     }
 }
@@ -72,7 +80,9 @@ impl Processor {
         Ok(Self {
             decls,
             bindings,
-            current_stack: Vec::new(),
+            current_pass: Vec::new(),
+            unresolved: HashMap::new(),
+            unresolved_containers: HashMap::new(),
         })
     }
 
@@ -83,6 +93,7 @@ impl Processor {
     /// In this case the type will be accessible from a module named `t`.
     pub fn add_decl(&mut self, decl: Binding) -> Result<()> {
         self.idl_to_rust(&decl.typ, Some(&decl.id), format_args!("{}", decl.id))?;
+        self.current_pass.clear();
         Ok(())
     }
 
@@ -101,317 +112,331 @@ impl Processor {
                 let ident = str_to_ident(name);
                 return Ok(quote!(#ident));
             }
-            self.current_stack.push(name.to_string())
-        }
-        // ensure current_stack is popped no matter how this function returns
-        let return_res = (|| {
-            let ret = match ty {
-                IDLType::RecordT(fields) => {
-                    let name = name
-                        .map(String::from)
-                        .unwrap_or_else(|| format!("_{}", gen_prefix));
-                    let name_ident = format_ident!("{}", name);
-                    let types = fields
-                        .iter()
-                        .map(|field| {
-                            self.idl_to_rust(
-                                &field.typ,
-                                None,
-                                format_args!("{}_field{}", gen_prefix, field.label),
-                            )
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    if fields
-                        .iter()
-                        .all(|field| matches!(field.label, Label::Unnamed(_)))
-                    {
-                        // all unnamed fields are better represented as a tuple struct
-                        let body = quote! {
-                            #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, ::ic_cdk::export::serde::Deserialize, ::ic_cdk::export::candid::CandidType)]
-                            #[serde(crate = "::ic_cdk::export::serde")]
-                            pub struct #name_ident ( #( pub #types ),* ) ;
-                        };
-                        self.decls.insert(name, body);
-                    } else {
-                        let (names, serde_attrs) = fields
-                            .iter()
-                            .map(|field| label_to_ident(&field.label))
-                            .map(|(name, id)| (name, id.map(|id| quote!(#[serde(rename = #id)]))))
-                            .unzip::<_, _, Vec<_>, Vec<_>>();
-                        let body = quote! {
-                            #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, ::ic_cdk::export::serde::Deserialize, ::ic_cdk::export::candid::CandidType)]
-                            #[serde(crate = "::ic_cdk::export::serde")]
-                            pub struct #name_ident {
-                                #(
-                                    #serde_attrs
-                                    pub #names : #types ,
-                                )*
-                            }
-                        };
-                        self.decls.insert(name, body);
-                    }
-                    return Ok(quote!(#name_ident)); // not a `type`
+            // given `b = a; c = b; a = c;`:
+            // detect that we are finally defining `a`
+            if let Some(previous) = self.unresolved.get(name) {
+                // push `b` and `c` into the current pass, so they will get boxed when referred to
+                // this could possibly result in a false positive for boxing, if the type is indirected through a function
+                // but it doesn't really matter as long as it's pared down to the minimum
+                self.current_pass.extend(previous.iter().cloned());
+                // and then clear
+                for s in previous {
+                    let coll = self.unresolved_containers.get_mut(s).unwrap();
+                    let idx = coll.iter().position(|x| x == name).unwrap();
+                    coll.remove(idx);
                 }
-                IDLType::VariantT(variants) => {
-                    let name = name
-                        .map(String::from)
-                        .unwrap_or_else(|| format!("_{}", gen_prefix));
-                    let name_ident = format_ident!("{}", name);
-                    let variants = variants
-                        .iter()
-                        .map(|variant| {
-                            let (variant_name, idx) = label_to_ident(&variant.label);
-                            let serde_attr = idx.map(|idx| quote!(#[serde(rename = #idx)]));
-                            Ok(match &variant.typ {
-                                // a single null field means it may as well be a unit variant
-                                IDLType::PrimT(PrimType::Null) => quote!(#variant_name),
-                                // handle individual fields of a record variant to avoid needing to generate an unnamed struct
-                                IDLType::RecordT(fields) => {
-                                    let types = fields
-                                        .iter()
-                                        .map(|field| {
-                                            self.idl_to_rust(
-                                                &field.typ,
-                                                None,
-                                                format_args!(
-                                                    "{}_{}_field{}",
-                                                    gen_prefix, variant.label, field.label
-                                                ),
-                                            )
-                                        })
-                                        .collect::<Result<Vec<_>>>()?;
-                                    if fields
-                                        .iter()
-                                        .all(|field| matches!(field.label, Label::Unnamed(_)))
-                                    {
-                                        // all unnamed fields means it's best represented as a tuple variant
-                                        quote!(#variant_name ( #( #types ),* ))
-                                    } else {
-                                        // otherwise, struct variant
-                                        let (names, serde_field_attrs) = fields
-                                            .iter()
-                                            .map(|field| label_to_ident(&field.label))
-                                            .map(|(name, id)| {
-                                                (name, id.map(|id| quote!(#[serde(rename = #id)])))
-                                            })
-                                            .unzip::<_, _, Vec<_>, Vec<_>>();
-                                        quote! {
-                                            #serde_attr
-                                            #variant_name {
-                                                #(
-                                                    #serde_field_attrs
-                                                    #names : #types ,
-                                                 )*
-                                            }
-                                        }
-                                    }
-                                }
-                                r#type => {
-                                    let inner = self.idl_to_rust(
-                                        r#type,
-                                        None,
-                                        format_args!("{}_{}", gen_prefix, variant.label),
-                                    )?;
-                                    quote!(#variant_name ( #inner ))
-                                }
-                            })
-                        })
-                        .collect::<Result<Vec<_>>>()?;
+                self.unresolved.remove(name);
+            }
+            self.current_pass.push(name.to_string());
+        }
+        let ret = match ty {
+            IDLType::RecordT(fields) => {
+                let name = name
+                    .map(String::from)
+                    .unwrap_or_else(|| format!("_{}", gen_prefix));
+                let name_ident = format_ident!("{}", name);
+                let types = fields
+                    .iter()
+                    .map(|field| {
+                        self.idl_to_rust(
+                            &field.typ,
+                            None,
+                            format_args!("{}_field{}", gen_prefix, field.label),
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                if fields
+                    .iter()
+                    .all(|field| matches!(field.label, Label::Unnamed(_)))
+                {
+                    // all unnamed fields are better represented as a tuple struct
                     let body = quote! {
                         #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, ::ic_cdk::export::serde::Deserialize, ::ic_cdk::export::candid::CandidType)]
                         #[serde(crate = "::ic_cdk::export::serde")]
-                        pub enum #name_ident {
-                            #( #variants , )*
-                        }
+                        pub struct #name_ident ( #( pub #types ),* ) ;
                     };
                     self.decls.insert(name, body);
-                    return Ok(quote!(#name_ident)); // not a `type`
-                }
-                IDLType::FuncT(func) => {
-                    let params = func
-                        .args
+                } else {
+                    let (names, serde_attrs) = fields
                         .iter()
-                        .enumerate()
-                        .map(|(i, arg)| {
-                            self.idl_to_rust(arg, None, format_args!("{}_arg{}", gen_prefix, i))
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    let param_list = quote!(( #( #params ,)*));
-                    let rets = func
-                        .rets
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ret)| {
-                            self.idl_to_rust(ret, None, format_args!("{}_ret{}", gen_prefix, i))
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    let ret_list = quote!(( #( #rets ,)* ));
-                    quote!(::ic_cdk::api::call::MethodRef< #param_list , #ret_list >)
-                }
-                IDLType::ServT(bindings) => {
-                    let bindings = bindings
-                        .iter()
-                        .map(|binding| {
-                            let func = match &binding.typ {
-                                IDLType::FuncT(func) => (
-                                    func.args
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, arg)| {
-                                            self.idl_to_rust(
-                                                arg,
-                                                None,
-                                                format_args!(
-                                                    "{}_{}_arg{}",
-                                                    gen_prefix, binding.id, i
-                                                ),
-                                            )
-                                        })
-                                        .collect::<Result<Vec<_>>>()?,
-                                    func.rets
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, ret)| {
-                                            self.idl_to_rust(
-                                                ret,
-                                                None,
-                                                format_args!(
-                                                    "{}_{}_ret{}",
-                                                    gen_prefix, binding.id, i
-                                                ),
-                                            )
-                                        })
-                                        .collect::<Result<Vec<_>>>()?,
-                                ),
-                                unknown => {
-                                    return Err(Error::new(
-                                        Span::call_site(),
-                                        format!(
-                                            "Expected function at service {}.{}, found {:?}",
-                                            name.unwrap_or("{anonymous}"),
-                                            binding.id,
-                                            unknown
-                                        ),
-                                    ))
-                                }
-                            };
-                            let ident = str_to_ident(&binding.id);
-                            Ok((func, (ident, binding.id.clone())))
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    let (functions, names) = bindings.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
-                    let (params, rets) = functions.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
-                    let (names, idl_names) = names.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
-                    let service_name = name
-                        .map(String::from)
-                        .unwrap_or_else(|| format!("_{}", gen_prefix));
-                    let param_names = params
-                        .iter()
-                        .map(|param| {
-                            (0..param.len())
-                                .map(|n| format_ident!("arg{}", n))
-                                .collect::<Vec<_>>()
-                        })
-                        .collect::<Vec<_>>();
-                    let service_ident = str_to_ident(&service_name);
-                    let (full_ret, qual) = rets
-                        .iter()
-                        .map(|ret| {
-                            if ret.len() == 1 {
-                                let ret0 = &ret[0];
-                                (quote!(#ret0), Some(quote!(.0)))
-                            } else {
-                                (quote!(#(#ret,)*), None)
-                            }
-                        })
+                        .map(|field| label_to_ident(&field.label))
+                        .map(|(name, id)| (name, id.map(|id| quote!(#[serde(rename = #id)]))))
                         .unzip::<_, _, Vec<_>, Vec<_>>();
                     let body = quote! {
-                        #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq)]
-                        pub struct #service_ident {
-                            __id: ::ic_cdk::export::Principal,
-                            #( pub #names : ::ic_cdk::api::call::MethodRef<( #( #params ,)* ), ( #( #rets ,)* )> ,)*
-                        }
-                        #[automatically_derived]
-                        impl ::ic_cdk::export::candid::CandidType for #service_ident {
-                            fn _ty() -> ::ic_cdk::export::candid::types::internal::Type {
-                                ::ic_cdk::export::candid::types::internal::Type::Unknown
-                            }
-                            fn idl_serialize<S>(&self, serializer: S) -> ::std::result::Result<(), S::Error>
-                            where
-                                S: ic_cdk::export::candid::types::Serializer
-                            {
-                                serializer.serialize_principal(self.__id.as_slice())
-                            }
-                        }
-                        #[automatically_derived]
-                        impl<'de> ::ic_cdk::export::serde::Deserialize<'de> for #service_ident {
-                            fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
-                            where
-                                D: ::ic_cdk::export::serde::Deserializer<'de>,
-                            {
-                                let principal = <::ic_cdk::export::Principal as ::ic_cdk::export::serde::Deserialize<'de>>::deserialize(deserializer)?;
-                                ::std::result::Result::Ok(Self {
-                                    __id: principal,
-                                    #(
-                                        #names : ::ic_cdk::api::call::MethodRef::new(principal, ::std::string::ToString::to_string( #idl_names )),
-                                    )*
-                                })
-                            }
-                        }
-                        impl #service_ident {
+                        #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, ::ic_cdk::export::serde::Deserialize, ::ic_cdk::export::candid::CandidType)]
+                        #[serde(crate = "::ic_cdk::export::serde")]
+                        pub struct #name_ident {
                             #(
-                                pub async fn #names (&self, #( #param_names : #params ),* ) -> ::ic_cdk::api::call::CallResult< #full_ret > {
-                                    ::ic_cdk::api::call::CallResult::Ok(self. #names .invoke(( #( #param_names ,)* )).await? #qual)
-                                }
+                                #serde_attrs
+                                pub #names : #types ,
                             )*
                         }
                     };
-                    self.decls.insert(service_name, body);
-                    return Ok(quote!(#service_ident)); // not a `type`
+                    self.decls.insert(name, body);
                 }
-                IDLType::VecT(inner) => {
-                    let inner = self.idl_to_rust(inner, None, gen_prefix)?;
-                    quote!(::std::vec::Vec< #inner >)
-                }
-                IDLType::OptT(inner) => {
-                    let inner = self.idl_to_rust(inner, None, gen_prefix)?;
-                    quote!(::std::option::Option< #inner >)
-                }
-                IDLType::PrimT(prim) => {
-                    // Don't actually insert the corresponding Rust primitive here, we did that earlier so that the user could override it
-                    let prim_ident = format_ident!("{}", prim_to_name(prim.clone()));
-                    quote!(#prim_ident)
-                }
-                IDLType::PrincipalT => quote!(Principal),
-                IDLType::VarT(name) => {
-                    let ident = str_to_ident(name);
-                    // handle recursion
-                    if self.current_stack.iter().any(|x| x == name) {
-                        return Ok(quote!(::std::boxed::Box< #ident >));
+                return Ok(quote!(#name_ident)); // not a `type`
+            }
+            IDLType::VariantT(variants) => {
+                let name = name
+                    .map(String::from)
+                    .unwrap_or_else(|| format!("_{}", gen_prefix));
+                let name_ident = format_ident!("{}", name);
+                let variants = variants
+                    .iter()
+                    .map(|variant| {
+                        let (variant_name, idx) = label_to_ident(&variant.label);
+                        let serde_attr = idx.map(|idx| quote!(#[serde(rename = #idx)]));
+                        Ok(match &variant.typ {
+                            // a single null field means it may as well be a unit variant
+                            IDLType::PrimT(PrimType::Null) => quote!(#variant_name),
+                            // handle individual fields of a record variant to avoid needing to generate an unnamed struct
+                            IDLType::RecordT(fields) => {
+                                let types = fields
+                                    .iter()
+                                    .map(|field| {
+                                        self.idl_to_rust(
+                                            &field.typ,
+                                            None,
+                                            format_args!(
+                                                "{}_{}_field{}",
+                                                gen_prefix, variant.label, field.label
+                                            ),
+                                        )
+                                    })
+                                    .collect::<Result<Vec<_>>>()?;
+                                if fields
+                                    .iter()
+                                    .all(|field| matches!(field.label, Label::Unnamed(_)))
+                                {
+                                    // all unnamed fields means it's best represented as a tuple variant
+                                    quote!(#variant_name ( #( #types ),* ))
+                                } else {
+                                    // otherwise, struct variant
+                                    let (names, serde_field_attrs) = fields
+                                        .iter()
+                                        .map(|field| label_to_ident(&field.label))
+                                        .map(|(name, id)| {
+                                            (name, id.map(|id| quote!(#[serde(rename = #id)])))
+                                        })
+                                        .unzip::<_, _, Vec<_>, Vec<_>>();
+                                    quote! {
+                                        #serde_attr
+                                        #variant_name {
+                                            #(
+                                                #serde_field_attrs
+                                                #names : #types ,
+                                             )*
+                                        }
+                                    }
+                                }
+                            }
+                            r#type => {
+                                let inner = self.idl_to_rust(
+                                    r#type,
+                                    None,
+                                    format_args!("{}_{}", gen_prefix, variant.label),
+                                )?;
+                                quote!(#variant_name ( #inner ))
+                            }
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let body = quote! {
+                    #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, ::ic_cdk::export::serde::Deserialize, ::ic_cdk::export::candid::CandidType)]
+                    #[serde(crate = "::ic_cdk::export::serde")]
+                    pub enum #name_ident {
+                        #( #variants , )*
                     }
+                };
+                self.decls.insert(name, body);
+                return Ok(quote!(#name_ident)); // not a `type`
+            }
+            IDLType::FuncT(func) => {
+                let params = func
+                    .args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, arg)| {
+                        self.idl_to_rust(arg, None, format_args!("{}_arg{}", gen_prefix, i))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let param_list = quote!(( #( #params ,)*));
+                let rets = func
+                    .rets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, ret)| {
+                        self.idl_to_rust(ret, None, format_args!("{}_ret{}", gen_prefix, i))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let ret_list = quote!(( #( #rets ,)* ));
+                quote!(::ic_cdk::api::call::MethodRef< #param_list , #ret_list >)
+            }
+            IDLType::ServT(bindings) => {
+                let bindings = bindings
+                    .iter()
+                    .map(|binding| {
+                        let func = match &binding.typ {
+                            IDLType::FuncT(func) => (
+                                func.args
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, arg)| {
+                                        self.idl_to_rust(
+                                            arg,
+                                            None,
+                                            format_args!("{}_{}_arg{}", gen_prefix, binding.id, i),
+                                        )
+                                    })
+                                    .collect::<Result<Vec<_>>>()?,
+                                func.rets
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, ret)| {
+                                        self.idl_to_rust(
+                                            ret,
+                                            None,
+                                            format_args!("{}_{}_ret{}", gen_prefix, binding.id, i),
+                                        )
+                                    })
+                                    .collect::<Result<Vec<_>>>()?,
+                            ),
+                            unknown => {
+                                return Err(Error::new(
+                                    Span::call_site(),
+                                    format!(
+                                        "Expected function at service {}.{}, found {:?}",
+                                        name.unwrap_or("{anonymous}"),
+                                        binding.id,
+                                        unknown
+                                    ),
+                                ))
+                            }
+                        };
+                        let ident = str_to_ident(&binding.id);
+                        Ok((func, (ident, binding.id.clone())))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let (functions, names) = bindings.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
+                let (params, rets) = functions.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
+                let (names, idl_names) = names.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
+                let service_name = name
+                    .map(String::from)
+                    .unwrap_or_else(|| format!("_{}", gen_prefix));
+                let param_names = params
+                    .iter()
+                    .map(|param| {
+                        (0..param.len())
+                            .map(|n| format_ident!("arg{}", n))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+                let service_ident = str_to_ident(&service_name);
+                let (full_ret, qual) = rets
+                    .iter()
+                    .map(|ret| {
+                        if ret.len() == 1 {
+                            let ret0 = &ret[0];
+                            (quote!(#ret0), Some(quote!(.0)))
+                        } else {
+                            (quote!(#(#ret,)*), None)
+                        }
+                    })
+                    .unzip::<_, _, Vec<_>, Vec<_>>();
+                let body = quote! {
+                    #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq)]
+                    pub struct #service_ident {
+                        __id: ::ic_cdk::export::Principal,
+                        #( pub #names : ::ic_cdk::api::call::MethodRef<( #( #params ,)* ), ( #( #rets ,)* )> ,)*
+                    }
+                    #[automatically_derived]
+                    impl ::ic_cdk::export::candid::CandidType for #service_ident {
+                        fn _ty() -> ::ic_cdk::export::candid::types::internal::Type {
+                            ::ic_cdk::export::candid::types::internal::Type::Unknown
+                        }
+                        fn idl_serialize<S>(&self, serializer: S) -> ::std::result::Result<(), S::Error>
+                        where
+                            S: ic_cdk::export::candid::types::Serializer
+                        {
+                            serializer.serialize_principal(self.__id.as_slice())
+                        }
+                    }
+                    #[automatically_derived]
+                    impl<'de> ::ic_cdk::export::serde::Deserialize<'de> for #service_ident {
+                        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+                        where
+                            D: ::ic_cdk::export::serde::Deserializer<'de>,
+                        {
+                            let principal = <::ic_cdk::export::Principal as ::ic_cdk::export::serde::Deserialize<'de>>::deserialize(deserializer)?;
+                            ::std::result::Result::Ok(Self {
+                                __id: principal,
+                                #(
+                                    #names : ::ic_cdk::api::call::MethodRef::new(principal, ::std::string::ToString::to_string( #idl_names )),
+                                )*
+                            })
+                        }
+                    }
+                    impl #service_ident {
+                        #(
+                            pub async fn #names (&self, #( #param_names : #params ),* ) -> ::ic_cdk::api::call::CallResult< #full_ret > {
+                                ::ic_cdk::api::call::CallResult::Ok(self. #names .invoke(( #( #param_names ,)* )).await? #qual)
+                            }
+                        )*
+                    }
+                };
+                self.decls.insert(service_name, body);
+                return Ok(quote!(#service_ident)); // not a `type`
+            }
+            IDLType::VecT(inner) => {
+                let inner = self.idl_to_rust(inner, None, gen_prefix)?;
+                quote!(::std::vec::Vec< #inner >)
+            }
+            IDLType::OptT(inner) => {
+                let inner = self.idl_to_rust(inner, None, gen_prefix)?;
+                quote!(::std::option::Option< #inner >)
+            }
+            IDLType::PrimT(prim) => {
+                // Don't actually insert the corresponding Rust primitive here, we did that earlier so that the user could override it
+                let prim_ident = format_ident!("{}", prim_to_name(prim.clone()));
+                quote!(#prim_ident)
+            }
+            IDLType::PrincipalT => quote!(Principal),
+            IDLType::VarT(name) => {
+                // given `b = a; c = b; a = c;`:
+                let ident = str_to_ident(name);
+                // detect the possibility of `c`
+                if let Some(v) = self.unresolved_containers.get(name) {
+                    for s in v.clone() {
+                        vecmap_insert(&mut self.unresolved, &s, name.clone());
+                        vecmap_insert(&mut self.unresolved_containers, name, s);
+                    }
+                }
+                // handle recursion
+                if self.current_pass.iter().any(|x| x == name) {
+                    quote!(::std::boxed::Box< #ident >)
+                } else {
+                    // starting here at `b`
                     if !self.decls.contains_key(name) {
-                        return Err(Error::new(
-                            Span::call_site(),
-                            format!("Undefined symbol {} in candid file", name),
-                        ));
+                        // hope it will be resolved later, otherwise the compile error should be meaningful enough
+                        // this also means it may be a mutually recursive type with something else
+                        for referent in &self.current_pass {
+                            vecmap_insert(&mut self.unresolved, name, referent.clone());
+                            vecmap_insert(&mut self.unresolved_containers, referent, name.clone());
+                        }
                     }
                     quote!(#ident)
                 }
-                _ => {
-                    todo!("class")
-                }
-            };
-            if let Some(name) = name {
-                let ident = format_ident!("{}", name);
-                self.decls
-                    .insert(name.to_owned(), quote!(pub type #ident = #ret ;));
             }
-            Ok(ret)
-        })();
-        if name.is_some() {
-            self.current_stack.pop();
+            _ => {
+                todo!("class")
+            }
+        };
+        if let Some(name) = name {
+            let ident = format_ident!("{}", name);
+            self.decls
+                .insert(name.to_owned(), quote!(pub type #ident = #ret ;));
         }
-        return_res
+        Ok(ret)
     }
 
     /// Adds the bindings for the primary actor (service).
@@ -704,6 +729,20 @@ fn str_to_ident(name: &str) -> Ident {
             .map(|c| if !c.is_alphanumeric() { '_' } else { c });
         let valid = iter::once('_').chain(chars).collect::<String>();
         format_ident!("{}", valid)
+    }
+}
+
+fn vecmap_insert<K: Hash + Eq, K2: Hash + Eq + ToOwned<Owned = K>, V>(
+    m: &mut HashMap<K, Vec<V>>,
+    key: &K2,
+    value: V,
+) where
+    K: Borrow<K2>,
+{
+    if let Some(vec) = m.get_mut(key) {
+        vec.push(value);
+    } else {
+        m.insert(key.to_owned(), vec![value]);
     }
 }
 
