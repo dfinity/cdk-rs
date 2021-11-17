@@ -7,6 +7,7 @@ mod mgmt {
     pub struct CanisterIdContainer {
         canister_id: Principal,
     }
+    #[rustfmt::skip] // {} vs ;
     pub async fn create_canister(can: CanisterIdContainer) -> CanisterIdContainer;
 }
 

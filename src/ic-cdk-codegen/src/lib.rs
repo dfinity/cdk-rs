@@ -72,7 +72,8 @@ impl Processor {
     /// - `use`s must not be globs (`*`).
     /// - Nothing may be generic.
     /// - Functions may neither be `const` nor `extern`.
-    /// - Functions should, but do not have to, end in `;` instead of `{}`.
+    /// - Functions should, but do not have to, end in `;` instead of `{}`. The former is more descriptive,
+    ///   but `rustfmt` messes with it.
     pub fn new(body: Vec<Item>) -> Result<Self> {
         let (predecls, bindings) = body_to_decls(body)?;
         let mut decls = initial_prim_map();
@@ -473,9 +474,14 @@ impl Processor {
                 .iter()
                 .map(|arg| self.idl_to_rust(arg, None, format_args!("_service")))
                 .collect::<Result<Vec<_>>>()?;
+            let ret_coll = if rets.len() != 1 {
+                quote!(( #( #rets ),* ))
+            } else {
+                quote!( #( #rets )* )
+            };
             self.bindings.insert(
                 binding.id,
-                parse2(quote!(async fn #ident ( #( #args ),* ) -> ( #( #rets ,)* ) )).unwrap(),
+                parse2(quote!(async fn #ident ( #( #args ),* ) -> #ret_coll )).unwrap(),
             );
         }
         Ok(())
@@ -510,8 +516,9 @@ impl Processor {
             // if there is only one return value, the return type should be the inner value; manually collect a 1-tuple and then access the field
             // this should be opaque to candid as tuples are not actually regular values but only valid in functions; `((x,),)` should render as `(x,)`
             // so the user shouldn't be locked out of using a 1-tuple as the return type if they really want to
-            let expr = (args.len() == 1).then(|| quote!(.0));
-            let qual = (args.len() == 1).then(|| quote!(::<_, (_,)>));
+            let one_return = matches!(&sig.output, ReturnType::Type(_, t) if !matches!(&**t, Type::Tuple(..)));
+            let expr = one_return.then(|| quote!(.0));
+            let qual = one_return.then(|| quote!(::<_, (_,)>));
             let body = quote! {
                 pub #sig {
                     ::ic_cdk::call #qual (

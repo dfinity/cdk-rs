@@ -181,8 +181,8 @@ At a minimum, you need to configure the following sections with basic informatio
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.3"
-ic-cdk-macros = "0.3"
+ic-cdk = "0.4"
+ic-cdk-macros = "0.4"
 serde = "1.0.111"
 ----
 +
