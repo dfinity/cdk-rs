@@ -123,7 +123,11 @@ pub(crate) fn ic_import(attr: TokenStream, item: TokenStream) -> Result<TokenStr
             processor.add_decl(decl)?;
         }
     }
-    if let Some(IDLType::ServT(bindings)) = prog.actor {
+    let mut actor = prog.actor;
+    if let Some(IDLType::ClassT(_, ret)) = actor {
+        actor = Some(*ret);
+    }
+    if let Some(IDLType::ServT(bindings)) = actor {
         processor.add_primary_actor(bindings)?;
     }
 

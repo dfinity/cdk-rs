@@ -428,9 +428,7 @@ impl Processor {
                     quote!(#ident)
                 }
             }
-            _ => {
-                todo!("class")
-            }
+            IDLType::ClassT(_, _) => return Err(Error::new(Span::call_site(), "Unexpected class type outside primary service")),
         };
         if let Some(name) = name {
             let ident = format_ident!("{}", name);
@@ -798,7 +796,11 @@ pub fn process(prog: IDLProg, principal: Principal) -> StdResult<TokenStream, Pr
             processor.add_decl(decl)?;
         }
     }
-    if let Some(IDLType::ServT(actor)) = prog.actor {
+    let mut actor = prog.actor;
+    if let Some(IDLType::ClassT(_, ret)) = actor {
+        actor = Some(*ret)
+    }
+    if let Some(IDLType::ServT(actor)) = actor {
         processor.add_primary_actor(actor)?;
     }
     let bindings = processor.generate(principal)?;
