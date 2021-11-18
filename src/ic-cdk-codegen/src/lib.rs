@@ -428,7 +428,12 @@ impl Processor {
                     quote!(#ident)
                 }
             }
-            IDLType::ClassT(_, _) => return Err(Error::new(Span::call_site(), "Unexpected class type outside primary service")),
+            IDLType::ClassT(_, _) => {
+                return Err(Error::new(
+                    Span::call_site(),
+                    "Unexpected class type outside primary service",
+                ))
+            }
         };
         if let Some(name) = name {
             let ident = format_ident!("{}", name);
