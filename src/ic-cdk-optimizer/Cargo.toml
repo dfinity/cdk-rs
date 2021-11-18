@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-optimizer"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
 description = "WASM Optimizer for the IC CDK (experimental)."
