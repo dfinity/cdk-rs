@@ -11,7 +11,7 @@ const FAKE: &str = "rrkah-fqaaa-aaaaa-aaaaq-cai";
 
 #[test]
 fn test_mgmt() {
-    build_shim(&fs::read_to_string("ic.did").unwrap(), "aaaaa-aa");
+    build_shim(&fs::read_to_string("tests/ic.did").unwrap(), "aaaaa-aa");
 }
 
 #[test]

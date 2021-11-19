@@ -248,7 +248,7 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Import another canister as a Rust module.
 ///
 /// The attribute can be invoked two ways: `import(canister = "foo")`, which will automatically import it from a compatible canister
-/// governed by the same DFX instance ater you run `dfx build`, and `import(canister_id = "rrkah-fqaaa-aaaaa-aaaaq-cai", candid_path = "foo.did")`,
+/// governed by the same DFX instance after you run `dfx build`, and `import(canister_id = "rrkah-fqaaa-aaaaa-aaaaq-cai", candid_path = "foo.did")`,
 /// which does it the boring way.
 ///
 /// All public interfaces defined in the corresponding candid file can be accessed through the annotated module. Both functions and types will be exported,
