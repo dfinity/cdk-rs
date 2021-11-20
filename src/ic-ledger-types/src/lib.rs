@@ -1,4 +1,4 @@
-use candid::{CandidType, Principal};
+use ic_cdk::export::candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fmt;
@@ -163,7 +163,7 @@ impl fmt::Display for AccountIdentifier {
 ///     MAINNET_LEDGER_CANISTER_ID,
 ///     "account_balance",
 ///     (AccountBalanceArgs {
-///       account: AccountIdentifier::new(caller(), &DEFAULT_SUBACCOUNT)
+///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
 ///     },)
 ///   ).await.expect("call to ledger failed");
 ///   icp
