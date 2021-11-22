@@ -6,7 +6,7 @@
     },
     "rust_deps": {
       "build": "cargo build --target wasm32-unknown-unknown --package  rust_deps --release",
-      "candid": "src/rust_deps/deps.did",
+      "candid": "src/rust_deps/src/deps.did",
       "wasm": "target/wasm32-unknown-unknown/release/rust_deps.wasm",
       "type": "custom",
       "dependencies": [
