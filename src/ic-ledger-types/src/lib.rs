@@ -12,7 +12,7 @@ pub const DEFAULT_FEE: Tokens = Tokens { e8s: 10_000 };
 
 /// Id of the ledger canister on the IC.
 pub const MAINNET_LEDGER_CANISTER_ID: Principal =
-    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01]);
+    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01]);
 
 /// Number of nanoseconds from the UNIX epoch in UTC timezone.
 #[derive(
@@ -255,6 +255,14 @@ mod tests {
                 &DEFAULT_SUBACCOUNT
             )
             .to_string()
+        );
+    }
+
+    #[test]
+    fn test_ledger_canister_id() {
+        assert_eq!(
+            MAINNET_LEDGER_CANISTER_ID,
+            Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap()
         );
     }
 }
