@@ -1,12 +1,30 @@
 {
   "canisters": {
     "rust_hello": {
-      "build": "cargo build --target wasm32-unknown-unknown --package rust_hello --release",
-      "candid": "src/rust_hello/src/rust_hello.did",
-      "wasm": "target/wasm32-unknown-unknown/release/rust_hello.wasm",
-      "type": "custom"
+      "candid": "src/rust_hello/rust_hello.did",
+      "package": "rust_hello",
+      "type": "rust"
+    },
+    "rust_hello_assets": {
+      "dependencies": [
+        "rust_hello"
+      ],
+      "frontend": {
+        "entrypoint": "src/rust_hello_assets/src/index.html"
+      },
+      "source": [
+        "src/rust_hello_assets/assets",
+        "dist/rust_hello_assets/"
+      ],
+      "type": "assets"
     }
-   },
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",
