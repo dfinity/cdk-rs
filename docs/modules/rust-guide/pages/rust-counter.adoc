@@ -123,10 +123,10 @@ By adding Candid files to your project, you can ensure that data is properly con
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
-To add a Candid file for this tutorial:
+To update the Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Open the `+src/rust_counter/src/rust_counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
+. Open the `+src/rust_counter/rust_counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
 +
 [source,did]
 ----
