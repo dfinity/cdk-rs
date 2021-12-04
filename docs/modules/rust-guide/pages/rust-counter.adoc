@@ -77,7 +77,7 @@ To create a new project directory for this tutorial:
 +
 [source,bash]
 ----
-dfx new rust_counter
+dfx new --type=rust rust_counter
 ----
 +
 . Change to your project directory by running the following command:
@@ -87,130 +87,22 @@ dfx new rust_counter
 cd rust_counter
 ----
 
-== Modify the default configuration
+== Modify the default project
 
-In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
+In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you went through the files in a default project with Rust type canister.
 
-To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
+To complete this tutorial, you'll need to complete the following steps:
 
-* <<Edit the default canister settings>>
-* <<Add a Cargo.toml file to the project>>
-* <<Add Rust files to the source directory>>
 * <<Replace the default dapp>>
-
-=== Edit the default canister settings
-
-One of the template files included in your project directory is a default `+dfx.json+` configuration file.
-This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust dapps that run on the {IC} as canister smart contracts.
-
-To modify the `+dfx.json+` configuration file:
-
-. Check that you are still in the root directory for your project, if needed.
-. Open the `+dfx.json+` configuration file in a text editor.
-. Replace the `+canisters.rust_counter+` settings with settings for building a canister using the `+cargo build+` command.
-+
-For example, under the `+rust_counter+` key, replace the `+main+` and `+type+` settings with settings like these:
-+
-[source,json]
-----
-  "rust_counter": {
-    "build": "cargo build --target wasm32-unknown-unknown --package  rust_counter --release",
-    "candid": "src/rust_counter/src/counter.did",
-    "wasm": "target/wasm32-unknown-unknown/release/rust_counter.wasm",
-    "type": "custom"
-    }
-----
-. Remove all of the `+rust_counter_assets+` configuration settings from the file.
-+
-The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
-. Remove the `+defaults+` and `+dfx+` version settings because this tutorial doesn't use these settings.
-+
-For example, the configuration file looks like this after you modify the settings:
-+
-....
-include::example$counter-tutorial/rust_counter_dfx.json[]
-....
-. Save your change and close the `+dfx.json+` file to continue.
-
-=== Add a Cargo.toml file to the project
-
-Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
-Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
-
-To add a `+Cargo.toml+` configuration file for the project:
-
-. Check that you are still in the root directory for your project, if needed.
-. Create a new file in the current directory named `+Cargo.toml+`.
-. Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your dapp.
-+
-For example:
-+
-[source,toml]
-----
-[workspace]
-members = [
-    "src/rust_counter",
-]
-----
-. Save your changes and close the file to continue.
-
-=== Add Rust files to the source directory
-
-Creating a new project creates a default `+src/rust_counter+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files.
-
-To prepare the source directory with Rust files:
-
-. Check that you are in the root directory for your project, if needed.
-. Create a new cargo package using a library template by running the following command:
-+
-[source, bash]
-----
-cargo init --lib src/rust_counter
-----
-+
-This command creates a `+src/rust_counter/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_counter+` directory.
-. Open the `+src/rust_counter/Cargo.toml+` file in a text editor.
-+
-You use this file to configure the details used to build the Rust package.
-+
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
-+
---
-* `+[package]+`
-* `+[lib]+`
-* `+[dependencies]+`
---
-. Delete the existing `+[dependencies]+` section and replace it with the following:
-+
-[source,toml]
-----
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.3"
-ic-cdk-macros = "0.3"
-----
-+
-NOTE: When you deploy the app later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_counter/Cargo.toml+` file to match the latest version.
-. Save your changes and close the file to continue.
+* <<Update interface description file>>
 
 === Replace the default dapp
 
-Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` dapp with the Rust dapp we want to deploy on the {IC}.
+Now that you have the files in place for your Rust dapp, we can replace the template `+lib.rs+` dapp with the Rust dapp we want to deploy on the {IC}.
 
 To replace the default dapp:
 
 . Check that you are still in the root directory for your project, if needed.
-. Delete the template `+src/rust_counter/main.mo+` file by running the following command:
-+
-[source,bash]
-----
-rm src/rust_counter/main.mo
-----
 . Open the template `+src/rust_counter/src/lib.rs+` file in a text editor and delete the existing content.
 +
 The next step is to write a Rust dapp that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
@@ -220,9 +112,9 @@ The next step is to write a Rust dapp that declares the `+COUNTER+` variable and
 ----
 include::example$counter-tutorial/counter.rs[]
 ----
-. Save your changes and close the `+counter.rs+` file to continue.
+. Save your changes and close the `+lib.rs+` file to continue.
 
-== Add an interface description file
+=== Update interface description file
 
 Candid is an interface description language (IDL) for interacting with canisters running on the Internet Computer.
 Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
@@ -231,11 +123,10 @@ By adding Candid files to your project, you can ensure that data is properly con
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
-To add a Candid file for this tutorial:
+To update the Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+counter.did+` in the `+src/rust_counter/src+` directory.
-. Open the `+src/rust_counter/src/counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
+. Open the `+src/rust_counter/rust_counter.did+` file in a text editor, then copy and paste the following `+service+` definition for the `+increment+`, `+get+`, and `+set+` functions:
 +
 [source,did]
 ----
@@ -245,7 +136,7 @@ service : {
   "set": (nat) -> ();
 }
 ----
-. Save your changes and close the `+counter.did+` file to continue.
+. Save your changes and close the `+rust_counter.did+` file to continue.
 
 == Start the {LEE}
 
@@ -282,25 +173,23 @@ The `+dfx deploy+` command output displays information about each of the operati
 +
 ....
 Creating a wallet canister on the local network.
-The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
+The wallet canister on the "local" network for user "default" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
 Deploying all canisters.
 Creating canisters...
 Creating canister "rust_counter"...
 "rust_counter" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
+Creating canister "rust_counter_assets"...
+"rust_counter_assets" canister created with canister id: "ryjl3-tyaaa-aaaaa-aaaba-cai"
 Building canisters...
-Executing 'cargo build --target wasm32-unknown-unknown --package  rust_counter --release'
-    Updating crates.io index
-  Downloaded thiserror v1.0.25
-  Downloaded libc v0.2.95
-  ...
-  Compiling ic-cdk v0.3
-  Compiling ic-cdk-macros v0.3
-  Compiling rust_counter v0.1.0 (/Users/lisagunn/CDK-RS-APR-2021/rust_counter/src/rust_counter)
-    Finished release [optimized] target(s) in 1m 10s
+Executing: "cargo" "build" "--target" "wasm32-unknown-unknown" "--release" "-p" "rust_counter"
+...
+    Finished release [optimized] target(s) in 53.36s
+Building frontend...
 Installing canisters...
 Creating UI canister on the local network.
-The UI canister on the "local" network is "ryjl3-tyaaa-aaaaa-aaaba-cai"
+The UI canister on the "local" network is "r7inp-6aaaa-aaaaa-aaabq-cai"
 Installing code for canister rust_counter, with canister_id rrkah-fqaaa-aaaaa-aaaaq-cai
+...
 Deployed canisters.
 ....
 
@@ -326,7 +215,7 @@ dfx canister call rust_counter get
 The command returns the current value of the `+COUNTER+` variable as zero:
 +
 ....
-(0)
+(0 : nat)
 ....
 [arabic]
 . Call the `+increment+` function to increment the value of the `+COUNTER+` variable by one:
@@ -347,7 +236,7 @@ dfx canister call rust_counter get
 The command returns the updated value of the `+COUNTER+` variable as one:
 +
 ....
-(1)
+(1 : nat)
 ....
 . Run additional commands to experiment with call the functions and using different values.
 +
