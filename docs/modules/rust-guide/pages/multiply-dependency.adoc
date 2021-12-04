@@ -66,23 +66,27 @@ To create a new project directory for this tutorial:
 +
 [source,bash]
 ----
-dfx new --type=rust rust_deps
+dfx new multiply_deps
 ----
 . Change to your project directory by running the following command:
 +
 [source,bash]
 ----
-cd rust_deps
+cd multiply_deps
 ----
 
-== Modify the default project
+== Modify the default configuration
 
-To complete this tutorial, you'll need to complete the following steps:
+creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
+You need to modify these default files and add some Rust-specific files to your project before you can build canisters that run on the {IC}.
+
+To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
 
 * <<Edit the default canister settings>>
-* <<Implement Motoko canister smart contract>>
-* <<Replace the default Rust canister smart contract>>
-* <<Update interface description file>>
+* <<Add a Cargo.toml file to the project>>
+* <<Add Rust files to the source directory>>
+* <<Replace the default {native} canister>>
+* <<Replace the default {lang} canister>>
 
 === Edit the default canister settings
 
@@ -92,35 +96,23 @@ To modify the `+dfx.json+` configuration file:
 
 . Check that you are still in the root directory for your project, if needed.
 . Open the `+dfx.json+` configuration file in a text editor.
-. Insert a new section before the `+canisters.rust_deps+` settings with settings for building a {native} program.
+. Insert a new section after the `+canisters.multiply_deps+` settings with settings for building a {lang} program using the `+cargo build+` command.
 +
-For example, in the `+canisters+` section, add a new `+multiply_deps+` key with settings like these:
-+
-[source,json]
-----
-"multiply_deps": {
-  "main": "src/multiply_deps/main.mo",
-  "type": "motoko"
-}
-----
-. Add a `+dependencies+` setting to the `+rust_deps+` .
-+
-The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
-Then the `+rust_deps` field will look like:
+For example, in the `+canisters+` section, add a new `+rust_deps+` key with settings like these:
 +
 [source,json]
 ----
 "rust_deps": {
-  "candid": "src/rust_deps/rust_deps.did",
-  "package": "rust_deps",
-  "type": "rust",
-  "dependencies": [
-    "multiply_deps"
-  ]
-}
+  "build": "cargo build --target wasm32-unknown-unknown --package  rust_deps --release",
+  "candid": "src/rust_deps/src/deps.did",
+  "wasm": "target/wasm32-unknown-unknown/release/rust_deps.wasm",
+  "type": "custom"
+  }
 ----
+. Copy the `+dependencies+` setting from the `+multiply_deps_assets+` section and add it to the settings for the {lang} canister.
 +
-. Remove all of the `+rust_deps_assets+` configuration settings from the file.
+The `+dependencies+` setting enables you to import functions from one canisters for use in another canister. For this tutorial, we want to import a function from the `+multiply_deps+` canister—written in {native}—and use it from the `+rust_deps+` canister written in Rust.
+. Remove all of the `+multiply_deps_assets+` configuration settings from the file.
 +
 The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
 +
@@ -133,21 +125,78 @@ include::example$mul-deps/mul-deps-dfx.json[]
 ....
 . Save your change and close the `+dfx.json+` file to continue.
 
-=== Implement Motoko canister smart contract
+=== Add a Cargo.toml file to the project
 
-The next step is to create a file at `+src/multiply_deps/main.mo+` with code that implements the `+mul+` and `+read+` functions.
+To build the {lang} canister using the `+cargo build+` command we added to the `+dfx.json+` configuration file, we also need to add a `+Cargo.toml+` file to the project directory.
 
-To write the {native} source code:
+To add `+Cargo.toml+` settings for the project:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create the directory for the {native} canister.
+. Create a new file in the current directory named `+Cargo.toml+`.
+. Open the `+Cargo.toml+` in a text editor.
+. Use the `+[workspace]+` key to specify the source file directory for your canister.
 +
-[source,bash]
+For example:
++
+[source,toml]
 ----
-mkdir multiply_deps
+[workspace]
+members = [
+    "src/rust_deps",
+]
+----
+. Save your changes and close the `+Cargo.toml+` file to continue.
+
+=== Add Rust files to the source directory
+
+Creating a new project creates a default `+src/multiply_deps+` directory with a template `+main.mo+` for our {native} canister.
+For this tutorial, we want to add the files for building a {lang} canister.
+
+To prepare the source directory with Rust files:
+
+. Check that you are in the root directory for your project, if needed.
+. Create a new cargo package using a library template by running the following command:
++
+[source, bash]
+----
+cargo init --lib src/rust_deps
 ----
 +
-. Create and open the `+src/multiply_deps/main.mo+` file in a text editor.
+This command creates a `+src/rust_deps/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_deps+` directory.
+. Open the `+src/rust_deps/Cargo.toml+` file in a text editor.
++
+You use this file to configure the details used to build the Rust package.
++
+At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
++
+--
+* `+[package]+`
+* `+[lib]+`
+* `+[dependencies]+`
+--
+. Delete the existing `+[dependencies]+` section and replace it with the following:
++
+[source,toml]
+----
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+----
++
+NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_deps/Cargo.toml+` file to match the latest version.
+. Save your changes and close the file to continue.
+
+=== Replace the default {native} canister smart contract
+
+The next step is to replace the default source code in the `+src/multiply_deps/main.mo+` file with code that implements the `+mul+` and `+read+` functions.
+
+To modify the default {native} source code:
+
+. Check that you are still in the root directory for your project, if needed.
+. Open the `+src/multiply_deps/main.mo+` file in a text editor and delete the existing content.
 . Copy and paste the following sample code into the `+main.mo+` file:
 +
 [source,motoko]
@@ -156,14 +205,14 @@ include::example$mul-deps/mul-deps.mo[]
 ----
 . Save your changes and close the file to continue.
 
-=== Replace the default Rust canister smart contract
+== Replace the default {lang} canister smart contract
 
 Now that we have the {native} canister that the {lang} canister depends upon, let's add the {lang} canister to the project.
 
 To replace the default {lang} canister:
 
 . Check that you are still in the root directory for your project, if needed.
-. Open the template `+src/rust_deps/lib.rs+` file in a text editor and delete the existing content.
+. Open the template `+src/rust_deps/src/lib.rs+` file in a text editor and delete the existing content.
 +
 The next step is to write a Rust program that imports the {native} canister and implements the `+read+` function.
 . Copy and paste the following sample code into the `+lib.rs+` file:
@@ -172,9 +221,9 @@ The next step is to write a Rust program that imports the {native} canister and 
 ----
 include::example$mul-deps/deps-main.rs[]
 ----
-. Save your changes and close the `+src/rust_deps/lib.rs+` file to continue.
+. Save your changes and close the `+src/rust_deps/src/lib.rs+` file to continue.
 
-=== Update interface description file
+== Add an interface description file
 
 Candid is an interface description language (IDL) for interacting with canisters running on the {IC}.
 Candid files provide a language-independent description of a canister's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
@@ -183,7 +232,7 @@ By adding Candid files to your project, you can ensure that data is properly con
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
-To update a Candid file for this tutorial:
+To add a Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
 . Create a new file named `+deps.did+` in the `+src/rust_deps/src+` directory.
