@@ -71,7 +71,7 @@ To create a new project directory for this tutorial:
 +
 [source,bash]
 ----
-dfx new rust_profile
+dfx new --type=rust rust_profile
 ----
 . Change to your project directory by running the following command:
 +
@@ -80,129 +80,33 @@ dfx new rust_profile
 cd rust_profile
 ----
 
-== Modify the default configuration
+== Modify the default project
 
-In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you saw that creating a new project adds several template files to your project directory much like when you create a new Rust package using the `+cargo new+` command.
-You need to modify these default files and add some Rust-specific files to your project before you can build canister smart contracts that run on the {IC}.
+In the link:rust-quickstart{outfilesuffix}[Hello, World! Rust CDK Quick Start], you went through the files in a default project with Rust type canister.
 
-To modify the default configuration for a {proglang} project, you'll need to complete the following steps:
+To complete this tutorial, you'll need to complete the following steps:
 
-* <<Edit the default canister settings>>
-* <<Add a Cargo.toml file to the project>>
-* <<Add Rust files to the source directory>>
-* <<Replace the default program>>
-
-=== Edit the default canister settings
-
-One of the template files included in your project directory is a default `+dfx.json+` configuration file.
-This file contains settings required to build a project for the {IC} much like the `+Cargo.toml+` file provides build and package management configuration details for Rust programs.
-You need to modify the default settings in the `+dfx.json+` configuration file to build Rust programs that run on the {IC} as canister smart contracts.
-
-To modify the default `+dfx.json+` configuration file:
-
-. Check that you are still in the root directory for your project, if needed.
-. Open the `+dfx.json+` configuration file in a text editor.
-. Replace the `+canisters.rust_profile+` settings with settings for building a canister using the `+cargo build+` command.
-+
-For example, under the `+rust_profile+` key, replace the `+main+` and `+type+` settings with settings like these:
-+
-[source,json]
-----
-"build": "cargo build --target wasm32-unknown-unknown --package  rust_profile --release",
-"candid": "src/rust_profile/src/profile.did",
-"wasm": "target/wasm32-unknown-unknown/release/rust_profile.wasm",
-"type": "custom"
-}
-----
-. Remove all of the `+rust_profile_assets+` configuration settings from the file.
-+
-The sample dapp for this tutorial doesn't use any front-end assets, so you can remove those settings from the configuration file.
-. Remove the `+defaults+` and `+dfx+` version settings.
-+
-For example, the configuration file looks like this after you modify the settings:
-+
-....
-include::example$profile-tutorial/profile-dfx.json[]
-....
-. Save your change and close the `+dfx.json+` file to continue.
-
-=== Add a Cargo.toml file to the project
-
-Because we are creating this new Rust project for the {IC} using the {sdk-short-name}, you need to manually create some Rust-specific files in specific locations within the project directory.
-Let's start by creating the `+Cargo.toml+` configuration file that describes the packages in our project.
-
-To add a `+Cargo.toml+` configuration file for the project:
-
-. Check that you are still in the root directory for your project, if needed.
-. Create a new file in the current directory named `+Cargo.toml+`.
-. Open the `+Cargo.toml+` in a text editor.
-. Use the `+[workspace]+` key to specify the source file directory for your program.
-+
-For example:
-+
-[source,toml]
-----
-[workspace]
-members = [
-  "src/rust_profile",
-]
-----
-. Save your changes and close the file to continue.
-
-=== Add Rust files to the source directory
-
-Creating a new project creates a default `+src/rust_profile+` directory with a template `+main.mo+`. We'll replace this default dapp with a Rust library `+lib.rs+` package and `+Cargo.toml+` files.
-
-To prepare the source directory with Rust files:
-
-. Check that you are in the root directory for your project, if needed.
-. Create a new cargo package using a library template by running the following command:
-+
-[source, bash]
-----
-cargo init --lib src/rust_profile
-----
-+
-This command creates a `+src/rust_profile/src+` directory with a library (`+lib.rs+`) package and a `+Cargo.toml+` file in the `+src/rust_profile+` directory.
-. Open the `+src/rust_profile/Cargo.toml+` file in a text editor.
-+
-You use this file to configure the details used to build the Rust package.
-At a minimum, you need to configure the following sections with basic information about the package name, the crate type, and the version of the {cdk-short-name} libraries to use.
-+
---
-* `+[lib]+`
-* `+[dependencies]+`
---
-. Delete the existing `+[dependencies]+` section and replace it with the following:
-+
-[source,toml]
-----
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.3"
-ic-cdk-macros = "0.3"
-serde = "1.0.111"
-----
-+
-NOTE: When you deploy the dapp later in the tutorial, you might get an error message that the dependency version is wrong. If there is a newer version of the {cdk-short-name}, update the dependencies in the `+src/rust_profile/Cargo.toml+` file to match the latest version.
-. Save your changes and close the file to continue.
+* <<Replace the default dapp>>
+* <<Update interface description file>>
 
 === Replace the default dapp
 
-Now that you have the files in place for your Rust dapp, we can replace the template `+main.mo+` program with the Rust dapp we want to deploy on the {IC}.
+Now that you have the files in place for your Rust dapp, we can replace the template `+lib.rs+` dapp with the Rust dapp we want to deploy on the {IC}.
 
 To replace the default program:
 
 . Check that you are still in the root directory for your project, if needed.
-. Delete the template `+src/rust_profile/main.mo+` file by running the following command:
+. Open the `+src/rust_profile/Cargo.toml+` file in a text editor and add `+serde+`  to dependencies.
 +
-[source,bash]
+[source,toml]
 ----
-rm src/rust_profile/main.mo
+[dependencies]
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
+serde = "1.0"
 ----
-. Open the template `+src/rust_profile/src/lib.rs+` file in a text editor and delete the existing content.
++
+. Open the template `+src/rust_profile/lib.rs+` file in a text editor and delete the existing content.
 +
 The next step is to add a Rust program that implements the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions.
 . Copy and paste the following sample code into the `+profile.rs+` file:
@@ -213,7 +117,7 @@ include::example$profile-tutorial/profile.rs[]
 ----
 . Save your changes and close the file to continue.
 
-== Add an interface description file
+== Update interface description file
 
 Candid is an interface description language (IDL) for interacting with canister smart contracts running on the Internet Computer.
 Candid files provide a language-independent description of a canister smart contract's interfaces including the names, parameters, and result formats and data types for each function a canister defines.
@@ -222,18 +126,17 @@ By adding Candid files to your project, you can ensure that data is properly con
 
 To see details about the Candid interface description language syntax, see the link:../candid-guide/candid-intro{outfilesuffix}[_Candid Guide_] or the https://docs.rs/candid/[Candid crate documentation].
 
-To add a Candid file for this tutorial:
+To update Candid file for this tutorial:
 
 . Check that you are still in the root directory for your project, if needed.
-. Create a new file named `+profile.did+` in the `+src/rust_profile/src+` directory.
-. Open the `+src/rust_profile/src/profile.did+`file in a text editor.
+. Open the `+src/rust_profile/rust_profile.did+`file in a text editor.
 . Copy and paste the following `+type+` declaration and `+service+` definition for the `+getSelf+`, `+update+`, `+get+`, and `+search+` functions:
 +
 [source,did]
 ----
 include::example$profile-tutorial/profile.did[]
 ----
-. Save your changes and close the `+profile.did+` file to continue.
+. Save your changes and close the file to continue.
 
 == Start the {LEE}
 
@@ -270,19 +173,23 @@ The `+dfx deploy+` command output displays information about each of the operati
 +
 ....
 Creating a wallet canister on the local network.
-The wallet canister on the "local" network for user "pubs_user_id" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
+The wallet canister on the "local" network for user "default" is "rwlgt-iiaaa-aaaaa-aaaaa-cai"
 Deploying all canisters.
 Creating canisters...
 Creating canister "rust_profile"...
 "rust_profile" canister created with canister id: "rrkah-fqaaa-aaaaa-aaaaq-cai"
+Creating canister "rust_profile_assets"...
+"rust_profile_assets" canister created with canister id: "ryjl3-tyaaa-aaaaa-aaaba-cai"
 Building canisters...
-Executing 'cargo build --target wasm32-unknown-unknown --package  rust_profile --release'
-   Compiling rust_profile v0.1.0 (/Users/pubs/rust_profile/src/rust_profile)
-    Finished release [optimized] target(s) in 2.83s
+Executing: "cargo" "build" "--target" "wasm32-unknown-unknown" "--release" "-p" "rust_profile"
+...
+    Finished release [optimized] target(s) in 6.31s
+Building frontend...
 Installing canisters...
 Creating UI canister on the local network.
-The UI canister on the "local" network is "ryjl3-tyaaa-aaaaa-aaaba-cai"
+The UI canister on the "local" network is "r7inp-6aaaa-aaaaa-aaabq-cai"
 Installing code for canister rust_profile, with canister_id rrkah-fqaaa-aaaaa-aaaaq-cai
+...
 Deployed canisters.
 ....
 
