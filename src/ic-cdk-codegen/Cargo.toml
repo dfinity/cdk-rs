@@ -1,7 +1,15 @@
 [package]
 name = "ic-cdk-codegen"
 version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
+description = "Codegen for the Canister Developer Kit"
+homepage = "https://docs.rs/ic-cdk-codegen"
+documentation = "https://docs.rs/ic-cdk-codegen"
+license = "Apache-2.0"
+categories = ["api-bindings", "compilers", "development-tools::build-utils", "development-tools::ffi"]
+keywords = ["internet-computer", "codegen", "dfinity", "canister", "cdk"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
