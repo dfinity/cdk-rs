@@ -21,7 +21,7 @@ For this tutorial, both canister smart contracts are in the same project.
 
 * The {native} canister creates an actor with a `+cell+` variable to contain the current value that results from an operation.
 * The `+mul+` function takes a natural number as input, multiplies the input value by three and stores the result in the `+cell+` variable.
-* The {lang} canister provides a `+read+` function that is a simple query that returns the current value of the `+cell+` variable.
+* The {lang} canister provides a simple `+read+` function that returns the current value of the `+cell+` variable. Notice that the function making inter-canister call should be a `+update+` method even though the method to be called is `+query+`.
 
 == Before you begin
 
@@ -192,7 +192,7 @@ To update the Candid file for this tutorial:
 [source,did]
 ----
 service : {
-  "read": () -> (nat) query;
+  "read": () -> (nat);
 }
 ----
 . Save your changes and close the `+deps.did+` file to continue.
