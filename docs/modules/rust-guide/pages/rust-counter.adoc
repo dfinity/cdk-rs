@@ -103,7 +103,7 @@ Now that you have the files in place for your Rust dapp, we can replace the temp
 To replace the default dapp:
 
 . Check that you are still in the root directory for your project, if needed.
-. Open the template `+src/rust_counter/src/lib.rs+` file in a text editor and delete the existing content.
+. Open the template `+src/rust_counter/lib.rs+` file in a text editor and delete the existing content.
 +
 The next step is to write a Rust dapp that declares the `+COUNTER+` variable and implements the `+increment+`, `+get+`, and `+set+` functions.
 . Copy and paste the following sample code into the `+lib.rs+` file:
