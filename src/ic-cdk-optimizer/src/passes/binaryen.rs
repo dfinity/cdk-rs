@@ -27,7 +27,7 @@ impl OptimizationPass for BinaryenPass {
             Module::read(wasm).map_err(|_| String::from("Could not load module..."))?;
 
         module.optimize(&CodegenConfig {
-            debug_info: false,
+            debug_info: true, // Reserve name section for profiling use
             optimization_level: 2,
             shrink_level: 2,
         });
