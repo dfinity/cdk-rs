@@ -4,7 +4,7 @@ use ic_cdk::export::candid;
 #[import(canister = "multiply_deps")]
 mod counter_canister {}
 
-#[query]
+#[update]
 async fn read() -> candid::Nat {
     counter_canister::read().await
 }
