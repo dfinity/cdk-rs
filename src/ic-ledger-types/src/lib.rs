@@ -1,4 +1,5 @@
 use ic_cdk::export::candid::{CandidType, Principal};
+use ic_cdk::api::call::CallResult;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fmt;
@@ -151,24 +152,6 @@ impl fmt::Display for AccountIdentifier {
 }
 
 /// Arguments for the `account_balance` call.
-/// Example:
-/// ```ignore
-/// use ic_cdk::api::{caller, call::call};
-/// use ic_cdk_macros::update;
-/// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID};
-///
-/// #[update]
-/// async fn check_callers_balance() -> Tokens {
-///   let (icp,) = call(
-///     MAINNET_LEDGER_CANISTER_ID,
-///     "account_balance",
-///     (AccountBalanceArgs {
-///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
-///     },)
-///   ).await.expect("call to ledger failed");
-///   icp
-/// }
-/// ```
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct AccountBalanceArgs {
     pub account: AccountIdentifier,
@@ -236,6 +219,52 @@ impl fmt::Display for TransferError {
             ),
         }
     }
+}
+
+/// Calls the "account_balance" method on the specified canister.
+///
+/// # Example
+/// ```no_run
+/// use ic_cdk::api::{caller, call::call};
+/// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID, account_balance};
+///
+/// async fn check_callers_balance() -> Tokens {
+///   account_balance(
+///     MAINNET_LEDGER_CANISTER_ID,
+///     AccountBalanceArgs {
+///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
+///     }
+///   ).await.expect("call to ledger failed")
+/// }
+/// ```
+pub async fn account_balance(ledger_canister_id: Principal, args: AccountBalanceArgs) -> CallResult<Tokens> {
+  let (icp,) = ic_cdk::call(ledger_canister_id, "account_balance", (args,)).await?;
+  Ok(icp)
+}
+
+/// Calls the "transfer" method on the specified canister.
+/// # Example
+/// ```no_run
+/// use ic_cdk::api::{caller, call::call};
+/// use ic_ledger_types::{AccountIdentifier, BlockIndex, Memo, TransferArgs, Tokens, DEFAULT_SUBACCOUNT, DEFAULT_FEE, MAINNET_LEDGER_CANISTER_ID, transfer};
+///
+/// async fn transfer_to_caller() -> BlockIndex {
+///   transfer(
+///     MAINNET_LEDGER_CANISTER_ID,
+///     TransferArgs {
+///       memo: Memo(0),
+///       amount: Tokens::from_e8s(1_000_000),
+///       fee: DEFAULT_FEE,
+///       from_subaccount: None,
+///       to: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT),
+///       created_at_time: None,
+///     }
+///   ).await.expect("call to ledger failed").expect("transfer failed")
+/// }
+/// ```
+pub async fn transfer(ledger_canister_id: Principal, args: TransferArgs) -> CallResult<TransferResult> {
+  let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
+  Ok(result)
 }
 
 #[cfg(test)]
