@@ -1,5 +1,5 @@
-use ic_cdk::export::candid::{CandidType, Principal};
 use ic_cdk::api::call::CallResult;
+use ic_cdk::export::candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::fmt;
@@ -237,9 +237,12 @@ impl fmt::Display for TransferError {
 ///   ).await.expect("call to ledger failed")
 /// }
 /// ```
-pub async fn account_balance(ledger_canister_id: Principal, args: AccountBalanceArgs) -> CallResult<Tokens> {
-  let (icp,) = ic_cdk::call(ledger_canister_id, "account_balance", (args,)).await?;
-  Ok(icp)
+pub async fn account_balance(
+    ledger_canister_id: Principal,
+    args: AccountBalanceArgs,
+) -> CallResult<Tokens> {
+    let (icp,) = ic_cdk::call(ledger_canister_id, "account_balance", (args,)).await?;
+    Ok(icp)
 }
 
 /// Calls the "transfer" method on the specified canister.
@@ -262,9 +265,12 @@ pub async fn account_balance(ledger_canister_id: Principal, args: AccountBalance
 ///   ).await.expect("call to ledger failed").expect("transfer failed")
 /// }
 /// ```
-pub async fn transfer(ledger_canister_id: Principal, args: TransferArgs) -> CallResult<TransferResult> {
-  let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
-  Ok(result)
+pub async fn transfer(
+    ledger_canister_id: Principal,
+    args: TransferArgs,
+) -> CallResult<TransferResult> {
+    let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
+    Ok(result)
 }
 
 #[cfg(test)]
