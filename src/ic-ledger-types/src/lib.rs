@@ -45,12 +45,12 @@ impl Tokens {
     pub const SUBDIVIDABLE_BY: u64 = 100_000_000;
 
     /// Constructs an amount of Tokens from the number of 10^-8 Tokens.
-    pub fn from_e8s(e8s: u64) -> Self {
+    pub const fn from_e8s(e8s: u64) -> Self {
         Self { e8s }
     }
 
     /// Returns the number of 10^-8 Tokens in this amount.
-    pub fn e8s(&self) -> u64 {
+    pub const fn e8s(&self) -> u64 {
         self.e8s
     }
 }
