@@ -15,6 +15,14 @@ pub const DEFAULT_FEE: Tokens = Tokens { e8s: 10_000 };
 pub const MAINNET_LEDGER_CANISTER_ID: Principal =
     Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01]);
 
+/// Id of the governance canister on the IC.
+pub const MAINNET_GOVERNANCE_CANISTER_ID: Principal =
+    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01]);
+
+/// Id of the cycles minting canister on the IC.
+pub const MAINNET_CYCLES_MINTING_CANISTER_ID: Principal =
+    Principal::from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x01]);
+
 /// Number of nanoseconds from the UNIX epoch in UTC timezone.
 #[derive(
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
@@ -298,6 +306,22 @@ mod tests {
         assert_eq!(
             MAINNET_LEDGER_CANISTER_ID,
             Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_governance_canister_id() {
+        assert_eq!(
+            MAINNET_GOVERNANCE_CANISTER_ID,
+            Principal::from_text("rrkah-fqaaa-aaaaa-aaaaq-cai").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_cycles_minting_canister_id() {
+        assert_eq!(
+            MAINNET_CYCLES_MINTING_CANISTER_ID,
+            Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()
         );
     }
 }
