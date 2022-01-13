@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RbTree::iter()` method.
 - impls of `Clone`, `PartialEq`, `Eq`, `PartialOrd`, `Ord`, `FromIterator`, and `Debug` for `RbTree`.
 
-## [0.2.0] - 2022-09-16
+## [0.2.0] - 2021-09-16
 ### Added
 - `RbTree::value_range()` method to get a witness for a range of keys with values.
 
