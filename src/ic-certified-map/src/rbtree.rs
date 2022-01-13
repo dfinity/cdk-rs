@@ -482,7 +482,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             },
             Some(n) => Iter {
                 visit: Visit::Pre,
-                parents: vec![&n],
+                parents: vec![n],
             },
         }
     }
