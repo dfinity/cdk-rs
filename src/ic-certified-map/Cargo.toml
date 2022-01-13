@@ -1,6 +1,6 @@
 [package]
 name = "ic-certified-map"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Merkleized map data structure."
