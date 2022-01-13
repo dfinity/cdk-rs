@@ -4,11 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2022-01-13
 ### Added
-- `RbTree::value_range()` method to get a witness for a range of keys with values.
 - `RbTree::iter()` method.
 - impls of `Clone`, `PartialEq`, `Eq`, `PartialOrd`, `Ord`, `FromIterator`, and `Debug` for `RbTree`.
+
+## [0.2.0] - 2021-09-16
+### Added
+- `RbTree::value_range()` method to get a witness for a range of keys with values.
 
 ### Changed
 - RbTree::key_range() method returns tighter key bounds which reduces the size of witnesses.
