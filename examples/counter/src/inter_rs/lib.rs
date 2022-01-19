@@ -2,19 +2,19 @@ use ic_cdk_macros::*;
 use ic_cdk::export::candid;
 
 #[import(canister = "counter_mo")]
-struct CounterCanister;
+mod counter_canister {}
 
 #[update]
 async fn read() -> candid::Nat {
-    CounterCanister::read().await.0
+    counter_canister::read().await
 }
 
 #[update]
 async fn inc() -> () {
-    CounterCanister::inc().await
+    counter_canister::inc().await
 }
 
 #[update]
 async fn write(input: candid::Nat) -> () {
-    CounterCanister::write(input).await
+    counter_canister::write(input).await
 }

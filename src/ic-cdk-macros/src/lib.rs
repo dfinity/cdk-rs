@@ -16,7 +16,7 @@
 //! * [`update`](attr.update.html)
 //! * [`query`](attr.query.html)
 //!
-//! ## Import another canister as a rust struct
+//! ## Import another canister as a Rust module
 //!
 //! * [`import`](attr.import.html)
 
@@ -245,31 +245,51 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
 }
 
-/// Import another canister as a rust struct.
+/// Import another canister as a Rust module.
 ///
-/// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
+/// The attribute can be invoked two ways: `import(canister = "foo")`, which will automatically import it from a compatible canister
+/// governed by the same DFX instance after you run `dfx build`, and `import(canister_id = "rrkah-fqaaa-aaaaa-aaaaq-cai", candid_path = "foo.did")`,
+/// which does it the boring way.
+///
+/// All public interfaces defined in the corresponding candid file can be accessed through the annotated module. Both functions and types will be exported,
+/// but in the case that names collide, functions will 'win' and types can be accessed through a submodule named `t`.
+///
+/// Inline variants and records cannot be directly translated, so they have names that look like `recordname_field0_variant3_param2`. These names are
+/// deterministic, and should not change when the Candid file is changed backwards-compatibly.
+///
+/// Every symbol can be overridden by writing your preferred version of it in the attributed module - structs, enums, functions, etc.
+/// See [`Processor::new`](ic_cdk_codegen::Processor::new) for the rules on doing so. You can even override the base Candid primitives,
+/// for example to use `u128` instead of [`Nat`](candid::Nat) (the names for doing so follow [`PrimType`](candid::parser::types::PrimType)
+/// rather than the IDL notation).
 ///
 /// # Example
 ///
-/// You can specify the canister with it's name.
-///
-/// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
-///
+/// You can specify the local canister with its name. Note that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
 /// During `dfx build`, the imported canister will be correctly resolved.
 ///
 /// ```rust,ignore
 /// # use ic_cdk_macros::import;
 /// #[import(canister = "some_canister")]
-/// struct SomeCanister;
+/// mod some_canister {}
 /// ```
 ///
-/// Or you can specify both the `canister_id` and the `candid_path`.
+/// Or you can specify both the `canister_id` and the `candid_path`. This example also shows how you might override some declarations.
 ///
 /// ```rust,ignore
 /// # use ic_cdk_macros::import;
-/// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
-/// struct SomeCanister;
+/// #[import(canister_id = "aaaaa-aa", candid_path = "path/to/ic.did")]
+/// mod ic {
+///     pub type Nat = u128;
+///     pub struct CanisterIdContainer {
+///         canister_id: Principal,
+///     }
+///     pub async fn create_canister(can: CanisterIdContainer) -> CanisterIdContainer;
+/// }
 /// ```
+///
+/// # Note
+///
+/// If your editor does not support expanding proc macros, the [`ic_cdk_codegen`] crate can also be used directly in a build script.
 #[proc_macro_attribute]
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)

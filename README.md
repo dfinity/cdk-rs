@@ -43,8 +43,8 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.3"
-ic-cdk-macros = "0.3"
+ic-cdk = "0.4"
+ic-cdk-macros = "0.4"
 ```
 
 Then in your rust source code:
