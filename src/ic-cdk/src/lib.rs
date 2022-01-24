@@ -36,7 +36,7 @@ pub fn setup() {
 
 /// See documentation for [spawn].
 #[deprecated(
-    since = "0.3.1",
+    since = "0.3.4",
     note = "Use the spawn() function instead, it does the same thing but is more appropriately named."
 )]
 pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
