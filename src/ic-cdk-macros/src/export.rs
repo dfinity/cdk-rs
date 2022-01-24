@@ -193,7 +193,7 @@ fn dfn_macro(
 
             #guard
 
-            ic_cdk::block_on(async {
+            ic_cdk::spawn(async {
                 #arg_decode
                 let result = #function_call;
                 #return_encode
@@ -306,7 +306,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let () = ic_cdk::api::call::arg_data();
                     let result = query();
                     ic_cdk::api::call::reply(())
@@ -343,7 +343,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let () = ic_cdk::api::call::arg_data();
                     let result = query();
                     ic_cdk::api::call::reply((result,))
@@ -380,7 +380,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let () = ic_cdk::api::call::arg_data();
                     let result = query();
                     ic_cdk::api::call::reply(result)
@@ -417,7 +417,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let (a, ) = ic_cdk::api::call::arg_data();
                     let result = query(a);
                     ic_cdk::api::call::reply(())
@@ -454,7 +454,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let (a, b, ) = ic_cdk::api::call::arg_data();
                     let result = query(a, b);
                     ic_cdk::api::call::reply(())
@@ -491,7 +491,7 @@ mod test {
             #[export_name = "canister_query query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let (a, b, ) = ic_cdk::api::call::arg_data();
                     let result = query(a, b);
                     ic_cdk::api::call::reply((result,))
@@ -528,7 +528,7 @@ mod test {
             #[export_name = "canister_query custom_query"]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::block_on(async {
+                ic_cdk::spawn(async {
                     let () = ic_cdk::api::call::arg_data();
                     let result = query();
                     ic_cdk::api::call::reply(())
