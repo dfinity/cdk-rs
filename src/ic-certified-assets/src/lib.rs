@@ -12,6 +12,7 @@ use sha2::Digest;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fmt;
 
 /// The amount of time a batch is kept alive. Modifying the batch
 /// delays the expiry further.
@@ -622,17 +623,32 @@ fn convert_percent(iter: &mut std::slice::Iter<u8>) -> Option<u8> {
     Some(result)
 }
 
+#[derive(Debug, PartialEq)]
+pub enum UrlDecodeError {
+    InvalidPercentEncoding,
+}
+
+impl fmt::Display for UrlDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPercentEncoding => write!(f, "invalid percent encoding"),
+        }
+    }
+}
+
 impl<'a> Iterator for UrlDecode<'a> {
-    type Item = char;
+    type Item = Result<char, UrlDecodeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let b = self.bytes.next()?;
         match b {
-            b'%' => Some(char::from(convert_percent(&mut self.bytes).expect(
-                "error decoding url: % must be followed by '%' or two hex digits",
-            ))),
-            b'+' => Some(' '),
-            x => Some(char::from(*x)),
+            b'%' => Some(
+                convert_percent(&mut self.bytes)
+                    .map(char::from)
+                    .ok_or(UrlDecodeError::InvalidPercentEncoding),
+            ),
+            b'+' => Some(Ok(' ')),
+            x => Some(Ok(char::from(*x))),
         }
     }
 
@@ -642,7 +658,7 @@ impl<'a> Iterator for UrlDecode<'a> {
     }
 }
 
-fn url_decode(url: &str) -> String {
+fn url_decode(url: &str) -> Result<String, UrlDecodeError> {
     UrlDecode {
         bytes: url.as_bytes().iter(),
     }
@@ -651,12 +667,21 @@ fn url_decode(url: &str) -> String {
 
 #[test]
 fn check_url_decode() {
-    assert_eq!(url_decode("/%"), "/%");
-    assert_eq!(url_decode("/%%"), "/%");
-    assert_eq!(url_decode("/%20a"), "/ a");
-    assert_eq!(url_decode("/%%+a%20+%@"), "/% a  %@");
-    assert_eq!(url_decode("/has%percent.txt"), "/has%percent.txt");
-    assert_eq!(url_decode("/%e6"), "/æ");
+    assert_eq!(
+        url_decode("/%"),
+        Err(UrlDecodeError::InvalidPercentEncoding)
+    );
+    assert_eq!(url_decode("/%%"), Ok("/%".to_string()));
+    assert_eq!(url_decode("/%20a"), Ok("/ a".to_string()));
+    assert_eq!(
+        url_decode("/%%+a%20+%@"),
+        Err(UrlDecodeError::InvalidPercentEncoding)
+    );
+    assert_eq!(
+        url_decode("/has%percent.txt"),
+        Err(UrlDecodeError::InvalidPercentEncoding)
+    );
+    assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
 }
 
 #[query]
@@ -675,8 +700,18 @@ fn http_request(req: HttpRequest) -> HttpResponse {
         Some(i) => &req.url[..i],
         None => &req.url[..],
     };
-
-    build_http_response(&url_decode(path), encodings, 0)
+    match url_decode(path) {
+        Ok(path) => build_http_response(&path, encodings, 0),
+        Err(err) => HttpResponse {
+            status_code: 400,
+            headers: vec![],
+            body: RcBytes::from(ByteBuf::from(format!(
+                "failed to decode path '{}': {}",
+                path, err
+            ))),
+            streaming_strategy: None,
+        },
+    }
 }
 
 #[query]
