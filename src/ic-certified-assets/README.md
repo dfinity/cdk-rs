@@ -11,7 +11,7 @@ Certified assets can also be served from any Rust canister by including this lib
 ic-certified-assets = "0.1.0"
 ```
 
-The assets are over upgrades by including the corresponding functions in the `init/pre_upgrade/upgrade`
+The assets are preserved over upgrades by including the corresponding functions in the `init/pre_upgrade/upgrade`
 hooks which can be mixed with the other state from the canister:
 
 ```
