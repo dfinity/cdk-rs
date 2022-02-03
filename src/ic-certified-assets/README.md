@@ -37,11 +37,11 @@ fn pre_upgrade() {
 
 >>#[post_upgrade]
 fn post_upgrade() {
-  let (stable_state,): (StableState,) =
-    ic_cdk::storage::stable_restore().expect("failed to restore stable state");
-  crate::assets::post_upgrade(stable_state.assets);
+  let (StableState { assets, my_state },): (StableState,) =
+                                         ic_cdk::storage::stable_restore().expect("failed to restore stable state");
+  crate::assets::post_upgrade(assets);
   STATE.with(|s| {
-      s.my_state = stable_state.my_state;
+      s.my_state = my_state;
   };
 }
 ```
