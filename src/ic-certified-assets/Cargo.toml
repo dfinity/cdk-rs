@@ -1,8 +1,11 @@
 [package]
 name = "ic-certified-assets"
 version = "0.1.0"
-authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+description = "Rust support for asset certification."
+license = "Apache-2.0"
+keywords = ["internet-computer", "dfinity"]
 
 [dependencies]
 base64 = "0.13"
