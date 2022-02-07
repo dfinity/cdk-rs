@@ -1,11 +1,11 @@
 [package]
 name = "ic-cdk-optimizer"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2018"
 description = "WASM Optimizer for the IC CDK (experimental)."
- homepage = "https://docs.rs/ic-cdk-optimizer"
- documentation = "https://docs.rs/ic-cdk-optimizer"
+homepage = "https://docs.rs/ic-cdk-optimizer"
+documentation = "https://docs.rs/ic-cdk-optimizer"
 license = "Apache-2.0"
 readme = "README.md"
 categories = ["api-bindings", "data-structures", "no-std", "command-line-utilities"]
