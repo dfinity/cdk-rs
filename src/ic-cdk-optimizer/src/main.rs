@@ -6,7 +6,7 @@ use std::path::PathBuf;
 mod passes;
 
 #[derive(Clap, Debug)]
-#[clap()]
+#[clap(version)]
 struct CommandLineOpts {
     /// Input file to optimize. By default will use STDIN.
     input: Option<PathBuf>,
