@@ -1,3 +1,11 @@
+#![warn(missing_docs)]
+
+//! This crate provides building blocks for developing Internet Computer Canister.
+//!
+//! You can check the [Internet Computer Specification](
+//! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
+//! for a full list of the system API functions.
+
 pub mod api;
 mod futures;
 mod printer;
@@ -8,6 +16,7 @@ pub use api::{caller, id, print, trap};
 
 static mut DONE: bool = false;
 
+/// Re-exports crates those are necessary for using ic-cdk
 pub mod export {
     pub use candid;
     pub use candid::types::ic_types::Principal;
@@ -25,9 +34,19 @@ pub fn setup() {
     printer::hook()
 }
 
-/// Block on a promise in a WASM-friendly way (no multithreading!).
+/// See documentation for [spawn].
+#[deprecated(
+    since = "0.3.4",
+    note = "Use the spawn() function instead, it does the same thing but is more appropriately named."
+)]
 pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::block_on(future);
+    futures::spawn(future);
+}
+
+/// Spawn an asynchronous task that drives the provided future to
+/// completion.
+pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
+    futures::spawn(future);
 }
 
 /// Format and then print the formatted message
