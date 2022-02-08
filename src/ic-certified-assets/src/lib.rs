@@ -24,6 +24,8 @@ const ENCODING_CERTIFICATION_ORDER: &[&str] = &["identity", "gzip", "compress", 
 /// The file to serve if the requested file wasn't found.
 const INDEX_FILE: &str = "/index.html";
 
+const MAX_CHUNK_SIZE: usize = 3_000_000;
+
 thread_local! {
     static STATE: State = State::default();
     static ASSET_HASHES: RefCell<AssetHashes> = RefCell::new(RbTree::new());
@@ -53,10 +55,17 @@ pub struct StableState {
 #[derive(Default, Clone, Debug, CandidType, Deserialize)]
 struct AssetEncoding {
     modified: Timestamp,
-    content_chunks: Vec<RcBytes>,
+    content_chunks: Vec<ContentChunk>,
     total_length: usize,
     certified: bool,
     sha256: [u8; 32],
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+struct ContentChunk {
+    content: RcBytes,
+    start_byte: u64,
+    end_byte: u64
 }
 
 #[derive(Default, Clone, Debug, CandidType, Deserialize)]
@@ -257,7 +266,7 @@ fn retrieve(key: Key) -> RcBytes {
         if id_enc.content_chunks.len() > 1 {
             trap("Asset too large. Use get() and get_chunk() instead.");
         }
-        id_enc.content_chunks[0].clone()
+        id_enc.content_chunks[0].content.clone()
     })
 }
 
@@ -276,8 +285,14 @@ fn store(arg: StoreArg) {
         }
 
         let encoding = asset.encodings.entry(arg.content_encoding).or_default();
+        let content_length = arg.content.len() as u64;
+
         encoding.total_length = arg.content.len();
-        encoding.content_chunks = vec![RcBytes::from(arg.content)];
+        encoding.content_chunks = vec![ContentChunk {
+            content: RcBytes::from(arg.content),
+            start_byte: 0,
+            end_byte: content_length - 1
+        }];
         encoding.modified = Int::from(time() as u64);
         encoding.sha256 = hash;
 
@@ -390,7 +405,7 @@ fn get(arg: GetArg) -> EncodedAsset {
         for enc in arg.accept_encodings.iter() {
             if let Some(asset_enc) = asset.encodings.get(enc) {
                 return EncodedAsset {
-                    content: asset_enc.content_chunks[0].clone(),
+                    content: asset_enc.content_chunks[0].content.clone(),
                     content_type: asset.content_type.clone(),
                     content_encoding: enc.clone(),
                     total_length: Nat::from(asset_enc.total_length as u64),
@@ -426,7 +441,7 @@ fn get_chunk(arg: GetChunkArg) -> GetChunkResponse {
         let index: usize = arg.index.0.to_usize().unwrap();
 
         GetChunkResponse {
-            content: enc.content_chunks[index].clone(),
+            content: enc.content_chunks[index].content.clone(),
         }
     })
 }
@@ -460,7 +475,23 @@ fn list() -> Vec<AssetDetails> {
     })
 }
 
-fn create_token(
+fn create_default_strategy(
+    asset: &Asset,
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    chunk_index: usize,
+) -> Option<StreamingStrategy> {
+    create_default_token(asset, enc_name, enc, key, chunk_index).map(|token| StreamingStrategy::Callback {
+        callback: ic_cdk::export::candid::Func {
+            method: "http_request_streaming_callback".to_string(),
+            principal: ic_cdk::id(),
+        },
+        token,
+    })
+}
+
+fn create_default_token(
     _asset: &Asset,
     enc_name: &str,
     enc: &AssetEncoding,
@@ -479,20 +510,53 @@ fn create_token(
     }
 }
 
-fn create_strategy(
-    asset: &Asset,
+// TODO I am hacking this for now by encoding the necessary information into the key field of StreamingCallbackToken
+// TODO I think the better way to do this would be to update the boundary node code to allow a custom StreamingCallbackToken
+// TODO See this issue: https://github.com/dfinity/certified-assets/issues/11
+fn create_partial_content_strategy(
     enc_name: &str,
     enc: &AssetEncoding,
     key: &str,
     chunk_index: usize,
-) -> Option<StreamingStrategy> {
-    create_token(asset, enc_name, enc, key, chunk_index).map(|token| StreamingStrategy::Callback {
+    start_byte: u64,
+    end_byte: u64
+) -> StreamingStrategy {
+    StreamingStrategy::Callback {
         callback: ic_cdk::export::candid::Func {
             method: "http_request_streaming_callback".to_string(),
-            principal: ic_cdk::id(),
+            principal: ic_cdk::id()
         },
-        token,
-    })
+        token: create_partial_content_token(
+            enc_name,
+            enc,
+            key,
+            chunk_index,
+            start_byte,
+            end_byte
+        )
+    }
+}
+
+fn create_partial_content_token(
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    chunk_index: usize,
+    start_byte: u64,
+    end_byte: u64
+) -> StreamingCallbackToken {
+    StreamingCallbackToken {
+        key: format!(
+            "RANGE::::{key}::::{start_byte}::::{end_byte}::::{partition_size}",
+            key = key,
+            start_byte = start_byte,
+            end_byte = end_byte,
+            partition_size = MAX_CHUNK_SIZE
+        ),
+        content_encoding: enc_name.to_string(),
+        index: Nat::from(chunk_index + 1),
+        sha256: Some(ByteBuf::from(enc.sha256))
+    }
 }
 
 fn build_200(
@@ -503,23 +567,232 @@ fn build_200(
     chunk_index: usize,
     certificate_header: Option<HeaderField>,
 ) -> HttpResponse {
-    let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
+    let mut headers = vec![
+        ("Accept-Ranges".to_string(), "bytes".to_string()),
+        ("Content-Type".to_string(), asset.content_type.to_string())
+    ];
+
     if enc_name != "identity" {
         headers.push(("Content-Encoding".to_string(), enc_name.to_string()));
     }
+
     if let Some(head) = certificate_header {
         headers.push(head);
     }
 
-    let streaming_strategy = create_strategy(asset, enc_name, enc, key, chunk_index);
+    let default_streaming_strategy = create_default_strategy(asset, enc_name, enc, key, chunk_index);
 
     HttpResponse {
         status_code: 200,
         headers,
-        body: enc.content_chunks[chunk_index].clone(),
-        streaming_strategy,
+        body: enc.content_chunks[chunk_index].content.clone(),
+        streaming_strategy: default_streaming_strategy,
     }
 }
+
+fn build_206(
+    asset: &Asset,
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    chunk_index: usize,
+    range_request_info: &RangeRequestInfo
+) -> HttpResponse {
+    if range_request_info.ranges.len() == 1 {
+        return build_206_single_part(
+            asset,
+            enc_name,
+            enc,
+            key,
+            chunk_index,
+            range_request_info
+        );
+    }
+    
+    // TODO Multipart ranges have not yet been implemented
+    // if range_request_info.ranges.len() > 1 {
+        // return build_206_multipart(
+            // asset,
+            // enc_name,
+            // enc,
+            // range_request_info
+        // );
+    // }
+
+    build_416(&enc.total_length.to_string())
+}
+
+fn build_206_single_part(
+    asset: &Asset,
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    chunk_index: usize,
+    range_request_info: &RangeRequestInfo
+) -> HttpResponse {
+    let range_option = &range_request_info.ranges.get(0);
+
+    if let Some(range) = range_option {
+        let total_bytes: u64 = enc.total_length.try_into().unwrap();
+
+        let start_and_end_byte_result = get_start_and_end_byte_for_range(
+            total_bytes,
+            range
+        );
+    
+        match start_and_end_byte_result {
+            Ok((start_byte, end_byte)) => {
+                let body_result = get_range_request_body(
+                    enc,
+                    start_byte,
+                    end_byte
+                );
+        
+                handle_206_single_part_body_result(
+                    body_result,
+                    total_bytes,
+                    start_byte,
+                    end_byte,
+                    asset,
+                    enc_name,
+                    enc,
+                    key,
+                    chunk_index
+                )
+            },
+            Err(http_416_response) => http_416_response
+        }
+    }
+    else {
+        build_416(&enc.total_length.to_string())
+    }
+}
+
+fn get_start_and_end_byte_for_range(
+    total_bytes: u64,
+    range: &Range
+) -> Result<(u64, u64), HttpResponse> {
+    match (range.start_byte, range.end_byte) {
+        (Some(start_byte), Some(end_byte)) => {
+            if
+                start_byte >= total_bytes ||
+                end_byte < start_byte
+            {
+                return Err(build_416(&total_bytes.to_string()));
+            }
+
+            if end_byte >= total_bytes {
+                return Ok((start_byte, total_bytes - 1));
+            }
+
+            Ok((start_byte, end_byte))
+        },
+        (Some(start_byte), None) => {
+            if start_byte >= total_bytes {
+                return Err(build_416(&total_bytes.to_string()));
+            }
+
+            Ok((start_byte, total_bytes - 1))
+        },
+        (None, Some(end_byte)) => {
+            if end_byte >= total_bytes {
+                Ok((0, total_bytes - 1))
+            }
+            else {
+                Ok((total_bytes - end_byte - 1, total_bytes - 1)) // TODO I hope I am not off by one for the start_byte value
+            }
+        },
+        (None, None) => Err(build_416(&total_bytes.to_string()))
+    }
+}
+
+fn handle_206_single_part_body_result(
+    body_result: Result<RcBytes, HttpResponse>,
+    total_bytes: u64,
+    start_byte: u64,
+    end_byte: u64,
+    asset: &Asset,
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    chunk_index: usize
+) -> HttpResponse {
+    match body_result {
+        Ok(body) => {
+            let mut headers = vec![
+                ("Accept-Ranges".to_string(), "bytes".to_string()),
+                ("Content-Length".to_string(), body.len().to_string()),
+                ("Content-Range".to_string(), format!(
+                    "bytes {start_byte}-{end_byte}/{total_bytes}",
+                    start_byte = start_byte,
+                    end_byte = end_byte,
+                    total_bytes = total_bytes
+                )),
+                ("Content-Type".to_string(), asset.content_type.to_string())
+            ];
+    
+            if enc_name != "identity" {
+                headers.push(("Content-Encoding".to_string(), enc_name.to_string()));
+            }
+    
+            if body.len() > MAX_CHUNK_SIZE {
+                let body = RcBytes(std::rc::Rc::new(ByteBuf::from(body[..MAX_CHUNK_SIZE].to_vec())));
+    
+                let streaming_strategy = Some(create_partial_content_strategy(
+                    enc_name,
+                    enc,
+                    key,
+                    chunk_index,
+                    start_byte,
+                    end_byte
+                ));
+            
+                HttpResponse {
+                    status_code: 206,
+                    headers,
+                    body,
+                    streaming_strategy
+                }
+            }
+            else {
+                HttpResponse {
+                    status_code: 206,
+                    headers,
+                    body,
+                    streaming_strategy: None
+                }
+            }
+        },
+        Err(http_416_response) => http_416_response
+    }
+}
+
+// TODO Multipart ranges have not yet been implemented
+// fn build_206_multipart(
+//     asset: &Asset,
+//     enc_name: &str,
+//     enc: &AssetEncoding,
+//     range_request_info: RangeRequestInfo // TODO should this be a reference?
+// ) -> HttpResponse {
+//     ic_cdk::println!("build_206_multipart");
+
+//     let mut headers = vec![
+//         ("Accept-Ranges".to_string(), "bytes".to_string()), // TODO when should accept-ranges be returned?
+//         ("Content-Length".to_string(), enc.content_chunks[0].content.len().to_string()),
+//         ("Content-Type".to_string(), "multipart/byteranges; boundary=3d6b6a416f9b5".to_string())
+//     ];
+    
+//     if enc_name != "identity" {
+//         headers.push(("Content-Encoding".to_string(), enc_name.to_string()));
+//     }
+
+//     HttpResponse {
+//         status_code: 206,
+//         headers,
+//         body: enc.content_chunks[0].content.clone(),
+//         streaming_strategy: None
+//     }
+// }
 
 fn build_404(certificate_header: HeaderField) -> HttpResponse {
     HttpResponse {
@@ -530,7 +803,120 @@ fn build_404(certificate_header: HeaderField) -> HttpResponse {
     }
 }
 
-fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> HttpResponse {
+// TODO Do I need the certificate_header here?
+fn build_416(length: &str) -> HttpResponse {
+    HttpResponse {
+        status_code: 416,
+        headers: vec![("Content-Range".to_string(), format!("*/{length}", length = length))],
+        body: RcBytes(std::rc::Rc::new(ByteBuf::from(vec![]))),
+        streaming_strategy: None,
+    }
+}
+
+fn get_range_request_body(
+    enc: &AssetEncoding,
+    start_byte: u64,
+    end_byte: u64
+) -> Result<RcBytes, HttpResponse> {
+    // TODO see if we can do this performantly and immutably
+    let final_slice_result = enc
+        .content_chunks
+        .iter()
+        .try_fold(vec![], |mut result, content_chunk| {
+            let start_byte_before_content_chunk = start_byte < content_chunk.start_byte;
+            let start_byte_after_content_chunk = start_byte > content_chunk.end_byte;
+            let start_byte_within_content_chunk = 
+                start_byte >= content_chunk.start_byte &&
+                start_byte <= content_chunk.end_byte;
+
+            let end_byte_before_content_chunk = end_byte < content_chunk.start_byte;
+            let end_byte_after_content_chunk = end_byte > content_chunk.end_byte;
+            let end_byte_within_content_chunk =
+                end_byte >= content_chunk.start_byte &&
+                end_byte <= content_chunk.end_byte;
+
+            let virtual_start_byte = start_byte - content_chunk.start_byte;
+            let virtual_end_byte = end_byte - content_chunk.start_byte + 1;
+
+            if
+                start_byte_before_content_chunk &&
+                end_byte_before_content_chunk
+            {
+                return Ok(result);
+            }
+
+            if
+                start_byte_before_content_chunk &&
+                end_byte_after_content_chunk
+            {
+                result.append(&mut content_chunk.content.to_vec());
+            }
+
+            if
+                start_byte_before_content_chunk &&
+                end_byte_within_content_chunk
+            {
+                result.append(&mut content_chunk.content[..virtual_end_byte as usize].to_vec());
+            }
+
+            if
+                start_byte_after_content_chunk &&
+                end_byte_before_content_chunk
+            {
+                return Err(build_416(&enc.total_length.to_string()));
+            }
+
+            if
+                start_byte_after_content_chunk &&
+                end_byte_after_content_chunk
+            {
+                return Ok(result);
+            }
+
+            if
+                start_byte_after_content_chunk &&
+                end_byte_within_content_chunk
+            {
+                return Err(build_416(&enc.total_length.to_string()));
+            }
+
+            if
+                start_byte_within_content_chunk &&
+                end_byte_before_content_chunk
+            {
+                return Err(build_416(&enc.total_length.to_string()));
+            }
+
+            if
+                start_byte_within_content_chunk &&
+                end_byte_after_content_chunk
+            {
+                result.append(&mut content_chunk.content[virtual_start_byte as usize..].to_vec());
+            }
+
+            if
+                start_byte_within_content_chunk &&
+                end_byte_within_content_chunk
+            {
+                result.append(&mut content_chunk.content[virtual_start_byte as usize..virtual_end_byte as usize].to_vec());
+            }
+
+            Ok(result)
+        });
+
+    match final_slice_result {
+        Ok(final_slice) => Ok(RcBytes(std::rc::Rc::new(ByteBuf::from(final_slice)))),
+        Err(http_response) => Err(http_response)
+    }
+}
+
+// TODO not sure what to do with certification for 206 responses
+fn build_http_response(
+    path: &str,
+    encodings: Vec<String>,
+    range_request_info_option: Option<RangeRequestInfo>,
+    index: usize
+) -> HttpResponse {
     STATE.with(|s| {
         let assets = s.assets.borrow();
 
@@ -551,14 +937,26 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
                 for enc_name in encodings.iter() {
                     if let Some(enc) = asset.encodings.get(enc_name) {
                         if enc.certified {
-                            return build_200(
-                                asset,
-                                enc_name,
-                                enc,
-                                INDEX_FILE,
-                                index,
-                                Some(certificate_header),
-                            );
+                            if let Some(range_request_info) = range_request_info_option {
+                                return build_206(
+                                    asset,
+                                    enc_name,
+                                    enc,
+                                    INDEX_FILE,
+                                    index,
+                                    &range_request_info
+                                );
+                            }
+                            else {
+                                return build_200(
+                                    asset,
+                                    enc_name,
+                                    enc,
+                                    INDEX_FILE,
+                                    index,
+                                    Some(certificate_header),
+                                );
+                            }
                         }
                     }
                 }
@@ -572,26 +970,50 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
             for enc_name in encodings.iter() {
                 if let Some(enc) = asset.encodings.get(enc_name) {
                     if enc.certified {
-                        return build_200(
-                            asset,
-                            enc_name,
-                            enc,
-                            path,
-                            index,
-                            Some(certificate_header),
-                        );
+                        if let Some(range_request_info) = range_request_info_option {
+                            return build_206(
+                                asset,
+                                enc_name,
+                                enc,
+                                path,
+                                index,
+                                &range_request_info
+                            );
+                        }
+                        else {
+                            return build_200(
+                                asset,
+                                enc_name,
+                                enc,
+                                path,
+                                index,
+                                Some(certificate_header),
+                            );
+                        }
                     } else {
                         // Find if identity is certified, if it's not.
                         if let Some(id_enc) = asset.encodings.get("identity") {
                             if id_enc.certified {
-                                return build_200(
-                                    asset,
-                                    enc_name,
-                                    enc,
-                                    path,
-                                    index,
-                                    Some(certificate_header),
-                                );
+                                if let Some(range_request_info) = range_request_info_option {
+                                    return build_206(
+                                        asset,
+                                        enc_name,
+                                        enc,
+                                        path,
+                                        index,
+                                        &range_request_info
+                                    );
+                                }
+                                else {
+                                    return build_200(
+                                        asset,
+                                        enc_name,
+                                        enc,
+                                        path,
+                                        index,
+                                        Some(certificate_header),
+                                    );
+                                }
                             }
                         }
                     }
@@ -696,21 +1118,29 @@ fn http_request(req: HttpRequest) -> HttpResponse {
     }
     encodings.push("identity".to_string());
 
-    let path = match req.url.find('?') {
-        Some(i) => &req.url[..i],
-        None => &req.url[..],
-    };
-    match url_decode(path) {
-        Ok(path) => build_http_response(&path, encodings, 0),
-        Err(err) => HttpResponse {
-            status_code: 400,
-            headers: vec![],
-            body: RcBytes::from(ByteBuf::from(format!(
-                "failed to decode path '{}': {}",
-                path, err
-            ))),
-            streaming_strategy: None,
+    let range_request_info_result = get_range_request_info(&req);
+
+    match range_request_info_result {
+        Ok(range_request_info) => {
+            let path = match req.url.find('?') {
+                Some(i) => &req.url[..i],
+                None => &req.url[..],
+            };
+            
+            match url_decode(path) {
+                Ok(path) => build_http_response(&path, encodings, range_request_info, 0),
+                Err(err) => HttpResponse {
+                    status_code: 400,
+                    headers: vec![],
+                    body: RcBytes::from(ByteBuf::from(format!(
+                        "failed to decode path '{}': {}",
+                        path, err
+                    ))),
+                    streaming_strategy: None,
+                },
+            }
         },
+        Err(http_416_response) => http_416_response
     }
 }
 
@@ -724,29 +1154,214 @@ fn http_request_streaming_callback(
     }: StreamingCallbackToken,
 ) -> StreamingCallbackHttpResponse {
     STATE.with(|s| {
-        let assets = s.assets.borrow();
-        let asset = assets
-            .get(&key)
-            .expect("Invalid token on streaming: key not found.");
-        let enc = asset
-            .encodings
-            .get(&content_encoding)
-            .expect("Invalid token on streaming: encoding not found.");
+        let key_contents = key.split("::::").collect::<Vec<&str>>();
 
-        if let Some(expected_hash) = sha256 {
-            if expected_hash != enc.sha256 {
-                trap("sha256 mismatch");
-            }
+        if key_contents[0] != "RANGE" {
+            handle_default_streaming_callback(
+                s,
+                &key,
+                &content_encoding,
+                sha256,
+                index
+            )
         }
-
-        // MAX is good enough. This means a chunk would be above 64-bits, which is impossible...
-        let chunk_index = index.0.to_usize().unwrap_or(usize::MAX);
-
-        StreamingCallbackHttpResponse {
-            body: enc.content_chunks[chunk_index].clone(),
-            token: create_token(asset, &content_encoding, enc, &key, chunk_index),
+        else {
+            handle_range_streaming_callback(
+                &key_contents,
+                s,
+                &content_encoding,
+                sha256,
+                index
+            )
         }
     })
+}
+
+fn handle_default_streaming_callback(
+    s: &State,
+    key: &str,
+    content_encoding: &str,
+    sha256: Option<ByteBuf>,
+    index: Nat
+) -> StreamingCallbackHttpResponse {
+    let assets = s.assets.borrow();
+    let asset = assets
+        .get(key)
+        .expect("Invalid token on streaming: key not found.");
+    let enc = asset
+        .encodings
+        .get(content_encoding)
+        .expect("Invalid token on streaming: encoding not found.");
+
+    if let Some(expected_hash) = sha256 {
+        if expected_hash != enc.sha256 {
+            trap("sha256 mismatch");
+        }
+    }
+
+    // MAX is good enough. This means a chunk would be above 64-bits, which is impossible...
+    let chunk_index = index.0.to_usize().unwrap_or(usize::MAX);
+
+    StreamingCallbackHttpResponse {
+        body: enc.content_chunks[chunk_index].content.clone(),
+        token: create_default_token(&asset, &content_encoding, enc, &key, chunk_index),
+    }
+}
+
+fn handle_range_streaming_callback(
+    key_contents: &Vec<&str>,
+    s: &State,
+    content_encoding: &str,
+    sha256: Option<ByteBuf>,
+    index: Nat
+) -> StreamingCallbackHttpResponse {
+    let key = key_contents[1];
+
+    let start_byte = key_contents[2].parse::<usize>().expect("Invalid RANGE encoding: start_byte");
+    let end_byte = key_contents[3].parse::<usize>().expect("Invalid RANGE encoding: end_byte");
+    let partition_size = key_contents[4].parse::<usize>().expect("Invalid RANGE encoding: partition_size");
+
+    let assets = s.assets.borrow();
+    let asset = assets
+        .get(key)
+        .expect("Invalid token on streaming: key not found.");
+    let enc = asset
+        .encodings
+        .get(content_encoding)
+        .expect("Invalid token on streaming: encoding not found.");
+
+    if let Some(expected_hash) = sha256 {
+        if expected_hash != enc.sha256 {
+            trap("sha256 mismatch");
+        }
+    }
+
+    let full_body = get_range_request_body(
+        enc,
+        start_byte as u64,
+        end_byte as u64 // TODO probably bad conversion
+    ).expect("Invalid range request body");
+
+    // MAX is good enough. This means a chunk would be above 64-bits, which is impossible...
+    let chunk_index = index.0.to_usize().unwrap_or(usize::MAX);
+
+    let partial_start_byte = chunk_index * partition_size;
+    let partial_end_byte = if partial_start_byte + partition_size > full_body.len() { full_body.len() - 1 } else { partial_start_byte + partition_size - 1 };
+
+    let partial_body = &full_body[partial_start_byte..=partial_end_byte];
+
+    let token = if partial_start_byte + partition_size <= full_body.len() { Some(create_partial_content_token(
+        &content_encoding,
+        enc,
+        key,
+        chunk_index,
+        start_byte as u64,
+        end_byte as u64
+    )) } else { None };
+
+    StreamingCallbackHttpResponse {
+        body: RcBytes(std::rc::Rc::new(ByteBuf::from(partial_body))),
+        token
+    }
+}
+
+// TODO is u64 the appropriate unit to use?
+#[derive(Debug)]
+struct RangeRequestInfo {
+    ranges: Vec<Range>,
+    if_range: Option<u64>
+}
+
+#[derive(Debug)]
+struct Range {
+    start_byte: Option<u64>,
+    end_byte: Option<u64>
+}
+
+fn get_range_request_info(req: &HttpRequest) -> Result<Option<RangeRequestInfo>, HttpResponse> {
+    let range_header_option = req.headers.iter().find(|header| {
+        header.0.to_lowercase() == "range"
+    });
+
+    if let Some(range_header) = range_header_option {
+        if req.method.to_lowercase() == "post" {
+            return Ok(None);
+        }
+
+        let ranges_result = get_ranges(&range_header.1);
+
+        match ranges_result {
+            Ok(ranges) => Ok(Some(RangeRequestInfo {
+                ranges,
+                if_range: None // TODO implement if_range
+            })),
+            Err(http_416_response) => Err(http_416_response)
+        }
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn get_ranges(range_header_value: &str) -> Result<Vec<Range>, HttpResponse> {
+    let range_strings = range_header_value.split(",");
+
+    range_strings
+        .map(|range_string| {
+            let range_string_without_prefix = range_string.replace("bytes=", "");
+
+            let bytes_string = range_string_without_prefix.split("-").collect::<Vec<&str>>();
+
+            let start_byte_string_option = bytes_string.get(0);
+            let end_byte_string_option = bytes_string.get(1);
+
+            match (start_byte_string_option, end_byte_string_option) {
+                (Some(start_byte_string), Some(end_byte_string)) => {
+                    let start_byte_result = get_range_start_byte(start_byte_string);
+                    let end_byte_result = get_range_end_byte(end_byte_string);
+
+                    match (start_byte_result, end_byte_result) {
+                        (Ok(start_byte), Ok(end_byte)) => {
+                            Ok(Range {
+                                start_byte,
+                                end_byte
+                            })
+                        },
+                        _ => Err(build_416("*"))
+                    }
+                },
+                _ => Err(build_416("*"))
+            }
+        })
+        .collect::<Result<Vec<Range>, HttpResponse>>()
+}
+
+fn get_range_start_byte(start_byte_string: &str) -> Result<Option<u64>, ()> {
+    if start_byte_string == "" {
+        return Ok(None);
+    }
+    else {
+        let start_byte_result = start_byte_string.parse::<u64>();
+        
+        match start_byte_result {
+            Ok(start_byte) => Ok(Some(start_byte)),
+            Err(_) => Err(())
+        }
+    }
+}
+
+fn get_range_end_byte(end_byte_string: &str) -> Result<Option<u64>, ()> {
+    if end_byte_string == "" {
+        return Ok(None);
+    }
+    else {
+        let end_byte_result = end_byte_string.parse::<u64>();
+        
+        match end_byte_result {
+            Ok(end_byte) => Ok(Some(end_byte)),
+            Err(_) => Err(())
+        }
+    }
 }
 
 fn do_create_asset(arg: CreateAssetArguments) {
@@ -783,9 +1398,21 @@ fn do_set_asset_content(arg: SetAssetContentArguments) {
         let mut chunks = s.chunks.borrow_mut();
 
         let mut content_chunks = vec![];
+        let mut previous_byte = 0;
+
+        // TODO I am assuming the chunks are stored in order
         for chunk_id in arg.chunk_ids.iter() {
             let chunk = chunks.remove(chunk_id).expect("chunk not found");
-            content_chunks.push(chunk.content);
+
+            let content_length = chunk.content.len() as u64;
+
+            content_chunks.push(ContentChunk {
+                content: chunk.content,
+                start_byte: previous_byte,
+                end_byte: previous_byte + content_length - 1
+            });
+
+            previous_byte = previous_byte + content_length;
         }
 
         let sha256: [u8; 32] = match arg.sha256 {
@@ -796,13 +1423,13 @@ fn do_set_asset_content(arg: SetAssetContentArguments) {
             None => {
                 let mut hasher = sha2::Sha256::new();
                 for chunk in content_chunks.iter() {
-                    hasher.update(chunk);
+                    hasher.update(&chunk.content);
                 }
                 hasher.finalize().into()
             }
         };
 
-        let total_length: usize = content_chunks.iter().map(|c| c.len()).sum();
+        let total_length: usize = content_chunks.iter().map(|c| c.content.len()).sum();
         let enc = AssetEncoding {
             modified: now,
             content_chunks,
