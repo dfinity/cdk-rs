@@ -3,7 +3,6 @@ use quote::quote;
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::fmt::Formatter;
-use std::sync::atomic::{AtomicBool, Ordering};
 use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
@@ -215,71 +214,26 @@ pub(crate) fn ic_update(attr: TokenStream, item: TokenStream) -> Result<TokenStr
 #[derive(Default, Deserialize)]
 struct InitAttributes {}
 
-static IS_INIT: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
-    if IS_INIT.swap(true, Ordering::SeqCst) {
-        return Err(Error::new(
-            Span::call_site(),
-            "[init] function already declared.",
-        ));
-    }
-
     dfn_macro(MethodType::Init, attr, item)
 }
 
-static HAS_PRE_UPGRADE: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn ic_pre_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
-    if HAS_PRE_UPGRADE.swap(true, Ordering::SeqCst) {
-        return Err(Error::new(
-            Span::call_site(),
-            "[pre_upgrade] function already declared.",
-        ));
-    }
-
     dfn_macro(MethodType::PreUpgrade, attr, item)
 }
 
-static HAS_POST_UPGRADE: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn ic_post_upgrade(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
-    if HAS_POST_UPGRADE.swap(true, Ordering::SeqCst) {
-        return Err(Error::new(
-            Span::call_site(),
-            "[post_upgrade] function already declared.",
-        ));
-    }
-
     dfn_macro(MethodType::PostUpgrade, attr, item)
 }
 
-static HAS_HEARTBEAT: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn ic_heartbeat(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
-    if HAS_HEARTBEAT.swap(true, Ordering::SeqCst) {
-        return Err(Error::new(
-            Span::call_site(),
-            "[heartbeat] function already declared.",
-        ));
-    }
-
     dfn_macro(MethodType::Heartbeat, attr, item)
 }
-
-static HAS_INSPECT_MESSAGE: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn ic_inspect_message(
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Error> {
-    if HAS_INSPECT_MESSAGE.swap(true, Ordering::SeqCst) {
-        return Err(Error::new(
-            Span::call_site(),
-            "[inspect_message] function already declared.",
-        ));
-    }
-
     dfn_macro(MethodType::InspectMessage, attr, item)
 }
 
