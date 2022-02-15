@@ -1,33 +1,29 @@
-use ic_cdk_macros::*;
 use ic_cdk::export::{candid, Principal};
+use ic_cdk_macros::*;
+use std::cell::{Cell, RefCell};
 
-static mut COUNTER: Option<candid::Nat> = None;
-static mut OWNER: Option<Principal> = None;
+thread_local! {
+    static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0));
+    static OWNER: Cell<Principal> = Cell::new(Principal::from_slice(&[]));
+}
 
 #[init]
 fn init() {
-    unsafe {
-        OWNER = Some(ic_cdk::api::caller());
-        COUNTER = Some(candid::Nat::from(0));
-    }
+    OWNER.with(|owner| owner.set(ic_cdk::api::caller()));
 }
 
 #[update]
 fn inc() -> () {
-    unsafe {
-        ic_cdk::println!("{:?}", OWNER);
-        COUNTER.as_mut().unwrap().0 += 1u64;
-    }
+    ic_cdk::println!("{:?}", OWNER.with(|owner| owner.get()));
+    COUNTER.with(|counter| *counter.borrow_mut() += 1u64);
 }
 
 #[query]
 fn read() -> candid::Nat {
-    unsafe { COUNTER.as_mut().unwrap().clone() }
+    COUNTER.with(|counter| counter.borrow().clone())
 }
 
 #[update]
 fn write(input: candid::Nat) -> () {
-    unsafe {
-        COUNTER.as_mut().unwrap().0 = input.0;
-    }
+    COUNTER.with(|counter| *counter.borrow_mut() += input);
 }
