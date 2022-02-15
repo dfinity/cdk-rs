@@ -204,6 +204,18 @@ struct HttpRequest {
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
+struct ChunkInfo {
+    chunk_id: ChunkId,
+    total_length: usize,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+struct ChunksInfoReponse {
+    total_length: usize,
+    chunks: Vec<ChunkInfo>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
 struct HttpResponse {
     status_code: u16,
     headers: Vec<HeaderField>,
@@ -399,6 +411,35 @@ fn get(arg: GetArg) -> EncodedAsset {
             }
         }
         trap("no such encoding");
+    })
+}
+
+#[query]
+fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
+    STATE.with(|s| {
+        let assets = s.assets.borrow();
+        let asset = assets.get(&arg.key).unwrap_or_else(|| {
+            trap("asset not found");
+        });
+
+        let mut result = ChunksInfoReponse {
+            total_length: 0,
+            chunks: vec![],
+        };
+
+
+        for enc in arg.accept_encodings.iter() {
+            if let Some(asset_enc) = asset.encodings.get(enc) {
+                for (i, chunk) in asset_enc.content_chunks.iter().enumerate() {
+                    result.total_length = result.total_length + asset_enc.total_length;
+                    result.chunks.push(ChunkInfo {
+                        chunk_id: Nat::from(i),
+                        total_length: chunk.len(),
+                    });
+                }
+            }
+        }
+        result
     })
 }
 
