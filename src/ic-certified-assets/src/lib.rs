@@ -206,12 +206,12 @@ struct HttpRequest {
 #[derive(Clone, Debug, CandidType, Deserialize)]
 struct ChunkInfo {
     chunk_id: ChunkId,
-    total_length: Nat,
+    chunk_length: u64,
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
 struct ChunksInfoReponse {
-    total_length: Nat,
+    total_length: u64,
     chunks: Vec<ChunkInfo>,
 }
 
@@ -423,7 +423,7 @@ fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
         });
 
         let mut result = ChunksInfoReponse {
-            total_length: Nat::from(0),
+            total_length: 0,
             chunks: vec![],
         };
 
@@ -431,10 +431,10 @@ fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
         for enc in arg.accept_encodings.iter() {
             if let Some(asset_enc) = asset.encodings.get(enc) {
                 for (i, chunk) in asset_enc.content_chunks.iter().enumerate() {
-                    result.total_length = result.total_length + asset_enc.total_length;
+                    result.total_length = result.total_length + (asset_enc.total_length as u64);
                     result.chunks.push(ChunkInfo {
                         chunk_id: Nat::from(i),
-                        total_length: Nat::from(chunk.len()),
+                        chunk_length: chunk.len() as u64,
                     });
                 }
             }
