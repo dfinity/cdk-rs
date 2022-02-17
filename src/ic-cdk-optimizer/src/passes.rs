@@ -6,8 +6,8 @@ mod binaryen;
 pub type PassResult = Result<Vec<u8>, Box<dyn std::error::Error>>;
 
 pub trait OptimizationPass {
-    fn args(&self) -> clap::App {
-        clap::App::new(&self.short_name())
+    fn args(&self) -> clap::Command {
+        clap::Command::new(&self.short_name())
     }
     fn short_name(&self) -> String;
     fn description(&self) -> String;

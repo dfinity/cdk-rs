@@ -1,17 +1,15 @@
 use crate::passes::{OptimizationPass, PassResult};
 use binaryen::{CodegenConfig, Module};
-use clap::{ArgMatches, Clap, IntoApp};
+use clap::{ArgMatches, IntoApp, Parser};
 
-pub struct BinaryenPass {}
+pub struct BinaryenPass;
 
-impl BinaryenPass {}
-
-#[derive(Clap, Debug)]
-pub struct BinaryenPassArgs {}
+#[derive(Parser, Debug)]
+pub struct BinaryenPassArgs;
 
 impl OptimizationPass for BinaryenPass {
-    fn args(&self) -> clap::App {
-        BinaryenPassArgs::into_app()
+    fn args(&self) -> clap::Command {
+        BinaryenPassArgs::command()
     }
 
     fn short_name(&self) -> String {

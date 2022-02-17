@@ -1,11 +1,11 @@
-use clap::{Clap, FromArgMatches, IntoApp};
+use clap::{CommandFactory, FromArgMatches, Parser};
 use humansize::{file_size_opts, FileSize};
 use std::io::Read;
 use std::path::PathBuf;
 
 mod passes;
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(version)]
 struct CommandLineOpts {
     /// Input file to optimize. By default will use STDIN.
@@ -18,7 +18,7 @@ struct CommandLineOpts {
 
 fn main() {
     let passes = passes::create();
-    let mut app = <CommandLineOpts as IntoApp>::into_app();
+    let mut app = CommandLineOpts::command();
 
     for pass in &passes {
         let args = pass.args();
@@ -28,7 +28,8 @@ fn main() {
     }
 
     let matches = app.get_matches();
-    let opts = <CommandLineOpts as FromArgMatches>::from_arg_matches(&matches);
+    let opts = <CommandLineOpts as FromArgMatches>::from_arg_matches(&matches)
+        .expect("Error processing arguments");
 
     let content = if let Some(i) = opts.input {
         std::fs::read(&i).expect("Could not read the file.")
