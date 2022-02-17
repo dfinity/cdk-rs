@@ -1,4 +1,4 @@
-use clap::{CommandFactory, FromArgMatches, Parser};
+use clap::Parser;
 use humansize::{file_size_opts, FileSize};
 use std::io::Read;
 use std::path::PathBuf;
@@ -18,19 +18,7 @@ struct CommandLineOpts {
 
 fn main() {
     let passes = passes::create();
-    let mut app = CommandLineOpts::command();
-
-    for pass in &passes {
-        let args = pass.args();
-        for arg in args.get_arguments() {
-            app = app.arg(arg);
-        }
-    }
-
-    let matches = app.get_matches();
-    let opts = <CommandLineOpts as FromArgMatches>::from_arg_matches(&matches)
-        .expect("Error processing arguments");
-
+    let opts = CommandLineOpts::parse();
     let content = if let Some(i) = opts.input {
         std::fs::read(&i).expect("Could not read the file.")
     } else {
@@ -52,7 +40,7 @@ fn main() {
 
     for pass in passes {
         eprintln!("{}...", pass.description());
-        let new_wasm = pass.opt(&wasm_back, &matches).expect("Pass failed:");
+        let new_wasm = pass.opt(&wasm_back).expect("Pass failed:");
         if new_wasm.len() < wasm_back.len() {
             wasm_back = new_wasm;
             eprintln!(
