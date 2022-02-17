@@ -427,11 +427,10 @@ fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
             chunks: vec![],
         };
 
-
         for enc in arg.accept_encodings.iter() {
             if let Some(asset_enc) = asset.encodings.get(enc) {
                 for (i, chunk) in asset_enc.content_chunks.iter().enumerate() {
-                    result.total_length = result.total_length + (asset_enc.total_length as u64);
+                    result.total_length += asset_enc.total_length as u64;
                     result.chunks.push(ChunkInfo {
                         chunk_id: Nat::from(i),
                         chunk_length: chunk.len() as u64,
