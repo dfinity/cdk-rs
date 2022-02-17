@@ -2,7 +2,7 @@
 //!
 //! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-stable-memory)
 //! for a in-depth explanation of stable memory.
-use std::io;
+use std::{error, fmt, io};
 
 /// Gets current size of the stable memory.
 pub fn stable_size() -> u32 {
@@ -15,7 +15,24 @@ pub fn stable64_size() -> u64 {
 }
 
 /// A possible error value when dealing with stable memory.
-pub struct StableMemoryError();
+#[derive(Debug)]
+pub enum StableMemoryError {
+    /// No more stable memory could be allocated.
+    OutOfMemory,
+    /// Attempted to read more stable memory than had been allocated.
+    OutOfBounds,
+}
+
+impl fmt::Display for StableMemoryError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::OutOfMemory => f.write_str("Out of memory"),
+            Self::OutOfBounds => f.write_str("Read exceeds allocated memory"),
+        }
+    }
+}
+
+impl error::Error for StableMemoryError {}
 
 /// Attempts to grow the stable memory by `new_pages` (added pages).
 ///
@@ -26,7 +43,7 @@ pub struct StableMemoryError();
 pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
     unsafe {
         match super::ic0::stable_grow(new_pages as i32) {
-            -1 => Err(StableMemoryError()),
+            -1 => Err(StableMemoryError::OutOfMemory),
             x => Ok(x as u32),
         }
     }
@@ -36,7 +53,7 @@ pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
 pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
     unsafe {
         match super::ic0::stable64_grow(new_pages as i64) {
-            -1 => Err(StableMemoryError()),
+            -1 => Err(StableMemoryError::OutOfMemory),
             x => Ok(x as u64),
         }
     }
@@ -134,7 +151,7 @@ impl StableWriter {
 impl io::Write for StableWriter {
     fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
         self.write(buf)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Out Of Memory"))
+            .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
     }
 
     fn flush(&mut self) -> Result<(), io::Error> {
@@ -147,28 +164,42 @@ impl io::Write for StableWriter {
 ///
 /// Keeps an offset and reads off stable memory consecutively.
 pub struct StableReader {
-    /// The offset of the next write.
+    /// The offset of the next read.
     offset: usize,
+    /// The capacity, in pages.
+    capacity: u32,
 }
 
 impl Default for StableReader {
     fn default() -> Self {
-        Self { offset: 0 }
+        Self {
+            offset: 0,
+            capacity: stable_size(),
+        }
     }
 }
 
 impl StableReader {
     /// Reads data from the stable memory location specified by an offset.
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, StableMemoryError> {
-        stable_read(self.offset as u32, buf);
-        self.offset += buf.len();
-        Ok(buf.len())
+        let cap = (self.capacity as usize) << 16;
+        let read_buf = if buf.len() + self.offset > cap {
+            if self.offset < cap {
+                &mut buf[..cap - self.offset]
+            } else {
+                return Err(StableMemoryError::OutOfBounds);
+            }
+        } else {
+            buf
+        };
+        stable_read(self.offset as u32, read_buf);
+        self.offset += read_buf.len();
+        Ok(read_buf.len())
     }
 }
 
 impl io::Read for StableReader {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.read(buf)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Unexpected error."))
+        self.read(buf).or(Ok(0)) // Read defines EOF to be success
     }
 }
