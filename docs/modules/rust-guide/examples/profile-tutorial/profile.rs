@@ -1,4 +1,10 @@
-use ic_cdk::export::{candid::{CandidType, Deserialize}, Principal};
+use ic_cdk::{
+    export::{
+        candid::{CandidType, Deserialize},
+        Principal,
+    },
+    call::{self, Empty},
+};
 use ic_cdk::storage;
 use ic_cdk_macros::*;
 use std::collections::BTreeMap;
@@ -45,22 +51,26 @@ fn update(profile: Profile) {
     profile_store.insert(principal_id, profile);
 }
 
-#[query]
-fn search(text: String) -> Option<&'static Profile> {
+#[query(reply = true)]
+fn search(text: String) -> Empty<Option<Profile>> {
     let text = text.to_lowercase();
     let profile_store = storage::get::<ProfileStore>();
 
+    let mut profile = None;
     for (_, p) in profile_store.iter() {
         if p.name.to_lowercase().contains(&text) || p.description.to_lowercase().contains(&text) {
-            return Some(p);
+            profile = Some(p);
+            break;
         }
 
         for x in p.keywords.iter() {
             if x.to_lowercase() == text {
-                return Some(p);
+                profile = Some(p);
+                break;
             }
         }
     }
 
-    None
+    call::reply(profile);
+    Empty::empty()
 }

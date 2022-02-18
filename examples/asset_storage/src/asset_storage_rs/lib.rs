@@ -1,4 +1,4 @@
-use ic_cdk::{storage, export::Principal};
+use ic_cdk::{storage, export::Principal, api::call::{self, Empty}};
 use ic_cdk_macros::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -27,14 +27,15 @@ fn store(path: String, contents: Vec<u8>) {
     store.insert(path, contents);
 }
 
-#[query]
-fn retrieve(path: String) -> &'static Vec<u8> {
+#[query(reply = true)]
+fn retrieve(path: String) -> Empty<Vec<u8> {
     let store = storage::get::<Store>();
 
     match store.get(&path) {
-        Some(content) => content,
+        Some(content) => call::reply(content),
         None => panic!("Path {} not found.", path),
     }
+    Empty::empty()
 }
 
 #[update(guard = "is_user")]
