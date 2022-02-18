@@ -1,6 +1,6 @@
 use ic_cdk::storage;
 use ic_cdk::{
-    call::{self, Empty},
+    api::call::{self, Empty},
     export::{
         candid::{CandidType, Deserialize},
         Principal,
@@ -57,20 +57,20 @@ fn search(text: String) -> Empty<Option<Profile>> {
     let profile_store = storage::get::<ProfileStore>();
 
     let mut profile = None;
-    for (_, p) in profile_store.iter() {
+    'outer: for (_, p) in profile_store.iter() {
         if p.name.to_lowercase().contains(&text) || p.description.to_lowercase().contains(&text) {
             profile = Some(p);
-            break;
+            break 'outer;
         }
 
         for x in p.keywords.iter() {
             if x.to_lowercase() == text {
                 profile = Some(p);
-                break;
+                break 'outer;
             }
         }
     }
 
-    call::reply(profile);
+    call::reply((profile,));
     Empty::empty()
 }

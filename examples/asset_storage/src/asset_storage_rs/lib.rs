@@ -36,7 +36,7 @@ fn retrieve(path: String) -> Empty<Vec<u8>> {
     let store = storage::get::<Store>();
 
     match store.get(&path) {
-        Some(content) => call::reply(content),
+        Some(content) => call::reply((content,)),
         None => panic!("Path {} not found.", path),
     }
     Empty::empty()

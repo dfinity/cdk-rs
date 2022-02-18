@@ -25,7 +25,7 @@ fn inc() -> () {
 
 #[query(reply = true)]
 fn read() -> Empty<candid::Nat> {
-    unsafe { call::reply(&COUNTER.as_mut().unwrap()) };
+    unsafe { call::reply((COUNTER.as_mut().unwrap(),)) };
     Empty::empty()
 }
 
