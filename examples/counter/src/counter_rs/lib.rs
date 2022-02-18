@@ -1,5 +1,8 @@
+use ic_cdk::{
+    api::call::{self, Empty},
+    export::{candid, Principal},
+};
 use ic_cdk_macros::*;
-use ic_cdk::{export::{candid, Principal}, api::call::{self, Empty}};
 
 static mut COUNTER: Option<candid::Nat> = None;
 static mut OWNER: Option<Principal> = None;

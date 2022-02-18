@@ -1,11 +1,11 @@
+use ic_cdk::storage;
 use ic_cdk::{
+    call::{self, Empty},
     export::{
         candid::{CandidType, Deserialize},
         Principal,
     },
-    call::{self, Empty},
 };
-use ic_cdk::storage;
 use ic_cdk_macros::*;
 use std::collections::BTreeMap;
 
