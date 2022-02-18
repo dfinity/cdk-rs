@@ -91,14 +91,14 @@ where
 /// ```
 ///
 /// If you would rather call the `reply` function than return a value, you
-/// will need to set `reply` to `false` so that the canister does not trap.
+/// will need to set `reply` to `true` so that the canister does not trap.
 ///
 /// ```rust
 /// # fn calculate_result() {}
 /// # type MyResult = ();
 /// # use ic_cdk_macros::query;
 /// use ic_cdk::api::call::{self, Empty};
-/// #[query(reply = false)]
+/// #[query(reply = true)]
 /// fn query_function() -> Empty<MyResult> {
 ///     let result = calculate_result();
 ///     call::reply(result); // instead of `return result;`
@@ -138,14 +138,14 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// If you would rather call the `reply` function than return a value, you
-/// will need to set `reply` to `false` so that the canister does not trap.
+/// will need to set `reply` to `true` so that the canister does not trap.
 ///
 /// ```rust
 /// # fn calculate_result() {}
 /// # type MyResult = ();
 /// # use ic_cdk_macros::update;
 /// use ic_cdk::api::call::{self, Empty};
-/// #[update(reply = false)]
+/// #[update(reply = true)]
 /// fn update_function() -> Empty<MyResult> {
 ///     let result = calculate_result();
 ///     call::reply(result); // instead of `return result;`
