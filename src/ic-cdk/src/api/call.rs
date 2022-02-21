@@ -398,21 +398,41 @@ pub fn method_name() -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
-/// Pretends to have the Candid type `T`, but unconditionally errors when serialized.
-/// Useful primarily as metadata when using `#[query(reply = false)]`,
+/// Pretends to have the Candid type `T`, but unconditionally errors
+/// when serialized.
+/// 
+/// Usable, but not required, as metadata when using `#[query(reply = false)]`,
 /// so an accurate Candid file can still be generated.
 #[derive(Debug, Copy, Clone, Default)]
-pub struct Empty<T: ?Sized>(PhantomData<T>);
+pub struct ManualReply<T: ?Sized>(PhantomData<T>);
 
-impl<T: ?Sized> Empty<T> {
-    /// Constructs a new `Empty`.
+impl<T: ?Sized> ManualReply<T> {
+    /// Constructs a new `ManualReply`.
     #[allow(clippy::self_named_constructors)]
     pub const fn empty() -> Self {
         Self(PhantomData)
     }
+    /// Replies with the given value and returns a new `ManualReply`,
+    /// for a useful reply-then-return shortcut.
+    pub fn all<U>(value: U) -> Self
+    where
+        U: ArgumentEncoder,
+    {
+        reply(value);
+        Self::empty()
+    }
+    /// Replies with a one-element tuple around the given value and returns
+    /// a new `ManualReply`, for a useful reply-then-return shortcut.
+    pub fn one<U>(value: U) -> Self
+    where
+        U: CandidType,
+    {
+        reply((value,));
+        Self::empty()
+    }
 }
 
-impl<T> CandidType for Empty<T>
+impl<T> CandidType for ManualReply<T>
 where
     T: CandidType + ?Sized,
 {

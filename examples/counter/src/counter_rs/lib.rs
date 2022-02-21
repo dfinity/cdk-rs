@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::call::{self, Empty},
+    api::call::{self, ManualReply},
     export::{candid, Principal},
 };
 use ic_cdk_macros::*;
@@ -24,9 +24,8 @@ fn inc() -> () {
 }
 
 #[query(reply = true)]
-fn read() -> Empty<candid::Nat> {
-    unsafe { call::reply((COUNTER.as_mut().unwrap(),)) };
-    Empty::empty()
+fn read() -> ManualReply<candid::Nat> {
+    unsafe { ManualReply::one(COUNTER.as_mut().unwrap()) }
 }
 
 #[update]

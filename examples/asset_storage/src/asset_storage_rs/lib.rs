@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::call::{self, Empty},
+    api::call::{self, ManualReply},
     export::Principal,
     storage,
 };
@@ -32,14 +32,13 @@ fn store(path: String, contents: Vec<u8>) {
 }
 
 #[query(reply = true)]
-fn retrieve(path: String) -> Empty<Vec<u8>> {
+fn retrieve(path: String) -> ManualReply<Vec<u8>> {
     let store = storage::get::<Store>();
 
     match store.get(&path) {
-        Some(content) => call::reply((content,)),
+        Some(content) => ManualReply::one(content),
         None => panic!("Path {} not found.", path),
     }
-    Empty::empty()
 }
 
 #[update(guard = "is_user")]
