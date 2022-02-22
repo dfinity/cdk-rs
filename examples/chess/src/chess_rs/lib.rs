@@ -40,8 +40,8 @@ fn new(name: String, white: bool) -> () {
 #[update(name = "move")]
 fn uci_move(name: String, m: String) -> bool {
     let should_move = STORE.with(|game_store| {
+        let mut game_store = game_store.borrow_mut();
         let game = game_store
-            .borrow_mut()
             .get_mut(&name)
             .unwrap_or_else(|| panic!("Game {} does not exist.", name));
 
@@ -57,8 +57,8 @@ fn uci_move(name: String, m: String) -> bool {
 #[update(name = "aiMove")]
 fn ai_move(name: String) -> () {
     STORE.with(|game_store| {
+        let mut game_store = game_store.borrow_mut();
         let game = game_store
-            .borrow_mut()
             .get_mut(&name)
             .unwrap_or_else(|| panic!("Game {} does not exist.", name));
 
