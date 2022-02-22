@@ -1,6 +1,9 @@
-use ic_cdk::export::{
-    candid::{CandidType, Deserialize},
-    Principal,
+use ic_cdk::{
+    api::call::{self, ManualReply},
+    export::{
+        candid::{CandidType, Deserialize},
+        Principal,
+    },
 };
 use ic_cdk_macros::*;
 use std::cell::RefCell;
@@ -59,22 +62,22 @@ fn update(profile: Profile) {
     });
 }
 
-#[query]
-fn search(text: String) -> Option<&'static Profile> {
+#[query(manual_reply = true)]
+fn search(text: String) -> ManualReply<Option<Profile>> {
     let text = text.to_lowercase();
     PROFILE_STORE.with(|profile_store| {
         for (_, p) in profile_store.borrow().iter() {
             if p.name.to_lowercase().contains(&text) || p.description.to_lowercase().contains(&text)
             {
-                return Some(p);
+                return ManualReply::one(Some(p));
             }
 
             for x in p.keywords.iter() {
                 if x.to_lowercase() == text {
-                    return Some(p);
+                    return ManualReply::one(Some(p));
                 }
             }
         }
-        None
+        ManualReply::one(None::<Profile>)
     })
 }

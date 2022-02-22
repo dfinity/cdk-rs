@@ -1,6 +1,8 @@
-use ic_cdk::export::{candid, Principal};
+use ic_cdk::{
+    api::call::{self, ManualReply},
+    export::{candid, Principal},
+};
 use ic_cdk_macros::*;
-use std::cell::{Cell, RefCell};
 
 thread_local! {
     static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0));
@@ -18,9 +20,9 @@ fn inc() -> () {
     COUNTER.with(|counter| *counter.borrow_mut() += 1u64);
 }
 
-#[query]
-fn read() -> candid::Nat {
-    COUNTER.with(|counter| counter.borrow().clone())
+#[query(manual_reply = true)]
+fn read() -> ManualReply<candid::Nat> {
+    COUNTER.with(|counter| ManualReply::one(counter))
 }
 
 #[update]
