@@ -3,6 +3,7 @@ use ic_cdk::{
     export::{candid, Principal},
 };
 use ic_cdk_macros::*;
+use std::cell::{Cell, RefCell};
 
 thread_local! {
     static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0));
