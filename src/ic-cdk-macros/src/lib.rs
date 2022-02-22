@@ -105,7 +105,7 @@ where
 ///     ManualReply::one(result)
 /// }
 /// ```
-/// 
+///
 /// [`reply`]: ic_cdk::api::call::reply
 #[proc_macro_attribute]
 pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {

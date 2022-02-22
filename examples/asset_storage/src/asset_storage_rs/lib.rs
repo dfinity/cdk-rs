@@ -31,7 +31,7 @@ fn store(path: String, contents: Vec<u8>) {
     store.insert(path, contents);
 }
 
-#[query(reply = true)]
+#[query(manual_reply = true)]
 fn retrieve(path: String) -> ManualReply<Vec<u8>> {
     let store = storage::get::<Store>();
 

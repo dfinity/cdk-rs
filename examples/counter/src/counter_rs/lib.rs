@@ -23,7 +23,7 @@ fn inc() -> () {
     }
 }
 
-#[query(reply = true)]
+#[query(manual_reply = true)]
 fn read() -> ManualReply<candid::Nat> {
     unsafe { ManualReply::one(COUNTER.as_mut().unwrap()) }
 }

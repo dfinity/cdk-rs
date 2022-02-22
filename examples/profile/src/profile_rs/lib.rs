@@ -51,7 +51,7 @@ fn update(profile: Profile) {
     profile_store.insert(principal_id, profile);
 }
 
-#[query(reply = true)]
+#[query(manual_reply = true)]
 fn search(text: String) -> ManualReply<Option<Profile>> {
     let text = text.to_lowercase();
     let profile_store = storage::get::<ProfileStore>();

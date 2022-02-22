@@ -400,7 +400,7 @@ pub fn method_name() -> String {
 
 /// Pretends to have the Candid type `T`, but unconditionally errors
 /// when serialized.
-/// 
+///
 /// Usable, but not required, as metadata when using `#[query(reply = false)]`,
 /// so an accurate Candid file can still be generated.
 #[derive(Debug, Copy, Clone, Default)]
