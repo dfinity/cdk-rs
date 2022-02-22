@@ -1,4 +1,8 @@
-use ic_cdk::{storage, export::Principal};
+use ic_cdk::{
+    api::call::{self, ManualReply},
+    export::Principal,
+    storage,
+};
 use ic_cdk_macros::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -27,12 +31,12 @@ fn store(path: String, contents: Vec<u8>) {
     store.insert(path, contents);
 }
 
-#[query]
-fn retrieve(path: String) -> &'static Vec<u8> {
+#[query(manual_reply = true)]
+fn retrieve(path: String) -> ManualReply<Vec<u8>> {
     let store = storage::get::<Store>();
 
     match store.get(&path) {
-        Some(content) => content,
+        Some(content) => ManualReply::one(content),
         None => panic!("Path {} not found.", path),
     }
 }

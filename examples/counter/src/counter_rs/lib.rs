@@ -1,5 +1,8 @@
+use ic_cdk::{
+    api::call::{self, ManualReply},
+    export::{candid, Principal},
+};
 use ic_cdk_macros::*;
-use ic_cdk::export::{candid, Principal};
 
 static mut COUNTER: Option<candid::Nat> = None;
 static mut OWNER: Option<Principal> = None;
@@ -20,9 +23,9 @@ fn inc() -> () {
     }
 }
 
-#[query]
-fn read() -> candid::Nat {
-    unsafe { COUNTER.as_mut().unwrap().clone() }
+#[query(manual_reply = true)]
+fn read() -> ManualReply<candid::Nat> {
+    unsafe { ManualReply::one(COUNTER.as_mut().unwrap()) }
 }
 
 #[update]

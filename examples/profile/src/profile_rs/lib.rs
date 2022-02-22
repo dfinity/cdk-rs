@@ -1,8 +1,11 @@
-use ic_cdk::export::{
-    candid::{CandidType, Deserialize},
-    Principal,
-};
 use ic_cdk::storage;
+use ic_cdk::{
+    api::call::{self, ManualReply},
+    export::{
+        candid::{CandidType, Deserialize},
+        Principal,
+    },
+};
 use ic_cdk_macros::*;
 use std::collections::BTreeMap;
 
@@ -48,22 +51,22 @@ fn update(profile: Profile) {
     profile_store.insert(principal_id, profile);
 }
 
-#[query]
-fn search(text: String) -> Option<&'static Profile> {
+#[query(manual_reply = true)]
+fn search(text: String) -> ManualReply<Option<Profile>> {
     let text = text.to_lowercase();
     let profile_store = storage::get::<ProfileStore>();
 
     for (_, p) in profile_store.iter() {
         if p.name.to_lowercase().contains(&text) || p.description.to_lowercase().contains(&text) {
-            return Some(p);
+            return ManualReply::one(Some(p));
         }
 
         for x in p.keywords.iter() {
             if x.to_lowercase() == text {
-                return Some(p);
+                return ManualReply::one(Some(p));
             }
         }
     }
 
-    None
+    ManualReply::one(None::<Profile>)
 }

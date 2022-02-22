@@ -2,8 +2,10 @@
 use crate::api::{ic0, trap};
 use crate::export::Principal;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args};
+use candid::{decode_args, encode_args, write_args, CandidType};
+use serde::ser::Error;
 use std::future::Future;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 
@@ -394,4 +396,54 @@ pub fn method_name() -> String {
         ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
     String::from_utf8_lossy(&bytes).to_string()
+}
+
+/// Pretends to have the Candid type `T`, but unconditionally errors
+/// when serialized.
+///
+/// Usable, but not required, as metadata when using `#[query(reply = false)]`,
+/// so an accurate Candid file can still be generated.
+#[derive(Debug, Copy, Clone, Default)]
+pub struct ManualReply<T: ?Sized>(PhantomData<T>);
+
+impl<T: ?Sized> ManualReply<T> {
+    /// Constructs a new `ManualReply`.
+    #[allow(clippy::self_named_constructors)]
+    pub const fn empty() -> Self {
+        Self(PhantomData)
+    }
+    /// Replies with the given value and returns a new `ManualReply`,
+    /// for a useful reply-then-return shortcut.
+    pub fn all<U>(value: U) -> Self
+    where
+        U: ArgumentEncoder,
+    {
+        reply(value);
+        Self::empty()
+    }
+    /// Replies with a one-element tuple around the given value and returns
+    /// a new `ManualReply`, for a useful reply-then-return shortcut.
+    pub fn one<U>(value: U) -> Self
+    where
+        U: CandidType,
+    {
+        reply((value,));
+        Self::empty()
+    }
+}
+
+impl<T> CandidType for ManualReply<T>
+where
+    T: CandidType + ?Sized,
+{
+    fn _ty() -> candid::types::Type {
+        T::_ty()
+    }
+    /// Unconditionally errors.
+    fn idl_serialize<S>(&self, _: S) -> Result<(), S::Error>
+    where
+        S: candid::types::Serializer,
+    {
+        Err(S::Error::custom("`Empty` cannot be serialized"))
+    }
 }
