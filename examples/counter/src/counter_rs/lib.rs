@@ -28,5 +28,5 @@ fn read() -> ManualReply<candid::Nat> {
 
 #[update]
 fn write(input: candid::Nat) -> () {
-    COUNTER.with(|counter| *counter.borrow_mut() += input);
+    COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
