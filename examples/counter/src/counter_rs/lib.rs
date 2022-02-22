@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::call::{self, ManualReply},
+    api::call::ManualReply,
     export::{candid, Principal},
 };
 use ic_cdk_macros::*;

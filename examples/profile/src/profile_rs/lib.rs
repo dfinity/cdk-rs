@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::call::{self, ManualReply},
+    api::call::ManualReply,
     export::{
         candid::{CandidType, Deserialize},
         Principal,
@@ -36,15 +36,20 @@ fn get_self() -> Profile {
     })
 }
 
-#[query]
-fn get(name: String) -> Profile {
+#[query(manual_reply = true)]
+fn get(name: String) -> ManualReply<Profile> {
     ID_STORE.with(|id_store| {
         PROFILE_STORE.with(|profile_store| {
-            id_store
+            let profile_store = profile_store.borrow();
+            if let Some(profile) = id_store
                 .borrow()
                 .get(&name)
-                .and_then(|id| profile_store.borrow().get(id).cloned())
-                .unwrap_or_else(|| Profile::default())
+                .and_then(|id| profile_store.get(id))
+            {
+                ManualReply::one(profile)
+            } else {
+                ManualReply::one(Profile::default())
+            }
         })
     })
 }

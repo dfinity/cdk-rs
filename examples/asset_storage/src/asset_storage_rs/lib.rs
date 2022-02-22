@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::call::{self, ManualReply},
+    api::call::ManualReply,
     export::Principal,
     storage,
 };
@@ -38,7 +38,7 @@ fn retrieve(path: String) -> ManualReply<Vec<u8>> {
     STORE.with(|store| match store.borrow().get(&path) {
         Some(content) => ManualReply::one(content),
         None => panic!("Path {} not found.", path),
-    });
+    })
 }
 
 #[update(guard = "is_user")]
