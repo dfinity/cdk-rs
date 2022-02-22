@@ -164,6 +164,12 @@ struct GetArg {
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
+struct GetChunksInfoArg {
+    key: Key,
+    content_encoding: String,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
 struct GetChunkArg {
     key: Key,
     content_encoding: String,
@@ -415,7 +421,7 @@ fn get(arg: GetArg) -> EncodedAsset {
 }
 
 #[query]
-fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
+fn get_chunks_info(arg: GetChunksInfoArg) -> ChunksInfoReponse {
     STATE.with(|s| {
         let assets = s.assets.borrow();
         let asset = assets.get(&arg.key).unwrap_or_else(|| {
@@ -427,15 +433,14 @@ fn get_chunks_info(arg: GetArg) -> ChunksInfoReponse {
             chunks: vec![],
         };
 
-        for enc in arg.accept_encodings.iter() {
-            if let Some(asset_enc) = asset.encodings.get(enc) {
-                for (i, chunk) in asset_enc.content_chunks.iter().enumerate() {
-                    result.total_length += asset_enc.total_length as u64;
-                    result.chunks.push(ChunkInfo {
-                        chunk_id: Nat::from(i),
-                        chunk_length: chunk.len() as u64,
-                    });
-                }
+        if let Some(asset_enc) = asset.encodings.get(&arg.content_encoding) {
+            for (i, chunk) in asset_enc.content_chunks.iter().enumerate() {
+                let chunk_length = chunk.len() as u64;
+                result.total_length += chunk_length;
+                result.chunks.push(ChunkInfo {
+                    chunk_id: Nat::from(i),
+                    chunk_length,
+                });
             }
         }
         result
