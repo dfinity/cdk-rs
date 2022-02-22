@@ -24,15 +24,15 @@ thread_local! {
     static ID_STORE: RefCell<IdStore> = RefCell::default();
 }
 
-#[query(name = "getSelf")]
-fn get_self() -> Profile {
+#[query(name = "getSelf", manual_reply = true)]
+fn get_self() -> ManualReply<Profile> {
     let id = ic_cdk::api::caller();
     PROFILE_STORE.with(|profile_store| {
-        profile_store
-            .borrow()
-            .get(&id)
-            .cloned()
-            .unwrap_or_else(|| Profile::default())
+        if let Some(profile) = profile_store.borrow().get(&id) {
+            ManualReply::one(profile)
+        } else {
+            ManualReply::one(Profile::default())
+        }
     })
 }
 
