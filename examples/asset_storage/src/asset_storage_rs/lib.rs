@@ -1,20 +1,27 @@
-use ic_cdk::{storage, export::Principal};
+use ic_cdk::{
+    api::call::ManualReply,
+    export::Principal,
+    storage,
+};
 use ic_cdk_macros::*;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
 type Users = BTreeSet<Principal>;
 type Store = BTreeMap<String, Vec<u8>>;
 
+thread_local! {
+    static USERS: RefCell<Users> = RefCell::default();
+    static STORE: RefCell<Store> = RefCell::default();
+}
+
 #[init]
 fn init() {
-    let users = storage::get_mut::<Users>();
-    users.insert(ic_cdk::api::caller());
+    USERS.with(|users| users.borrow_mut().insert(ic_cdk::api::caller()));
 }
 
 fn is_user() -> Result<(), String> {
-    let users = storage::get::<Users>();
-
-    if users.contains(&ic_cdk::api::caller()) {
+    if USERS.with(|users| users.borrow().contains(&ic_cdk::api::caller())) {
         Ok(())
     } else {
         Err("Store can only be set by the owner of the asset canister.".to_string())
@@ -23,39 +30,29 @@ fn is_user() -> Result<(), String> {
 
 #[update(guard = "is_user")]
 fn store(path: String, contents: Vec<u8>) {
-    let store = storage::get_mut::<Store>();
-    store.insert(path, contents);
+    STORE.with(|store| store.borrow_mut().insert(path, contents));
 }
 
-#[query]
-fn retrieve(path: String) -> &'static Vec<u8> {
-    let store = storage::get::<Store>();
-
-    match store.get(&path) {
-        Some(content) => content,
+#[query(manual_reply = true)]
+fn retrieve(path: String) -> ManualReply<Vec<u8>> {
+    STORE.with(|store| match store.borrow().get(&path) {
+        Some(content) => ManualReply::one(content),
         None => panic!("Path {} not found.", path),
-    }
+    })
 }
 
 #[update(guard = "is_user")]
 fn add_user(principal: Principal) {
-    let users = storage::get_mut::<Users>();
-    users.insert(principal);
+    USERS.with(|users| users.borrow_mut().insert(principal));
 }
 
 #[pre_upgrade]
 fn pre_upgrade() {
-    let mut vec = Vec::new();
-    for p in storage::get_mut::<Users>().iter() {
-        vec.push(p);
-    }
-    storage::stable_save((vec,)).unwrap();
+    USERS.with(|users| storage::stable_save((users,)).unwrap());
 }
 
 #[post_upgrade]
 fn post_upgrade() {
-    let (old_users,): (Vec<Principal>,) = storage::stable_restore().unwrap();
-    for u in old_users {
-        storage::get_mut::<Users>().insert(u);
-    }
+    let (old_users,): (BTreeSet<Principal>,) = storage::stable_restore().unwrap();
+    USERS.with(|users| *users.borrow_mut() = old_users);
 }

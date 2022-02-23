@@ -10,6 +10,8 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    #[serde(default)]
+    pub manual_reply: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -152,7 +154,7 @@ fn dfn_macro(
 
     let arg_count = arg_tuple.len();
 
-    let return_encode = if method.is_lifecycle() {
+    let return_encode = if method.is_lifecycle() || attrs.manual_reply {
         quote! {}
     } else {
         match return_length {
