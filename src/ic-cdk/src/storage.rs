@@ -23,8 +23,5 @@ where
     let mut de =
         candid::de::IDLDeserialize::new(bytes.as_slice()).map_err(|e| format!("{:?}", e))?;
     let res = candid::utils::ArgumentDecoder::decode(&mut de).map_err(|e| format!("{:?}", e))?;
-    // The idea here is to ignore an error that comes from Candid, because we have trailing
-    // bytes.
-    let _ = de.done();
     Ok(res)
 }
