@@ -27,9 +27,11 @@ const INDEX_FILE: &str = "/index.html";
 thread_local! {
     static STATE: State = State::default();
     static ASSET_HASHES: RefCell<AssetHashes> = RefCell::new(RbTree::new());
+    static CHUNK_HASHES: RefCell<HashMap<Key, ChunkHashes>> = RefCell::new(HashMap::new());
 }
 
 type AssetHashes = RbTree<Key, Hash>;
+type ChunkHashes = RbTree<Key, Hash>;
 
 #[derive(Default)]
 struct State {
@@ -185,6 +187,7 @@ struct CreateBatchResponse {
 struct CreateChunkArg {
     batch_id: BatchId,
     content: ByteBuf,
+    sha256: Option<ByteBuf>,
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
@@ -232,6 +235,7 @@ enum StreamingStrategy {
 struct StreamingCallbackHttpResponse {
     body: RcBytes,
     token: Option<StreamingCallbackToken>,
+    chunk_tree: Option<String>,
 }
 
 #[update]
@@ -495,69 +499,140 @@ fn create_strategy(
     })
 }
 
-fn build_200(
+fn get_chunk_index_by_range(range: &Range, asset: &AssetEncoding) -> Option<ContentRange> {
+    let start_byte = range.start_byte;
+    let mut reduced = 0;
+    let mut chunk_start_byte = 0;
+    let chunk_index = asset.content_chunks
+        .iter()
+        .position(|chunk| {
+            let chunk_len = chunk.len() as u64;
+            let result = (start_byte - reduced) < chunk_len;
+            chunk_start_byte = reduced;
+            reduced += chunk_len;
+            result
+        });
+    match chunk_index {
+        Some(index) => Some(ContentRange {
+            index,
+            total: asset.total_length,
+            start_byte: chunk_start_byte,
+            end_byte: chunk_start_byte + (asset.content_chunks[index].len() as u64) - 1,
+        }),
+        _ => None,
+    }
+}
+
+fn build_20x(
     asset: &Asset,
     enc_name: &str,
     enc: &AssetEncoding,
     key: &str,
     chunk_index: usize,
-    certificate_header: Option<HeaderField>,
+    status_code: u16,
+    extra_headers: Option<Vec<(String, String)>>,
 ) -> HttpResponse {
     let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
     if enc_name != "identity" {
         headers.push(("Content-Encoding".to_string(), enc_name.to_string()));
     }
-    if let Some(head) = certificate_header {
-        headers.push(head);
+    if let Some(h) = extra_headers {
+        headers = [headers, h].concat();
     }
 
     let streaming_strategy = create_strategy(asset, enc_name, enc, key, chunk_index);
 
     HttpResponse {
-        status_code: 200,
+        status_code,
         headers,
         body: enc.content_chunks[chunk_index].clone(),
         streaming_strategy,
     }
 }
 
-fn build_404(certificate_header: HeaderField) -> HttpResponse {
+fn build_40x(key: &str, status_code: u16, message: Option<&str>) -> HttpResponse {
+    let certificate_header =
+        ASSET_HASHES.with(|t| witness_to_header(t.borrow().witness(key.as_bytes()), "".to_string(), 0));
+
     HttpResponse {
-        status_code: 404,
+        status_code,
         headers: vec![certificate_header],
-        body: RcBytes::from(ByteBuf::from("not found")),
+        body: RcBytes::from(ByteBuf::from(message.unwrap_or("not found"))),
         streaming_strategy: None,
     }
 }
 
-fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> HttpResponse {
+fn build_certified_response(
+    asset: &Asset,
+    enc_name: &str,
+    enc: &AssetEncoding,
+    key: &str,
+    range: Option<Range>,
+) -> HttpResponse {
+    let mut chunk_index = 0;
+    let mut extra_headers = vec![];
+    let status_code = match range {
+        Some(r) => match get_chunk_index_by_range(&r, enc) {
+            Some(content_range) => {
+                chunk_index = content_range.index;
+                extra_headers.push(("Content-Range".to_string(), format!("bytes {}-{}/{}", content_range.start_byte, content_range.end_byte, content_range.total)));
+                extra_headers.push(("Accept-Ranges".to_string(), "bytes".to_string()));
+                206
+            },
+            _ => {
+                return build_40x(key, 416, Some("Chunk index not found"));
+            },
+        },
+        _ => 200
+    };
+
+    let chunk_tree = get_serialized_chunk_witness(key, chunk_index);
+    let certificate_header = ASSET_HASHES.with(|t| {
+        let tree = t.borrow();
+        if key == INDEX_FILE {
+            let chunk_tree = get_serialized_chunk_witness(key, chunk_index);
+            let absence_proof = tree.witness("".as_bytes());
+            let index_proof = tree.witness(INDEX_FILE.as_bytes());
+            let combined_proof = merge_hash_trees(absence_proof, index_proof);
+            witness_to_header(combined_proof, chunk_tree.clone(), chunk_index)
+        } else {
+            witness_to_header(tree.witness(key.as_bytes()), chunk_tree.clone(), chunk_index)
+        }
+    });
+
+    extra_headers.push(certificate_header);
+
+    build_20x(
+        asset,
+        enc_name,
+        enc,
+        key,
+        chunk_index,
+        status_code,
+        Some(extra_headers),
+    )
+}
+
+fn build_http_response(path: &str, encodings: Vec<String>, range: Option<Range>) -> HttpResponse {
     STATE.with(|s| {
         let assets = s.assets.borrow();
 
-        let index_redirect_certificate = ASSET_HASHES.with(|t| {
+        let index_redirect = ASSET_HASHES.with(|t| {
             let tree = t.borrow();
-            if tree.get(path.as_bytes()).is_none() && tree.get(INDEX_FILE.as_bytes()).is_some() {
-                let absence_proof = tree.witness(path.as_bytes());
-                let index_proof = tree.witness(INDEX_FILE.as_bytes());
-                let combined_proof = merge_hash_trees(absence_proof, index_proof);
-                Some(witness_to_header(combined_proof))
-            } else {
-                None
-            }
+            tree.get(path.as_bytes()).is_none() && tree.get(INDEX_FILE.as_bytes()).is_some()
         });
 
-        if let Some(certificate_header) = index_redirect_certificate {
+        if index_redirect {
             if let Some(asset) = assets.get(INDEX_FILE) {
                 for enc_name in encodings.iter() {
                     if let Some(enc) = asset.encodings.get(enc_name) {
                         if enc.certified {
-                            return build_200(
+                            return build_certified_response(
                                 asset,
                                 enc_name,
                                 enc,
                                 INDEX_FILE,
-                                index,
-                                Some(certificate_header),
+                                range,
                             );
                         }
                     }
@@ -565,32 +640,27 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
             }
         }
 
-        let certificate_header =
-            ASSET_HASHES.with(|t| witness_to_header(t.borrow().witness(path.as_bytes())));
-
         if let Some(asset) = assets.get(path) {
             for enc_name in encodings.iter() {
                 if let Some(enc) = asset.encodings.get(enc_name) {
                     if enc.certified {
-                        return build_200(
+                        return build_certified_response(
                             asset,
                             enc_name,
                             enc,
                             path,
-                            index,
-                            Some(certificate_header),
+                            range,
                         );
                     } else {
                         // Find if identity is certified, if it's not.
                         if let Some(id_enc) = asset.encodings.get("identity") {
                             if id_enc.certified {
-                                return build_200(
+                                return build_certified_response(
                                     asset,
                                     enc_name,
                                     enc,
                                     path,
-                                    index,
-                                    Some(certificate_header),
+                                    range,
                                 );
                             }
                         }
@@ -599,7 +669,7 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
             }
         }
 
-        build_404(certificate_header)
+        build_40x(path, 404, None)
     })
 }
 
@@ -684,33 +754,113 @@ fn check_url_decode() {
     assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
 }
 
+#[derive(Debug)]
+struct Range {
+    start_byte: u64,
+    end_byte: Option<u64>,
+}
+
+#[derive(Debug)]
+struct ContentRange {
+    index: usize,
+    total: usize,
+    start_byte: u64,
+    end_byte: u64,
+}
+
+fn get_ranges(range_header_value: &str) -> Option<Vec<Range>> {
+    range_header_value
+        .split(",")
+        .map(|range_string| {
+            let pure_range_string = range_string.replace("bytes=", "");
+            let bytes = pure_range_string
+                .split("-")
+                .map(|s| s.trim())
+                .collect::<Vec<&str>>();
+
+            let start_byte = bytes.get(0).unwrap_or(&"").parse::<u64>().ok();
+            let end_byte = bytes.get(1).unwrap_or(&"").parse::<u64>().ok();
+
+            if start_byte.is_none() {
+                return None;
+            }
+
+            Some(Range {
+                start_byte: start_byte.unwrap(),
+                end_byte
+            })
+        })
+        .collect::<Option<Vec<Range>>>()
+}
+
+fn get_first_range(value: &str) -> Option<Range> {
+    if let Some(ranges) = get_ranges(value) {
+        Some(Range {
+            start_byte: ranges[0].start_byte,
+            end_byte: ranges[0].end_byte,
+        })
+    } else {
+        None
+    }
+}
+
+#[test]
+fn check_get_ranges() {
+    let empty = get_ranges("").unwrap_or(vec![]);
+    assert_eq!(empty.len(), 0);
+
+    let mut range = get_ranges("bytes=0-").unwrap_or_else(|| panic!("Unable to parse range"));
+    assert_eq!(range[0].start_byte, 0);
+    assert_eq!(range[0].end_byte, None);
+
+    range = get_ranges("bytes=10-11").unwrap_or_else(|| panic!("Unable to parse range"));
+    assert_eq!(range[0].start_byte, 10);
+    assert_eq!(range[0].end_byte.unwrap_or(0), 11);
+
+    range = get_ranges("bytes=10-11, 100-101").unwrap_or_else(|| panic!("Unable to parse range"));
+    assert_eq!(range[0].start_byte, 10);
+    assert_eq!(range[0].end_byte.unwrap_or(0), 11);
+    assert_eq!(range[1].start_byte, 100);
+    assert_eq!(range[1].end_byte.unwrap_or(0), 101);
+
+    range = get_ranges("bytes=10-11, bytes=100-101").unwrap_or_else(|| panic!("Unable to parse range"));
+    assert_eq!(range[0].start_byte, 10);
+    assert_eq!(range[0].end_byte.unwrap_or(0), 11);
+    assert_eq!(range[1].start_byte, 100);
+    assert_eq!(range[1].end_byte.unwrap_or(0), 101);
+}
+
 #[query]
 fn http_request(req: HttpRequest) -> HttpResponse {
+    let path = match req.url.find('?') {
+        Some(i) => &req.url[..i],
+        None => &req.url[..],
+    };
     let mut encodings = vec![];
+    let mut range: Option<Range> = None;
+
     for (name, value) in req.headers.iter() {
         if name.eq_ignore_ascii_case("Accept-Encoding") {
             for v in value.split(',') {
                 encodings.push(v.trim().to_string());
             }
         }
+        if name.eq_ignore_ascii_case("Range") {
+            range = get_first_range(value);
+
+            if range.is_none() {
+                return build_40x(&path, 416, Some("Range not satisfiable"));
+            }
+        }
     }
     encodings.push("identity".to_string());
 
-    let path = match req.url.find('?') {
-        Some(i) => &req.url[..i],
-        None => &req.url[..],
-    };
     match url_decode(path) {
-        Ok(path) => build_http_response(&path, encodings, 0),
-        Err(err) => HttpResponse {
-            status_code: 400,
-            headers: vec![],
-            body: RcBytes::from(ByteBuf::from(format!(
-                "failed to decode path '{}': {}",
-                path, err
-            ))),
-            streaming_strategy: None,
-        },
+        Ok(path) => build_http_response(&path, encodings, range),
+        Err(err) => build_40x(&path, 400, Some(&format!(
+            "failed to decode path '{}': {}",
+            path, err
+        ))),
     }
 }
 
@@ -741,10 +891,12 @@ fn http_request_streaming_callback(
 
         // MAX is good enough. This means a chunk would be above 64-bits, which is impossible...
         let chunk_index = index.0.to_usize().unwrap_or(usize::MAX);
+        let chunk_tree = get_serialized_chunk_witness(&key, chunk_index);
 
         StreamingCallbackHttpResponse {
             body: enc.content_chunks[chunk_index].clone(),
             token: create_token(asset, &content_encoding, enc, &key, chunk_index),
+            chunk_tree: Some(chunk_tree.clone()),
         }
     })
 }
@@ -794,11 +946,8 @@ fn do_set_asset_content(arg: SetAssetContentArguments) {
                 .try_into()
                 .unwrap_or_else(|_| trap("invalid SHA-256")),
             None => {
-                let mut hasher = sha2::Sha256::new();
-                for chunk in content_chunks.iter() {
-                    hasher.update(chunk);
-                }
-                hasher.finalize().into()
+                set_chunks_to_tree(&arg.key, &content_chunks);
+                get_asset_hash_from_tree(&arg.key)
             }
         };
 
@@ -872,6 +1021,7 @@ fn on_asset_change(key: &str, asset: &mut Asset) {
 
     if asset.encodings.is_empty() {
         delete_asset_hash(key);
+        delete_chunks(key);
         return;
     }
 
@@ -886,6 +1036,7 @@ fn on_asset_change(key: &str, asset: &mut Asset) {
         if let Some(enc) = asset.encodings.get_mut(*enc_name) {
             certify_asset(key.to_string(), &enc.sha256);
             enc.certified = true;
+            set_chunks_to_tree(&key.to_string(), &enc.content_chunks);
             return;
         }
     }
@@ -896,6 +1047,7 @@ fn on_asset_change(key: &str, asset: &mut Asset) {
     if let Some(enc) = asset.encodings.values_mut().next() {
         certify_asset(key.to_string(), &enc.sha256);
         enc.certified = true;
+        set_chunks_to_tree(&key.to_string(), &enc.content_chunks);
     }
 }
 
@@ -921,14 +1073,11 @@ fn set_root_hash(tree: &AssetHashes) {
     set_certified_data(&full_tree_hash);
 }
 
-fn witness_to_header(witness: HashTree) -> HeaderField {
+fn witness_to_header(witness: HashTree, chunk_serialized_tree: String, chunk_index: usize) -> HeaderField {
     use ic_certified_map::labeled;
 
     let hash_tree = labeled(b"http_assets", witness);
-    let mut serializer = serde_cbor::ser::Serializer::new(vec![]);
-    serializer.self_describe().unwrap();
-    hash_tree.serialize(&mut serializer).unwrap();
-
+    let tree = serialize_tree(hash_tree);
     let certificate = data_certificate().unwrap_or_else(|| trap("no data certificate available"));
 
     (
@@ -936,9 +1085,61 @@ fn witness_to_header(witness: HashTree) -> HeaderField {
         String::from("certificate=:")
             + &base64::encode(&certificate)
             + ":, tree=:"
-            + &base64::encode(&serializer.into_inner())
+            + &tree
+            + ":, chunk_tree=:"
+            + &chunk_serialized_tree
+            + ":, chunk_index=:"
+            + &chunk_index.to_string()
             + ":",
     )
+}
+
+fn get_asset_hash_from_tree(key: &str) -> [u8; 32] {
+    CHUNK_HASHES.with(|t| {
+        let chunks_map = t.borrow_mut();
+        let tree = chunks_map.get(key).unwrap_or_else(|| trap("asset not found in chunks map"));
+        tree.root_hash()
+    })
+}
+
+fn get_serialized_chunk_witness(key: &str, index: usize) -> String {
+    CHUNK_HASHES.with(|t| {
+        let chunks_map = t.borrow();
+        let tree = chunks_map.get(key).unwrap_or_else(|| trap("asset not found in chunks map"));
+
+        if tree.get(index.to_string().as_bytes()).is_some() {
+            let witness = tree.witness(index.to_string().as_bytes());
+            serialize_tree(witness)
+        } else {
+            String::new()
+        }
+    })
+}
+
+fn set_chunks_to_tree(key: &String, content_chunks: &Vec<RcBytes>) {
+    CHUNK_HASHES.with(|t| {
+        let mut chunks_map = t.borrow_mut();
+
+        let tree = chunks_map.entry(key.clone()).or_insert(RbTree::new());
+
+        for (i, chunk) in content_chunks.iter().enumerate() {
+            if !tree.get(i.to_string().as_bytes()).is_some() {
+                let sha256 = hash_bytes(chunk);
+                tree.insert(i.to_string(), sha256);
+            }
+        }
+    });
+}
+
+fn delete_chunks(key: &str) {
+    CHUNK_HASHES.with(|t| (t.borrow_mut().remove(key)));
+}
+
+fn serialize_tree(tree: HashTree) -> String {
+    let mut serializer = serde_cbor::ser::Serializer::new(vec![]);
+    serializer.self_describe().unwrap();
+    tree.serialize(&mut serializer).unwrap();
+    base64::encode(&serializer.into_inner())
 }
 
 fn merge_hash_trees<'a>(lhs: HashTree<'a>, rhs: HashTree<'a>) -> HashTree<'a> {
