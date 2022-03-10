@@ -510,15 +510,12 @@ fn get_chunk_index_by_range(range: &Range, asset: &AssetEncoding) -> Option<Cont
         reduced += chunk_len;
         result
     });
-    match chunk_index {
-        Some(index) => Some(ContentRange {
-            index,
-            total: asset.total_length,
-            start_byte: chunk_start_byte,
-            end_byte: chunk_start_byte + (asset.content_chunks[index].len() as u64) - 1,
-        }),
-        _ => None,
-    }
+    chunk_index.map(|index| ContentRange {
+        index,
+        total: asset.total_length,
+        start_byte: chunk_start_byte,
+        end_byte: chunk_start_byte + (asset.content_chunks[index].len() as u64) - 1,
+    })
 }
 
 fn build_20x(
@@ -598,13 +595,9 @@ fn build_certified_response(
             let absence_proof = tree.witness("".as_bytes());
             let index_proof = tree.witness(INDEX_FILE.as_bytes());
             let combined_proof = merge_hash_trees(absence_proof, index_proof);
-            witness_to_header(combined_proof, chunk_tree.clone(), chunk_index)
+            witness_to_header(combined_proof, chunk_tree, chunk_index)
         } else {
-            witness_to_header(
-                tree.witness(key.as_bytes()),
-                chunk_tree.clone(),
-                chunk_index,
-            )
+            witness_to_header(tree.witness(key.as_bytes()), chunk_tree, chunk_index)
         }
     });
 
@@ -762,20 +755,18 @@ struct ContentRange {
 
 fn get_ranges(range_header_value: &str) -> Option<Vec<Range>> {
     range_header_value
-        .split(",")
+        .split(',')
         .map(|range_string| {
             let pure_range_string = range_string.replace("bytes=", "");
             let bytes = pure_range_string
-                .split("-")
+                .split('-')
                 .map(|s| s.trim())
                 .collect::<Vec<&str>>();
 
             let start_byte = bytes.get(0).unwrap_or(&"").parse::<u64>().ok();
             let end_byte = bytes.get(1).unwrap_or(&"").parse::<u64>().ok();
 
-            if start_byte.is_none() {
-                return None;
-            }
+            start_byte?;
 
             Some(Range {
                 start_byte: start_byte.unwrap(),
@@ -786,19 +777,15 @@ fn get_ranges(range_header_value: &str) -> Option<Vec<Range>> {
 }
 
 fn get_first_range(value: &str) -> Option<Range> {
-    if let Some(ranges) = get_ranges(value) {
-        Some(Range {
-            start_byte: ranges[0].start_byte,
-            end_byte: ranges[0].end_byte,
-        })
-    } else {
-        None
-    }
+    get_ranges(value).map(|ranges| Range {
+        start_byte: ranges[0].start_byte,
+        end_byte: ranges[0].end_byte,
+    })
 }
 
 #[test]
 fn check_get_ranges() {
-    let empty = get_ranges("").unwrap_or(vec![]);
+    let empty = get_ranges("").unwrap_or_default();
     assert_eq!(empty.len(), 0);
 
     let mut range = get_ranges("bytes=0-").unwrap_or_else(|| panic!("Unable to parse range"));
@@ -842,7 +829,7 @@ fn http_request(req: HttpRequest) -> HttpResponse {
             range = get_first_range(value);
 
             if range.is_none() {
-                return build_40x(&path, 416, Some("Range not satisfiable"));
+                return build_40x(path, 416, Some("Range not satisfiable"));
             }
         }
     }
@@ -851,7 +838,7 @@ fn http_request(req: HttpRequest) -> HttpResponse {
     match url_decode(path) {
         Ok(path) => build_http_response(&path, encodings, range),
         Err(err) => build_40x(
-            &path,
+            path,
             400,
             Some(&format!("failed to decode path '{}': {}", path, err)),
         ),
@@ -890,7 +877,7 @@ fn http_request_streaming_callback(
         StreamingCallbackHttpResponse {
             body: enc.content_chunks[chunk_index].clone(),
             token: create_token(asset, &content_encoding, enc, &key, chunk_index),
-            chunk_tree: Some(chunk_tree.clone()),
+            chunk_tree: Some(chunk_tree),
         }
     })
 }
@@ -1118,14 +1105,16 @@ fn get_serialized_chunk_witness(key: &str, index: usize) -> String {
     })
 }
 
-fn set_chunks_to_tree(key: &String, content_chunks: &Vec<RcBytes>) {
+fn set_chunks_to_tree(key: &str, content_chunks: &[RcBytes]) {
     CHUNK_HASHES.with(|t| {
         let mut chunks_map = t.borrow_mut();
 
-        let tree = chunks_map.entry(key.clone()).or_insert(RbTree::new());
+        let tree = chunks_map
+            .entry(key.to_string())
+            .or_insert_with(RbTree::new);
 
         for (i, chunk) in content_chunks.iter().enumerate() {
-            if !tree.get(i.to_string().as_bytes()).is_some() {
+            if tree.get(i.to_string().as_bytes()).is_none() {
                 let sha256 = hash_bytes(chunk);
                 tree.insert(i.to_string(), sha256);
             }
