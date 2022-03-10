@@ -503,15 +503,13 @@ fn get_chunk_index_by_range(range: &Range, asset: &AssetEncoding) -> Option<Cont
     let start_byte = range.start_byte;
     let mut reduced = 0;
     let mut chunk_start_byte = 0;
-    let chunk_index = asset.content_chunks
-        .iter()
-        .position(|chunk| {
-            let chunk_len = chunk.len() as u64;
-            let result = (start_byte - reduced) < chunk_len;
-            chunk_start_byte = reduced;
-            reduced += chunk_len;
-            result
-        });
+    let chunk_index = asset.content_chunks.iter().position(|chunk| {
+        let chunk_len = chunk.len() as u64;
+        let result = (start_byte - reduced) < chunk_len;
+        chunk_start_byte = reduced;
+        reduced += chunk_len;
+        result
+    });
     match chunk_index {
         Some(index) => Some(ContentRange {
             index,
@@ -551,8 +549,8 @@ fn build_20x(
 }
 
 fn build_40x(key: &str, status_code: u16, message: Option<&str>) -> HttpResponse {
-    let certificate_header =
-        ASSET_HASHES.with(|t| witness_to_header(t.borrow().witness(key.as_bytes()), "".to_string(), 0));
+    let certificate_header = ASSET_HASHES
+        .with(|t| witness_to_header(t.borrow().witness(key.as_bytes()), "".to_string(), 0));
 
     HttpResponse {
         status_code,
@@ -575,15 +573,21 @@ fn build_certified_response(
         Some(r) => match get_chunk_index_by_range(&r, enc) {
             Some(content_range) => {
                 chunk_index = content_range.index;
-                extra_headers.push(("Content-Range".to_string(), format!("bytes {}-{}/{}", content_range.start_byte, content_range.end_byte, content_range.total)));
+                extra_headers.push((
+                    "Content-Range".to_string(),
+                    format!(
+                        "bytes {}-{}/{}",
+                        content_range.start_byte, content_range.end_byte, content_range.total
+                    ),
+                ));
                 extra_headers.push(("Accept-Ranges".to_string(), "bytes".to_string()));
                 206
-            },
+            }
             _ => {
                 return build_40x(key, 416, Some("Chunk index not found"));
-            },
+            }
         },
-        _ => 200
+        _ => 200,
     };
 
     let chunk_tree = get_serialized_chunk_witness(key, chunk_index);
@@ -596,7 +600,11 @@ fn build_certified_response(
             let combined_proof = merge_hash_trees(absence_proof, index_proof);
             witness_to_header(combined_proof, chunk_tree.clone(), chunk_index)
         } else {
-            witness_to_header(tree.witness(key.as_bytes()), chunk_tree.clone(), chunk_index)
+            witness_to_header(
+                tree.witness(key.as_bytes()),
+                chunk_tree.clone(),
+                chunk_index,
+            )
         }
     });
 
@@ -628,11 +636,7 @@ fn build_http_response(path: &str, encodings: Vec<String>, range: Option<Range>)
                     if let Some(enc) = asset.encodings.get(enc_name) {
                         if enc.certified {
                             return build_certified_response(
-                                asset,
-                                enc_name,
-                                enc,
-                                INDEX_FILE,
-                                range,
+                                asset, enc_name, enc, INDEX_FILE, range,
                             );
                         }
                     }
@@ -644,24 +648,12 @@ fn build_http_response(path: &str, encodings: Vec<String>, range: Option<Range>)
             for enc_name in encodings.iter() {
                 if let Some(enc) = asset.encodings.get(enc_name) {
                     if enc.certified {
-                        return build_certified_response(
-                            asset,
-                            enc_name,
-                            enc,
-                            path,
-                            range,
-                        );
+                        return build_certified_response(asset, enc_name, enc, path, range);
                     } else {
                         // Find if identity is certified, if it's not.
                         if let Some(id_enc) = asset.encodings.get("identity") {
                             if id_enc.certified {
-                                return build_certified_response(
-                                    asset,
-                                    enc_name,
-                                    enc,
-                                    path,
-                                    range,
-                                );
+                                return build_certified_response(asset, enc_name, enc, path, range);
                             }
                         }
                     }
@@ -787,7 +779,7 @@ fn get_ranges(range_header_value: &str) -> Option<Vec<Range>> {
 
             Some(Range {
                 start_byte: start_byte.unwrap(),
-                end_byte
+                end_byte,
             })
         })
         .collect::<Option<Vec<Range>>>()
@@ -823,7 +815,8 @@ fn check_get_ranges() {
     assert_eq!(range[1].start_byte, 100);
     assert_eq!(range[1].end_byte.unwrap_or(0), 101);
 
-    range = get_ranges("bytes=10-11, bytes=100-101").unwrap_or_else(|| panic!("Unable to parse range"));
+    range =
+        get_ranges("bytes=10-11, bytes=100-101").unwrap_or_else(|| panic!("Unable to parse range"));
     assert_eq!(range[0].start_byte, 10);
     assert_eq!(range[0].end_byte.unwrap_or(0), 11);
     assert_eq!(range[1].start_byte, 100);
@@ -857,10 +850,11 @@ fn http_request(req: HttpRequest) -> HttpResponse {
 
     match url_decode(path) {
         Ok(path) => build_http_response(&path, encodings, range),
-        Err(err) => build_40x(&path, 400, Some(&format!(
-            "failed to decode path '{}': {}",
-            path, err
-        ))),
+        Err(err) => build_40x(
+            &path,
+            400,
+            Some(&format!("failed to decode path '{}': {}", path, err)),
+        ),
     }
 }
 
@@ -1073,7 +1067,11 @@ fn set_root_hash(tree: &AssetHashes) {
     set_certified_data(&full_tree_hash);
 }
 
-fn witness_to_header(witness: HashTree, chunk_serialized_tree: String, chunk_index: usize) -> HeaderField {
+fn witness_to_header(
+    witness: HashTree,
+    chunk_serialized_tree: String,
+    chunk_index: usize,
+) -> HeaderField {
     use ic_certified_map::labeled;
 
     let hash_tree = labeled(b"http_assets", witness);
@@ -1097,7 +1095,9 @@ fn witness_to_header(witness: HashTree, chunk_serialized_tree: String, chunk_ind
 fn get_asset_hash_from_tree(key: &str) -> [u8; 32] {
     CHUNK_HASHES.with(|t| {
         let chunks_map = t.borrow_mut();
-        let tree = chunks_map.get(key).unwrap_or_else(|| trap("asset not found in chunks map"));
+        let tree = chunks_map
+            .get(key)
+            .unwrap_or_else(|| trap("asset not found in chunks map"));
         tree.root_hash()
     })
 }
@@ -1105,7 +1105,9 @@ fn get_asset_hash_from_tree(key: &str) -> [u8; 32] {
 fn get_serialized_chunk_witness(key: &str, index: usize) -> String {
     CHUNK_HASHES.with(|t| {
         let chunks_map = t.borrow();
-        let tree = chunks_map.get(key).unwrap_or_else(|| trap("asset not found in chunks map"));
+        let tree = chunks_map
+            .get(key)
+            .unwrap_or_else(|| trap("asset not found in chunks map"));
 
         if tree.get(index.to_string().as_bytes()).is_some() {
             let witness = tree.witness(index.to_string().as_bytes());
