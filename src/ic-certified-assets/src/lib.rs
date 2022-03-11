@@ -706,7 +706,7 @@ fn http_request(req: HttpRequest) -> HttpResponse {
                         headers: vec![("Location".to_string(), replacement_url)],
                         body: RcBytes::from(ByteBuf::default()),
                         streaming_strategy: None,
-                    }
+                    };
                 }
             }
         }
