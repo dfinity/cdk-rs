@@ -6,6 +6,8 @@ authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Rust support for asset certification."
 license = "Apache-2.0"
 keywords = ["internet-computer", "dfinity"]
+categories = ["wasm", "filesystem", "data-structures"]
+repository = "https://github.com/dfinity/cdk-rs"
 
 [dependencies]
 base64 = "0.13"
