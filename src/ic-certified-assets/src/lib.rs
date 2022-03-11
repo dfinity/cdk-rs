@@ -235,7 +235,7 @@ enum StreamingStrategy {
 struct StreamingCallbackHttpResponse {
     body: RcBytes,
     token: Option<StreamingCallbackToken>,
-    chunk_tree: Option<String>,
+    chunk_tree: Option<Vec<u8>>,
 }
 
 #[update]
@@ -546,8 +546,8 @@ fn build_20x(
 }
 
 fn build_40x(key: &str, status_code: u16, message: Option<&str>) -> HttpResponse {
-    let certificate_header = ASSET_HASHES
-        .with(|t| witness_to_header(t.borrow().witness(key.as_bytes()), "".to_string(), 0));
+    let certificate_header =
+        ASSET_HASHES.with(|t| witness_to_header(t.borrow().witness(key.as_bytes()), vec![], 0));
 
     HttpResponse {
         status_code,
@@ -1056,7 +1056,7 @@ fn set_root_hash(tree: &AssetHashes) {
 
 fn witness_to_header(
     witness: HashTree,
-    chunk_serialized_tree: String,
+    chunk_serialized_tree: Vec<u8>,
     chunk_index: usize,
 ) -> HeaderField {
     use ic_certified_map::labeled;
@@ -1070,9 +1070,9 @@ fn witness_to_header(
         String::from("certificate=:")
             + &base64::encode(&certificate)
             + ":, tree=:"
-            + &tree
+            + &base64::encode(&tree)
             + ":, chunk_tree=:"
-            + &chunk_serialized_tree
+            + &base64::encode(&chunk_serialized_tree)
             + ":, chunk_index=:"
             + &chunk_index.to_string()
             + ":",
@@ -1089,7 +1089,7 @@ fn get_asset_hash_from_tree(key: &str) -> [u8; 32] {
     })
 }
 
-fn get_serialized_chunk_witness(key: &str, index: usize) -> String {
+fn get_serialized_chunk_witness(key: &str, index: usize) -> Vec<u8> {
     CHUNK_HASHES.with(|t| {
         let chunks_map = t.borrow();
         let tree = chunks_map
@@ -1100,7 +1100,7 @@ fn get_serialized_chunk_witness(key: &str, index: usize) -> String {
             let witness = tree.witness(index.to_string().as_bytes());
             serialize_tree(witness)
         } else {
-            String::new()
+            vec![]
         }
     })
 }
@@ -1126,11 +1126,11 @@ fn delete_chunks(key: &str) {
     CHUNK_HASHES.with(|t| (t.borrow_mut().remove(key)));
 }
 
-fn serialize_tree(tree: HashTree) -> String {
+fn serialize_tree(tree: HashTree) -> Vec<u8> {
     let mut serializer = serde_cbor::ser::Serializer::new(vec![]);
     serializer.self_describe().unwrap();
     tree.serialize(&mut serializer).unwrap();
-    base64::encode(&serializer.into_inner())
+    serializer.into_inner()
 }
 
 fn merge_hash_trees<'a>(lhs: HashTree<'a>, rhs: HashTree<'a>) -> HashTree<'a> {
