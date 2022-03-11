@@ -693,6 +693,23 @@ fn http_request(req: HttpRequest) -> HttpResponse {
                 encodings.push(v.trim().to_string());
             }
         }
+        if name.eq_ignore_ascii_case("Host") {
+            if let Some(host) = value.split(':').next() {
+                if host.contains("raw.ic0.app") {
+                    let replacement_url = if host.contains("http") {
+                        host.replace("raw.", "") + &req.url
+                    } else {
+                        format!("https://{}{}", host.replace("raw.", ""), req.url)
+                    };
+                    return HttpResponse {
+                        status_code: 308,
+                        headers: vec![("Location".to_string(), replacement_url)],
+                        body: RcBytes::from(ByteBuf::default()),
+                        streaming_strategy: None,
+                    }
+                }
+            }
+        }
     }
     encodings.push("identity".to_string());
 
