@@ -8,9 +8,10 @@ homepage = "https://docs.rs/ic-cdk"
 documentation = "https://docs.rs/ic-cdk"
 license = "Apache-2.0"
 readme = "README.md"
-categories = ["api-bindings", "data-structures", "no-std"]
+categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+repository = "https://github.com/dfinity/cdk-rs"
 
 [dependencies]
 candid = "0.7.4"
