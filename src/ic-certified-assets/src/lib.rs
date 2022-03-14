@@ -687,8 +687,8 @@ fn check_url_decode() {
 fn redirect_to_url(host: &str, url: &str) -> Option<String> {
     if let Some(host) = host.split(':').next() {
         let host = host.trim();
-        if host.ends_with(".raw.ic0.app") {
-            return Some(format!("https://{}.ic0.app{}", &host[..host.len() - ".raw.ic0.app".len()], url));
+        if let Some(base) = host.strip_suffix(".raw.ic0.app") {
+            return Some(format!("https://{}.ic0.app{}", base, url));
         }
     }
     None
@@ -706,12 +706,25 @@ fn redirects_cleanly() {
     }
     fn assert_308(resp: &HttpResponse, expected: &str) {
         assert_eq!(resp.status_code, 308);
-        assert!(resp.headers.iter().any(|(key, value)| key == "Location" && value == expected));
+        assert!(resp
+            .headers
+            .iter()
+            .any(|(key, value)| key == "Location" && value == expected));
     }
-    assert_308(&http_request(fake("aaaaa-aa.raw.ic0.app")), "https://aaaaa-aa.ic0.app/asset.blob");
-    assert_308(&http_request(fake("my.http.files.raw.ic0.app")), "https://my.http.files.ic0.app/asset.blob");
-    assert_308(&http_request(fake("raw.ic0.app.raw.ic0.app")), "https://raw.ic0.app.ic0.app/asset.blob");
-    let no_redirect = std::panic::catch_unwind(|| http_request(fake("raw.ic0.app.ic0.app")).status_code);
+    assert_308(
+        &http_request(fake("aaaaa-aa.raw.ic0.app")),
+        "https://aaaaa-aa.ic0.app/asset.blob",
+    );
+    assert_308(
+        &http_request(fake("my.http.files.raw.ic0.app")),
+        "https://my.http.files.ic0.app/asset.blob",
+    );
+    assert_308(
+        &http_request(fake("raw.ic0.app.raw.ic0.app")),
+        "https://raw.ic0.app.ic0.app/asset.blob",
+    );
+    let no_redirect =
+        std::panic::catch_unwind(|| http_request(fake("raw.ic0.app.ic0.app")).status_code);
     assert!(!matches!(no_redirect, Ok(308)));
 }
 
