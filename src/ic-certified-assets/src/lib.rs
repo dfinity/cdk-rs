@@ -684,6 +684,37 @@ fn check_url_decode() {
     assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
 }
 
+fn redirect_to_url(host: &str, url: &str) -> Option<String> {
+    if let Some(host) = host.split(':').next() {
+        let host = host.trim();
+        if host.ends_with(".raw.ic0.app") {
+            return Some(format!("https://{}.ic0.app{}", &host[..host.len() - ".raw.ic0.app".len()], url));
+        }
+    }
+    None
+}
+
+#[test]
+fn redirects_cleanly() {
+    fn fake(host: &str) -> HttpRequest {
+        HttpRequest {
+            body: ByteBuf::new(),
+            headers: vec![("Host".to_string(), host.to_string())],
+            method: "GET".to_string(),
+            url: "/asset.blob".to_string(),
+        }
+    }
+    fn assert_308(resp: &HttpResponse, expected: &str) {
+        assert_eq!(resp.status_code, 308);
+        assert!(resp.headers.iter().any(|(key, value)| key == "Location" && value == expected));
+    }
+    assert_308(&http_request(fake("aaaaa-aa.raw.ic0.app")), "https://aaaaa-aa.ic0.app/asset.blob");
+    assert_308(&http_request(fake("my.http.files.raw.ic0.app")), "https://my.http.files.ic0.app/asset.blob");
+    assert_308(&http_request(fake("raw.ic0.app.raw.ic0.app")), "https://raw.ic0.app.ic0.app/asset.blob");
+    let no_redirect = std::panic::catch_unwind(|| http_request(fake("raw.ic0.app.ic0.app")).status_code);
+    assert!(!matches!(no_redirect, Ok(308)));
+}
+
 #[query]
 fn http_request(req: HttpRequest) -> HttpResponse {
     let mut encodings = vec![];
@@ -694,20 +725,13 @@ fn http_request(req: HttpRequest) -> HttpResponse {
             }
         }
         if name.eq_ignore_ascii_case("Host") {
-            if let Some(host) = value.split(':').next() {
-                if host.contains("raw.ic0.app") {
-                    let replacement_url = if host.contains("http") {
-                        host.replace("raw.", "") + &req.url
-                    } else {
-                        format!("https://{}{}", host.replace("raw.", ""), req.url)
-                    };
-                    return HttpResponse {
-                        status_code: 308,
-                        headers: vec![("Location".to_string(), replacement_url)],
-                        body: RcBytes::from(ByteBuf::default()),
-                        streaming_strategy: None,
-                    };
-                }
+            if let Some(replacement_url) = redirect_to_url(value, &req.url) {
+                return HttpResponse {
+                    status_code: 308,
+                    headers: vec![("Location".to_string(), replacement_url)],
+                    body: RcBytes::from(ByteBuf::default()),
+                    streaming_strategy: None,
+                };
             }
         }
     }
