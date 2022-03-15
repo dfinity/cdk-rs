@@ -122,7 +122,7 @@ where
 /// }
 /// ```
 ///
-/// [`reply`]: ic_cdk::api::call::reply
+/// [`call::reply`]: ic_cdk::api::call::reply
 #[proc_macro_attribute]
 pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_query, "ic_query", attr, item)
@@ -187,7 +187,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// [`reply`]: ic_cdk::api::call::reply
+/// [`call::reply`]: ic_cdk::api::call::reply
 #[proc_macro_attribute]
 pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_update, "ic_update", attr, item)
