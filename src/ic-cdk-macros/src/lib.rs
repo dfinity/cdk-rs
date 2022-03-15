@@ -90,6 +90,22 @@ where
 /// }
 /// ```
 ///
+/// You can specify a guard function to be executed before the query function.
+/// When the guard function returns an Error, the query function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[query(guard = "guard_function")]
+/// fn query_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
 /// If you would rather call the [`call::reply`] function than return a value,
 /// you will need to set `manual_reply` to `true` so that the canister does not
 /// trap.
@@ -139,6 +155,22 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
+/// You can specify a guard function to be executed before the update function.
+/// When the guard function returns an Error, the update function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[update(guard = "guard_function")]
+/// fn update_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
 /// If you would rather call the [`call::reply`] function than return a value,
 /// you will need to set `manual_reply` to `true` so that the canister does not
 /// trap.
@@ -180,6 +212,22 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// You can specify a guard function to be executed before the init function.
+/// When the guard function returns an Error, the init function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[init(guard = "guard_function")]
+/// fn init_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_init, "ic_init", attr, item)
@@ -199,6 +247,22 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```rust
 /// # use ic_cdk_macros::pre_upgrade;
 /// #[pre_upgrade]
+/// fn pre_upgrade_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can specify a guard function to be executed before the pre_upgrade function.
+/// When the guard function returns an Error, the pre_upgrade function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[pre_upgrade(guard = "guard_function")]
 /// fn pre_upgrade_function() {
 ///     // ...
 /// # unimplemented!()
@@ -228,6 +292,22 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// You can specify a guard function to be executed before the post_upgrade function.
+/// When the guard function returns an Error, the post_upgrade function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[post_upgrade(guard = "guard_function")]
+/// fn post_upgrade_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_post_upgrade, "ic_post_upgrade", attr, item)
@@ -252,6 +332,22 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// You can specify a guard function to be executed before the heartbeat function.
+/// When the guard function returns an Error, the heartbeat function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[heartbeat(guard = "guard_function")]
+/// fn heartbeat_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_heartbeat, "ic_heartbeat", attr, item)
@@ -271,6 +367,22 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```rust
 /// # use ic_cdk_macros::inspect_message;
 /// #[inspect_message]
+/// fn inspect_message_function() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can specify a guard function to be executed before the inspect_message function.
+/// When the guard function returns an Error, the inspect_message function will not proceed.
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+/// fn guard_function() -> Result<(), String> {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[inspect_message(guard = "guard_function")]
 /// fn inspect_message_function() {
 ///     // ...
 /// # unimplemented!()
