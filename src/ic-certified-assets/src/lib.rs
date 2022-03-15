@@ -1,4 +1,6 @@
 mod rc_bytes;
+#[cfg(test)]
+mod tests;
 
 use crate::rc_bytes::RcBytes;
 use ic_cdk::api::{caller, data_certificate, set_certified_data, time, trap};
@@ -665,23 +667,16 @@ fn url_decode(url: &str) -> Result<String, UrlDecodeError> {
     .collect()
 }
 
-#[test]
-fn check_url_decode() {
-    assert_eq!(
-        url_decode("/%"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(url_decode("/%%"), Ok("/%".to_string()));
-    assert_eq!(url_decode("/%20a"), Ok("/ a".to_string()));
-    assert_eq!(
-        url_decode("/%%+a%20+%@"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(
-        url_decode("/has%percent.txt"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
+fn redirect_to_url(host: &str, url: &str) -> Option<String> {
+    if let Some(host) = host.split(':').next() {
+        let host = host.trim();
+        if host == "raw.ic0.app" {
+            return Some(format!("https://ic0.app{}", url));
+        } else if let Some(base) = host.strip_suffix(".raw.ic0.app") {
+            return Some(format!("https://{}.ic0.app{}", base, url));
+        }
+    }
+    None
 }
 
 #[query]
@@ -691,6 +686,16 @@ fn http_request(req: HttpRequest) -> HttpResponse {
         if name.eq_ignore_ascii_case("Accept-Encoding") {
             for v in value.split(',') {
                 encodings.push(v.trim().to_string());
+            }
+        }
+        if name.eq_ignore_ascii_case("Host") {
+            if let Some(replacement_url) = redirect_to_url(value, &req.url) {
+                return HttpResponse {
+                    status_code: 308,
+                    headers: vec![("Location".to_string(), replacement_url)],
+                    body: RcBytes::from(ByteBuf::default()),
+                    streaming_strategy: None,
+                };
             }
         }
     }
