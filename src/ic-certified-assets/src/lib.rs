@@ -670,8 +670,10 @@ fn url_decode(url: &str) -> Result<String, UrlDecodeError> {
 fn redirect_to_url(host: &str, url: &str) -> Option<String> {
     if let Some(host) = host.split(':').next() {
         let host = host.trim();
-        if let Some(base) = host.strip_suffix("raw.ic0.app") {
-            return Some(format!("https://{}ic0.app{}", base, url));
+        if host == "raw.ic0.app" {
+            return Some(format!("https://ic0.app{}", url));
+        } else if let Some(base) = host.strip_suffix(".raw.ic0.app") {
+            return Some(format!("https://{}.ic0.app{}", base, url));
         }
     }
     None

@@ -1,5 +1,7 @@
 use crate::*;
 
+use std::panic::catch_unwind;
+
 #[test]
 fn check_url_decode() {
     assert_eq!(
@@ -52,7 +54,8 @@ fn redirects_cleanly() {
         &http_request(fake("raw.ic0.app")), // for ?canisterId=
         "https://ic0.app/asset.blob",
     );
-    let no_redirect =
-        std::panic::catch_unwind(|| http_request(fake("raw.ic0.app.ic0.app")).status_code);
+    let no_redirect = catch_unwind(|| http_request(fake("raw.ic0.app.ic0.app")).status_code);
     assert!(!matches!(no_redirect, Ok(308)));
+    let no_redirect2 = catch_unwind(|| http_request(fake("straw.ic0.app")).status_code);
+    assert!(!matches!(no_redirect2, Ok(308)));
 }
