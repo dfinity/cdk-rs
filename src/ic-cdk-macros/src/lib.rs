@@ -91,7 +91,7 @@ where
 /// ```
 ///
 /// You can specify a guard function to be executed before the query function.
-/// When the guard function returns an Error, the query function will not proceed.
+/// When the guard function returns an error, the query function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -156,7 +156,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the update function.
-/// When the guard function returns an Error, the update function will not proceed.
+/// When the guard function returns an error, the update function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -214,7 +214,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the init function.
-/// When the guard function returns an Error, the init function will not proceed.
+/// When the guard function returns an error, the init function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -254,7 +254,7 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the pre_upgrade function.
-/// When the guard function returns an Error, the pre_upgrade function will not proceed.
+/// When the guard function returns an error, the pre_upgrade function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -294,7 +294,7 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the post_upgrade function.
-/// When the guard function returns an Error, the post_upgrade function will not proceed.
+/// When the guard function returns an error, the post_upgrade function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -334,7 +334,7 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the heartbeat function.
-/// When the guard function returns an Error, the heartbeat function will not proceed.
+/// When the guard function returns an error, the heartbeat function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
@@ -374,7 +374,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 ///
 /// You can specify a guard function to be executed before the inspect_message function.
-/// When the guard function returns an Error, the inspect_message function will not proceed.
+/// When the guard function returns an error, the inspect_message function will not proceed.
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
