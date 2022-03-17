@@ -40,6 +40,14 @@ The Rust tool chain must be at version 1.46.0, or later.
 
 * You have downloaded and installed the {sdk-long-name} package as described in link:../quickstart/local-quickstart{outfilesuffix}#download-and-install[Download and install].
 
+* You have webassembly wasm32-unknown-unknown target installed via rustup
++
+[source,bash]
+----
+rustup target add wasm32-unknown-unknown
+----
++
+
 * You have `+cmake+` installed. For example, use Homebrew with the following command:
 +
 [source,bash]
