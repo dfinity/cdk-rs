@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Update canister calling API for 128-bit cycles (#228)
+
 ### Changed
 - Take slice rather than owned Vec as input arg (#217)
 - Remove non-stable storage API (#215)
