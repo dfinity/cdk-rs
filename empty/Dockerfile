@@ -35,8 +35,5 @@ RUN curl --fail https://sh.rustup.rs -sSf \
 
 ENV PATH=/cargo/bin:$PATH
 
-
-COPY . build
-WORKDIR build
-RUN rm -fr target
-RUN cargo build
+# Install IC CDK optimizer
+RUN cargo install --version 0.3.4 ic-cdk-optimizer
