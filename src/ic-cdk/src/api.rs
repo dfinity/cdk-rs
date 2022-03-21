@@ -1,6 +1,6 @@
 //! System API and low level functions for it.
 use crate::export::Principal;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 pub mod call;
 pub mod stable;
@@ -55,10 +55,9 @@ pub fn canister_balance() -> u64 {
 
 /// Get the amount of funds available in the canister.
 pub fn canister_balance128() -> u128 {
-    let size = 16;
-    let mut buf = vec![0u8; size];
-    unsafe { ic0::canister_cycle_balance128(buf.as_mut_ptr() as i32) }
-    u128::from_le_bytes(buf.try_into().unwrap())
+    let mut recv = 0u128;
+    unsafe { ic0::canister_cycle_balance128(&mut recv as *mut u128 as i32) }
+    recv
 }
 
 /// Sets the certified data of this canister.
