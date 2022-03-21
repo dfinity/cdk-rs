@@ -1,7 +1,7 @@
 use clap::Parser;
 use humansize::{file_size_opts, FileSize};
 use std::io::{Read, Write};
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 mod passes;
 
@@ -62,7 +62,9 @@ fn main() {
     );
     let outfile = opts.output.unwrap_or(opts.input);
     if outfile == Path::new("-") {
-        std::io::stdout().write_all(&wasm_back).expect("Could not write output.");
+        std::io::stdout()
+            .write_all(&wasm_back)
+            .expect("Could not write output.");
     } else {
         std::fs::write(outfile, wasm_back).expect("Could not write output file.");
     }
