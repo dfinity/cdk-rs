@@ -7,6 +7,7 @@ use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::sync::atomic::Ordering;
 use std::task::{Context, Poll, Waker};
 
 #[cfg(target_arch = "wasm32-unknown-unknown")]
@@ -216,6 +217,28 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     }
 }
 
+/// This function is called when [callback] was just called with the same parameter, and trapped.
+/// We can't guarantee internal consistency at this point, but we can at least e.g. drop mutex guards.
+/// Waker is a very opaque API, so the best we can do is set a global flag and proceed normally.
+fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    let state = unsafe { WasmCell::from_raw(state_ptr) };
+    // We set the call result, even though it won't be read on the default executor, because we can't guarantee it was called on our executor.
+    // None of these calls trap - the rollback from the previous trap ensures that the Mutex is not in a poisoned state.
+    {
+        state.borrow_mut().result = Some(match reject_code() {
+            RejectionCode::NoError => unsafe { Ok(arg_data_raw()) },
+            n => Err((n, reject_message())),
+        });
+    }
+    let w = state.borrow_mut().waker.take();
+    if let Some(waker) = w {
+        // Flag that we do not want to actually wake the task - we want to drop it *without* executing it.
+        crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+        waker.wake();
+        crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+    }
+}
+
 /// Similar to `call`, but without serialization.
 pub fn call_raw(
     id: Principal,
@@ -276,6 +299,7 @@ fn call_raw_internal(
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
         payment_func();
+        ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
         ic0::call_perform()
     };
 
