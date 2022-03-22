@@ -10,6 +10,6 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 
 # Checklist:
 
-- [ ] The title of this PR complies with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+- [ ] The title of this PR complies with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 - [ ] I have edited the CHANGELOG accordingly.
-- [ ] I have made corresponding changes to the documentation
+- [ ] I have made corresponding changes to the documentation.
