@@ -47,7 +47,10 @@ pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
 // waker was used as intended.
 mod waker {
     use super::*;
-    use std::{task::{RawWaker, RawWakerVTable, Waker}, sync::atomic::Ordering};
+    use std::{
+        sync::atomic::Ordering,
+        task::{RawWaker, RawWakerVTable, Waker},
+    };
     type FuturePtr = *mut dyn Future<Output = ()>;
 
     static MY_VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
@@ -71,10 +74,11 @@ mod waker {
         let future_ptr: FuturePtr = *boxed_future_ptr_ptr;
         let boxed_future = Box::from_raw(future_ptr);
         let mut pinned_future = Pin::new_unchecked(&mut *future_ptr);
-        if !super::CLEANUP.load(Ordering::Relaxed) && pinned_future
-            .as_mut()
-            .poll(&mut Context::from_waker(&waker::waker(ptr)))
-            .is_pending()
+        if !super::CLEANUP.load(Ordering::Relaxed)
+            && pinned_future
+                .as_mut()
+                .poll(&mut Context::from_waker(&waker::waker(ptr)))
+                .is_pending()
         {
             Box::into_raw(boxed_future_ptr_ptr);
             Box::into_raw(boxed_future);
