@@ -228,6 +228,27 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// The init function may accept an argument, if that argument is a `CandidType`:
+///
+/// ```rust
+/// # use ic_cdk_macros::*;
+///
+/// #[derive(Clone, Debug, CandidType, Deserialize)]
+/// struct InitArg {
+///     foo: u8,
+/// }
+///
+/// #[init]
+/// fn init_function(arg: InitArg) {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// In this case, the argument will be read from `ic0.msg_arg_data_size/copy` and passed to the
+/// init function upon successful deserialization.
+/// Refer to the [`canister_init` Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-init) for more information.
 #[proc_macro_attribute]
 pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_init, "ic_init", attr, item)
