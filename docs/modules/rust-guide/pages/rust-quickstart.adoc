@@ -136,8 +136,8 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.4"
-ic-cdk-macros = "0.4"
+ic-cdk = "0.5"
+ic-cdk-macros = "0.5"
 ----
 
 Notice the `+crate-type = ["cdylib"]+` line which is necessary to compile this rust program into WebAssembly module.

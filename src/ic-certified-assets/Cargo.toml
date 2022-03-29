@@ -13,8 +13,8 @@ repository = "https://github.com/dfinity/cdk-rs"
 base64 = "0.13"
 candid = "0.7.10"
 hex = "0.4.3"
-ic-cdk = { path = "../ic-cdk", version = "0.4" }
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.4" }
+ic-cdk = { path = "../ic-cdk", version = "0.5" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.5" }
 ic-types = "0.3.0"
 ic-certified-map = { path = "../ic-certified-map", version = "0.3" }
 num-traits = "0.2.14"
