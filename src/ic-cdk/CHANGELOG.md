@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Do not call done() in stable_restore() (#216) 
 - Remove out-of-bounds vulnerability (#208)
+- Run inter-canister calls without awaiting (#233)
 
 ## [0.4.0] - 2022-01-26
 ### Changed
