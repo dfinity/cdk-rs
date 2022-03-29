@@ -315,38 +315,47 @@ fn call_raw_internal(
 }
 
 /// Performs an asynchronous call to another canister via ic0.
-pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
-) -> CallResult<R> {
+) -> impl Future<Output = CallResult<R>> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, &args_raw, 0).await?;
-    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    let fut = call_raw(id, method, &args_raw, 0);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
 }
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
-pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
     cycles: u64,
-) -> CallResult<R> {
+) -> impl Future<Output = CallResult<R>> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, &args_raw, cycles).await?;
-    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    let fut = call_raw(id, method, &args_raw, cycles);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
 }
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
-pub async fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
     cycles: u128,
-) -> CallResult<R> {
+) -> impl Future<Output = CallResult<R>> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw128(id, method, &args_raw, cycles).await?;
-    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    let fut = call_raw128(id, method, &args_raw, cycles);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
 }
 
 /// Returns a result that maps over the call
