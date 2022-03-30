@@ -1,13 +1,14 @@
 [package]
 name = "ic-certified-assets"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Rust support for asset certification."
 license = "Apache-2.0"
 keywords = ["internet-computer", "dfinity"]
 categories = ["wasm", "filesystem", "data-structures"]
 repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.58.1"
 
 [dependencies]
 base64 = "0.13"

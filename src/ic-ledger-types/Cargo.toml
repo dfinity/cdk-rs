@@ -1,7 +1,7 @@
 [package]
 name = "ic-ledger-types"
 version = "0.1.1"
-edition = "2018"
+edition = "2021"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Types for interacting with the ICP ledger canister."
 homepage = "https://docs.rs/ic-ledger-types"
@@ -12,6 +12,7 @@ keywords = ["internet-computer", "ledger"]
 categories = ["cryptography::cryptocurrencies", "data-structures"]
 include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.58.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

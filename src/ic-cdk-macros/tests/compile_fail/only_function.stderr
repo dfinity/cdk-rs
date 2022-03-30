@@ -1,5 +1,5 @@
 error: #[query] must be above a function.
-expected `fn`
+       expected `fn`
  --> tests/compile_fail/only_function.rs:4:1
   |
 4 | struct S;

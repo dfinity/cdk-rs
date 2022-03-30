@@ -233,6 +233,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// ```rust
 /// # use ic_cdk_macros::*;
+/// # use candid::*;
 ///
 /// #[derive(Clone, Debug, CandidType, Deserialize)]
 /// struct InitArg {

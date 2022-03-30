@@ -2,7 +2,7 @@
 name = "ic-cdk-optimizer"
 version = "0.3.4"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
-edition = "2018"
+edition = "2021"
 description = "WASM Optimizer for the IC CDK (experimental)."
 homepage = "https://docs.rs/ic-cdk-optimizer"
 documentation = "https://docs.rs/ic-cdk-optimizer"
@@ -12,6 +12,7 @@ categories = ["api-bindings", "data-structures", "no-std", "command-line-utiliti
 keywords = ["internet-computer", "dfinity", "canister", "cli", "optimizer"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.58.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

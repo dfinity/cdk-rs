@@ -94,11 +94,9 @@ pub fn stable_bytes() -> Vec<u8> {
     let size = (stable_size() as usize) << 16;
     let mut vec = Vec::with_capacity(size);
     unsafe {
+        super::ic0::stable_read(vec.as_ptr() as i32, 0, size as i32);
         vec.set_len(size);
     }
-
-    stable_read(0, vec.as_mut_slice());
-
     vec
 }
 
