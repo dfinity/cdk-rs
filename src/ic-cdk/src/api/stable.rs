@@ -4,7 +4,7 @@
 //! for a in-depth explanation of stable memory.
 use std::{error, fmt, io};
 
-const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024;
+const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
 
 /// Gets current size of the stable memory (in WASM pages).
 pub fn stable_size() -> u32 {
