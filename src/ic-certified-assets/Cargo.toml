@@ -1,18 +1,21 @@
 [package]
 name = "ic-certified-assets"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Rust support for asset certification."
 license = "Apache-2.0"
 keywords = ["internet-computer", "dfinity"]
+categories = ["wasm", "filesystem", "data-structures"]
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.58.1"
 
 [dependencies]
 base64 = "0.13"
 candid = "0.7.10"
 hex = "0.4.3"
-ic-cdk = { path = "../ic-cdk", version = "0.4" }
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.4" }
+ic-cdk = { path = "../ic-cdk", version = "0.5" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.5" }
 ic-types = "0.3.0"
 ic-certified-map = { path = "../ic-certified-map", version = "0.3" }
 num-traits = "0.2.14"

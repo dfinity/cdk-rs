@@ -101,8 +101,8 @@ To replace the default program:
 [source,toml]
 ----
 [dependencies]
-ic-cdk = "0.4"
-ic-cdk-macros = "0.4"
+ic-cdk = "0.5"
+ic-cdk-macros = "0.5"
 serde = "1.0"
 ----
 +

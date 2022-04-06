@@ -60,6 +60,9 @@ pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
 }
 
 /// Writes data to the stable memory location specified by an offset.
+///
+/// Warning - this will panic if `offset + buf.len()` exceeds the current size of stable memory.
+/// Use `stable_grow` to request more stable memory if needed.
 pub fn stable_write(offset: u32, buf: &[u8]) {
     unsafe {
         super::ic0::stable_write(offset as i32, buf.as_ptr() as i32, buf.len() as i32);
@@ -94,11 +97,9 @@ pub fn stable_bytes() -> Vec<u8> {
     let size = (stable_size() as usize) << 16;
     let mut vec = Vec::with_capacity(size);
     unsafe {
+        super::ic0::stable_read(vec.as_ptr() as i32, 0, size as i32);
         vec.set_len(size);
     }
-
-    stable_read(0, vec.as_mut_slice());
-
     vec
 }
 

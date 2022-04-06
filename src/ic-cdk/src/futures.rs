@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::atomic::AtomicBool;
 use std::task::Context;
 
 /// Must be called on every top-level future corresponding to a method call of a
@@ -36,6 +37,8 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     }
 }
 
+pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
+
 // This module contains the implementation of a waker we're using for waking
 // top-level futures (the ones returned by canister methods). The waker polls
 // the future once and re-pins it on the heap, if it's pending. If the future is
@@ -44,7 +47,10 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 // waker was used as intended.
 mod waker {
     use super::*;
-    use std::task::{RawWaker, RawWakerVTable, Waker};
+    use std::{
+        sync::atomic::Ordering,
+        task::{RawWaker, RawWakerVTable, Waker},
+    };
     type FuturePtr = *mut dyn Future<Output = ()>;
 
     static MY_VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
@@ -61,16 +67,18 @@ mod waker {
     // Then, the waker will restore the future from the pointer we passed into the
     // waker inside the `kickstart` method and poll the future again. If the future
     // is pending, we leave it on the heap. If it's ready, we deallocate the
-    // pointer.
+    // pointer. If CLEANUP is set, then we're recovering from a callback trap, and
+    // want to drop the future without executing any more of it.
     unsafe fn wake(ptr: *const ()) {
         let boxed_future_ptr_ptr = Box::from_raw(ptr as *mut FuturePtr);
         let future_ptr: FuturePtr = *boxed_future_ptr_ptr;
         let boxed_future = Box::from_raw(future_ptr);
         let mut pinned_future = Pin::new_unchecked(&mut *future_ptr);
-        if pinned_future
-            .as_mut()
-            .poll(&mut Context::from_waker(&waker::waker(ptr)))
-            .is_pending()
+        if !super::CLEANUP.load(Ordering::Relaxed)
+            && pinned_future
+                .as_mut()
+                .poll(&mut Context::from_waker(&waker::waker(ptr)))
+                .is_pending()
         {
             Box::into_raw(boxed_future_ptr_ptr);
             Box::into_raw(boxed_future);

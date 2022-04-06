@@ -7,6 +7,7 @@ use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::sync::atomic::Ordering;
 use std::task::{Context, Poll, Waker};
 
 #[cfg(target_arch = "wasm32-unknown-unknown")]
@@ -216,12 +217,67 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     }
 }
 
+/// This function is called when [callback] was just called with the same parameter, and trapped.
+/// We can't guarantee internal consistency at this point, but we can at least e.g. drop mutex guards.
+/// Waker is a very opaque API, so the best we can do is set a global flag and proceed normally.
+fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    let state = unsafe { WasmCell::from_raw(state_ptr) };
+    // We set the call result, even though it won't be read on the default executor, because we can't guarantee it was called on our executor.
+    // None of these calls trap - the rollback from the previous trap ensures that the Mutex is not in a poisoned state.
+    {
+        state.borrow_mut().result = Some(match reject_code() {
+            RejectionCode::NoError => unsafe { Ok(arg_data_raw()) },
+            n => Err((n, reject_message())),
+        });
+    }
+    let w = state.borrow_mut().waker.take();
+    if let Some(waker) = w {
+        // Flag that we do not want to actually wake the task - we want to drop it *without* executing it.
+        crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+        waker.wake();
+        crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+    }
+}
+
 /// Similar to `call`, but without serialization.
 pub fn call_raw(
     id: Principal,
     method: &str,
     args_raw: &[u8],
     payment: u64,
+) -> impl Future<Output = CallResult<Vec<u8>>> {
+    call_raw_internal(id, method, args_raw, move || {
+        if payment > 0 {
+            unsafe {
+                ic0::call_cycles_add(payment as i64);
+            }
+        }
+    })
+}
+
+/// Similar to `call128`, but without serialization.
+pub fn call_raw128(
+    id: Principal,
+    method: &str,
+    args_raw: &[u8],
+    payment: u128,
+) -> impl Future<Output = CallResult<Vec<u8>>> {
+    call_raw_internal(id, method, args_raw, move || {
+        if payment > 0 {
+            unsafe {
+                let high = (payment >> 64) as u64;
+                let low = (payment & u64::MAX as u128) as u64;
+                ic0::call_cycles_add128(high as i64, low as i64);
+            }
+        }
+    })
+}
+
+fn call_raw_internal(
+    id: Principal,
+    method: &str,
+    args_raw: &[u8],
+    payment_func: impl FnOnce(),
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
     let state = WasmCell::new(CallFutureState {
@@ -242,9 +298,8 @@ pub fn call_raw(
         );
 
         ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-        if payment > 0 {
-            ic0::call_cycles_add(payment as i64);
-        }
+        payment_func();
+        ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
         ic0::call_perform()
     };
 
@@ -260,26 +315,47 @@ pub fn call_raw(
 }
 
 /// Performs an asynchronous call to another canister via ic0.
-pub async fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
-) -> CallResult<R> {
+) -> impl Future<Output = CallResult<R>> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, &args_raw, 0).await?;
-    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    let fut = call_raw(id, method, &args_raw, 0);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
 }
 
-/// Performs an asynchronous call to another canister and pay cycles at the same time
-pub async fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+/// Performs an asynchronous call to another canister and pay cycles at the same time.
+pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
     cycles: u64,
-) -> CallResult<R> {
+) -> impl Future<Output = CallResult<R>> {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let bytes = call_raw(id, method, &args_raw, cycles).await?;
-    decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    let fut = call_raw(id, method, &args_raw, cycles);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
+}
+
+/// Performs an asynchronous call to another canister and pay cycles at the same time.
+pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+    id: Principal,
+    method: &str,
+    args: T,
+    cycles: u128,
+) -> impl Future<Output = CallResult<R>> {
+    let args_raw = encode_args(args).expect("Failed to encode arguments.");
+    let fut = call_raw128(id, method, &args_raw, cycles);
+    async {
+        let bytes = fut.await?;
+        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+    }
 }
 
 /// Returns a result that maps over the call
@@ -348,6 +424,16 @@ pub fn msg_cycles_available() -> u64 {
     unsafe { ic0::msg_cycles_available() as u64 }
 }
 
+/// Returns the amount of cycles that were transferred by the caller
+/// of the current call, and is still available in this message.
+pub fn msg_cycles_available128() -> u128 {
+    let mut recv = 0u128;
+    unsafe {
+        ic0::msg_cycles_available128(&mut recv as *mut u128 as i32);
+    }
+    recv
+}
+
 /// Returns the amount of cycles that came back with the response as a refund.
 ///
 /// The refund has already been added to the canister balance automatically.
@@ -355,12 +441,36 @@ pub fn msg_cycles_refunded() -> u64 {
     unsafe { ic0::msg_cycles_refunded() as u64 }
 }
 
+/// Returns the amount of cycles that came back with the response as a refund.
+///
+/// The refund has already been added to the canister balance automatically.
+pub fn msg_cycles_refunded128() -> u128 {
+    let mut recv = 0u128;
+    unsafe {
+        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as i32);
+    }
+    recv
+}
+
 /// Moves cycles from the call to the canister balance.
 ///
-/// The actual amounts moved will be returned
+/// The actual amount moved will be returned.
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     // TODO: should we assert the u64 input is within the range of i64?
     unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
+}
+
+/// Moves cycles from the call to the canister balance.
+///
+/// The actual amount moved will be returned.
+pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
+    let high = (max_amount >> 64) as u64;
+    let low = (max_amount & u64::MAX as u128) as u64;
+    let mut recv = 0u128;
+    unsafe {
+        ic0::msg_cycles_accept128(high as i64, low as i64, &mut recv as *mut u128 as i32);
+    }
+    recv
 }
 
 /// Returns the argument data as bytes.

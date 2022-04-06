@@ -131,10 +131,7 @@ fn dfn_macro(
         get_args(method, signature)?.iter().cloned().unzip();
     let name = &signature.ident;
 
-    let outer_function_ident = Ident::new(
-        &format!("{}_{}_", name.to_string(), crate::id()),
-        Span::call_site(),
-    );
+    let outer_function_ident = Ident::new(&format!("{}_{}_", name, crate::id()), Span::call_site());
 
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
