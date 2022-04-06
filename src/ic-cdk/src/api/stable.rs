@@ -105,22 +105,6 @@ pub fn stable_bytes() -> Vec<u8> {
     vec
 }
 
-/// Ensures the stable memory size is large enough to perform the write, then writes data to the
-/// stable memory location specified by an offset.
-pub fn grow_then_write_stable_bytes(offset: u64, bytes: &[u8]) -> Result<(), StableMemoryError> {
-    let bytes_required = offset + bytes.len() as u64;
-    let pages_required = (bytes_required + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
-    let current_pages = stable64_size();
-    let additional_pages_required = pages_required.saturating_sub(current_pages);
-
-    if additional_pages_required > 0 {
-        stable64_grow(additional_pages_required)?;
-    }
-
-    stable64_write(offset, bytes);
-    Ok(())
-}
-
 /// A writer to the stable memory.
 ///
 /// Will attempt to grow the memory as it writes,
@@ -157,7 +141,16 @@ impl StableWriter {
     /// The only condition where this will
     /// error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
-        grow_then_write_stable_bytes(self.offset as u64, buf)?;
+        let memory_end_bytes = (self.offset + buf.len()) as u64;
+        let memory_end_pages = (memory_end_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
+        let current_pages = self.capacity as u64;
+        let additional_pages_required = memory_end_pages.saturating_sub(current_pages);
+
+        if additional_pages_required > 0 {
+            stable64_grow(additional_pages_required)?;
+        }
+
+        stable64_write(self.offset as u64, buf);
         self.offset += buf.len();
         Ok(buf.len())
     }
