@@ -223,10 +223,6 @@ impl BufferedStableWriter {
                 self.flush()?;
             }
             // The new bytes will not fit in the buffer.
-            // If the new bytes exceed the capacity remaining + the starting capacity then we must
-            // flush everything now since we will not be able to fit the bytes into the buffer.
-            // Otherwise we fill the buffer, flush it, then populate the buffer again with the
-            // remaining bytes.
             Ordering::Less => {
                 // We can reduce the calls to grow stable memory by growing to the total known
                 // length here rather than leaving it up to `flush` which will only grow by up to
@@ -235,9 +231,14 @@ impl BufferedStableWriter {
                     self.offset + self.buffer.len() as u64 + buf.len() as u64;
                 self.grow_to_capacity_bytes(total_capacity_required)?;
 
+                // If the new bytes exceed the capacity remaining + the starting capacity then we
+                // must flush everything now since we will not be able to fit the bytes into the
+                // buffer.
+                // Otherwise we fill the buffer, flush it, then populate the buffer again with the
+                // remaining bytes.
                 if buf.len() > self.buffer.capacity() + buffer_capacity_remaining {
                     self.flush()?;
-                    stable64_write(self.offset, &buf);
+                    stable64_write(self.offset, buf);
                     self.offset += buf.len() as u64;
                 } else {
                     self.buffer
