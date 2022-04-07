@@ -2,6 +2,7 @@ use ic_cdk::api::call::CallResult;
 use ic_cdk::export::candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
+use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
@@ -144,6 +145,22 @@ impl AccountIdentifier {
         result[0..4].copy_from_slice(&crc32_bytes[..]);
         result[4..32].copy_from_slice(hash.as_ref());
         Self(result)
+    }
+}
+
+impl TryFrom<[u8; 32]> for AccountIdentifier {
+    type Error = String;
+
+    fn try_from(bytes: [u8; 32]) -> Result<Self, Self::Error> {
+        let hash = &bytes[4..];
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(hash);
+        let crc32_bytes = hasher.finalize().to_be_bytes();
+        if bytes[0..4] == crc32_bytes[0..4] {
+            Ok(Self(bytes))
+        } else {
+            Err("CRC-32 checksum failed to verify".to_string())
+        }
     }
 }
 
@@ -299,6 +316,18 @@ mod tests {
             )
             .to_string()
         );
+    }
+
+    #[test]
+    fn test_account_id_try_from() {
+        let mut bytes: [u8; 32] = [0; 32];
+        bytes.copy_from_slice(
+            &hex::decode("bdc4ee05d42cd0669786899f256c8fd7217fa71177bd1fa7b9534f568680a938")
+                .unwrap(),
+        );
+        assert!(AccountIdentifier::try_from(bytes).is_ok());
+        bytes[0] = 0;
+        assert!(AccountIdentifier::try_from(bytes).is_err());
     }
 
     #[test]
