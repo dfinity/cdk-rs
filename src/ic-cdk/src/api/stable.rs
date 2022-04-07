@@ -4,9 +4,7 @@
 //! for a in-depth explanation of stable memory.
 use std::{error, fmt, io};
 
-const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
-
-/// Gets current size of the stable memory (in WASM pages).
+/// Gets current size of the stable memory.
 pub fn stable_size() -> u32 {
     unsafe { super::ic0::stable_size() as u32 }
 }
@@ -105,22 +103,6 @@ pub fn stable_bytes() -> Vec<u8> {
     vec
 }
 
-/// Ensures the stable memory size is large enough to perform the write, then writes data to the
-/// stable memory location specified by an offset.
-pub fn grow_then_write_stable_bytes(offset: u64, bytes: &[u8]) -> Result<(), StableMemoryError> {
-    let bytes_required = offset + bytes.len() as u64;
-    let pages_required = (bytes_required + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
-    let current_pages = stable64_size();
-    let additional_pages_required = pages_required.saturating_sub(current_pages);
-
-    if additional_pages_required > 0 {
-        stable64_grow(additional_pages_required)?;
-    }
-
-    stable64_write(offset, bytes);
-    Ok(())
-}
-
 /// A writer to the stable memory.
 ///
 /// Will attempt to grow the memory as it writes,
@@ -157,7 +139,11 @@ impl StableWriter {
     /// The only condition where this will
     /// error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
-        grow_then_write_stable_bytes(self.offset as u64, buf)?;
+        if self.offset + buf.len() > ((self.capacity as usize) << 16) {
+            self.grow((buf.len() >> 16) as u32 + 1)?;
+        }
+
+        stable_write(self.offset as u32, buf);
         self.offset += buf.len();
         Ok(buf.len())
     }
