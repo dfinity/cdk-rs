@@ -3,6 +3,7 @@
 //! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-stable-memory)
 //! for a in-depth explanation of stable memory.
 use std::{error, fmt, io};
+use std::cmp::Ordering;
 
 const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
 
@@ -172,6 +173,123 @@ impl io::Write for StableWriter {
     fn flush(&mut self) -> Result<(), io::Error> {
         // Noop.
         Ok(())
+    }
+}
+
+/// A writer to the stable memory which first writes data to a buffer and flushes the buffer to
+/// stable memory each time it becomes full. This reduces the number of system calls to
+/// `stable64_write` and `stable64_grow` which have relatively large overhead.
+struct BufferedStableWriter {
+    /// The offset of the next write.
+    offset: u64,
+
+    /// The capacity, in pages.
+    capacity: u64,
+
+    /// The buffer to hold data waiting to be written to stable memory
+    buffer: Vec<u8>,
+}
+
+impl Default for BufferedStableWriter {
+    fn default() -> Self {
+        BufferedStableWriter::new(1024 * 1024) // 1MB buffer
+    }
+}
+
+impl BufferedStableWriter {
+    pub fn new(buffer_size: usize) -> BufferedStableWriter {
+        BufferedStableWriter {
+            offset: 0,
+            capacity: stable64_size(),
+            buffer: Vec::with_capacity(buffer_size)
+        }
+    }
+
+    /// Writes a byte slice to the buffer, flushes the buffer to stable memory if it becomes full.
+    ///
+    /// The only condition where this will error out is if it cannot grow the memory.
+    pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
+        let buffer_capacity_remaining = self.buffer.capacity() - self.buffer.len();
+
+        match buffer_capacity_remaining.cmp(&buf.len()) {
+            // There is enough room in the buffer to store the new bytes.
+            Ordering::Greater => {
+                self.buffer.extend_from_slice(buf);
+            }
+            // There is enough room in the buffer to store the new bytes, but now it is full so we
+            // need to flush it to stable memory.
+            Ordering::Equal => {
+                self.buffer.extend_from_slice(buf);
+                self.flush()?;
+            }
+            // The new bytes will not fit in the buffer.
+            // If the new bytes exceed the capacity remaining + the new capacity then we must flush
+            // everything straight away since we will not be able to fit the bytes into the buffer.
+            // Otherwise we fill the buffer, flush it, then start the buffer again with the
+            // remaining bytes.
+            Ordering::Less => {
+                // We can reduce the calls to grow stable memory by growing to the total known
+                // length rather than leaving it up to `flush` which will only grow by up to the
+                // length of the buffer.
+                self.grow_to_capacity_bytes(self.offset + self.buffer.len() as u64 + buf.len() as u64)?;
+
+                if buf.len() > self.buffer.capacity() + buffer_capacity_remaining {
+                    self.flush()?;
+                    stable64_write(self.offset, &buf);
+                    self.offset += buf.len() as u64;
+                } else {
+                    self.buffer.extend_from_slice(&buf[..buffer_capacity_remaining]);
+                    let remaining_to_write = &buf[buffer_capacity_remaining..];
+                    self.flush()?;
+                    self.buffer.extend_from_slice(remaining_to_write);
+                }
+            }
+        }
+
+        Ok(buf.len())
+    }
+
+    /// Attempts to grow the memory by adding new pages.
+    pub fn grow(&mut self, added_pages: u64) -> Result<(), StableMemoryError> {
+        let old_page_count = stable64_grow(added_pages)?;
+        self.capacity = old_page_count + added_pages;
+        Ok(())
+    }
+
+    pub fn flush(&mut self) -> Result<(), StableMemoryError> {
+        if !self.buffer.is_empty() {
+            self.grow_to_capacity_bytes(self.offset + self.buffer.len() as u64)?;
+            stable64_write(self.offset, &self.buffer);
+            self.offset += self.buffer.len() as u64;
+            self.buffer.clear();
+        }
+
+        Ok(())
+    }
+
+    fn grow_to_capacity_bytes(&mut self, required_capacity_bytes: u64) -> Result<(), StableMemoryError> {
+        let required_capacity_pages =
+            (required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
+        let current_pages = self.capacity as u64;
+        let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
+
+        if additional_pages_required > 0 {
+            self.grow(additional_pages_required)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl io::Write for BufferedStableWriter {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+        self.write(buf)
+            .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
+    }
+
+    fn flush(&mut self) -> Result<(), io::Error> {
+        self.flush()
+            .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
     }
 }
 
