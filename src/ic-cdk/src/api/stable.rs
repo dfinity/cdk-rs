@@ -7,6 +7,7 @@ mod canister;
 mod tests;
 
 use canister::CanisterStableMemory;
+use std::cmp::Ordering;
 use std::{error, fmt, io};
 
 const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB

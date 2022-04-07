@@ -1,5 +1,5 @@
-use std::cell::RefCell;
 use super::*;
+use std::cell::RefCell;
 
 thread_local! {
     static MEMORY: RefCell<Vec<u8>> = RefCell::default();

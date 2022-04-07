@@ -1,5 +1,5 @@
-use crate::api::ic0;
 use super::*;
+use crate::api::ic0;
 
 #[derive(Default)]
 pub struct CanisterStableMemory {}
