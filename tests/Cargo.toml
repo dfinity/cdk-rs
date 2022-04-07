@@ -1,0 +1,24 @@
+[package]
+name = "ic-cdk-e2e-tests"
+version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2021"
+description = "End-to-end tests for the Rust Canister Development Kit"
+license = "Apache-2.0"
+repository = "https://github.com/dfinity/cdk-rs"
+
+[dependencies]
+candid = "0.7.4"
+cargo_metadata = "0.14.2"
+escargot = "0.5.7"
+serde_bytes = "0.11"
+ic-cdk = { path = "../src/ic-cdk" }
+ic-cdk-macros = { path = "../src/ic-cdk-macros" }
+
+[[bin]]
+name = "simple-kv-store"
+path = "canisters/sipmle_kv_store.rs"
+
+[dev-dependencies]
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "991129a26e680deeeee4d197583f8e6e91901a36" }
+ic-ic00-types = { git = "https://github.com/dfinity/ic", rev = "991129a26e680deeeee4d197583f8e6e91901a36" }
