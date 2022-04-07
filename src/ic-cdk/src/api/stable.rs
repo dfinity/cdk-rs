@@ -2,8 +2,8 @@
 //!
 //! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-stable-memory)
 //! for a in-depth explanation of stable memory.
-use std::{error, fmt, io};
 use std::cmp::Ordering;
+use std::{error, fmt, io};
 
 const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
 
@@ -201,11 +201,11 @@ impl BufferedStableWriter {
         BufferedStableWriter {
             offset: 0,
             capacity: stable64_size(),
-            buffer: Vec::with_capacity(buffer_size)
+            buffer: Vec::with_capacity(buffer_size),
         }
     }
 
-    /// Writes a byte slice to the buffer, flushes the buffer to stable memory if it becomes full.
+    /// Writes a byte slice to the buffer, flushing the buffer to stable memory if it becomes full.
     ///
     /// The only condition where this will error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
@@ -223,22 +223,25 @@ impl BufferedStableWriter {
                 self.flush()?;
             }
             // The new bytes will not fit in the buffer.
-            // If the new bytes exceed the capacity remaining + the new capacity then we must flush
-            // everything straight away since we will not be able to fit the bytes into the buffer.
-            // Otherwise we fill the buffer, flush it, then start the buffer again with the
+            // If the new bytes exceed the capacity remaining + the starting capacity then we must
+            // flush everything now since we will not be able to fit the bytes into the buffer.
+            // Otherwise we fill the buffer, flush it, then populate the buffer again with the
             // remaining bytes.
             Ordering::Less => {
                 // We can reduce the calls to grow stable memory by growing to the total known
-                // length rather than leaving it up to `flush` which will only grow by up to the
-                // length of the buffer.
-                self.grow_to_capacity_bytes(self.offset + self.buffer.len() as u64 + buf.len() as u64)?;
+                // length here rather than leaving it up to `flush` which will only grow by up to
+                // the length of the buffer.
+                let total_capacity_required =
+                    self.offset + self.buffer.len() as u64 + buf.len() as u64;
+                self.grow_to_capacity_bytes(total_capacity_required)?;
 
                 if buf.len() > self.buffer.capacity() + buffer_capacity_remaining {
                     self.flush()?;
                     stable64_write(self.offset, &buf);
                     self.offset += buf.len() as u64;
                 } else {
-                    self.buffer.extend_from_slice(&buf[..buffer_capacity_remaining]);
+                    self.buffer
+                        .extend_from_slice(&buf[..buffer_capacity_remaining]);
                     let remaining_to_write = &buf[buffer_capacity_remaining..];
                     self.flush()?;
                     self.buffer.extend_from_slice(remaining_to_write);
@@ -267,7 +270,10 @@ impl BufferedStableWriter {
         Ok(())
     }
 
-    fn grow_to_capacity_bytes(&mut self, required_capacity_bytes: u64) -> Result<(), StableMemoryError> {
+    fn grow_to_capacity_bytes(
+        &mut self,
+        required_capacity_bytes: u64,
+    ) -> Result<(), StableMemoryError> {
         let required_capacity_pages =
             (required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
         let current_pages = self.capacity as u64;
