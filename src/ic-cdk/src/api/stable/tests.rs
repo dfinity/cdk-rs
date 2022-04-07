@@ -4,14 +4,12 @@ use std::sync::Mutex;
 
 #[derive(Default)]
 pub struct TestStableMemory {
-    memory: Rc<Mutex<Vec<u8>>>
+    memory: Rc<Mutex<Vec<u8>>>,
 }
 
 impl TestStableMemory {
     pub fn new(memory: Rc<Mutex<Vec<u8>>>) -> TestStableMemory {
-        TestStableMemory {
-            memory
-        }
+        TestStableMemory { memory }
     }
 }
 
@@ -75,7 +73,8 @@ mod buffer_writer_tests {
     #[test]
     fn write_single_slice() {
         let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer = BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
+        let mut writer =
+            BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
 
         let bytes = vec![1; 128];
 
@@ -90,7 +89,8 @@ mod buffer_writer_tests {
     #[test]
     fn write_many_slices() {
         let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer = BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
+        let mut writer =
+            BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
 
         for i in 1..100 {
             let bytes = vec![i as u8; i];
@@ -112,7 +112,8 @@ mod buffer_writer_tests {
     #[test]
     fn write_many_slices_some_exceeding_buffer_capacity() {
         let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer = BufferedStableWriter::with_memory(10, TestStableMemory::new(memory.clone()));
+        let mut writer =
+            BufferedStableWriter::with_memory(10, TestStableMemory::new(memory.clone()));
 
         for i in 1..100 {
             let bytes = vec![i as u8; i];
