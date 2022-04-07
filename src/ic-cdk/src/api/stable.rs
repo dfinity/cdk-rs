@@ -2,19 +2,34 @@
 //!
 //! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-stable-memory)
 //! for a in-depth explanation of stable memory.
-use std::cmp::Ordering;
+mod canister;
+#[cfg(test)]
+mod tests;
+
+use canister::CanisterStableMemory;
 use std::{error, fmt, io};
 
 const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
 
+trait StableMemory {
+    fn stable_size() -> u32;
+    fn stable64_size() -> u64;
+    fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError>;
+    fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError>;
+    fn stable_write(offset: u32, buf: &[u8]);
+    fn stable64_write(offset: u64, buf: &[u8]);
+    fn stable_read(offset: u32, buf: &mut [u8]);
+    fn stable64_read(offset: u64, buf: &mut [u8]);
+}
+
 /// Gets current size of the stable memory (in WASM pages).
 pub fn stable_size() -> u32 {
-    unsafe { super::ic0::stable_size() as u32 }
+    CanisterStableMemory::stable_size()
 }
 
 /// Similar to `stable_size` but with support for 64-bit addressed memory.
 pub fn stable64_size() -> u64 {
-    unsafe { super::ic0::stable64_size() as u64 }
+    CanisterStableMemory::stable64_size()
 }
 
 /// A possible error value when dealing with stable memory.
@@ -44,22 +59,12 @@ impl error::Error for StableMemoryError {}
 ///
 /// *Note*: Pages are 64KiB in WASM.
 pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
-    unsafe {
-        match super::ic0::stable_grow(new_pages as i32) {
-            -1 => Err(StableMemoryError::OutOfMemory),
-            x => Ok(x as u32),
-        }
-    }
+    CanisterStableMemory::stable_grow(new_pages)
 }
 
 /// Similar to `stable_grow` but with support for 64-bit addressed memory.
 pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
-    unsafe {
-        match super::ic0::stable64_grow(new_pages as i64) {
-            -1 => Err(StableMemoryError::OutOfMemory),
-            x => Ok(x as u64),
-        }
-    }
+    CanisterStableMemory::stable64_grow(new_pages)
 }
 
 /// Writes data to the stable memory location specified by an offset.
@@ -67,30 +72,22 @@ pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
 /// Warning - this will panic if `offset + buf.len()` exceeds the current size of stable memory.
 /// Use `stable_grow` to request more stable memory if needed.
 pub fn stable_write(offset: u32, buf: &[u8]) {
-    unsafe {
-        super::ic0::stable_write(offset as i32, buf.as_ptr() as i32, buf.len() as i32);
-    }
+    CanisterStableMemory::stable_write(offset, buf)
 }
 
 /// Similar to `stable_write` but with support for 64-bit addressed memory.
 pub fn stable64_write(offset: u64, buf: &[u8]) {
-    unsafe {
-        super::ic0::stable64_write(offset as i64, buf.as_ptr() as i64, buf.len() as i64);
-    }
+    CanisterStableMemory::stable64_write(offset, buf)
 }
 
 /// Reads data from the stable memory location specified by an offset.
 pub fn stable_read(offset: u32, buf: &mut [u8]) {
-    unsafe {
-        super::ic0::stable_read(buf.as_ptr() as i32, offset as i32, buf.len() as i32);
-    }
+    CanisterStableMemory::stable_read(offset, buf)
 }
 
 /// Similar to `stable_read` but with support for 64-bit addressed memory.
 pub fn stable64_read(offset: u64, buf: &mut [u8]) {
-    unsafe {
-        super::ic0::stable64_read(buf.as_ptr() as i64, offset as i64, buf.len() as i64);
-    }
+    CanisterStableMemory::stable64_read(offset, buf)
 }
 
 /// Returns a copy of the stable memory.
