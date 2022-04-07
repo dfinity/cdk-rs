@@ -142,7 +142,8 @@ impl StableWriter {
     /// error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
         let memory_end_bytes = (self.offset + buf.len()) as u64;
-        let memory_end_pages = (memory_end_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
+        let memory_end_pages =
+            (memory_end_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
         let current_pages = self.capacity as u64;
         let additional_pages_required = memory_end_pages.saturating_sub(current_pages);
 
