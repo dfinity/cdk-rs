@@ -193,10 +193,10 @@ impl io::Write for StableWriter {
 /// `stable64_write` and `stable64_grow` which have relatively large overhead.
 pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
     /// The offset of the next write.
-    offset: u64,
+    stable_memory_offset_in_bytes: u64,
 
     /// The capacity, in pages.
-    capacity: u64,
+    stable_memory_capacity_in_pages: u64,
 
     /// The buffer to hold data waiting to be written to stable memory
     buffer: Vec<u8>,
@@ -225,8 +225,8 @@ impl<M: StableMemory> BufferedStableWriter<M> {
     /// using the provided `StableMemory` implementation
     pub fn with_memory(buffer_size: usize, memory: M) -> BufferedStableWriter<M> {
         BufferedStableWriter {
-            offset: 0,
-            capacity: memory.stable64_size(),
+            stable_memory_offset_in_bytes: 0,
+            stable_memory_capacity_in_pages: memory.stable64_size(),
             buffer: Vec::with_capacity(buffer_size),
             memory,
         }
@@ -254,8 +254,9 @@ impl<M: StableMemory> BufferedStableWriter<M> {
                 // We can reduce the calls to grow stable memory by growing to the total known
                 // length here rather than leaving it up to `flush` which will only grow by up to
                 // the length of the buffer.
-                let total_capacity_required =
-                    self.offset + self.buffer.len() as u64 + buf.len() as u64;
+                let total_capacity_required = self.stable_memory_offset_in_bytes
+                    + self.buffer.len() as u64
+                    + buf.len() as u64;
                 self.grow_to_capacity_bytes(total_capacity_required)?;
 
                 // If the new bytes exceed the capacity remaining + the starting capacity then we
@@ -265,8 +266,9 @@ impl<M: StableMemory> BufferedStableWriter<M> {
                 // remaining bytes.
                 if buf.len() > self.buffer.capacity() + buffer_capacity_remaining {
                     self.flush()?;
-                    self.memory.stable64_write(self.offset, buf);
-                    self.offset += buf.len() as u64;
+                    self.memory
+                        .stable64_write(self.stable_memory_offset_in_bytes, buf);
+                    self.stable_memory_offset_in_bytes += buf.len() as u64;
                 } else {
                     self.buffer
                         .extend_from_slice(&buf[..buffer_capacity_remaining]);
@@ -283,16 +285,19 @@ impl<M: StableMemory> BufferedStableWriter<M> {
     /// Attempts to grow the memory by adding new pages.
     pub fn grow(&mut self, added_pages: u64) -> Result<(), StableMemoryError> {
         let old_page_count = self.memory.stable64_grow(added_pages)?;
-        self.capacity = old_page_count + added_pages;
+        self.stable_memory_capacity_in_pages = old_page_count + added_pages;
         Ok(())
     }
 
     /// Flushes the current buffer to stable memory
     pub fn flush(&mut self) -> Result<(), StableMemoryError> {
         if !self.buffer.is_empty() {
-            self.grow_to_capacity_bytes(self.offset + self.buffer.len() as u64)?;
-            self.memory.stable64_write(self.offset, &self.buffer);
-            self.offset += self.buffer.len() as u64;
+            self.grow_to_capacity_bytes(
+                self.stable_memory_offset_in_bytes + self.buffer.len() as u64,
+            )?;
+            self.memory
+                .stable64_write(self.stable_memory_offset_in_bytes, &self.buffer);
+            self.stable_memory_offset_in_bytes += self.buffer.len() as u64;
             self.buffer.clear();
         }
 
@@ -305,7 +310,7 @@ impl<M: StableMemory> BufferedStableWriter<M> {
     ) -> Result<(), StableMemoryError> {
         let required_capacity_pages =
             (required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
-        let current_pages = self.capacity as u64;
+        let current_pages = self.stable_memory_capacity_in_pages as u64;
         let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
 
         if additional_pages_required > 0 {
