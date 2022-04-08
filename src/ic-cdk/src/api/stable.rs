@@ -12,25 +12,51 @@ use std::{error, fmt, io};
 
 const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
 
-trait StableMemory {
+static CANISTER_STABLE_MEMORY: CanisterStableMemory = CanisterStableMemory {};
+
+/// A trait defining the stable memory API which each canister running on the IC can make use of
+pub trait StableMemory {
+    /// Gets current size of the stable memory (in WASM pages).
     fn stable_size(&self) -> u32;
+
+    /// Similar to `stable_size` but with support for 64-bit addressed memory.
     fn stable64_size(&self) -> u64;
+
+    /// Attempts to grow the stable memory by `new_pages` (added pages).
+    ///
+    /// Returns an error if it wasn't possible. Otherwise, returns the previous
+    /// size that was reserved.
+    ///
+    /// *Note*: Pages are 64KiB in WASM.
     fn stable_grow(&self, new_pages: u32) -> Result<u32, StableMemoryError>;
+
+    /// Similar to `stable_grow` but with support for 64-bit addressed memory.
     fn stable64_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError>;
+
+    /// Writes data to the stable memory location specified by an offset.
+    ///
+    /// Warning - this will panic if `offset + buf.len()` exceeds the current size of stable memory.
+    /// Use `stable_grow` to request more stable memory if needed.
     fn stable_write(&self, offset: u32, buf: &[u8]);
+
+    /// Similar to `stable_write` but with support for 64-bit addressed memory.
     fn stable64_write(&self, offset: u64, buf: &[u8]);
+
+    /// Reads data from the stable memory location specified by an offset.
     fn stable_read(&self, offset: u32, buf: &mut [u8]);
+
+    /// Similar to `stable_read` but with support for 64-bit addressed memory.
     fn stable64_read(&self, offset: u64, buf: &mut [u8]);
 }
 
 /// Gets current size of the stable memory (in WASM pages).
 pub fn stable_size() -> u32 {
-    CanisterStableMemory::default().stable_size()
+    CANISTER_STABLE_MEMORY.stable_size()
 }
 
 /// Similar to `stable_size` but with support for 64-bit addressed memory.
 pub fn stable64_size() -> u64 {
-    CanisterStableMemory::default().stable64_size()
+    CANISTER_STABLE_MEMORY.stable64_size()
 }
 
 /// A possible error value when dealing with stable memory.
@@ -60,12 +86,12 @@ impl error::Error for StableMemoryError {}
 ///
 /// *Note*: Pages are 64KiB in WASM.
 pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
-    CanisterStableMemory::default().stable_grow(new_pages)
+    CANISTER_STABLE_MEMORY.stable_grow(new_pages)
 }
 
 /// Similar to `stable_grow` but with support for 64-bit addressed memory.
 pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
-    CanisterStableMemory::default().stable64_grow(new_pages)
+    CANISTER_STABLE_MEMORY.stable64_grow(new_pages)
 }
 
 /// Writes data to the stable memory location specified by an offset.
@@ -73,22 +99,22 @@ pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
 /// Warning - this will panic if `offset + buf.len()` exceeds the current size of stable memory.
 /// Use `stable_grow` to request more stable memory if needed.
 pub fn stable_write(offset: u32, buf: &[u8]) {
-    CanisterStableMemory::default().stable_write(offset, buf)
+    CANISTER_STABLE_MEMORY.stable_write(offset, buf)
 }
 
 /// Similar to `stable_write` but with support for 64-bit addressed memory.
 pub fn stable64_write(offset: u64, buf: &[u8]) {
-    CanisterStableMemory::default().stable64_write(offset, buf)
+    CANISTER_STABLE_MEMORY.stable64_write(offset, buf)
 }
 
 /// Reads data from the stable memory location specified by an offset.
 pub fn stable_read(offset: u32, buf: &mut [u8]) {
-    CanisterStableMemory::default().stable_read(offset, buf)
+    CANISTER_STABLE_MEMORY.stable_read(offset, buf)
 }
 
 /// Similar to `stable_read` but with support for 64-bit addressed memory.
 pub fn stable64_read(offset: u64, buf: &mut [u8]) {
-    CanisterStableMemory::default().stable64_read(offset, buf)
+    CANISTER_STABLE_MEMORY.stable64_read(offset, buf)
 }
 
 /// Returns a copy of the stable memory.
@@ -165,7 +191,7 @@ impl io::Write for StableWriter {
 /// A writer to the stable memory which first writes data to a buffer and flushes the buffer to
 /// stable memory each time it becomes full. This reduces the number of system calls to
 /// `stable64_write` and `stable64_grow` which have relatively large overhead.
-struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
+pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
     /// The offset of the next write.
     offset: u64,
 
@@ -186,6 +212,7 @@ impl Default for BufferedStableWriter {
 }
 
 impl BufferedStableWriter {
+    /// Creates a new `BufferedStableWriter` with the specified `buffer_size`
     pub fn new(buffer_size: usize) -> BufferedStableWriter {
         let memory = CanisterStableMemory::default();
 
@@ -194,6 +221,8 @@ impl BufferedStableWriter {
 }
 
 impl<M: StableMemory> BufferedStableWriter<M> {
+    /// Creates a new `BufferedStableWriter` with the specified `buffer_size` which stores data
+    /// using the provided `StableMemory` implementation
     pub fn with_memory(buffer_size: usize, memory: M) -> BufferedStableWriter<M> {
         BufferedStableWriter {
             offset: 0,
@@ -258,6 +287,7 @@ impl<M: StableMemory> BufferedStableWriter<M> {
         Ok(())
     }
 
+    /// Flushes the current buffer to stable memory
     pub fn flush(&mut self) -> Result<(), StableMemoryError> {
         if !self.buffer.is_empty() {
             self.grow_to_capacity_bytes(self.offset + self.buffer.len() as u64)?;

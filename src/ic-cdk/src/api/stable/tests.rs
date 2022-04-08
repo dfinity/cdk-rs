@@ -96,7 +96,6 @@ mod buffer_writer_tests {
             let bytes = vec![i as u8; i];
             writer.write(&bytes).unwrap();
         }
-
         writer.flush().unwrap();
 
         let result = &*memory.lock().unwrap();
@@ -119,7 +118,6 @@ mod buffer_writer_tests {
             let bytes = vec![i as u8; i];
             writer.write(&bytes).unwrap();
         }
-
         writer.flush().unwrap();
 
         let result = &*memory.lock().unwrap();
