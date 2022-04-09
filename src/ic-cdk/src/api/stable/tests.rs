@@ -119,10 +119,11 @@ mod stable_writer_tests {
     }
 
     fn build_writer(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Write> {
+        let writer = StableWriter::with_memory(memory, 0);
         if let Some(buffer_size) = buffer_size {
-            Box::new(BufferedStableWriter::with_memory(buffer_size, memory))
+            Box::new(BufferedStableWriter::with_writer(buffer_size, writer))
         } else {
-            Box::new(StableWriter::with_memory(memory))
+            Box::new(writer)
         }
     }
 }

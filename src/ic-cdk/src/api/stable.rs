@@ -7,7 +7,6 @@ mod canister;
 mod tests;
 
 use canister::CanisterStableMemory;
-use std::io::{BufWriter, Write};
 use std::{error, fmt, io};
 
 const WASM_PAGE_SIZE_IN_BYTES: usize = 64 * 1024; // 64KB
@@ -147,17 +146,17 @@ pub struct StableWriter<M: StableMemory = CanisterStableMemory> {
 
 impl Default for StableWriter {
     fn default() -> Self {
-        Self::with_memory(CanisterStableMemory::default())
+        Self::with_memory(CanisterStableMemory::default(), 0)
     }
 }
 
 impl<M: StableMemory> StableWriter<M> {
     /// Creates a new `StableWriter` which writes to the selected memory
-    pub fn with_memory(memory: M) -> Self {
+    pub fn with_memory(memory: M, offset: usize) -> Self {
         let capacity = memory.stable_size();
 
         Self {
-            offset: 0,
+            offset,
             capacity,
             memory,
         }
@@ -205,27 +204,30 @@ impl<M: StableMemory> io::Write for StableWriter<M> {
 
 /// A writer to the stable memory which first writes the bytes to an in memory buffer and flushes
 /// the buffer to stable memory each time it becomes full.
+///
+/// Note: Each call to grow or write to stable memory is a relatively expensive operation, so pick a
+/// buffer size large enough to avoid excessive calls to stable memory.
 pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
-    inner: BufWriter<StableWriter<M>>,
+    inner: io::BufWriter<StableWriter<M>>,
 }
 
 impl BufferedStableWriter {
     /// Creates a new `BufferedStableWriter`
     pub fn new(buffer_size: usize) -> BufferedStableWriter {
-        BufferedStableWriter::with_memory(buffer_size, CanisterStableMemory::default())
+        BufferedStableWriter::with_writer(buffer_size, StableWriter::default())
     }
 }
 
 impl<M: StableMemory> BufferedStableWriter<M> {
     /// Creates a new `BufferedStableWriter` which writes to the selected memory
-    pub fn with_memory(buffer_size: usize, memory: M) -> BufferedStableWriter<M> {
+    pub fn with_writer(buffer_size: usize, writer: StableWriter<M>) -> BufferedStableWriter<M> {
         BufferedStableWriter {
-            inner: BufWriter::with_capacity(buffer_size, StableWriter::with_memory(memory)),
+            inner: io::BufWriter::with_capacity(buffer_size, writer),
         }
     }
 }
 
-impl<M: StableMemory> Write for BufferedStableWriter<M> {
+impl<M: StableMemory> io::Write for BufferedStableWriter<M> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.inner.write(buf)
     }
