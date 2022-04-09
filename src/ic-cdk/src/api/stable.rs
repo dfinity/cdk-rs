@@ -203,6 +203,9 @@ pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
 
     /// The stable memory implementation
     memory: M,
+
+    /// If true, the buffer will be flushed to stable memory when this object is dropped
+    flush_on_drop: bool,
 }
 
 impl Default for BufferedStableWriter {
@@ -216,19 +219,20 @@ impl BufferedStableWriter {
     pub fn new(buffer_size: usize) -> BufferedStableWriter {
         let memory = CanisterStableMemory::default();
 
-        Self::with_memory(buffer_size, memory)
+        Self::with_memory(buffer_size, memory, true)
     }
 }
 
 impl<M: StableMemory> BufferedStableWriter<M> {
     /// Creates a new `BufferedStableWriter` with the specified `buffer_size` which stores data
     /// using the provided `StableMemory` implementation
-    pub fn with_memory(buffer_size: usize, memory: M) -> BufferedStableWriter<M> {
+    pub fn with_memory(buffer_size: usize, memory: M, flush_on_drop: bool) -> BufferedStableWriter<M> {
         BufferedStableWriter {
             stable_memory_offset_in_bytes: 0,
             stable_memory_capacity_in_pages: memory.stable64_size(),
             buffer: Vec::with_capacity(buffer_size),
             memory,
+            flush_on_drop,
         }
     }
 
@@ -330,6 +334,14 @@ impl<M: StableMemory> io::Write for BufferedStableWriter<M> {
     fn flush(&mut self) -> Result<(), io::Error> {
         self.flush()
             .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
+    }
+}
+
+impl<M: StableMemory> Drop for BufferedStableWriter<M> {
+    fn drop(&mut self) {
+        if self.flush_on_drop {
+            self.flush().unwrap();
+        }
     }
 }
 
