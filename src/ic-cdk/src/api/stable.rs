@@ -7,10 +7,10 @@ mod canister;
 mod tests;
 
 use canister::CanisterStableMemory;
-use std::cmp::Ordering;
+use std::io::{BufWriter, Write};
 use std::{error, fmt, io};
 
-const WASM_PAGE_SIZE_IN_BYTES: u64 = 64 * 1024; // 64KB
+const WASM_PAGE_SIZE_IN_BYTES: usize = 64 * 1024; // 64KB
 
 static CANISTER_STABLE_MEMORY: CanisterStableMemory = CanisterStableMemory {};
 
@@ -134,30 +134,39 @@ pub fn stable_bytes() -> Vec<u8> {
 ///
 /// Will attempt to grow the memory as it writes,
 /// and keep offsets and total capacity.
-pub struct StableWriter {
+pub struct StableWriter<M: StableMemory = CanisterStableMemory> {
     /// The offset of the next write.
     offset: usize,
 
     /// The capacity, in pages.
     capacity: u32,
+
+    /// The stable memory to write data to.
+    memory: M,
 }
 
 impl Default for StableWriter {
     fn default() -> Self {
-        let capacity = stable_size();
+        Self::with_memory(CanisterStableMemory::default())
+    }
+}
+
+impl<M: StableMemory> StableWriter<M> {
+    /// Creates a new `StableWriter` which writes to the selected memory
+    pub fn with_memory(memory: M) -> Self {
+        let capacity = memory.stable_size();
 
         Self {
             offset: 0,
             capacity,
+            memory,
         }
     }
-}
 
-impl StableWriter {
     /// Attempts to grow the memory by adding new pages.
-    pub fn grow(&mut self, added_pages: u32) -> Result<(), StableMemoryError> {
-        let old_page_count = stable_grow(added_pages)?;
-        self.capacity = old_page_count + added_pages;
+    pub fn grow(&mut self, new_pages: u32) -> Result<(), StableMemoryError> {
+        let old_page_count = self.memory.stable_grow(new_pages)?;
+        self.capacity = old_page_count + new_pages;
         Ok(())
     }
 
@@ -166,17 +175,23 @@ impl StableWriter {
     /// The only condition where this will
     /// error out is if it cannot grow the memory.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
-        if self.offset + buf.len() > ((self.capacity as usize) << 16) {
-            self.grow((buf.len() >> 16) as u32 + 1)?;
+        let required_capacity_bytes = self.offset + buf.len();
+        let required_capacity_pages = ((required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1)
+            / WASM_PAGE_SIZE_IN_BYTES) as u32;
+        let current_pages = self.capacity;
+        let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
+
+        if additional_pages_required > 0 {
+            self.grow(additional_pages_required)?;
         }
 
-        stable_write(self.offset as u32, buf);
+        self.memory.stable_write(self.offset as u32, buf);
         self.offset += buf.len();
         Ok(buf.len())
     }
 }
 
-impl io::Write for StableWriter {
+impl<M: StableMemory> io::Write for StableWriter<M> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
         self.write(buf)
             .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
@@ -188,160 +203,35 @@ impl io::Write for StableWriter {
     }
 }
 
-/// A writer to the stable memory which first writes data to a buffer and flushes the buffer to
-/// stable memory each time it becomes full. This reduces the number of system calls to
-/// `stable64_write` and `stable64_grow` which have relatively large overhead.
+/// A writer to the stable memory which first writes the bytes to an in memory buffer and flushes
+/// the buffer to stable memory each time it becomes full.
 pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
-    /// The offset of the next write.
-    stable_memory_offset_in_bytes: u64,
-
-    /// The capacity, in pages.
-    stable_memory_capacity_in_pages: u64,
-
-    /// The buffer to hold data waiting to be written to stable memory
-    buffer: Vec<u8>,
-
-    /// The stable memory implementation
-    memory: M,
-
-    /// If true, the buffer will be flushed to stable memory when this object is dropped
-    flush_on_drop: bool,
-}
-
-impl Default for BufferedStableWriter {
-    fn default() -> Self {
-        BufferedStableWriter::new(1024 * 1024) // 1MB buffer
-    }
+    inner: BufWriter<StableWriter<M>>,
 }
 
 impl BufferedStableWriter {
-    /// Creates a new `BufferedStableWriter` with the specified `buffer_size`
+    /// Creates a new `BufferedStableWriter`
     pub fn new(buffer_size: usize) -> BufferedStableWriter {
-        let memory = CanisterStableMemory::default();
-
-        Self::with_memory(buffer_size, memory, true)
+        BufferedStableWriter::with_memory(buffer_size, CanisterStableMemory::default())
     }
 }
 
 impl<M: StableMemory> BufferedStableWriter<M> {
-    /// Creates a new `BufferedStableWriter` with the specified `buffer_size` which stores data
-    /// using the provided `StableMemory` implementation
-    pub fn with_memory(buffer_size: usize, memory: M, flush_on_drop: bool) -> BufferedStableWriter<M> {
+    /// Creates a new `BufferedStableWriter` which writes to the selected memory
+    pub fn with_memory(buffer_size: usize, memory: M) -> BufferedStableWriter<M> {
         BufferedStableWriter {
-            stable_memory_offset_in_bytes: 0,
-            stable_memory_capacity_in_pages: memory.stable64_size(),
-            buffer: Vec::with_capacity(buffer_size),
-            memory,
-            flush_on_drop,
+            inner: BufWriter::with_capacity(buffer_size, StableWriter::with_memory(memory)),
         }
-    }
-
-    /// Writes a byte slice to the buffer, flushing the buffer to stable memory if it becomes full.
-    ///
-    /// The only condition where this will error out is if it cannot grow the memory.
-    pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
-        let buffer_capacity_remaining = self.buffer.capacity() - self.buffer.len();
-
-        match buffer_capacity_remaining.cmp(&buf.len()) {
-            // There is enough room in the buffer to store the new bytes.
-            Ordering::Greater => {
-                self.buffer.extend_from_slice(buf);
-            }
-            // There is enough room in the buffer to store the new bytes, but now it is full so we
-            // need to flush it to stable memory.
-            Ordering::Equal => {
-                self.buffer.extend_from_slice(buf);
-                self.flush()?;
-            }
-            // The new bytes will not fit in the buffer.
-            Ordering::Less => {
-                // We can reduce the calls to grow stable memory by growing to the total known
-                // length here rather than leaving it up to `flush` which will only grow by up to
-                // the length of the buffer.
-                let total_capacity_required = self.stable_memory_offset_in_bytes
-                    + self.buffer.len() as u64
-                    + buf.len() as u64;
-                self.grow_to_capacity_bytes(total_capacity_required)?;
-
-                // If the new bytes exceed the capacity remaining + the starting capacity then we
-                // must flush everything now since we will not be able to fit the bytes into the
-                // buffer.
-                // Otherwise we fill the buffer, flush it, then populate the buffer again with the
-                // remaining bytes.
-                if buf.len() > self.buffer.capacity() + buffer_capacity_remaining {
-                    self.flush()?;
-                    self.memory
-                        .stable64_write(self.stable_memory_offset_in_bytes, buf);
-                    self.stable_memory_offset_in_bytes += buf.len() as u64;
-                } else {
-                    self.buffer
-                        .extend_from_slice(&buf[..buffer_capacity_remaining]);
-                    let remaining_to_write = &buf[buffer_capacity_remaining..];
-                    self.flush()?;
-                    self.buffer.extend_from_slice(remaining_to_write);
-                }
-            }
-        }
-
-        Ok(buf.len())
-    }
-
-    /// Attempts to grow the memory by adding new pages.
-    pub fn grow(&mut self, added_pages: u64) -> Result<(), StableMemoryError> {
-        let old_page_count = self.memory.stable64_grow(added_pages)?;
-        self.stable_memory_capacity_in_pages = old_page_count + added_pages;
-        Ok(())
-    }
-
-    /// Flushes the current buffer to stable memory
-    pub fn flush(&mut self) -> Result<(), StableMemoryError> {
-        if !self.buffer.is_empty() {
-            self.grow_to_capacity_bytes(
-                self.stable_memory_offset_in_bytes + self.buffer.len() as u64,
-            )?;
-            self.memory
-                .stable64_write(self.stable_memory_offset_in_bytes, &self.buffer);
-            self.stable_memory_offset_in_bytes += self.buffer.len() as u64;
-            self.buffer.clear();
-        }
-
-        Ok(())
-    }
-
-    fn grow_to_capacity_bytes(
-        &mut self,
-        required_capacity_bytes: u64,
-    ) -> Result<(), StableMemoryError> {
-        let required_capacity_pages =
-            (required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
-        let current_pages = self.stable_memory_capacity_in_pages as u64;
-        let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
-
-        if additional_pages_required > 0 {
-            self.grow(additional_pages_required)?;
-        }
-
-        Ok(())
     }
 }
 
-impl<M: StableMemory> io::Write for BufferedStableWriter<M> {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.write(buf)
-            .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
+impl<M: StableMemory> Write for BufferedStableWriter<M> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.inner.write(buf)
     }
 
-    fn flush(&mut self) -> Result<(), io::Error> {
-        self.flush()
-            .map_err(|e| io::Error::new(io::ErrorKind::OutOfMemory, e))
-    }
-}
-
-impl<M: StableMemory> Drop for BufferedStableWriter<M> {
-    fn drop(&mut self) {
-        if self.flush_on_drop {
-            self.flush().unwrap();
-        }
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
     }
 }
 

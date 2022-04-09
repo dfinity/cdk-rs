@@ -67,16 +67,22 @@ impl StableMemory for TestStableMemory {
     }
 }
 
-mod buffer_writer_tests {
+mod stable_writer_tests {
     use super::*;
+    use rstest::rstest;
+    use std::io::Write;
 
-    #[test]
-    fn write_single_slice() {
+    #[rstest]
+    #[case(None)]
+    #[case(Some(1))]
+    #[case(Some(10))]
+    #[case(Some(100))]
+    #[case(Some(1000))]
+    fn write_single_slice(#[case] buffer_size: Option<usize>) {
         let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer =
-            BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
+        let mut writer = build_writer(TestStableMemory::new(memory.clone()), buffer_size);
 
-        let bytes = vec![1; 128];
+        let bytes = vec![1; 100];
 
         writer.write(&bytes).unwrap();
         writer.flush().unwrap();
@@ -86,11 +92,15 @@ mod buffer_writer_tests {
         assert_eq!(bytes, result[..bytes.len()]);
     }
 
-    #[test]
-    fn write_many_slices() {
+    #[rstest]
+    #[case(None)]
+    #[case(Some(1))]
+    #[case(Some(10))]
+    #[case(Some(100))]
+    #[case(Some(1000))]
+    fn write_many_slices(#[case] buffer_size: Option<usize>) {
         let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer =
-            BufferedStableWriter::with_memory(1024, TestStableMemory::new(memory.clone()));
+        let mut writer = build_writer(TestStableMemory::new(memory.clone()), buffer_size);
 
         for i in 1..100 {
             let bytes = vec![i as u8; i];
@@ -108,25 +118,11 @@ mod buffer_writer_tests {
         }
     }
 
-    #[test]
-    fn write_many_slices_some_exceeding_buffer_capacity() {
-        let memory = Rc::new(Mutex::new(Vec::new()));
-        let mut writer =
-            BufferedStableWriter::with_memory(10, TestStableMemory::new(memory.clone()));
-
-        for i in 1..100 {
-            let bytes = vec![i as u8; i];
-            writer.write(&bytes).unwrap();
-        }
-        writer.flush().unwrap();
-
-        let result = &*memory.lock().unwrap();
-
-        let mut offset = 0;
-        for i in 1..100 {
-            let bytes = &result[offset..offset + i];
-            assert_eq!(bytes, vec![i as u8; i]);
-            offset += i;
+    fn build_writer(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Write> {
+        if let Some(buffer_size) = buffer_size {
+            Box::new(BufferedStableWriter::with_memory(buffer_size, memory))
+        } else {
+            Box::new(StableWriter::with_memory(memory))
         }
     }
 }
