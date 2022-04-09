@@ -84,7 +84,7 @@ mod stable_writer_tests {
 
         let bytes = vec![1; 100];
 
-        writer.write(&bytes).unwrap();
+        writer.write_all(&bytes).unwrap();
         writer.flush().unwrap();
 
         let result = &*memory.lock().unwrap();
@@ -104,7 +104,7 @@ mod stable_writer_tests {
 
         for i in 1..100 {
             let bytes = vec![i as u8; i];
-            writer.write(&bytes).unwrap();
+            writer.write_all(&bytes).unwrap();
         }
         writer.flush().unwrap();
 
