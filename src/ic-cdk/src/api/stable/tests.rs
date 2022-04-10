@@ -137,7 +137,8 @@ mod stable_writer_tests {
         writer.flush().unwrap();
 
         let capacity_pages = TestStableMemory::new(memory).stable64_size();
-        let min_pages_required = (total_bytes + WASM_PAGE_SIZE_IN_BYTES - 1)  / WASM_PAGE_SIZE_IN_BYTES;
+        let min_pages_required =
+            (total_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
 
         assert_eq!(capacity_pages, min_pages_required as u64);
     }
