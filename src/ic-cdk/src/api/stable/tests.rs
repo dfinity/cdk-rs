@@ -31,7 +31,7 @@ impl StableMemory for TestStableMemory {
         let previous_len = vec.len();
         let new_len = vec.len() + new_bytes;
         vec.resize(new_len, 0);
-        Ok(previous_len as u32)
+        Ok((previous_len / WASM_PAGE_SIZE_IN_BYTES as usize) as u32)
     }
 
     fn stable64_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
@@ -116,6 +116,30 @@ mod stable_writer_tests {
             assert_eq!(bytes, vec![i as u8; i]);
             offset += i;
         }
+    }
+
+    #[rstest]
+    #[case(None)]
+    #[case(Some(1))]
+    #[case(Some(10))]
+    #[case(Some(100))]
+    #[case(Some(1000))]
+    fn ensure_only_requests_min_number_of_pages_required(#[case] buffer_size: Option<usize>) {
+        let memory = Rc::new(Mutex::new(Vec::new()));
+        let mut writer = build_writer(TestStableMemory::new(memory.clone()), buffer_size);
+
+        let mut total_bytes = 0;
+        for i in 1..10000 {
+            let bytes = vec![i as u8; i];
+            writer.write_all(&bytes).unwrap();
+            total_bytes += i;
+        }
+        writer.flush().unwrap();
+
+        let capacity_pages = TestStableMemory::new(memory).stable64_size();
+        let min_pages_required = (total_bytes + WASM_PAGE_SIZE_IN_BYTES - 1)  / WASM_PAGE_SIZE_IN_BYTES;
+
+        assert_eq!(capacity_pages, min_pages_required as u64);
     }
 
     fn build_writer(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Write> {
