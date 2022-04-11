@@ -131,6 +131,9 @@ pub fn stable_bytes() -> Vec<u8> {
 
 /// A writer to the stable memory.
 ///
+/// Warning: This will overwrite any existing data in stable memory as it writes, so ensure you set
+/// the `offset` value accordingly if you wish to preserve existing data.
+///
 /// Will attempt to grow the memory as it writes,
 /// and keep offsets and total capacity.
 pub struct StableWriter<M: StableMemory = CanisterStableMemory> {
@@ -204,6 +207,9 @@ impl<M: StableMemory> io::Write for StableWriter<M> {
 
 /// A writer to the stable memory which first writes the bytes to an in memory buffer and flushes
 /// the buffer to stable memory each time it becomes full.
+///
+/// Warning: This will overwrite any existing data in stable memory as it writes, so ensure you set
+/// the `offset` value accordingly if you wish to preserve existing data.
 ///
 /// Note: Each call to grow or write to stable memory is a relatively expensive operation, so pick a
 /// buffer size large enough to avoid excessive calls to stable memory.
