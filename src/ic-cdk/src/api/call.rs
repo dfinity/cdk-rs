@@ -456,7 +456,6 @@ pub fn msg_cycles_refunded128() -> u128 {
 ///
 /// The actual amount moved will be returned.
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
-    // TODO: should we assert the u64 input is within the range of i64?
     unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
