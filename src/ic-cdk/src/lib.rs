@@ -1,4 +1,9 @@
-#![warn(missing_docs, unsafe_op_in_unsafe_fn, clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
+#![warn(
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
 #![allow(unused_unsafe)]
 
 //! This crate provides building blocks for developing Internet Computer Canister.

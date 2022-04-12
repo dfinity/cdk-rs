@@ -22,14 +22,18 @@ use std::task::Context;
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let future_ptr = Box::into_raw(Box::new(future));
     let future_ptr_ptr: *mut *mut dyn Future<Output = ()> = Box::into_raw(Box::new(future_ptr));
+    // SAFETY: The pointer is to a Box, which satisfies the pinning requirement.
     let mut pinned_future = unsafe { Pin::new_unchecked(&mut *future_ptr) };
     if pinned_future
         .as_mut()
-        .poll(&mut Context::from_waker(&waker::waker(
-            future_ptr_ptr as *const (),
-        )))
+        // SAFETY: future_ptr_ptr was constructed from a boxed box.
+        // future_ptr_ptr is NOT unique (shared by pinned_future). This call is UNSOUND.
+        .poll(&mut Context::from_waker(&unsafe {
+            waker::waker(future_ptr_ptr as *const ())
+        }))
         .is_ready()
     {
+        // SAFETY: These were created from boxes earlier in the function
         unsafe {
             let _ = Box::from_raw(future_ptr);
             let _ = Box::from_raw(future_ptr_ptr);
@@ -55,12 +59,19 @@ mod waker {
 
     static MY_VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
 
-    fn raw_waker(ptr: *const ()) -> RawWaker {
+    /// # Safety
+    ///
+    /// The pointer must be a unique Box-allocated pointer to a Box-allocated pointer to a `dyn Future<Output=()>`.
+    unsafe fn raw_waker(ptr: *const ()) -> RawWaker {
+        // SAFETY: All the function pointers in MY_VTABLE correctly operate on the pointer in question.
         RawWaker::new(ptr, &MY_VTABLE)
     }
 
-    fn clone(ptr: *const ()) -> RawWaker {
-        raw_waker(ptr)
+    /// # Safety
+    /// This function should only be called by a [Waker] created by [`waker`].
+    unsafe fn clone(ptr: *const ()) -> RawWaker {
+        // SAFETY: The pointer attached via `waker` satisfies its own contract.
+        unsafe { raw_waker(ptr) }
     }
 
     // Our waker will be called only if one of the response callbacks is triggered.
@@ -69,15 +80,22 @@ mod waker {
     // is pending, we leave it on the heap. If it's ready, we deallocate the
     // pointer. If CLEANUP is set, then we're recovering from a callback trap, and
     // want to drop the future without executing any more of it.
+    /// # Safety
+    /// This function should only be called by a [Waker] created by [`waker`].
     unsafe fn wake(ptr: *const ()) {
-        let boxed_future_ptr_ptr = Box::from_raw(ptr as *mut FuturePtr);
+        // SAFETY: The function contract guarantees that the outer pointer is a Box of the FuturePtr.
+        let boxed_future_ptr_ptr = unsafe { Box::from_raw(ptr as *mut FuturePtr) };
         let future_ptr: FuturePtr = *boxed_future_ptr_ptr;
-        let boxed_future = Box::from_raw(future_ptr);
-        let mut pinned_future = Pin::new_unchecked(&mut *future_ptr);
+        // SAFETY: The function contract guarantees that the inner pointer is a FuturePtr, and unique.
+        let mut boxed_future = unsafe { Box::from_raw(future_ptr) };
+        // SAFETY: Boxes satisfy the pinning contract and are sound to use in new_unchecked.
+        // The box is never moved out of, but dropped in place.
+        let mut pinned_future = unsafe { Pin::new_unchecked(&mut *boxed_future) };
         if !super::CLEANUP.load(Ordering::Relaxed)
             && pinned_future
                 .as_mut()
-                .poll(&mut Context::from_waker(&waker::waker(ptr)))
+                // SAFETY: The pointer attached via `waker` satisfies its own contract.
+                .poll(&mut Context::from_waker(&unsafe { waker::waker(ptr) }))
                 .is_pending()
         {
             Box::into_raw(boxed_future_ptr_ptr);
@@ -89,7 +107,14 @@ mod waker {
 
     fn drop(_: *const ()) {}
 
-    pub fn waker(ptr: *const ()) -> Waker {
+    /// # Safety
+    ///
+    /// The pointer must be a unique Box-allocated pointer to a Box-allocated pointer to a `dyn Future<Output=()>`.
+    pub unsafe fn waker(ptr: *const ()) -> Waker {
+        // SAFETY:
+        // raw_waker has the same safety requirement on ptr as this function
+        // The functions in the vtable are passed the ptr that was passed to this function
+        // The functions in the vtable uphold RawWaker's contract
         unsafe { Waker::from_raw(raw_waker(ptr)) }
     }
 }

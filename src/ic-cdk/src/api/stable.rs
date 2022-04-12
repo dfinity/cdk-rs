@@ -6,11 +6,13 @@ use std::{error, fmt, io};
 
 /// Gets current size of the stable memory.
 pub fn stable_size() -> u32 {
+    // SAFETY: ic0.stable_size is always safe to call.
     unsafe { super::ic0::stable_size() as u32 }
 }
 
 /// Similar to `stable_size` but with support for 64-bit addressed memory.
 pub fn stable64_size() -> u64 {
+    // SAFETY: ic0.stable64_size is always safe to call.
     unsafe { super::ic0::stable64_size() as u64 }
 }
 
@@ -41,6 +43,7 @@ impl error::Error for StableMemoryError {}
 ///
 /// *Note*: Pages are 64KiB in WASM.
 pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
+    // SAFETY: ic0.stable_grow is always safe to call.
     unsafe {
         match super::ic0::stable_grow(new_pages as i32) {
             -1 => Err(StableMemoryError::OutOfMemory),
@@ -51,6 +54,7 @@ pub fn stable_grow(new_pages: u32) -> Result<u32, StableMemoryError> {
 
 /// Similar to `stable_grow` but with support for 64-bit addressed memory.
 pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
+    // SAFETY: ic0.stable64_grow is always safe to call.
     unsafe {
         match super::ic0::stable64_grow(new_pages as i64) {
             -1 => Err(StableMemoryError::OutOfMemory),
@@ -61,6 +65,7 @@ pub fn stable64_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
 
 /// Writes data to the stable memory location specified by an offset.
 pub fn stable_write(offset: u32, buf: &[u8]) {
+    // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore safe to pass to ic0.stable_write
     unsafe {
         super::ic0::stable_write(offset as i32, buf.as_ptr() as i32, buf.len() as i32);
     }
@@ -68,6 +73,7 @@ pub fn stable_write(offset: u32, buf: &[u8]) {
 
 /// Similar to `stable_write` but with support for 64-bit addressed memory.
 pub fn stable64_write(offset: u64, buf: &[u8]) {
+    // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore safe to pass to ic0.stable64_write
     unsafe {
         super::ic0::stable64_write(offset as i64, buf.as_ptr() as i64, buf.len() as i64);
     }
@@ -75,6 +81,7 @@ pub fn stable64_write(offset: u64, buf: &[u8]) {
 
 /// Reads data from the stable memory location specified by an offset.
 pub fn stable_read(offset: u32, buf: &mut [u8]) {
+    // SAFETY: `buf`, being &mut [u8], is a writable buffer of bytes, and therefore safe to pass to ic0.stable_read
     unsafe {
         super::ic0::stable_read(buf.as_ptr() as i32, offset as i32, buf.len() as i32);
     }
@@ -82,6 +89,7 @@ pub fn stable_read(offset: u32, buf: &mut [u8]) {
 
 /// Similar to `stable_read` but with support for 64-bit addressed memory.
 pub fn stable64_read(offset: u64, buf: &mut [u8]) {
+    // SAFETY: `buf`, being &mut [u8], is a writable buffer of bytes, and therefore safe to pass to ic0.stable64_read
     unsafe {
         super::ic0::stable64_read(buf.as_ptr() as i64, offset as i64, buf.len() as i64);
     }
@@ -93,6 +101,8 @@ pub fn stable64_read(offset: u64, buf: &mut [u8]) {
 pub fn stable_bytes() -> Vec<u8> {
     let size = (stable_size() as usize) << 16;
     let mut vec = Vec::with_capacity(size);
+    // SAFETY: `vec` is allocated to `size` bytes, and therefore safe to pass to ic0.stable_read
+    // After ic0.stable_read has been called, `size` bytes have been initialized, making that a valid len for `vec`
     unsafe {
         super::ic0::stable_read(vec.as_ptr() as i32, 0, size as i32);
         vec.set_len(size);
