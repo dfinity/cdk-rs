@@ -17,7 +17,7 @@ ic-cdk-macros = { path = "../src/ic-cdk-macros" }
 
 [[bin]]
 name = "simple-kv-store"
-path = "canisters/sipmle_kv_store.rs"
+path = "canisters/simple_kv_store.rs"
 
 [dev-dependencies]
 ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "991129a26e680deeeee4d197583f8e6e91901a36" }
