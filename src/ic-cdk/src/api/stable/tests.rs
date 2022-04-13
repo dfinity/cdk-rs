@@ -177,7 +177,7 @@ mod stable_reader_tests {
     fn reads_all_bytes(#[case] buffer_size: Option<usize>) {
         let input = vec![1; 10_000];
         let memory = Rc::new(Mutex::new(input.clone()));
-        let mut reader = build_reader(TestStableMemory::new(memory.clone()), buffer_size);
+        let mut reader = build_reader(TestStableMemory::new(memory), buffer_size);
 
         let mut output = Vec::new();
         reader.read_to_end(&mut output).unwrap();
