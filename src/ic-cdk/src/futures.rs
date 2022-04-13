@@ -28,6 +28,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
         .as_mut()
         // SAFETY: future_ptr_ptr was constructed from a boxed box.
         // future_ptr_ptr is NOT unique (shared by pinned_future). This call is UNSOUND.
+        // FIXME
         .poll(&mut Context::from_waker(&unsafe {
             waker::waker(future_ptr_ptr as *const ())
         }))

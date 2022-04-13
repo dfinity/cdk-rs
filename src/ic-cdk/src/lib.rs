@@ -4,7 +4,6 @@
     clippy::undocumented_unsafe_blocks,
     clippy::missing_safety_doc
 )]
-#![allow(unused_unsafe)]
 
 //! This crate provides building blocks for developing Internet Computer Canister.
 //!
