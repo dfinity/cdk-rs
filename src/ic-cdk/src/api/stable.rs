@@ -246,43 +246,82 @@ impl<M: StableMemory> io::Write for BufferedStableWriter<M> {
 /// A reader to the stable memory.
 ///
 /// Keeps an offset and reads off stable memory consecutively.
-pub struct StableReader {
+pub struct StableReader<M: StableMemory = CanisterStableMemory> {
     /// The offset of the next read.
     offset: usize,
+
     /// The capacity, in pages.
     capacity: u32,
+
+    /// The stable memory to read data from.
+    memory: M,
 }
 
 impl Default for StableReader {
     fn default() -> Self {
-        Self {
-            offset: 0,
-            capacity: stable_size(),
-        }
+        Self::with_memory(CanisterStableMemory::default(), 0)
     }
 }
 
-impl StableReader {
+impl<M: StableMemory> StableReader<M> {
+    /// Creates a new `StableReader` which reads from the selected memory
+    pub fn with_memory(memory: M, offset: usize) -> Self {
+        let capacity = memory.stable_size();
+
+        Self {
+            offset,
+            capacity,
+            memory,
+        }
+    }
+
     /// Reads data from the stable memory location specified by an offset.
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, StableMemoryError> {
-        let cap = (self.capacity as usize) << 16;
-        let read_buf = if buf.len() + self.offset > cap {
-            if self.offset < cap {
-                &mut buf[..cap - self.offset]
+        let capacity_bytes = self.capacity as usize * WASM_PAGE_SIZE_IN_BYTES;
+        let read_buf = if buf.len() + self.offset > capacity_bytes {
+            if self.offset < capacity_bytes {
+                &mut buf[..capacity_bytes - self.offset]
             } else {
                 return Err(StableMemoryError::OutOfBounds);
             }
         } else {
             buf
         };
-        stable_read(self.offset as u32, read_buf);
+        self.memory.stable_read(self.offset as u32, read_buf);
         self.offset += read_buf.len();
         Ok(read_buf.len())
     }
 }
 
-impl io::Read for StableReader {
+impl<M: StableMemory> io::Read for StableReader<M> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         self.read(buf).or(Ok(0)) // Read defines EOF to be success
+    }
+}
+
+/// A reader to the stable memory which reads bytes a chunk at a time as each chunk is required.
+pub struct BufferedStableReader<M: StableMemory = CanisterStableMemory> {
+    inner: io::BufReader<StableReader<M>>,
+}
+
+impl BufferedStableReader {
+    /// Creates a new `BufferedStableReader`
+    pub fn new(buffer_size: usize) -> BufferedStableReader {
+        BufferedStableReader::with_reader(buffer_size, StableReader::default())
+    }
+}
+
+impl<M: StableMemory> BufferedStableReader<M> {
+    /// Creates a new `BufferedStableReader` which reads from the selected memory
+    pub fn with_reader(buffer_size: usize, reader: StableReader<M>) -> BufferedStableReader<M> {
+        BufferedStableReader {
+            inner: io::BufReader::with_capacity(buffer_size, reader),
+        }
+    }
+}
+
+impl<M: StableMemory> io::Read for BufferedStableReader<M> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(buf)
     }
 }

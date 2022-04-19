@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 ### Added
+- Add `BufferedStableReader` for efficient reading from stable memory (#247)
 - Add `BufferedStableWriter` for efficient writing to stable memory (#245)
 
 ## [0.5.0] - 2022-03-29

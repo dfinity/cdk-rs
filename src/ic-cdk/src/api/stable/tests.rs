@@ -9,6 +9,13 @@ pub struct TestStableMemory {
 
 impl TestStableMemory {
     pub fn new(memory: Rc<Mutex<Vec<u8>>>) -> TestStableMemory {
+        let bytes_len = memory.lock().unwrap().len();
+        if bytes_len > 0 {
+            let pages_required = pages_required(bytes_len);
+            let bytes_required = pages_required * WASM_PAGE_SIZE_IN_BYTES;
+            memory.lock().unwrap().resize(bytes_required, 0);
+        }
+
         TestStableMemory { memory }
     }
 }
@@ -16,8 +23,7 @@ impl TestStableMemory {
 impl StableMemory for TestStableMemory {
     fn stable_size(&self) -> u32 {
         let bytes_len = self.memory.lock().unwrap().len();
-        let page_size = WASM_PAGE_SIZE_IN_BYTES as usize;
-        ((bytes_len + page_size - 1) / page_size) as u32
+        pages_required(bytes_len) as u32
     }
 
     fn stable64_size(&self) -> u64 {
@@ -56,15 +62,19 @@ impl StableMemory for TestStableMemory {
         let offset = offset as usize;
 
         let vec = self.memory.lock().unwrap();
-        if offset + buf.len() < vec.len() {
-            panic!("stable memory out of bounds");
-        }
-        buf[..vec.len()].copy_from_slice(&vec[offset..]);
+        let count_to_copy = buf.len();
+
+        buf[..count_to_copy].copy_from_slice(&vec[offset..offset + count_to_copy]);
     }
 
     fn stable64_read(&self, offset: u64, buf: &mut [u8]) {
         self.stable_read(offset as u32, buf)
     }
+}
+
+fn pages_required(bytes_len: usize) -> usize {
+    let page_size = WASM_PAGE_SIZE_IN_BYTES as usize;
+    (bytes_len + page_size - 1) / page_size
 }
 
 mod stable_writer_tests {
@@ -149,6 +159,38 @@ mod stable_writer_tests {
             Box::new(BufferedStableWriter::with_writer(buffer_size, writer))
         } else {
             Box::new(writer)
+        }
+    }
+}
+
+mod stable_reader_tests {
+    use super::*;
+    use rstest::rstest;
+    use std::io::Read;
+
+    #[rstest]
+    #[case(None)]
+    #[case(Some(1))]
+    #[case(Some(10))]
+    #[case(Some(100))]
+    #[case(Some(1000))]
+    fn reads_all_bytes(#[case] buffer_size: Option<usize>) {
+        let input = vec![1; 10_000];
+        let memory = Rc::new(Mutex::new(input.clone()));
+        let mut reader = build_reader(TestStableMemory::new(memory), buffer_size);
+
+        let mut output = Vec::new();
+        reader.read_to_end(&mut output).unwrap();
+
+        assert_eq!(input, output[..input.len()]);
+    }
+
+    fn build_reader(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Read> {
+        let reader = StableReader::with_memory(memory, 0);
+        if let Some(buffer_size) = buffer_size {
+            Box::new(BufferedStableReader::with_reader(buffer_size, reader))
+        } else {
+            Box::new(reader)
         }
     }
 }
