@@ -16,6 +16,9 @@ jobs:
           - build: linux-stable
             os: ubuntu-latest
             rust: 1.58.1
+          - build: macos-stable
+            os: macos-latest
+            rust: 1.58.1
 
     steps:
       - uses: actions/checkout@v2
@@ -38,3 +41,13 @@ jobs:
           cargo test -p ic-cdk-e2e-tests
         env:
           RUST_BACKTRACE: 1
+
+      - name: Purge for OSX
+        if: matrix.os == 'macos-latest'
+        run: |
+          # There is a bug with BSD tar on macOS where the first 8MB of the file are
+          # sometimes all NUL bytes. See https://github.com/actions/cache/issues/403
+          # and https://github.com/rust-lang/cargo/issues/8603 for some more
+          # information. An alternative solution here is to install GNU tar, but
+          # flushing the disk cache seems to work, too.
+          sudo /usr/sbin/purge

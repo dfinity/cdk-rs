@@ -20,5 +20,4 @@ name = "simple-kv-store"
 path = "canisters/simple_kv_store.rs"
 
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "991129a26e680deeeee4d197583f8e6e91901a36" }
-ic-ic00-types = { git = "https://github.com/dfinity/ic", rev = "991129a26e680deeeee4d197583f8e6e91901a36" }
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "709f9caaffd39c5d63f7ef1ec694eeb2a1b7976a" }
