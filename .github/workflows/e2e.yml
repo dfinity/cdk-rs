@@ -1,4 +1,4 @@
-name: Tests
+name: End-to-end Test
 
 on:
   push:
@@ -19,9 +19,6 @@ jobs:
           - build: macos-stable
             os: macos-latest
             rust: 1.58.1
-          - build: windows-stable
-            os: windows-latest
-            rust: 1.58.1
 
     steps:
       - uses: actions/checkout@v2
@@ -39,28 +36,9 @@ jobs:
           rustup update ${{ matrix.rust }} --no-self-update
           rustup default ${{ matrix.rust }}
 
-      - name: Install dependencies (windows only)
-        if: matrix.os == 'windows-latest'
-        shell: bash
+      - name: E2E tests
         run: |
-          vcpkg integrate install
-          vcpkg install openssl:x64-windows-static-md
-          echo "::set-env OPENSSL_DIR 'C:\Tools\vcpkg\installed\x64-windows-static-md'"
-          echo "::set-env OPENSSL_STATIC Yes"
-        env:
-          VCPKG_ROOT: 'C:\vcpkg'
-
-      - name: Run Tests
-        shell: bash
-        run: |
-          # Test all features and no features for each package except e2e-tests.
-          # We run e2e tests in a separate workflow.
-          for p in $(cargo metadata --no-deps --format-version 1 | jq -r .packages[].manifest_path | grep -v e2e-tests); do
-            pushd $(dirname $p)
-            cargo test --all-targets --all-features
-            cargo test --all-targets --no-default-features
-            popd
-          done
+          cargo test -p ic-cdk-e2e-tests
         env:
           RUST_BACKTRACE: 1
 
