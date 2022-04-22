@@ -474,11 +474,17 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 }
 
 /// Returns the argument data as bytes.
-pub(crate) unsafe fn arg_data_raw() -> Vec<u8> {
+pub unsafe fn arg_data_raw() -> Vec<u8> {
     let len: usize = ic0::msg_arg_data_size() as usize;
     let mut bytes = vec![0u8; len as usize];
     ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     bytes
+}
+
+/// Replies with the bytes passed
+pub unsafe fn reply_raw(buf: &[u8]) {
+    ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+    ic0::msg_reply();
 }
 
 /// Returns the argument data in the current call.

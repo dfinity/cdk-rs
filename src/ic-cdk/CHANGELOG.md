@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add `BufferedStableReader` for efficient reading from stable memory (#247)
 - Add `BufferedStableWriter` for efficient writing to stable memory (#245)
+- Add `reply_raw` and publish `arg_data_raw` for serialization-agnostic arguments fetching and replies
 
 ## [0.5.0] - 2022-03-29
 ### Added
