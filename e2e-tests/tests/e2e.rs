@@ -96,13 +96,15 @@ fn test_panic_after_async_frees_resources() {
             Ok(()) => (),
             Err(CallError::Reject(msg)) => panic!("unexpected reject: {}", msg),
             Err(CallError::UserError(e)) => {
+                println!("Got a user error as expected: {}", e);
+
                 assert_eq!(e.code(), ErrorCode::CanisterCalledTrap);
-                assert_eq!(
-                    e.description(),
-                    &format!(
-                        "Canister {} trapped explicitly: Goodbye, cruel world.",
-                        canister_id
-                    )
+                let expected_message = "Goodbye, cruel world.";
+                assert!(
+                    e.description().contains(expected_message),
+                    "Expected the user error to contain '{}', got: {}",
+                    expected_message,
+                    e.description()
                 );
             }
         }

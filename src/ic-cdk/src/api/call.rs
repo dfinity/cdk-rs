@@ -222,17 +222,19 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
 /// Waker is a very opaque API, so the best we can do is set a global flag and proceed normally.
 fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     let state = unsafe { WasmCell::from_raw(state_ptr) };
-    // We set the call result, even though it won't be read on the default executor, because we can't guarantee it was called on our executor.
-    // None of these calls trap - the rollback from the previous trap ensures that the Mutex is not in a poisoned state.
-    {
-        state.borrow_mut().result = Some(match reject_code() {
-            RejectionCode::NoError => unsafe { Ok(arg_data_raw()) },
-            n => Err((n, reject_message())),
-        });
-    }
+    // We set the call result, even though it won't be read on the
+    // default executor, because we can't guarantee it was called on
+    // our executor. However, we are not allowed to inspect
+    // reject_code() inside of a cleanup callback, so always set the
+    // result to a reject.
+    //
+    // Borrowing does not trap - the rollback from the
+    // previous trap ensures that the WasmCell can be borrowed again.
+    state.borrow_mut().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
     let w = state.borrow_mut().waker.take();
     if let Some(waker) = w {
-        // Flag that we do not want to actually wake the task - we want to drop it *without* executing it.
+        // Flag that we do not want to actually wake the task - we
+        // want to drop it *without* executing it.
         crate::futures::CLEANUP.store(true, Ordering::Relaxed);
         waker.wake();
         crate::futures::CLEANUP.store(false, Ordering::Relaxed);
