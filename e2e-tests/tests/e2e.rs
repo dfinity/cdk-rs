@@ -89,7 +89,9 @@ fn test_storage_roundtrip() {
 fn test_panic_after_async_frees_resources() {
     let env = StateMachine::new();
     let wasm = cargo_build_canister("async");
-    let canister_id = env.install_canister(wasm.clone(), vec![], None).unwrap();
+    let canister_id = env
+        .install_canister(wasm, vec![], None)
+        .expect("failed to install a canister");
 
     for i in 1..3 {
         match call_candid(&env, canister_id, "panic_after_async", ()) {
