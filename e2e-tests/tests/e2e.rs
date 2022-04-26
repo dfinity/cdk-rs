@@ -97,7 +97,13 @@ fn test_panic_after_async_frees_resources() {
             Err(CallError::Reject(msg)) => panic!("unexpected reject: {}", msg),
             Err(CallError::UserError(e)) => {
                 assert_eq!(e.code(), ErrorCode::CanisterCalledTrap);
-                assert_eq!(e.description(), "Goodbye, cruel world.");
+                assert_eq!(
+                    e.description(),
+                    &format!(
+                        "Canister {} trapped explicitly: Goodbye, cruel world.",
+                        canister_id
+                    )
+                );
             }
         }
 
