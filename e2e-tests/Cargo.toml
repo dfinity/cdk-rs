@@ -11,13 +11,18 @@ repository = "https://github.com/dfinity/cdk-rs"
 candid = "0.7.4"
 cargo_metadata = "0.14.2"
 escargot = { version = "0.5.7", features = ["print"] }
-serde_bytes = "0.11"
 ic-cdk = { path = "../src/ic-cdk" }
 ic-cdk-macros = { path = "../src/ic-cdk-macros" }
+lazy_static = "1.4.0"
+serde_bytes = "0.11"
 
 [[bin]]
 name = "simple-kv-store"
 path = "canisters/simple_kv_store.rs"
+
+[[bin]]
+name = "async"
+path = "canisters/async.rs"
 
 [dev-dependencies]
 ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "709f9caaffd39c5d63f7ef1ec694eeb2a1b7976a" }
