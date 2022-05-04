@@ -3,8 +3,8 @@ mod rc_bytes;
 mod tests;
 
 use crate::rc_bytes::RcBytes;
+use candid::{candid_method, CandidType, Deserialize, Func, Int, Nat, Principal};
 use ic_cdk::api::{caller, data_certificate, set_certified_data, time, trap};
-use ic_cdk::export::candid::{CandidType, Deserialize, Func, Int, Nat, Principal};
 use ic_cdk_macros::{query, update};
 use ic_certified_map::{AsHashTree, Hash, HashTree, RbTree};
 use num_traits::ToPrimitive;
@@ -237,6 +237,7 @@ struct StreamingCallbackHttpResponse {
 }
 
 #[update]
+#[candid_method(update)]
 fn authorize(other: Principal) {
     let caller = caller();
     STATE.with(|s| {
@@ -248,6 +249,7 @@ fn authorize(other: Principal) {
 }
 
 #[query]
+#[candid_method(query)]
 fn retrieve(key: Key) -> RcBytes {
     STATE.with(|s| {
         let assets = s.assets.borrow();
@@ -264,6 +266,7 @@ fn retrieve(key: Key) -> RcBytes {
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn store(arg: StoreArg) {
     STATE.with(move |s| {
         let mut assets = s.assets.borrow_mut();
@@ -288,6 +291,7 @@ fn store(arg: StoreArg) {
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn create_batch() -> CreateBatchResponse {
     STATE.with(|s| {
         let batch_id = s.next_batch_id.borrow().clone();
@@ -315,6 +319,7 @@ fn create_batch() -> CreateBatchResponse {
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn create_chunk(arg: CreateChunkArg) -> CreateChunkResponse {
     STATE.with(|s| {
         let mut batches = s.batches.borrow_mut();
@@ -340,31 +345,37 @@ fn create_chunk(arg: CreateChunkArg) -> CreateChunkResponse {
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn create_asset(arg: CreateAssetArguments) {
     do_create_asset(arg);
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn set_asset_content(arg: SetAssetContentArguments) {
     do_set_asset_content(arg);
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn unset_asset_content(arg: UnsetAssetContentArguments) {
     do_unset_asset_content(arg);
 }
 
 #[update(guard = "is_authorized")]
-fn delete_content(arg: DeleteAssetArguments) {
+#[candid_method(update)]
+fn delete_asset(arg: DeleteAssetArguments) {
     do_delete_asset(arg);
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn clear() {
     do_clear();
 }
 
 #[update(guard = "is_authorized")]
+#[candid_method(update)]
 fn commit_batch(arg: CommitBatchArguments) {
     let batch_id = arg.batch_id;
     for op in arg.operations {
@@ -382,6 +393,7 @@ fn commit_batch(arg: CommitBatchArguments) {
 }
 
 #[query]
+#[candid_method(query)]
 fn get(arg: GetArg) -> EncodedAsset {
     STATE.with(|s| {
         let assets = s.assets.borrow();
@@ -405,6 +417,7 @@ fn get(arg: GetArg) -> EncodedAsset {
 }
 
 #[query]
+#[candid_method(query)]
 fn get_chunk(arg: GetChunkArg) -> GetChunkResponse {
     STATE.with(|s| {
         let assets = s.assets.borrow();
@@ -434,6 +447,7 @@ fn get_chunk(arg: GetChunkArg) -> GetChunkResponse {
 }
 
 #[query]
+#[candid_method(query)]
 fn list() -> Vec<AssetDetails> {
     STATE.with(|s| {
         s.assets
@@ -680,6 +694,7 @@ fn redirect_to_url(host: &str, url: &str) -> Option<String> {
 }
 
 #[query]
+#[candid_method(query)]
 fn http_request(req: HttpRequest) -> HttpResponse {
     let mut encodings = vec![];
     for (name, value) in req.headers.iter() {
@@ -720,6 +735,7 @@ fn http_request(req: HttpRequest) -> HttpResponse {
 }
 
 #[query]
+#[candid_method(query)]
 fn http_request_streaming_callback(
     StreamingCallbackToken {
         key,
@@ -1012,4 +1028,24 @@ pub fn post_upgrade(stable_state: StableState) {
             on_asset_change(asset_name, asset);
         }
     });
+}
+
+#[test]
+fn candid_interface_compatibility() {
+    use candid::utils::{service_compatible, CandidSource};
+    use std::path::PathBuf;
+
+    candid::export_service!();
+    let new_interface = __export_service();
+
+    let old_interface =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("assets.did");
+
+    println!("Exported interface: {}", new_interface);
+
+    service_compatible(
+        CandidSource::Text(&new_interface),
+        CandidSource::File(old_interface.as_path()),
+    )
+    .expect("The assets canister interface is not compatible with the assets.did file");
 }
