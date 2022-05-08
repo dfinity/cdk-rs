@@ -160,7 +160,16 @@ fn list() -> Vec<AssetDetails> {
 fn http_request(req: HttpRequest) -> HttpResponse {
     let certificate = data_certificate().unwrap_or_else(|| trap("no data certificate available"));
 
-    STATE.with(|s| s.borrow().http_request(req, &certificate))
+    STATE.with(|s| {
+        s.borrow().http_request(
+            req,
+            &certificate,
+            candid::Func {
+                method: "http_request_streaming_callback".to_string(),
+                principal: ic_cdk::id(),
+            },
+        )
+    })
 }
 
 #[query]

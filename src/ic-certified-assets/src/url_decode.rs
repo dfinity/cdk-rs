@@ -61,22 +61,3 @@ pub fn url_decode(url: &str) -> Result<String, UrlDecodeError> {
     }
     .collect()
 }
-
-#[test]
-fn check_url_decode() {
-    assert_eq!(
-        url_decode("/%"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(url_decode("/%%"), Ok("/%".to_string()));
-    assert_eq!(url_decode("/%20a"), Ok("/ a".to_string()));
-    assert_eq!(
-        url_decode("/%%+a%20+%@"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(
-        url_decode("/has%percent.txt"),
-        Err(UrlDecodeError::InvalidPercentEncoding)
-    );
-    assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
-}

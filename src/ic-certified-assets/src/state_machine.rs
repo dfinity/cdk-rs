@@ -5,7 +5,7 @@
 // as formal arguments.  This approach makes it very easy to test the state machine.
 
 use crate::{rc_bytes::RcBytes, types::*, url_decode::url_decode};
-use candid::{CandidType, Deserialize, Int, Nat, Principal};
+use candid::{CandidType, Deserialize, Func, Int, Nat, Principal};
 use ic_certified_map::{AsHashTree, Hash, HashTree, RbTree};
 use num_traits::ToPrimitive;
 use serde::Serialize;
@@ -16,7 +16,7 @@ use std::convert::TryInto;
 
 /// The amount of time a batch is kept alive. Modifying the batch
 /// delays the expiry further.
-const BATCH_EXPIRY_NANOS: u64 = 300_000_000_000;
+pub const BATCH_EXPIRY_NANOS: u64 = 300_000_000_000;
 
 /// The order in which we pick encodings for certification.
 const ENCODING_CERTIFICATION_ORDER: &[&str] = &["identity", "gzip", "compress", "deflate", "br"];
@@ -104,7 +104,7 @@ impl State {
     }
 
     pub fn authorize(&mut self, caller: &Principal, other: Principal) -> Result<(), String> {
-        if !self.is_authorized(&caller) {
+        if !self.is_authorized(caller) {
             return Err("the caller is not authorized".to_string());
         }
         self.authorize_unconditionally(other);
@@ -353,7 +353,7 @@ impl State {
                 });
             }
         }
-        return Err("no such encoding".to_string());
+        Err("no such encoding".to_string())
     }
 
     pub fn get_chunk(&self, arg: GetChunkArg) -> Result<RcBytes, String> {
@@ -386,6 +386,7 @@ impl State {
         path: &str,
         encodings: Vec<String>,
         index: usize,
+        callback: Func,
     ) -> HttpResponse {
         let index_redirect_certificate = if self.asset_hashes.get(path.as_bytes()).is_none()
             && self.asset_hashes.get(INDEX_FILE.as_bytes()).is_some()
@@ -410,6 +411,7 @@ impl State {
                                 INDEX_FILE,
                                 index,
                                 Some(certificate_header),
+                                callback,
                             );
                         }
                     }
@@ -431,6 +433,7 @@ impl State {
                             path,
                             index,
                             Some(certificate_header),
+                            callback,
                         );
                     } else {
                         // Find if identity is certified, if it's not.
@@ -443,6 +446,7 @@ impl State {
                                     path,
                                     index,
                                     Some(certificate_header),
+                                    callback,
                                 );
                             }
                         }
@@ -454,7 +458,12 @@ impl State {
         build_404(certificate_header)
     }
 
-    pub fn http_request(&self, req: HttpRequest, certificate: &[u8]) -> HttpResponse {
+    pub fn http_request(
+        &self,
+        req: HttpRequest,
+        certificate: &[u8],
+        callback: Func,
+    ) -> HttpResponse {
         let mut encodings = vec![];
         for (name, value) in req.headers.iter() {
             if name.eq_ignore_ascii_case("Accept-Encoding") {
@@ -481,7 +490,7 @@ impl State {
         };
 
         match url_decode(path) {
-            Ok(path) => self.build_http_response(certificate, &path, encodings, 0),
+            Ok(path) => self.build_http_response(certificate, &path, encodings, 0, callback),
             Err(err) => HttpResponse {
                 status_code: 400,
                 headers: vec![],
@@ -539,9 +548,11 @@ impl From<State> for StableState {
 
 impl From<StableState> for State {
     fn from(stable_state: StableState) -> Self {
-        let mut state = Self::default();
-        state.authorized = stable_state.authorized;
-        state.assets = stable_state.stable_assets;
+        let mut state = Self {
+            authorized: stable_state.authorized,
+            assets: stable_state.stable_assets,
+            ..Self::default()
+        };
 
         for (asset_name, asset) in state.assets.iter_mut() {
             for enc in asset.encodings.values_mut() {
@@ -667,22 +678,6 @@ fn create_token(
     }
 }
 
-fn create_strategy(
-    asset: &Asset,
-    enc_name: &str,
-    enc: &AssetEncoding,
-    key: &str,
-    chunk_index: usize,
-) -> Option<StreamingStrategy> {
-    create_token(asset, enc_name, enc, key, chunk_index).map(|token| StreamingStrategy::Callback {
-        callback: ic_cdk::export::candid::Func {
-            method: "http_request_streaming_callback".to_string(),
-            principal: ic_cdk::id(),
-        },
-        token,
-    })
-}
-
 fn build_200(
     asset: &Asset,
     enc_name: &str,
@@ -690,6 +685,7 @@ fn build_200(
     key: &str,
     chunk_index: usize,
     certificate_header: Option<HeaderField>,
+    callback: Func,
 ) -> HttpResponse {
     let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
     if enc_name != "identity" {
@@ -699,7 +695,8 @@ fn build_200(
         headers.push(head);
     }
 
-    let streaming_strategy = create_strategy(asset, enc_name, enc, key, chunk_index);
+    let streaming_strategy = create_token(asset, enc_name, enc, key, chunk_index)
+        .map(|token| StreamingStrategy::Callback { callback, token });
 
     HttpResponse {
         status_code: 200,
