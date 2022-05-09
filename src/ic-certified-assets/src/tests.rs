@@ -320,7 +320,7 @@ fn supports_etag_caching() {
         response
             .headers
             .contains(&("ETag".to_string(), etag.clone())),
-        "Not ETag header in response: {:#?}",
+        "No ETag header in response: {:#?}",
         response
     );
 
