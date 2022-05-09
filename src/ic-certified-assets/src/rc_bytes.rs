@@ -1,3 +1,4 @@
+//! This module contains an implementation of [RcBytes], a reference-counted byte array.
 use ic_cdk::export::candid::{
     types::{internal::Type, Serializer},
     CandidType, Deserialize,
@@ -9,7 +10,7 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
-pub(crate) struct RcBytes(Rc<ByteBuf>);
+pub struct RcBytes(Rc<ByteBuf>);
 
 impl CandidType for RcBytes {
     fn _ty() -> Type {
