@@ -18,10 +18,12 @@ fn unused_callback() -> candid::Func {
     }
 }
 
+type Encodings<'a> = Vec<(&'a str, Vec<&'a [u8]>)>;
+
 fn create_assets(
     state: &mut State,
     time_now: u64,
-    assets: Vec<(&str, &str, Vec<(&str, Vec<&[u8]>)>)>,
+    assets: Vec<(&str, &str, Encodings<'_>)>,
 ) -> BatchId {
     let batch_id = state.create_batch(time_now);
 
