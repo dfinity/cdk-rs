@@ -702,6 +702,7 @@ fn create_token(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_ok(
     asset: &Asset,
     enc_name: &str,
