@@ -320,7 +320,16 @@ fn supports_etag_caching() {
         response
             .headers
             .contains(&("ETag".to_string(), etag.clone())),
-        "No ETag header in response: {:#?}",
+        "No matching ETag header in response: {:#?}, expected ETag {}",
+        response,
+        etag
+    );
+    assert!(
+        response
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("IC-Certificate")),
+        "No IC-Certificate header in response: {:#?}",
         response
     );
 
