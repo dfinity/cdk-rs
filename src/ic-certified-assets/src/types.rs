@@ -14,6 +14,7 @@ pub type Key = String;
 pub struct CreateAssetArguments {
     pub key: Key,
     pub content_type: String,
+    pub max_age: Option<u64>,
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
