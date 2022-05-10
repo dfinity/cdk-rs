@@ -6,6 +6,7 @@ use crate::types::{
 use crate::url_decode::{url_decode, UrlDecodeError};
 use candid::Principal;
 use serde_bytes::ByteBuf;
+use sha2::Digest;
 
 fn some_principal() -> Principal {
     Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap()
@@ -281,6 +282,107 @@ fn uses_streaming_for_multichunk_assets() {
         "Unexpected streaming response: {:?}",
         streaming_response
     );
+}
+
+#[test]
+fn supports_etag_caching() {
+    let mut state = State::default();
+    let time_now = 100_000_000_000;
+
+    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
+    let hash: [u8; 32] = sha2::Sha256::digest(BODY).into();
+    let etag = hex::encode(hash);
+
+    create_assets(
+        &mut state,
+        time_now,
+        vec![(
+            "/contents.html",
+            "text/html",
+            vec![("identity", vec![BODY])],
+        )],
+    );
+
+    let response = state.http_request(
+        HttpRequest {
+            body: ByteBuf::new(),
+            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
+            method: "GET".to_string(),
+            url: "/contents.html".to_string(),
+        },
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body.as_ref(), BODY);
+    assert!(
+        response
+            .headers
+            .contains(&("ETag".to_string(), etag.clone())),
+        "No matching ETag header in response: {:#?}, expected ETag {}",
+        response,
+        etag
+    );
+    assert!(
+        response
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("IC-Certificate")),
+        "No IC-Certificate header in response: {:#?}",
+        response
+    );
+
+    let response = state.http_request(
+        HttpRequest {
+            body: ByteBuf::new(),
+            headers: vec![
+                ("Accept-Encoding".to_string(), "gzip,identity".to_string()),
+                ("If-None-Match".to_string(), etag),
+            ],
+            method: "GET".to_string(),
+            url: "/contents.html".to_string(),
+        },
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 304);
+    assert_eq!(response.body.as_ref(), &[] as &[u8]);
+}
+
+#[test]
+fn returns_400_on_invalid_etag() {
+    let mut state = State::default();
+    let time_now = 100_000_000_000;
+
+    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
+
+    create_assets(
+        &mut state,
+        time_now,
+        vec![(
+            "/contents.html",
+            "text/html",
+            vec![("identity", vec![BODY])],
+        )],
+    );
+
+    let response = state.http_request(
+        HttpRequest {
+            body: ByteBuf::new(),
+            headers: vec![
+                ("Accept-Encoding".to_string(), "gzip,identity".to_string()),
+                ("If-None-Match".to_string(), "cafe".to_string()),
+            ],
+            method: "GET".to_string(),
+            url: "/contents.html".to_string(),
+        },
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 400);
 }
 
 #[test]

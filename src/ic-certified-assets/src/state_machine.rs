@@ -387,6 +387,7 @@ impl State {
         encodings: Vec<String>,
         index: usize,
         callback: Func,
+        etag: Option<Hash>,
     ) -> HttpResponse {
         let index_redirect_certificate = if self.asset_hashes.get(path.as_bytes()).is_none()
             && self.asset_hashes.get(INDEX_FILE.as_bytes()).is_some()
@@ -404,7 +405,7 @@ impl State {
                 for enc_name in encodings.iter() {
                     if let Some(enc) = asset.encodings.get(enc_name) {
                         if enc.certified {
-                            return build_200(
+                            return build_ok(
                                 asset,
                                 enc_name,
                                 enc,
@@ -412,6 +413,7 @@ impl State {
                                 index,
                                 Some(certificate_header),
                                 callback,
+                                etag,
                             );
                         }
                     }
@@ -426,7 +428,7 @@ impl State {
             for enc_name in encodings.iter() {
                 if let Some(enc) = asset.encodings.get(enc_name) {
                     if enc.certified {
-                        return build_200(
+                        return build_ok(
                             asset,
                             enc_name,
                             enc,
@@ -434,12 +436,13 @@ impl State {
                             index,
                             Some(certificate_header),
                             callback,
+                            etag,
                         );
                     } else {
                         // Find if identity is certified, if it's not.
                         if let Some(id_enc) = asset.encodings.get("identity") {
                             if id_enc.certified {
-                                return build_200(
+                                return build_ok(
                                     asset,
                                     enc_name,
                                     enc,
@@ -447,6 +450,7 @@ impl State {
                                     index,
                                     Some(certificate_header),
                                     callback,
+                                    etag,
                                 );
                             }
                         }
@@ -465,6 +469,7 @@ impl State {
         callback: Func,
     ) -> HttpResponse {
         let mut encodings = vec![];
+        let mut etag = None;
         for (name, value) in req.headers.iter() {
             if name.eq_ignore_ascii_case("Accept-Encoding") {
                 for v in value.split(',') {
@@ -481,6 +486,25 @@ impl State {
                     };
                 }
             }
+            if name.eq_ignore_ascii_case("If-None-Match") {
+                let mut hash = Hash::default();
+                match hex::decode_to_slice(value, &mut hash[..]) {
+                    Ok(()) => {
+                        etag = Some(hash);
+                    }
+                    Err(err) => {
+                        return HttpResponse {
+                            status_code: 400,
+                            headers: vec![],
+                            body: RcBytes::from(ByteBuf::from(format!(
+                                "Invalid {} header: {}",
+                                name, err
+                            ))),
+                            streaming_strategy: None,
+                        };
+                    }
+                }
+            }
         }
         encodings.push("identity".to_string());
 
@@ -490,7 +514,7 @@ impl State {
         };
 
         match url_decode(path) {
-            Ok(path) => self.build_http_response(certificate, &path, encodings, 0, callback),
+            Ok(path) => self.build_http_response(certificate, &path, encodings, 0, callback, etag),
             Err(err) => HttpResponse {
                 status_code: 400,
                 headers: vec![],
@@ -678,7 +702,8 @@ fn create_token(
     }
 }
 
-fn build_200(
+#[allow(clippy::too_many_arguments)]
+fn build_ok(
     asset: &Asset,
     enc_name: &str,
     enc: &AssetEncoding,
@@ -686,6 +711,7 @@ fn build_200(
     chunk_index: usize,
     certificate_header: Option<HeaderField>,
     callback: Func,
+    etag: Option<Hash>,
 ) -> HttpResponse {
     let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
     if enc_name != "identity" {
@@ -698,10 +724,17 @@ fn build_200(
     let streaming_strategy = create_token(asset, enc_name, enc, key, chunk_index)
         .map(|token| StreamingStrategy::Callback { callback, token });
 
+    let (status_code, body) = if etag == Some(enc.sha256) {
+        (304, RcBytes::default())
+    } else {
+        headers.push(("ETag".to_string(), hex::encode(enc.sha256)));
+        (200, enc.content_chunks[chunk_index].clone())
+    };
+
     HttpResponse {
-        status_code: 200,
+        status_code,
         headers,
-        body: enc.content_chunks[chunk_index].clone(),
+        body,
         streaming_strategy,
     }
 }
