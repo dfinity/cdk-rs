@@ -1,6 +1,6 @@
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use ic_cdk_e2e_tests::cargo_build_canister;
-use ic_state_machine_tests::{CanisterId, StateMachine, UserError, WasmResult};
+use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
@@ -83,4 +83,37 @@ fn test_storage_roundtrip() {
     let (result,): (Option<ByteBuf>,) =
         query_candid(&env, canister_id, "lookup", (&"candid",)).expect("failed to lookup 'candid'");
     assert_eq!(result, Some(ByteBuf::from(b"did".to_vec())));
+}
+
+#[test]
+fn test_panic_after_async_frees_resources() {
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("async");
+    let canister_id = env
+        .install_canister(wasm, vec![], None)
+        .expect("failed to install a canister");
+
+    for i in 1..3 {
+        match call_candid(&env, canister_id, "panic_after_async", ()) {
+            Ok(()) => (),
+            Err(CallError::Reject(msg)) => panic!("unexpected reject: {}", msg),
+            Err(CallError::UserError(e)) => {
+                println!("Got a user error as expected: {}", e);
+
+                assert_eq!(e.code(), ErrorCode::CanisterCalledTrap);
+                let expected_message = "Goodbye, cruel world.";
+                assert!(
+                    e.description().contains(expected_message),
+                    "Expected the user error to contain '{}', got: {}",
+                    expected_message,
+                    e.description()
+                );
+            }
+        }
+
+        let (n,): (u64,) = call_candid(&env, canister_id, "invocation_count", ())
+            .expect("failed to call invocation_count");
+
+        assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
+    }
 }
