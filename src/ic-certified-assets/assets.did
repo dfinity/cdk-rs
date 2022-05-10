@@ -6,6 +6,7 @@ type Time = int;
 type CreateAssetArguments = record {
   key: Key;
   content_type: text;
+  max_age: opt nat64;
 };
 
 // Add or change content for an asset, by content encoding

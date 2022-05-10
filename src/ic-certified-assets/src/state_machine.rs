@@ -40,6 +40,7 @@ pub struct AssetEncoding {
 pub struct Asset {
     pub content_type: String,
     pub encodings: HashMap<String, AssetEncoding>,
+    pub max_age: Option<u64>,
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
@@ -127,6 +128,7 @@ impl State {
                 Asset {
                     content_type: arg.content_type,
                     encodings: HashMap::new(),
+                    max_age: arg.max_age,
                 },
             );
         }
@@ -719,6 +721,9 @@ fn build_ok(
     }
     if let Some(head) = certificate_header {
         headers.push(head);
+    }
+    if let Some(max_age) = asset.max_age {
+        headers.push(("Cache-Control".to_string(), format!("max-age={}", max_age)));
     }
 
     let streaming_strategy = create_token(asset, enc_name, enc, key, chunk_index)

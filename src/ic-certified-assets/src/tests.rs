@@ -19,23 +19,86 @@ fn unused_callback() -> candid::Func {
     }
 }
 
-type Encodings<'a> = Vec<(&'a str, Vec<&'a [u8]>)>;
+struct AssetBuilder {
+    name: String,
+    content_type: String,
+    max_age: Option<u64>,
+    encodings: Vec<(String, Vec<ByteBuf>)>,
+}
 
-fn create_assets(
-    state: &mut State,
-    time_now: u64,
-    assets: Vec<(&str, &str, Encodings<'_>)>,
-) -> BatchId {
+impl AssetBuilder {
+    fn new(name: impl AsRef<str>, content_type: impl AsRef<str>) -> Self {
+        Self {
+            name: name.as_ref().to_string(),
+            content_type: content_type.as_ref().to_string(),
+            max_age: None,
+            encodings: vec![],
+        }
+    }
+
+    fn with_max_age(mut self, max_age: u64) -> Self {
+        self.max_age = Some(max_age);
+        self
+    }
+
+    fn with_encoding(mut self, name: impl AsRef<str>, chunks: Vec<impl AsRef<[u8]>>) -> Self {
+        self.encodings.push((
+            name.as_ref().to_string(),
+            chunks
+                .into_iter()
+                .map(|c| ByteBuf::from(c.as_ref().to_vec()))
+                .collect(),
+        ));
+        self
+    }
+}
+
+struct RequestBuilder {
+    resource: String,
+    method: String,
+    headers: Vec<(String, String)>,
+    body: ByteBuf,
+}
+
+impl RequestBuilder {
+    fn get(resource: impl AsRef<str>) -> Self {
+        Self {
+            resource: resource.as_ref().to_string(),
+            method: "GET".to_string(),
+            headers: vec![],
+            body: ByteBuf::new(),
+        }
+    }
+
+    fn with_header(mut self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
+        self.headers
+            .push((name.as_ref().to_string(), value.as_ref().to_string()));
+        self
+    }
+
+    fn build(self) -> HttpRequest {
+        HttpRequest {
+            method: self.method,
+            url: self.resource,
+            headers: self.headers,
+            body: self.body,
+        }
+    }
+}
+
+fn create_assets(state: &mut State, time_now: u64, assets: Vec<AssetBuilder>) -> BatchId {
     let batch_id = state.create_batch(time_now);
 
     let mut operations = vec![];
 
-    for (asset, content_type, encodings) in assets {
+    for asset in assets {
         operations.push(BatchOperation::CreateAsset(CreateAssetArguments {
-            key: asset.to_string(),
-            content_type: content_type.to_string(),
+            key: asset.name.clone(),
+            content_type: asset.content_type,
+            max_age: asset.max_age,
         }));
-        for (enc, chunks) in encodings {
+
+        for (enc, chunks) in asset.encodings {
             let mut chunk_ids = vec![];
             for chunk in chunks {
                 chunk_ids.push(
@@ -43,7 +106,7 @@ fn create_assets(
                         .create_chunk(
                             CreateChunkArg {
                                 batch_id: batch_id.clone(),
-                                content: ByteBuf::from(chunk.to_vec()),
+                                content: chunk,
                             },
                             time_now,
                         )
@@ -53,8 +116,8 @@ fn create_assets(
 
             operations.push(BatchOperation::SetAssetContent({
                 SetAssetContentArguments {
-                    key: asset.to_string(),
-                    content_encoding: enc.to_string(),
+                    key: asset.name.clone(),
+                    content_encoding: enc,
                     chunk_ids,
                     sha256: None,
                 }
@@ -75,6 +138,13 @@ fn create_assets(
     batch_id
 }
 
+fn lookup_header<'a>(response: &'a HttpResponse, header: &str) -> Option<&'a str> {
+    response
+        .headers
+        .iter()
+        .find_map(|(h, v)| h.eq_ignore_ascii_case(header).then(|| v.as_str()))
+}
+
 #[test]
 fn can_create_assets_using_batch_api() {
     let mut state = State::default();
@@ -85,20 +155,13 @@ fn can_create_assets_using_batch_api() {
     let batch_id = create_assets(
         &mut state,
         time_now,
-        vec![(
-            "/contents.html",
-            "text/html",
-            vec![("identity", vec![BODY])],
-        )],
+        vec![AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY])],
     );
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
-            method: "GET".to_string(),
-            url: "/contents.html".to_string(),
-        },
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
         &[],
         unused_callback(),
     );
@@ -172,26 +235,17 @@ fn returns_index_file_for_missing_assets() {
         &mut state,
         time_now,
         vec![
-            (
-                "/index.html",
-                "text/html",
-                vec![("identity", vec![INDEX_BODY])],
-            ),
-            (
-                "/other.html",
-                "text/html",
-                vec![("identity", vec![OTHER_BODY])],
-            ),
+            AssetBuilder::new("/index.html", "text/html")
+                .with_encoding("identity", vec![INDEX_BODY]),
+            AssetBuilder::new("/other.html", "text/html")
+                .with_encoding("identity", vec![OTHER_BODY]),
         ],
     );
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
-            method: "GET".to_string(),
-            url: "/missing.html".to_string(),
-        },
+        RequestBuilder::get("/missing.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
         &[],
         unused_callback(),
     );
@@ -210,23 +264,17 @@ fn preserves_state_on_stable_roundtrip() {
     create_assets(
         &mut state,
         time_now,
-        vec![(
-            "/index.html",
-            "text/html",
-            vec![("identity", vec![INDEX_BODY])],
-        )],
+        vec![AssetBuilder::new("/index.html", "text/html")
+            .with_encoding("identity", vec![INDEX_BODY])],
     );
 
     let stable_state: StableState = state.into();
     let state: State = stable_state.into();
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
-            method: "GET".to_string(),
-            url: "/index.html".to_string(),
-        },
+        RequestBuilder::get("/index.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
         &[],
         unused_callback(),
     );
@@ -245,11 +293,8 @@ fn uses_streaming_for_multichunk_assets() {
     create_assets(
         &mut state,
         time_now,
-        vec![(
-            "/index.html",
-            "text/html",
-            vec![("identity", vec![INDEX_BODY_CHUNK_1, INDEX_BODY_CHUNK_2])],
-        )],
+        vec![AssetBuilder::new("/index.html", "text/html")
+            .with_encoding("identity", vec![INDEX_BODY_CHUNK_1, INDEX_BODY_CHUNK_2])],
     );
 
     let streaming_callback = candid::Func {
@@ -257,12 +302,9 @@ fn uses_streaming_for_multichunk_assets() {
         principal: some_principal(),
     };
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
-            method: "GET".to_string(),
-            url: "/index.html".to_string(),
-        },
+        RequestBuilder::get("/index.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
         &[],
         streaming_callback.clone(),
     );
@@ -296,53 +338,37 @@ fn supports_etag_caching() {
     create_assets(
         &mut state,
         time_now,
-        vec![(
-            "/contents.html",
-            "text/html",
-            vec![("identity", vec![BODY])],
-        )],
+        vec![AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY])],
     );
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Accept-Encoding".to_string(), "gzip,identity".to_string())],
-            method: "GET".to_string(),
-            url: "/contents.html".to_string(),
-        },
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
         &[],
         unused_callback(),
     );
 
     assert_eq!(response.status_code, 200);
     assert_eq!(response.body.as_ref(), BODY);
-    assert!(
-        response
-            .headers
-            .contains(&("ETag".to_string(), etag.clone())),
+    assert_eq!(
+        lookup_header(&response, "ETag"),
+        Some(etag.as_str()),
         "No matching ETag header in response: {:#?}, expected ETag {}",
         response,
         etag
     );
     assert!(
-        response
-            .headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("IC-Certificate")),
+        lookup_header(&response, "IC-Certificate").is_some(),
         "No IC-Certificate header in response: {:#?}",
         response
     );
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![
-                ("Accept-Encoding".to_string(), "gzip,identity".to_string()),
-                ("If-None-Match".to_string(), etag),
-            ],
-            method: "GET".to_string(),
-            url: "/contents.html".to_string(),
-        },
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .with_header("If-None-Match", &etag)
+            .build(),
         &[],
         unused_callback(),
     );
@@ -361,23 +387,14 @@ fn returns_400_on_invalid_etag() {
     create_assets(
         &mut state,
         time_now,
-        vec![(
-            "/contents.html",
-            "text/html",
-            vec![("identity", vec![BODY])],
-        )],
+        vec![AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY])],
     );
 
     let response = state.http_request(
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![
-                ("Accept-Encoding".to_string(), "gzip,identity".to_string()),
-                ("If-None-Match".to_string(), "cafe".to_string()),
-            ],
-            method: "GET".to_string(),
-            url: "/contents.html".to_string(),
-        },
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .with_header("If-None-Match", "cafe")
+            .build(),
         &[],
         unused_callback(),
     );
@@ -386,14 +403,63 @@ fn returns_400_on_invalid_etag() {
 }
 
 #[test]
+fn supports_max_age_headers() {
+    let mut state = State::default();
+    let time_now = 100_000_000_000;
+
+    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
+
+    create_assets(
+        &mut state,
+        time_now,
+        vec![
+            AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY]),
+            AssetBuilder::new("/max-age.html", "text/html")
+                .with_max_age(604800)
+                .with_encoding("identity", vec![BODY]),
+        ],
+    );
+
+    let response = state.http_request(
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body.as_ref(), BODY);
+    assert!(
+        lookup_header(&response, "Cache-Control").is_none(),
+        "Unexpected Cache-Control header in response: {:#?}",
+        response,
+    );
+
+    let response = state.http_request(
+        RequestBuilder::get("/max-age.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body.as_ref(), BODY);
+    assert_eq!(
+        lookup_header(&response, "Cache-Control"),
+        Some("max-age=604800"),
+        "No matching Cache-Control header in response: {:#?}",
+        response,
+    );
+}
+
+#[test]
 fn redirects_cleanly() {
     fn fake(host: &str) -> HttpRequest {
-        HttpRequest {
-            body: ByteBuf::new(),
-            headers: vec![("Host".to_string(), host.to_string())],
-            method: "GET".to_string(),
-            url: "/asset.blob".to_string(),
-        }
+        RequestBuilder::get("/asset.blob")
+            .with_header("Host", host)
+            .build()
     }
     fn assert_308(resp: &HttpResponse, expected: &str) {
         assert_eq!(resp.status_code, 308);
