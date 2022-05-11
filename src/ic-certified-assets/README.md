@@ -8,7 +8,7 @@ Certified assets can also be served from any Rust canister by including this lib
 
 ```
 [dependencies]
-ic-certified-assets = "0.2.0"
+ic-certified-assets = "0.2.1"
 ```
 
 The assets are preserved over upgrades by including the corresponding functions in the `init/pre_upgrade/upgrade`

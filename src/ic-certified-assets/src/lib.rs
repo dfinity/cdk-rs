@@ -1,15 +1,16 @@
 //! This module declares canister methods expected by the assets canister client.
-mod rc_bytes;
-mod state_machine;
-mod types;
+pub mod rc_bytes;
+pub mod state_machine;
+pub mod types;
 mod url_decode;
 
 #[cfg(test)]
 mod tests;
 
+pub use crate::state_machine::StableState;
 use crate::{
     rc_bytes::RcBytes,
-    state_machine::{AssetDetails, EncodedAsset, StableState, State},
+    state_machine::{AssetDetails, EncodedAsset, State},
     types::*,
 };
 use candid::{candid_method, Principal};
