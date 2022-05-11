@@ -480,8 +480,9 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 pub fn arg_data_raw() -> Vec<u8> {
     unsafe {
         let len: usize = ic0::msg_arg_data_size() as usize;
-        let mut bytes = vec![0u8; len as usize];
+        let mut bytes = Vec::with_capacity(len);
         ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+        bytes.set_len(len);
         bytes
     }
 }
