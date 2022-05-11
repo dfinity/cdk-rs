@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2022-05-12
+### Fixed
+- Make StableState public again
+
 ## [0.2.0] - 2022-05-11
 ### Added
 - Support for asset caching based on [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
