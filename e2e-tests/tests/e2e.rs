@@ -117,3 +117,13 @@ fn test_panic_after_async_frees_resources() {
         assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
     }
 }
+
+#[test]
+fn test_raw_api() {
+    let env = StateMachine::new();
+    let rev = cargo_build_canister("reverse");
+    let canister_id = env.install_canister(rev, vec![], None).unwrap();
+
+    let result = env.query(canister_id, "reverse", vec![1, 2, 3, 4]).unwrap();
+    assert_eq!(result, WasmResult::Reply(vec![4, 3, 2, 1]));
+}

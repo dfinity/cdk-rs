@@ -24,5 +24,9 @@ path = "canisters/simple_kv_store.rs"
 name = "async"
 path = "canisters/async.rs"
 
+[[bin]]
+name = "reverse"
+path = "canisters/reverse.rs"
+
 [dev-dependencies]
 ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "709f9caaffd39c5d63f7ef1ec694eeb2a1b7976a" }
