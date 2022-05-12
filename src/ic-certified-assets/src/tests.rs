@@ -353,7 +353,7 @@ fn supports_etag_caching() {
     assert_eq!(response.body.as_ref(), BODY);
     assert_eq!(
         lookup_header(&response, "ETag"),
-        Some(etag.as_str()),
+        Some(format!("\"{}\"", etag).as_str()),
         "No matching ETag header in response: {:#?}, expected ETag {}",
         response,
         etag
@@ -367,7 +367,7 @@ fn supports_etag_caching() {
     let response = state.http_request(
         RequestBuilder::get("/contents.html")
             .with_header("Accept-Encoding", "gzip,identity")
-            .with_header("If-None-Match", &etag)
+            .with_header("If-None-Match", format!("\"{}\"", etag))
             .build(),
         &[],
         unused_callback(),

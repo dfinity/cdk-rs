@@ -389,7 +389,7 @@ impl State {
         encodings: Vec<String>,
         index: usize,
         callback: Func,
-        etag: Option<Hash>,
+        etags: Vec<Hash>,
     ) -> HttpResponse {
         let index_redirect_certificate = if self.asset_hashes.get(path.as_bytes()).is_none()
             && self.asset_hashes.get(INDEX_FILE.as_bytes()).is_some()
@@ -415,7 +415,7 @@ impl State {
                                 index,
                                 Some(certificate_header),
                                 callback,
-                                etag,
+                                etags,
                             );
                         }
                     }
@@ -438,7 +438,7 @@ impl State {
                             index,
                             Some(certificate_header),
                             callback,
-                            etag,
+                            etags,
                         );
                     } else {
                         // Find if identity is certified, if it's not.
@@ -452,7 +452,7 @@ impl State {
                                     index,
                                     Some(certificate_header),
                                     callback,
-                                    etag,
+                                    etags,
                                 );
                             }
                         }
@@ -471,7 +471,7 @@ impl State {
         callback: Func,
     ) -> HttpResponse {
         let mut encodings = vec![];
-        let mut etag = None;
+        let mut etags = Vec::new();
         for (name, value) in req.headers.iter() {
             if name.eq_ignore_ascii_case("Accept-Encoding") {
                 for v in value.split(',') {
@@ -489,17 +489,16 @@ impl State {
                 }
             }
             if name.eq_ignore_ascii_case("If-None-Match") {
-                let mut hash = Hash::default();
-                match hex::decode_to_slice(value, &mut hash[..]) {
-                    Ok(()) => {
-                        etag = Some(hash);
+                match decode_etag_seq(value) {
+                    Ok(decoded_etags) => {
+                        etags = decoded_etags;
                     }
                     Err(err) => {
                         return HttpResponse {
                             status_code: 400,
                             headers: vec![],
                             body: RcBytes::from(ByteBuf::from(format!(
-                                "Invalid {} header: {}",
+                                "Invalid {} header value: {}",
                                 name, err
                             ))),
                             streaming_strategy: None,
@@ -516,7 +515,7 @@ impl State {
         };
 
         match url_decode(path) {
-            Ok(path) => self.build_http_response(certificate, &path, encodings, 0, callback, etag),
+            Ok(path) => self.build_http_response(certificate, &path, encodings, 0, callback, etags),
             Err(err) => HttpResponse {
                 status_code: 400,
                 headers: vec![],
@@ -587,6 +586,70 @@ impl From<StableState> for State {
             on_asset_change(&mut state.asset_hashes, asset_name, asset);
         }
         state
+    }
+}
+
+fn decode_etag_seq(value: &str) -> Result<Vec<Hash>, String> {
+    // Hex-encoded 32-byte hash + 2 quotes
+    const EXPECTED_ETAG_LEN: usize = 66;
+    let mut etags = Vec::with_capacity(1);
+    for etag in value.split(',') {
+        let etag = etag.trim();
+        if etag.len() != EXPECTED_ETAG_LEN {
+            return Err(format!(
+                "invalid length of component {}: expected {}, got {}",
+                etag,
+                EXPECTED_ETAG_LEN,
+                etag.len()
+            ));
+        }
+        if !etag.starts_with('"') {
+            return Err(format!("missing first quote of component {}", etag));
+        }
+        if !etag.ends_with('"') {
+            return Err(format!("missing final quote of component {}", etag));
+        }
+        let mut hash = Hash::default();
+        match hex::decode_to_slice(&etag[1..EXPECTED_ETAG_LEN - 1], &mut hash) {
+            Ok(()) => {
+                etags.push(hash);
+            }
+            Err(e) => return Err(format!("invalid hex of component {}: {}", etag, e)),
+        }
+    }
+    Ok(etags)
+}
+
+#[test]
+fn test_decode_seq() {
+    for (value, expected) in [
+        (
+            r#""0000000000000000000000000000000000000000000000000000000000000000""#,
+            vec![[0u8; 32]],
+        ),
+        (
+            r#""0000000000000000000000000000000000000000000000000000000000000000", "1111111111111111111111111111111111111111111111111111111111111111""#,
+            vec![[0u8; 32], [17u8; 32]],
+        ),
+    ] {
+        let decoded = decode_etag_seq(value)
+            .unwrap_or_else(|e| panic!("failed to parse good ETag value {}: {}", value, e));
+        assert_eq!(decoded, expected);
+    }
+
+    for value in [
+        r#""00000000000000000000000000000000""#,
+        r#"0000000000000000000000000000000000000000000000000000000000000000"#,
+        r#""0000000000000000000000000000000000000000000000000000000000000000" "1111111111111111111111111111111111111111111111111111111111111111""#,
+        r#"0000000000000000000000000000000000000000000000000000000000000000 1111111111111111111111111111111111111111111111111111111111111111"#,
+    ] {
+        let result = decode_etag_seq(value);
+        assert!(
+            result.is_err(),
+            "should have failed to parse invalid ETag value {}, got: {:?}",
+            value,
+            result
+        );
     }
 }
 
@@ -713,7 +776,7 @@ fn build_ok(
     chunk_index: usize,
     certificate_header: Option<HeaderField>,
     callback: Func,
-    etag: Option<Hash>,
+    etags: Vec<Hash>,
 ) -> HttpResponse {
     let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
     if enc_name != "identity" {
@@ -729,10 +792,13 @@ fn build_ok(
     let streaming_strategy = create_token(asset, enc_name, enc, key, chunk_index)
         .map(|token| StreamingStrategy::Callback { callback, token });
 
-    let (status_code, body) = if etag == Some(enc.sha256) {
+    let (status_code, body) = if etags.contains(&enc.sha256) {
         (304, RcBytes::default())
     } else {
-        headers.push(("ETag".to_string(), hex::encode(enc.sha256)));
+        headers.push((
+            "ETag".to_string(),
+            format!("\"{}\"", hex::encode(enc.sha256)),
+        ));
         (200, enc.content_chunks[chunk_index].clone())
     };
 
