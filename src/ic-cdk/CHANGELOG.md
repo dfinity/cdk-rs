@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BufferedStableReader` for efficient reading from stable memory (#247)
 - `BufferedStableWriter` for efficient writing to stable memory (#245)
 - `reply_raw` and publish `arg_data_raw` for serialization-agnostic arguments fetching and replies (#256)
-- Support for one-way calls (see `notify` and `notify_raw` functions)
+- Support for one-way calls (see `notify` and `notify_raw` functions) (#261)
 
 ### Fixed
 - Panicking after `.await` does not leak resources anymore (#232, #250)
