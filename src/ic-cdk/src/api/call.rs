@@ -268,6 +268,10 @@ fn add_payment(payment: u128) {
 ///
 ///   * It is safe to upgrade a canister without stopping it first if it sends out *only*
 ///     one-way messages.
+///
+///   * If the payment is non-zero and the system fails to deliver the notification, the behaviour
+///     is unspecified: the funds can be either reimbursed or consumed irrevocably by the IC depending
+///     on the underlying implementation of one-way calls.
 pub fn notify<T: ArgumentEncoder>(
     id: Principal,
     method: &str,
@@ -286,6 +290,11 @@ pub fn notify_raw(
     payment: u128,
 ) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
+    // We set all callbacks to -1, which is guaranteed to be invalid callback index.
+    // The system will still deliver the reply, but it will trap immediately because the callback
+    // is not a valid function. See
+    // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
+    // for more context.
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
