@@ -137,7 +137,7 @@ fn test_notify_calls() {
         .expect("failed to install a canister");
 
     let receiver_id = env
-        .install_canister(wasm.clone(), vec![], None)
+        .install_canister(wasm, vec![], None)
         .expect("failed to install a canister");
 
     let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
