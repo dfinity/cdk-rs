@@ -241,6 +241,72 @@ fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     }
 }
 
+fn add_payment(payment: u128) {
+    if payment == 0 {
+        return;
+    }
+    let high = (payment >> 64) as u64;
+    let low = (payment & u64::MAX as u128) as u64;
+    unsafe {
+        ic0::call_cycles_add128(high as i64, low as i64);
+    }
+}
+
+/// Sends a one-way message that invokes `method` with arguments `args` on the principal
+/// identified by `id`, ignoring the reply.
+///
+/// Returns `Ok(())` if the message was successfully enqueued, otherwise returns a reject code.
+///
+/// # Notes
+///
+///   * The caller has no way of checking whether the destination processed the notification.
+///     The system can drop the notification if the destination does not have resources to
+///     process the message (for example, if it's out of cycles or queue slots).
+///
+///   * The callee cannot tell whether the call is one-way or not.
+///     The callee must produce replies for all incoming messages.
+///
+///   * It is safe to upgrade a canister without stopping it first if it sends out *only*
+///     one-way messages.
+pub fn notify<T: ArgumentEncoder>(
+    id: Principal,
+    method: &str,
+    args: T,
+    payment: u128,
+) -> Result<(), RejectionCode> {
+    let args_raw = encode_args(args).expect("failed to encode arguments");
+    notify_raw(id, method, &args_raw, payment)
+}
+
+/// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
+pub fn notify_raw(
+    id: Principal,
+    method: &str,
+    args_raw: &[u8],
+    payment: u128,
+) -> Result<(), RejectionCode> {
+    let callee = id.as_slice();
+    let err_code = unsafe {
+        ic0::call_new(
+            callee.as_ptr() as i32,
+            callee.len() as i32,
+            method.as_ptr() as i32,
+            method.len() as i32,
+            /* reply_fun = */ -1,
+            /* reply_env = */ -1,
+            /* reject_fun = */ -1,
+            /* reject_env = */ -1,
+        );
+        add_payment(payment);
+        ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+        ic0::call_perform()
+    };
+    match err_code {
+        0 => Ok(()),
+        c => Err(RejectionCode::from(c)),
+    }
+}
+
 /// Similar to `call`, but without serialization.
 pub fn call_raw(
     id: Principal,
@@ -265,13 +331,7 @@ pub fn call_raw128(
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     call_raw_internal(id, method, args_raw, move || {
-        if payment > 0 {
-            unsafe {
-                let high = (payment >> 64) as u64;
-                let low = (payment & u64::MAX as u128) as u64;
-                ic0::call_cycles_add128(high as i64, low as i64);
-            }
-        }
+        add_payment(payment);
     })
 }
 
