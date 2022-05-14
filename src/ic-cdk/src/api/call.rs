@@ -252,8 +252,8 @@ fn add_payment(payment: u128) {
     }
 }
 
-/// Sends a one-way message that invokes `method` with arguments `args` on the principal
-/// identified by `id`, ignoring the reply.
+/// Sends a one-way message with `payment` cycles attached to it that invokes `method` with
+/// arguments `args` on the principal identified by `id`, ignoring the reply.
 ///
 /// Returns `Ok(())` if the message was successfully enqueued, otherwise returns a reject code.
 ///
@@ -272,7 +272,7 @@ fn add_payment(payment: u128) {
 ///   * If the payment is non-zero and the system fails to deliver the notification, the behaviour
 ///     is unspecified: the funds can be either reimbursed or consumed irrevocably by the IC depending
 ///     on the underlying implementation of one-way calls.
-pub fn notify<T: ArgumentEncoder>(
+pub fn notify_with_payment128<T: ArgumentEncoder>(
     id: Principal,
     method: &str,
     args: T,
@@ -280,6 +280,15 @@ pub fn notify<T: ArgumentEncoder>(
 ) -> Result<(), RejectionCode> {
     let args_raw = encode_args(args).expect("failed to encode arguments");
     notify_raw(id, method, &args_raw, payment)
+}
+
+/// Like [notify_with_payment128], but sets the payment to zero.
+pub fn notify<T: ArgumentEncoder>(
+    id: Principal,
+    method: &str,
+    args: T,
+) -> Result<(), RejectionCode> {
+    notify_with_payment128(id, method, args, 0)
 }
 
 /// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
