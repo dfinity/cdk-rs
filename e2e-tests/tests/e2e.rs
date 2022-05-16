@@ -127,3 +127,27 @@ fn test_raw_api() {
     let result = env.query(canister_id, "reverse", vec![1, 2, 3, 4]).unwrap();
     assert_eq!(result, WasmResult::Reply(vec![4, 3, 2, 1]));
 }
+
+#[test]
+fn test_notify_calls() {
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("async");
+    let sender_id = env
+        .install_canister(wasm.clone(), vec![], None)
+        .expect("failed to install a canister");
+
+    let receiver_id = env
+        .install_canister(wasm, vec![], None)
+        .expect("failed to install a canister");
+
+    let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
+        .expect("failed to query 'notifications_received'");
+    assert_eq!(n, 0);
+
+    let () = call_candid(&env, sender_id, "notify", (receiver_id, "on_notify"))
+        .expect("failed to call 'notify'");
+
+    let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
+        .expect("failed to query 'notifications_received'");
+    assert_eq!(n, 1);
+}

@@ -12,6 +12,7 @@ mod printer;
 pub mod storage;
 
 pub use api::call::call;
+pub use api::call::notify;
 pub use api::{caller, id, print, trap};
 
 static mut DONE: bool = false;
