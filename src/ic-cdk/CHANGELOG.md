@@ -6,7 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] 
 ### Added
-- pub fn `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing
+- pub fn `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing (#263)
+
+### Fixed
+- Use explicitly type u8 in vector initialization (#264)
 
 ## [0.5.1] - 2022-05-16
 ### Added
