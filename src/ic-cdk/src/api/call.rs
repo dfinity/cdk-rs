@@ -460,7 +460,7 @@ pub fn reject_code() -> RejectionCode {
 /// Returns the rejection message.
 pub fn reject_message() -> String {
     let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
-    let mut bytes = vec![0; len as usize];
+    let mut bytes = vec![0u8; len as usize];
     unsafe {
         ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
@@ -593,7 +593,7 @@ pub fn accept_message() {
 /// Returns the name of current canister method.
 pub fn method_name() -> String {
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
-    let mut bytes = vec![0; len as usize];
+    let mut bytes = vec![0u8; len as usize];
     unsafe {
         ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
