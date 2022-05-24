@@ -10,5 +10,9 @@ fn reverse() {
             .as_ref(),
     );
 }
+#[export_name = "canister_update empty_call"]
+fn empty_call() {
+    reply_raw(&[]);
+}
 
 fn main() {}

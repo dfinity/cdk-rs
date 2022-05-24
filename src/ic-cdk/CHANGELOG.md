@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Use explicitly type u8 in vector initialization (#264)
+- Make `reply_raw` avoid writing empty replies
 
 ## [0.5.1] - 2022-05-16
 ### Added
