@@ -276,10 +276,10 @@ pub struct Transaction {
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     /// The hash of the parent block.
-    parent_hash: Option<[u8; 32]>,
-    transaction: Transaction,
+    pub parent_hash: Option<[u8; 32]>,
+    pub transaction: Transaction,
     /// The time at which the ledger constructed the block.
-    timestamp: Timestamp,
+    pub timestamp: Timestamp,
 }
 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
