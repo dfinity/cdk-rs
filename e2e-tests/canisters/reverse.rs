@@ -6,5 +6,9 @@ fn reverse() {
     assert_eq!(arg_bytes.len(), arg_data_raw_size());
     reply_raw(arg_bytes.into_iter().rev().collect::<Vec<_>>().as_ref());
 }
+#[export_name = "canister_update empty_call"]
+fn empty_call() {
+    reply_raw(&[]);
+}
 
 fn main() {}

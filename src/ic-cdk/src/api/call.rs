@@ -573,7 +573,9 @@ pub fn arg_data_raw_size() -> usize {
 /// Replies with the bytes passed
 pub fn reply_raw(buf: &[u8]) {
     unsafe {
-        ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+        if !buf.is_empty() {
+            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32)
+        };
         ic0::msg_reply();
     }
 }
