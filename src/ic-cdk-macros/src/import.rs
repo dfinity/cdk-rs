@@ -15,7 +15,7 @@ struct ImportAttributes {
 
 fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Error> {
     let canister_id_var_name = format!("CANISTER_ID_{}", canister_name);
-    let candid_path_var_name = format!("CANISTER_CANDID_{}", canister_name);
+    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name);
 
     Ok((
         std::env::var(canister_id_var_name).map_err(|_| {

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Use explicitly type u8 in vector initialization (#264)
+- Uses new format for candid environment variables in import macros. Requires DFX >=0.9.2 (#270)
 
 ## [0.5.1] - 2022-05-16
 ### Added
