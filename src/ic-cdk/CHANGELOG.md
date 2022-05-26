@@ -4,10 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] 
+### Added
+- pub fn `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing (#263)
+
 ### Fixed
 - Use explicitly type u8 in vector initialization (#264)
 - Make `reply_raw` avoid writing empty replies
+- Uses new format for candid environment variables in import macros. Requires DFX >=0.9.2 (#270)
 
 ## [0.5.1] - 2022-05-16
 ### Added
