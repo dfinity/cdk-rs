@@ -126,6 +126,11 @@ fn test_raw_api() {
 
     let result = env.query(canister_id, "reverse", vec![1, 2, 3, 4]).unwrap();
     assert_eq!(result, WasmResult::Reply(vec![4, 3, 2, 1]));
+
+    let result = env
+        .execute_ingress(canister_id, "empty_call", Default::default())
+        .unwrap();
+    assert_eq!(result, WasmResult::Reply(Default::default()));
 }
 
 #[test]
