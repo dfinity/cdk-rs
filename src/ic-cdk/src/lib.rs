@@ -6,6 +6,9 @@
 //! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
 //! for a full list of the system API functions.
 
+#[cfg(target_feature = "atomics")]
+compile_error!("This version of the CDK does not support multithreading.");
+
 pub mod api;
 mod futures;
 mod printer;
