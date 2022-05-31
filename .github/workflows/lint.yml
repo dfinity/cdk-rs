@@ -31,3 +31,13 @@ jobs:
         run: cargo clippy --tests --benches -- -D clippy::all
         env:
           RUST_BACKTRACE: 1
+
+  aggregate:
+    name: lint:required
+    if: ${{ always() }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: check step result directly
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1
