@@ -6,16 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-* Methods to query ledger blocks.
+- Integrate with the ledger's `token_symbol` method
+- Methods to query ledger blocks.
 
 ### Changed
-* Support conversion from `[u8; 32]` to `AccountIdentifier` via `TryFrom` with CRC-32 check.
-* Upgrade `ic-cdk` to 0.5.0
+- Support conversion from `[u8; 32]` to `AccountIdentifier` via `TryFrom` with CRC-32 check.
+- Upgrade `ic-cdk` to 0.5.0
 
 ## [0.1.1] - 2022-02-04
 ### Changed
-* Upgrade `ic-cdk` to v0.4.0.
+- Upgrade `ic-cdk` to v0.4.0.
 
 ## [0.1.0] - 2021-11-11
 ### Added
-* Initial release of the library.
+- Initial release of the library.
