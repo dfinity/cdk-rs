@@ -34,3 +34,13 @@ jobs:
         run: cargo fmt --all -- --check
         env:
           RUST_BACKTRACE: 1
+
+  aggregate:
+    name: fmt:required
+    if: ${{ always() }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: check step result directly
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1
