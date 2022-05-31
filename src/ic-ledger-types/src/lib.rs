@@ -1,6 +1,7 @@
+use candid::{types::reference::Func, CandidType, Principal};
 use ic_cdk::api::call::CallResult;
-use ic_cdk::export::candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use sha2::Digest;
 use std::convert::TryFrom;
 use std::fmt;
@@ -246,6 +247,143 @@ impl fmt::Display for TransferError {
     }
 }
 
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum Operation {
+    Mint {
+        to: AccountIdentifier,
+        amount: Tokens,
+    },
+    Burn {
+        from: AccountIdentifier,
+        amount: Tokens,
+    },
+    Transfer {
+        from: AccountIdentifier,
+        to: AccountIdentifier,
+        amount: Tokens,
+        fee: Tokens,
+    },
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Transaction {
+    pub memo: Memo,
+    pub operation: Option<Operation>,
+    /// The time at which the client of the ledger constructed the transaction.
+    pub created_at_time: Timestamp,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Block {
+    /// The hash of the parent block.
+    pub parent_hash: Option<[u8; 32]>,
+    pub transaction: Transaction,
+    /// The time at which the ledger constructed the block.
+    pub timestamp: Timestamp,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GetBlocksArgs {
+    /// The index of the first block to fetch.
+    pub start: BlockIndex,
+    /// Max number of blocks to fetch.
+    pub length: u64,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct QueryBlocksResponse {
+    pub chain_length: u64,
+    /// The replica certificate for the last block hash (see https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding).
+    /// Not available when querying blocks from a canister.
+    pub certificate: Option<ByteBuf>,
+    pub blocks: Vec<Block>,
+    /// The index of the first block in [QueryBlocksResponse::blocks].
+    pub first_block_index: BlockIndex,
+    pub archived_blocks: Vec<ArchivedBlockRange>,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct ArchivedBlockRange {
+    pub start: BlockIndex,
+    pub length: u64,
+    pub callback: QueryArchiveFn,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BlockRange {
+    pub blocks: Vec<Block>,
+}
+
+pub type GetBlocksResult = Result<BlockRange, GetBlocksError>;
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, CandidType)]
+pub enum GetBlocksError {
+    BadFirstBlockIndex {
+        requested_index: BlockIndex,
+        first_valid_index: BlockIndex,
+    },
+    Other {
+        error_code: u64,
+        error_message: String,
+    },
+}
+
+impl fmt::Display for GetBlocksError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::BadFirstBlockIndex {
+                requested_index,
+                first_valid_index,
+            } => write!(
+                f,
+                "invalid first block index: requested block = {}, first valid block = {}",
+                requested_index, first_valid_index
+            ),
+            Self::Other {
+                error_code,
+                error_message,
+            } => write!(
+                f,
+                "failed to query blocks (error code {}): {}",
+                error_code, error_message
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(transparent)]
+pub struct QueryArchiveFn(Func);
+
+impl From<Func> for QueryArchiveFn {
+    fn from(func: Func) -> Self {
+        Self(func)
+    }
+}
+
+impl From<QueryArchiveFn> for Func {
+    fn from(query_func: QueryArchiveFn) -> Self {
+        query_func.0
+    }
+}
+
+impl CandidType for QueryArchiveFn {
+    fn _ty() -> candid::types::Type {
+        candid::types::Type::Func(candid::types::Function {
+            modes: vec![candid::parser::types::FuncMode::Query],
+            args: vec![GetBlocksArgs::_ty()],
+            rets: vec![GetBlocksResult::_ty()],
+        })
+    }
+
+    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
+    where
+        S: candid::types::Serializer,
+    {
+        Func::from(self.clone()).idl_serialize(serializer)
+    }
+}
+
 /// Calls the "account_balance" method on the specified canister.
 ///
 /// # Example
@@ -295,6 +433,50 @@ pub async fn transfer(
     args: TransferArgs,
 ) -> CallResult<TransferResult> {
     let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
+    Ok(result)
+}
+
+/// Calls the "query_block" method on the specified canister.
+/// # Example
+/// ```no_run
+/// use candid::Principal;
+/// use ic_cdk::api::call::CallResult;
+/// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
+///
+/// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
+///   let args = GetBlocksArgs { start: block_index, length: 1 };
+///
+///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///
+///   if blocks_result.blocks.len() >= 1 {
+///       debug_assert_eq!(blocks_result.first_block_index, block_index);
+///       return Ok(blocks_result.blocks.into_iter().next());
+///   }
+///
+///   if let Some(func) = blocks_result
+///       .archived_blocks
+///       .into_iter()
+///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
+///       match query_archived_blocks(&func, args).await? {
+///           Ok(range) => return Ok(range.blocks.into_iter().next()),
+///           _ => (),
+///       }
+///   }
+///   Ok(None)
+/// }
+pub async fn query_blocks(
+    ledger_canister_id: Principal,
+    args: GetBlocksArgs,
+) -> CallResult<QueryBlocksResponse> {
+    let (result,) = ic_cdk::call(ledger_canister_id, "query_blocks", (args,)).await?;
+    Ok(result)
+}
+
+pub async fn query_archived_blocks(
+    func: &QueryArchiveFn,
+    args: GetBlocksArgs,
+) -> CallResult<GetBlocksResult> {
+    let (result,) = ic_cdk::api::call::call(func.0.principal, &func.0.method, (args,)).await?;
     Ok(result)
 }
 
