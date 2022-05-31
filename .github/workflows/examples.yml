@@ -65,3 +65,13 @@ jobs:
           # information. An alternative solution here is to install GNU tar, but
           # flushing the disk cache seems to work, too.
           sudo /usr/sbin/purge
+
+  aggregate:
+    name: examples:required
+    if: ${{ always() }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: check step result directly
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1
