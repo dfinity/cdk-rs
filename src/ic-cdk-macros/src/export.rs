@@ -10,6 +10,8 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    pub serializer: Option<String>,
+    pub deserializer: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
 }
@@ -153,6 +155,12 @@ fn dfn_macro(
 
     let return_encode = if method.is_lifecycle() || attrs.manual_reply {
         quote! {}
+    } else if let Some(serializer) = attrs.serializer {
+        let serializer_ident = syn::Ident::new(&serializer, Span::call_site());
+        match return_length {
+            0 => quote! { ic_cdk::api::call::reply_raw(&#serializer_ident (())) },
+            _ => quote! { ic_cdk::api::call::reply_raw(&#serializer_ident (result)) },
+        }
     } else {
         match return_length {
             0 => quote! { ic_cdk::api::call::reply(()) },
@@ -166,6 +174,14 @@ fn dfn_macro(
     // If the data we receive is not empty, then try to unwrap it as if it's DID.
     let arg_decode = if method.is_lifecycle() && arg_count == 0 {
         quote! {}
+    } else if let Some(deserializer) = attrs.deserializer {
+        let deserializer_ident = syn::Ident::new(&deserializer, Span::call_site());
+        let deserialize = quote! { #deserializer_ident (&ic_cdk::api::call::arg_data_raw()); };
+
+        match arg_count {
+            1 => quote! { let #(#arg_tuple)* = #deserialize },
+            _ => quote! { let ( #( #arg_tuple, )* ) = #deserialize },
+        }
     } else {
         quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(); }
     };
