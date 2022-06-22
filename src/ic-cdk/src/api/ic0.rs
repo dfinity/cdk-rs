@@ -61,19 +61,20 @@ macro_rules! ic0_module {
 
 // This is a private module that can only be used internally in this file.
 // Copy-paste the spec section of the API here.
-// Current spec version: 0.18.2
+// https://github.com/dfinity/interface-spec/blob/master/spec/ic0.txt
 /*
 The comment after each function lists from where these functions may be invoked:
 I: from canister_init or canister_post_upgrade
 G: from canister_pre_upgrade
-U: from canister_update
+U: from canister_update …
 Q: from canister_query …
 Ry: from a reply callback
 Rt: from a reject callback
 C: from a cleanup callback
 s: the (start) module initialization function
 F: from canister_inspect_message
-* = I G U Q Ry Rt C F (NB: Not (start))
+H: from canister_heartbeat
+* = I G U Q Ry Rt C F H (NB: Not (start))
 */
 ic0_module! {
     ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry F
@@ -92,9 +93,9 @@ ic0_module! {
     ic0.msg_cycles_available128 : (dst : i32) -> ();                            // U Rt Ry
     ic0.msg_cycles_refunded : () -> i64;                                        // Rt Ry
     ic0.msg_cycles_refunded128 : (dst : i32) -> ();                             // Rt Ry
-    ic0.msg_cycles_accept : ( max_amount : i64) -> ( amount : i64 );            // U Rt Ry
-    ic0.msg_cycles_accept128 : ( max_amount_high : i64, max_amount_low: i64, dst : i32)
-                       -> ();                                                   // U Rt Ry
+    ic0.msg_cycles_accept : (max_amount : i64) -> (amount : i64);               // U Rt Ry
+    ic0.msg_cycles_accept128 : (max_amount_high : i64, max_amount_low: i64, dst : i32)
+                           -> ();                                               // U Rt Ry
 
     ic0.canister_self_size : () -> i32;                                         // *
     ic0.canister_self_copy : (dst : i32, offset : i32, size : i32) -> ();       // *
@@ -118,8 +119,8 @@ ic0_module! {
       ) -> ();
     ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt H
     ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt H
-    ic0.call_cycles_add : ( amount : i64 ) -> ();                               // U Ry Rt H
-    ic0.call_cycles_add128 : ( amount_high : i64, amount_low: i64 ) -> ();      // U Ry Rt H
+    ic0.call_cycles_add : (amount : i64) -> ();                                 // U Ry Rt H
+    ic0.call_cycles_add128 : (amount_high : i64, amount_low: i64) -> ();        // U Ry Rt H
     ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt H
 
     ic0.stable_size : () -> (page_count : i32);                                 // *
@@ -137,7 +138,7 @@ ic0_module! {
     ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();       // *
 
     ic0.time : () -> (timestamp : i64);                                         // *
-    ic0.performance_counter : () -> (counter : i64);                            // * s
+    ic0.performance_counter : (counter_type : i32) -> (counter : i64);          // * s
 
     ic0.debug_print : (src : i32, size : i32) -> ();                            // * s
     ic0.trap : (src : i32, size : i32) -> ();                                   // * s

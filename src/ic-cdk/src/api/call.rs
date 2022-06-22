@@ -607,6 +607,14 @@ pub fn method_name() -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
+/// Get the value of specified performance counter
+///
+/// Supported counter type:
+/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+pub fn performance_counter(counter_type: u32) -> u64 {
+    unsafe { ic0::performance_counter(counter_type as i32) as u64 }
+}
+
 /// Pretends to have the Candid type `T`, but unconditionally errors
 /// when serialized.
 ///

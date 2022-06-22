@@ -22,7 +22,7 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
 
     let cargo_build = CargoBuild::new()
         .target("wasm32-unknown-unknown")
-        .bin(bin_name.to_string())
+        .bin(bin_name)
         .args(["--profile", "canister-release"])
         .manifest_path(&cargo_toml_path)
         .target_dir(&wasm_target_dir);

@@ -28,5 +28,9 @@ path = "canisters/async.rs"
 name = "reverse"
 path = "canisters/reverse.rs"
 
+[[bin]]
+name = "api-call"
+path = "canisters/api_call.rs"
+
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "709f9caaffd39c5d63f7ef1ec694eeb2a1b7976a" }
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "92e6b0ed36cdc9322a3588f46a8c8c7cc567e143" }

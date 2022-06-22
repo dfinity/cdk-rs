@@ -16,7 +16,7 @@ jobs:
         include:
           - build: linux-stable
             os: ubuntu-latest
-            rust: 1.58.1
+            rust: 1.60.0
             dfx: 0.9.3
 
     steps:
