@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] 
 ### Added
-- pub fn `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing (#263)
+- `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing (#263)
+- `performance_counter` for getting the value of specified performance counter (#277)
 
 ### Fixed
 - Use explicitly type u8 in vector initialization (#264)

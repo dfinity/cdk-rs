@@ -608,7 +608,7 @@ pub fn method_name() -> String {
 }
 
 /// Get the value of specified performance counter
-/// 
+///
 /// Supported counter type:
 /// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
 pub fn performance_counter(counter_type: u32) -> u64 {
