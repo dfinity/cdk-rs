@@ -156,3 +156,14 @@ fn test_notify_calls() {
         .expect("failed to query 'notifications_received'");
     assert_eq!(n, 1);
 }
+
+#[test]
+fn test_api_call() {
+    let env = StateMachine::new();
+    let rev = cargo_build_canister("api-call");
+    let canister_id = env.install_canister(rev, vec![], None).unwrap();
+
+    let (result,): (u64,) = query_candid(&env, canister_id, "instruction_counter", ())
+        .expect("failed to query instruction_counter");
+    assert!(result > 0);
+}
