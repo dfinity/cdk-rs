@@ -1,6 +1,9 @@
 use super::*;
 use crate::api::ic0;
 
+/// A standard implementation of [`StableMemory`].
+///
+/// Useful for creating [`StableWriter`] and [`StableReader`].
 #[derive(Default)]
 pub struct CanisterStableMemory {}
 
