@@ -41,6 +41,7 @@ pub struct Asset {
     pub content_type: String,
     pub encodings: HashMap<String, AssetEncoding>,
     pub max_age: Option<u64>,
+    pub headers: Option<HashMap<String, String>>,
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
@@ -129,6 +130,7 @@ impl State {
                     content_type: arg.content_type,
                     encodings: HashMap::new(),
                     max_age: arg.max_age,
+                    headers: arg.headers,
                 },
             );
         }
@@ -787,6 +789,11 @@ fn build_ok(
     }
     if let Some(max_age) = asset.max_age {
         headers.push(("Cache-Control".to_string(), format!("max-age={}", max_age)));
+    }
+    if let Some(arg_headers) = asset.headers.as_ref() {
+        for (k, v) in arg_headers {
+            headers.push((k.to_owned(), v.to_owned()));
+        }
     }
 
     let streaming_strategy = create_token(asset, enc_name, enc, key, chunk_index)

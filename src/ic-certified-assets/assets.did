@@ -7,6 +7,7 @@ type CreateAssetArguments = record {
   key: Key;
   content_type: text;
   max_age: opt nat64;
+  headers: opt HeaderField;
 };
 
 // Add or change content for an asset, by content encoding

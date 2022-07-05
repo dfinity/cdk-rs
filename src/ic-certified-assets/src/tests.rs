@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::state_machine::{StableState, State, BATCH_EXPIRY_NANOS};
 use crate::types::{
     BatchId, BatchOperation, CommitBatchArguments, CreateAssetArguments, CreateChunkArg,
@@ -24,6 +26,7 @@ struct AssetBuilder {
     content_type: String,
     max_age: Option<u64>,
     encodings: Vec<(String, Vec<ByteBuf>)>,
+    headers: Option<HashMap<String, String>>,
 }
 
 impl AssetBuilder {
@@ -33,6 +36,7 @@ impl AssetBuilder {
             content_type: content_type.as_ref().to_string(),
             max_age: None,
             encodings: vec![],
+            headers: None,
         }
     }
 
@@ -49,6 +53,12 @@ impl AssetBuilder {
                 .map(|c| ByteBuf::from(c.as_ref().to_vec()))
                 .collect(),
         ));
+        self
+    }
+
+    fn with_header(mut self, header_key: String, header_value: String) -> Self {
+        let hm = self.headers.get_or_insert(HashMap::new());
+        hm.insert(header_key, header_value);
         self
     }
 }
@@ -96,6 +106,7 @@ fn create_assets(state: &mut State, time_now: u64, assets: Vec<AssetBuilder>) ->
             key: asset.name.clone(),
             content_type: asset.content_type,
             max_age: asset.max_age,
+            headers: asset.headers,
         }));
 
         for (enc, chunks) in asset.encodings {
