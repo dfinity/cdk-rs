@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::state_machine::{StableState, State, BATCH_EXPIRY_NANOS};
 use crate::types::{
     BatchId, BatchOperation, CommitBatchArguments, CreateAssetArguments, CreateChunkArg,
@@ -24,6 +26,7 @@ struct AssetBuilder {
     content_type: String,
     max_age: Option<u64>,
     encodings: Vec<(String, Vec<ByteBuf>)>,
+    headers: Option<HashMap<String, String>>,
 }
 
 impl AssetBuilder {
@@ -33,6 +36,7 @@ impl AssetBuilder {
             content_type: content_type.as_ref().to_string(),
             max_age: None,
             encodings: vec![],
+            headers: None,
         }
     }
 
@@ -49,6 +53,12 @@ impl AssetBuilder {
                 .map(|c| ByteBuf::from(c.as_ref().to_vec()))
                 .collect(),
         ));
+        self
+    }
+
+    fn with_header(mut self, header_key: &str, header_value: &str) -> Self {
+        let hm = self.headers.get_or_insert(HashMap::new());
+        hm.insert(header_key.to_string(), header_value.to_string());
         self
     }
 }
@@ -96,6 +106,7 @@ fn create_assets(state: &mut State, time_now: u64, assets: Vec<AssetBuilder>) ->
             key: asset.name.clone(),
             content_type: asset.content_type,
             max_age: asset.max_age,
+            headers: asset.headers,
         }));
 
         for (enc, chunks) in asset.encodings {
@@ -524,4 +535,74 @@ fn check_url_decode() {
         Err(UrlDecodeError::InvalidPercentEncoding)
     );
     assert_eq!(url_decode("/%e6"), Ok("/æ".to_string()));
+}
+
+#[test]
+fn supports_custom_http_headers() {
+    let mut state = State::default();
+    let time_now = 100_000_000_000;
+
+    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
+
+    create_assets(
+        &mut state,
+        time_now,
+        vec![
+            AssetBuilder::new("/contents.html", "text/html")
+                .with_encoding("identity", vec![BODY])
+                .with_header("Access-Control-Allow-Origin", "*"),
+            AssetBuilder::new("/max-age.html", "text/html")
+                .with_max_age(604800)
+                .with_encoding("identity", vec![BODY])
+                .with_header("X-Content-Type-Options", "nosniff"),
+        ],
+    );
+
+    let response = state.http_request(
+        RequestBuilder::get("/contents.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body.as_ref(), BODY);
+    assert!(
+        lookup_header(&response, "Access-Control-Allow-Origin").is_some(),
+        "Missing Access-Control-Allow-Origin header in response: {:#?}",
+        response,
+    );
+    assert!(
+        lookup_header(&response, "Access-Control-Allow-Origin") == Some("*"),
+        "Incorrect value for Access-Control-Allow-Origin header in response: {:#?}",
+        response,
+    );
+
+    let response = state.http_request(
+        RequestBuilder::get("/max-age.html")
+            .with_header("Accept-Encoding", "gzip,identity")
+            .build(),
+        &[],
+        unused_callback(),
+    );
+
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body.as_ref(), BODY);
+    assert_eq!(
+        lookup_header(&response, "Cache-Control"),
+        Some("max-age=604800"),
+        "No matching Cache-Control header in response: {:#?}",
+        response,
+    );
+    assert!(
+        lookup_header(&response, "X-Content-Type-Options").is_some(),
+        "Missing X-Content-Type-Options header in response: {:#?}",
+        response,
+    );
+    assert!(
+        lookup_header(&response, "X-Content-Type-Options") == Some("nosniff"),
+        "Incorrect value for X-Content-Type-Options header in response: {:#?}",
+        response,
+    );
 }
