@@ -98,3 +98,19 @@ pub fn data_certificate() -> Option<Vec<u8>> {
     }
     Some(buf)
 }
+
+/// Returns the number of instructions that the canister executed since the last [entry
+/// point](https://internetcomputer.org/docs/current/references/ic-interface-spec/#entry-points).
+#[inline]
+pub fn instruction_counter() -> u64 {
+    performance_counter(0)
+}
+
+/// Get the value of specified performance counter.
+///
+/// Supported counter type:
+/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+#[inline]
+pub fn performance_counter(counter_type: u32) -> u64 {
+    unsafe { ic0::performance_counter(counter_type as i32) as u64 }
+}
