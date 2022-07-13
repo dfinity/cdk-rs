@@ -6,6 +6,7 @@ members = [
     "src/ic-certified-assets",
     "src/ic-certified-map",
     "src/ic-ledger-types",
+    "src/ic-management",
     "e2e-tests",
 ]
 
