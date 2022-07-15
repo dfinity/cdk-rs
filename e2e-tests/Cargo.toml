@@ -33,4 +33,4 @@ name = "api-call"
 path = "canisters/api_call.rs"
 
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "92e6b0ed36cdc9322a3588f46a8c8c7cc567e143" }
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "02a4a828f2f4d3b1dcb93a84e60672a3f3fdb400" }
