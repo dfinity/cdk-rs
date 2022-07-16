@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make `CanisterStableMemory` public (#281)
 - BREAKING CHANGE: move performance_counter from the `ic_cdk::api::call` to `ic_cdk::api` module.
 
+### Fixed
+- Outdated documentation for `ManualReply`.
+
 ## [0.5.2] - 2022-06-23 
 ### Added
 - `arg_data_raw_size` for checking the size of the arg-data-raw before copying to a vector or deserializing (#263)

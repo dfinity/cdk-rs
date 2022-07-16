@@ -618,7 +618,7 @@ pub fn performance_counter(counter_type: u32) -> u64 {
 /// Pretends to have the Candid type `T`, but unconditionally errors
 /// when serialized.
 ///
-/// Usable, but not required, as metadata when using `#[query(reply = false)]`,
+/// Usable, but not required, as metadata when using `#[query(manual_reply = true)]`,
 /// so an accurate Candid file can still be generated.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct ManualReply<T: ?Sized>(PhantomData<T>);
