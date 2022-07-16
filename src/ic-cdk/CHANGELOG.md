@@ -7,14 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Added
-- `instruction_counter` function as a shorthand for `performance_counter(0)`.
+- `instruction_counter` function as a shorthand for `performance_counter(0)` (#283).
 
 ### Changed
 - Make `CanisterStableMemory` public (#281)
-- BREAKING CHANGE: move performance_counter from the `ic_cdk::api::call` to `ic_cdk::api` module.
+- BREAKING CHANGE: move performance_counter from the `ic_cdk::api::call` to `ic_cdk::api` module (#283).
 
 ### Fixed
-- Outdated documentation for `ManualReply`.
+- Outdated documentation for `ManualReply` (#286).
 
 ## [0.5.2] - 2022-06-23 
 ### Added
