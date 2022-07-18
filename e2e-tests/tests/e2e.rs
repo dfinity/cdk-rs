@@ -167,3 +167,14 @@ fn test_api_call() {
         .expect("failed to query instruction_counter");
     assert!(result > 0);
 }
+
+#[test]
+fn test_management_canister() {
+    let env = StateMachine::new();
+    let rev = cargo_build_canister("call-management");
+    let canister_id = env.install_canister(rev, vec![], None).unwrap();
+
+    let (result,): (Vec<u8>,) =
+        call_candid(&env, canister_id, "call_raw_rand", ()).expect("failed to call call_raw_rand");
+    dbg!(result);
+}
