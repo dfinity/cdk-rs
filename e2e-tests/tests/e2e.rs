@@ -176,5 +176,5 @@ fn test_management_canister() {
 
     let (result,): (Vec<u8>,) =
         call_candid(&env, canister_id, "call_raw_rand", ()).expect("failed to call call_raw_rand");
-    dbg!(result);
+    assert_eq!(result.len(), 32);
 }
