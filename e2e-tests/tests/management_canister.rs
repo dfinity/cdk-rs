@@ -9,8 +9,14 @@ fn manage_canister() {
     let rev = cargo_build_canister("call-management");
     let canister_id = env.install_canister(rev, vec![], None).unwrap();
 
-    let (_result,): (CanisterId,) = call_candid(&env, canister_id, "call_create_canister", ())
-        .expect("failed to call call_create_canister");
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_update_settings", ());
+    assert!(matches!(result, Err(CallError::UserError(_))));
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_create_canister", ());
+    assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_update_settings", ());
+    assert!(result.is_ok());
 }
 
 #[test]
