@@ -174,6 +174,9 @@ fn test_management_canister() {
     let rev = cargo_build_canister("call-management");
     let canister_id = env.install_canister(rev, vec![], None).unwrap();
 
+    let (_result,): (CanisterId,) =
+        call_candid(&env, canister_id, "call_create_canister", ()).expect("failed to call call_create_canister");
+
     let (result,): (Vec<u8>,) =
         call_candid(&env, canister_id, "call_raw_rand", ()).expect("failed to call call_raw_rand");
     assert_eq!(result.len(), 32);
