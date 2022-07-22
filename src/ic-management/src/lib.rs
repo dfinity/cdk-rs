@@ -1,4 +1,5 @@
 use candid::{CandidType, Deserialize, Nat, Principal};
+use serde::Serialize;
 use ic_cdk::api::call::{call, CallResult};
 
 pub type CanisterId = Principal;
@@ -40,6 +41,47 @@ pub struct UpdateSettingsArgument {
 // }) -> ();
 pub async fn update_settings(arg: UpdateSettingsArgument) -> CallResult<()> {
     call(Principal::management_canister(), "update_settings", (arg,)).await
+}
+
+// #[derive(Clone, CandidType, Deserialize, Debug)]
+// pub enum InstallCodeMode {
+//     Install,
+//     Reinstall,
+//     Upgrade,
+// }
+/// The mode with which a canister is installed.
+#[derive(
+    Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType, Copy,
+)]
+pub enum CanisterInstallMode {
+    /// A fresh install of a new canister.
+    #[serde(rename = "install")]
+    Install,
+    /// Reinstalling a canister that was already installed.
+    #[serde(rename = "reinstall")]
+    Reinstall,
+    /// Upgrade an existing canister.
+    #[serde(rename = "upgrade")]
+    Upgrade,
+}
+
+pub type WasmModule = Vec<u8>;
+
+#[derive(Clone, CandidType, Deserialize, Debug)]
+pub struct InstallCodeArgument {
+    pub mode: CanisterInstallMode,
+    pub canister_id: CanisterId,
+    pub wasm_module: WasmModule,
+    pub arg: Vec<u8>,
+}
+// install_code : (record {
+//   mode : variant {install; reinstall; upgrade};
+//   canister_id : canister_id;
+//   wasm_module : wasm_module;
+//   arg : blob;
+// }) -> ();
+pub async fn install_code(arg: InstallCodeArgument) -> CallResult<()> {
+    call(Principal::management_canister(), "install_code", (arg,)).await
 }
 
 // raw_rand : () -> (blob);

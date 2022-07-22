@@ -42,6 +42,21 @@ async fn call_update_settings() {
 }
 
 #[update]
+async fn call_install_code() {
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = InstallCodeArgument {
+            mode: CanisterInstallMode::Install,
+            canister_id,
+            wasm_module: vec![],
+            arg: vec![],
+        };
+        install_code(arg).await.unwrap();
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
+#[update]
 async fn call_raw_rand() -> Vec<u8> {
     raw_rand().await.unwrap().0
 }
