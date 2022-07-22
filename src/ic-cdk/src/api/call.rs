@@ -130,7 +130,9 @@ use rc::{InnerCell, WasmCell};
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[allow(missing_docs)]
 #[repr(i32)]
-#[derive(Debug, CandidType, Deserialize, Clone, Copy)]
+#[derive(
+    CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum RejectionCode {
     NoError = 0,
 
