@@ -6,10 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.5.4] - 2022-07-22
+## [0.5.5] - 2022-07-22
 
 ### Added
-- Derive `CandidType` for `RejectionCode` (#291)
+- Derive `CandidType` and `Deserialize` for `RejectionCode` (#291, #293)
 
 ## [0.5.3] - 2022-07-19
 
