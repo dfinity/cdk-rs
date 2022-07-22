@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Derive common traits for `RejectionCode` (#294)
 - `ManualReply::reject` function (#297)
+- `CallFutureRaw` the return type of the `call_raw` and `call_raw128` functions, know if the CallFutureRaw.await will yeild or not.
 
 ## [0.5.5] - 2022-07-22
 

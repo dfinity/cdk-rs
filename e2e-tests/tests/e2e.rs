@@ -172,4 +172,8 @@ fn test_api_call() {
         .query(canister_id, "manual_reject", Encode!().unwrap())
         .unwrap();
     assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
+
+    let (_call_perform_status_code,): (u32,) =
+        call_candid(&env, canister_id, "call_future_raw", ())
+            .expect("failed to call 'call_future_raw'");
 }

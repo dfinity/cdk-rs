@@ -174,10 +174,25 @@ struct CallFutureState<R: serde::de::DeserializeOwned> {
     waker: Option<Waker>,
 }
 
-struct CallFuture<R: serde::de::DeserializeOwned> {
+/// The CallFuture of a call. A canister can use this struct through the CallFutureRaw-type, the return-type of the call_raw and call_raw128 functions.
+pub struct CallFuture<R: serde::de::DeserializeOwned> {
     // We basically use Rc instead of Arc (since we're single threaded), and use
     // RefCell instead of Mutex (because we cannot lock in WASM).
     state: rc::WasmCell<CallFutureState<R>>,
+
+    /// call_perform_status_code == 0 means the call is in the queue and will perform if the function yeilds or returns without trapping.
+    /// call_perform_status_code > 0 is an error-code and the call will not perform.
+    /// if the call will perform, a .await on this CallFuture will yeild the function and the code following the .await will be the callback within a separate-message/separate-execution.
+    /// if the call will not perform, a .await on this CallFuture will not yeild the function and the code following the .await will be within the same message/execution as the code before it.
+    /// https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call
+    pub call_perform_status_code: u32,
+}
+
+impl<R: serde::de::DeserializeOwned> CallFuture<R> {
+    /// see the documentation for the call_perform_status_code field on the CallFuture type.
+    pub fn will_perform(&self) -> bool {
+        self.call_perform_status_code == 0
+    }
 }
 
 impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
@@ -325,13 +340,12 @@ pub fn notify_raw(
     }
 }
 
+/// The return-type of the call_raw and call_raw128 functions.
+/// see the documentation for the CallFuture struct.
+pub type CallFutureRaw = CallFuture<Vec<u8>>;
+
 /// Similar to `call`, but without serialization.
-pub fn call_raw(
-    id: Principal,
-    method: &str,
-    args_raw: &[u8],
-    payment: u64,
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+pub fn call_raw(id: Principal, method: &str, args_raw: &[u8], payment: u64) -> CallFutureRaw {
     call_raw_internal(id, method, args_raw, move || {
         if payment > 0 {
             unsafe {
@@ -342,12 +356,7 @@ pub fn call_raw(
 }
 
 /// Similar to `call128`, but without serialization.
-pub fn call_raw128(
-    id: Principal,
-    method: &str,
-    args_raw: &[u8],
-    payment: u128,
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+pub fn call_raw128(id: Principal, method: &str, args_raw: &[u8], payment: u128) -> CallFutureRaw {
     call_raw_internal(id, method, args_raw, move || {
         add_payment(payment);
     })
@@ -358,7 +367,7 @@ fn call_raw_internal(
     method: &str,
     args_raw: &[u8],
     payment_func: impl FnOnce(),
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+) -> CallFutureRaw {
     let callee = id.as_slice();
     let state = WasmCell::new(CallFutureState {
         result: None,
@@ -391,7 +400,10 @@ fn call_raw_internal(
             "Couldn't send message".to_string(),
         )));
     }
-    CallFuture { state }
+    CallFuture {
+        state,
+        call_perform_status_code: err_code as u32,
+    }
 }
 
 /// Performs an asynchronous call to another canister via ic0.
