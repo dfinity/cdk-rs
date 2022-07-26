@@ -17,6 +17,15 @@ fn manage_canister() {
 
     let result: Result<(), _> = call_candid(&env, canister_id, "call_install_code", ());
     assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_uninstall_code", ());
+    assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_start_canister", ());
+    assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_stop_canister", ());
+    assert!(result.is_ok());
 }
 
 #[test]

@@ -49,10 +49,40 @@ async fn call_install_code() {
             canister_id,
             // A minimal valid wasm module
             // wat2wasm "(module)"
-            wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(), 
+            wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
             arg: vec![],
         };
         install_code(arg).await.unwrap();
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
+#[update]
+async fn call_uninstall_code() {
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = CanisterIdArg { canister_id };
+        uninstall_code(arg).await.unwrap();
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
+#[update]
+async fn call_start_canister() {
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = CanisterIdArg { canister_id };
+        start_canister(arg).await.unwrap();
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
+#[update]
+async fn call_stop_canister() {
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = CanisterIdArg { canister_id };
+        stop_canister(arg).await.unwrap();
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");
     }
