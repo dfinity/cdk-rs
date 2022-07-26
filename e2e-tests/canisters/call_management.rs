@@ -47,7 +47,9 @@ async fn call_install_code() {
         let arg = InstallCodeArgument {
             mode: CanisterInstallMode::Install,
             canister_id,
-            wasm_module: vec![],
+            // A minimal valid wasm module
+            // wat2wasm "(module)"
+            wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(), 
             arg: vec![],
         };
         install_code(arg).await.unwrap();
