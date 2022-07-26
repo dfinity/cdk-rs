@@ -43,12 +43,6 @@ pub async fn update_settings(arg: UpdateSettingsArgument) -> CallResult<()> {
     call(Principal::management_canister(), "update_settings", (arg,)).await
 }
 
-// #[derive(Clone, CandidType, Deserialize, Debug)]
-// pub enum InstallCodeMode {
-//     Install,
-//     Reinstall,
-//     Upgrade,
-// }
 /// The mode with which a canister is installed.
 #[derive(
     Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType, Copy,
@@ -74,6 +68,7 @@ pub struct InstallCodeArgument {
     pub wasm_module: WasmModule,
     pub arg: Vec<u8>,
 }
+
 // install_code : (record {
 //   mode : variant {install; reinstall; upgrade};
 //   canister_id : canister_id;
