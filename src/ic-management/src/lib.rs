@@ -138,6 +138,16 @@ pub async fn canister_status(arg: CanisterIdArg) -> CallResult<(CanisterStatusRe
     call(Principal::management_canister(), "canister_status", (arg,)).await
 }
 
+/// delete_canister : (record {canister_id : canister_id}) -> ();
+pub async fn delete_canister(arg: CanisterIdArg) -> CallResult<()> {
+    call(Principal::management_canister(), "delete_canister", (arg,)).await
+}
+
+/// deposit_cycles : (record {canister_id : canister_id}) -> ();
+pub async fn deposit_cycles(arg: CanisterIdArg) -> CallResult<()> {
+    call(Principal::management_canister(), "deposit_cycles", (arg,)).await
+}
+
 /// raw_rand : () -> (blob);
 pub async fn raw_rand() -> CallResult<(Vec<u8>,)> {
     call(Principal::management_canister(), "raw_rand", ()).await

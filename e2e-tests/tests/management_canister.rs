@@ -30,6 +30,12 @@ fn manage_canister() {
     let result: Result<(ic_management::CanisterStatusReturn,), _> =
         call_candid(&env, canister_id, "call_canister_status", ());
     assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_deposit_cycles", ());
+    assert!(result.is_ok());
+
+    let result: Result<(), _> = call_candid(&env, canister_id, "call_delete_canister", ());
+    assert!(result.is_ok());
 }
 
 #[test]
