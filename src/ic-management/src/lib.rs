@@ -98,6 +98,46 @@ pub async fn stop_canister(arg: CanisterIdArg) -> CallResult<()> {
     call(Principal::management_canister(), "stop_canister", (arg,)).await
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, CandidType)]
+pub enum CanisterStatusType {
+    #[serde(rename = "running")]
+    Running,
+    #[serde(rename = "stopping")]
+    Stopping,
+    #[serde(rename = "stopped")]
+    Stopped,
+}
+
+#[derive(Default, Clone, CandidType, Deserialize, Debug)]
+pub struct DefiniteCanisterSettings {
+    pub controllers: Vec<Principal>,
+    pub compute_allocation: Nat,
+    pub memory_allocation: Nat,
+    pub freezing_threshold: Nat,
+}
+
+#[derive(Clone, CandidType, Deserialize, Debug)]
+pub struct CanisterStatusReturn {
+    pub status: CanisterStatusType,
+    pub settings: DefiniteCanisterSettings,
+    pub module_hash: Option<Vec<u8>>,
+    pub memory_size: Nat,
+    pub cycles: Nat,
+    pub idle_cycles_burned_per_day: Nat,
+}
+
+/// canister_status : (record {canister_id : canister_id}) -> (record {
+///   status : variant { running; stopping; stopped };
+///   settings: definite_canister_settings;
+///   module_hash: opt blob;
+///   memory_size: nat;
+///   cycles: nat;
+///   idle_cycles_burned_per_day: nat;
+/// });
+pub async fn canister_status(arg: CanisterIdArg) -> CallResult<(CanisterStatusReturn,)> {
+    call(Principal::management_canister(), "canister_status", (arg,)).await
+}
+
 /// raw_rand : () -> (blob);
 pub async fn raw_rand() -> CallResult<(Vec<u8>,)> {
     call(Principal::management_canister(), "raw_rand", ()).await

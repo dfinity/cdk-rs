@@ -89,6 +89,16 @@ async fn call_stop_canister() {
 }
 
 #[update]
+async fn call_canister_status() -> CanisterStatusReturn {
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = CanisterIdArg { canister_id };
+        canister_status(arg).await.unwrap().0
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
+#[update]
 async fn call_raw_rand() -> Vec<u8> {
     raw_rand().await.unwrap().0
 }
