@@ -3,6 +3,7 @@ use ic_cdk::api::call::{call, CallResult};
 use serde::{Deserialize, Serialize};
 
 mod http_request;
+pub mod bitcoin;
 
 pub use http_request::*;
 
