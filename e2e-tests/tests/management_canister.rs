@@ -48,3 +48,15 @@ fn raw_rand() {
         call_candid(&env, canister_id, "call_raw_rand", ()).expect("failed to call call_raw_rand");
     assert_eq!(result.len(), 32);
 }
+
+#[test]
+fn http_request() {
+    let env = StateMachine::new();
+    let rev = cargo_build_canister("call-management");
+    let canister_id = env.install_canister(rev, vec![], None).unwrap();
+
+    let (result,): (ic_management::CanisterHttpResponse,) =
+        call_candid(&env, canister_id, "call_http_request", ())
+            .expect("failed to call call_http_request");
+    assert_eq!(result.status, 200);
+}

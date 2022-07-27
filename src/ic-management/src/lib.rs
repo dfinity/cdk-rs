@@ -1,6 +1,10 @@
-use candid::{CandidType, Deserialize, Nat, Principal};
+use candid::{CandidType, Nat, Principal};
 use ic_cdk::api::call::{call, CallResult};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+mod http_request;
+
+pub use http_request::*;
 
 pub type CanisterId = Principal;
 

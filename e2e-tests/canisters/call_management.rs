@@ -124,4 +124,17 @@ async fn call_raw_rand() -> Vec<u8> {
     raw_rand().await.unwrap().0
 }
 
+#[update]
+async fn call_http_request() -> CanisterHttpResponse {
+    let arg = CanisterHttpRequestArgument {
+        url: "example.com".into(),
+        max_response_bytes: None,
+        method: HttpMethod::GET,
+        headers: vec![],
+        body: None,
+        transform_method_name: None,
+    };
+    http_request(arg).await.unwrap().0
+}
+
 fn main() {}
