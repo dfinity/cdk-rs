@@ -89,7 +89,7 @@ async fn call_stop_canister() {
 }
 
 #[update]
-async fn call_canister_status() -> CanisterStatusReturn {
+async fn call_canister_status() -> CanisterStatusReply {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
         let arg = CanisterIdArg { canister_id };
         canister_status(arg).await.unwrap().0

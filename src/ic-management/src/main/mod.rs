@@ -7,7 +7,7 @@ pub use types::*;
 /// create_canister : (record {
 ///   settings : opt canister_settings
 /// }) -> (record {canister_id : canister_id});
-pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CreateCanisterReturn,)> {
+pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CreateCanisterReply,)> {
     call(Principal::management_canister(), "create_canister", (arg,)).await
 }
 
@@ -52,7 +52,7 @@ pub async fn stop_canister(arg: CanisterIdArg) -> CallResult<()> {
 ///   cycles: nat;
 ///   idle_cycles_burned_per_day: nat;
 /// });
-pub async fn canister_status(arg: CanisterIdArg) -> CallResult<(CanisterStatusReturn,)> {
+pub async fn canister_status(arg: CanisterIdArg) -> CallResult<(CanisterStatusReply,)> {
     call(Principal::management_canister(), "canister_status", (arg,)).await
 }
 

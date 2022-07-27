@@ -18,7 +18,7 @@ pub struct CreateCanisterArgument {
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct CreateCanisterReturn {
+pub struct CreateCanisterReply {
     pub canister_id: CanisterId,
 }
 
@@ -76,7 +76,7 @@ pub struct DefiniteCanisterSettings {
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct CanisterStatusReturn {
+pub struct CanisterStatusReply {
     pub status: CanisterStatusType,
     pub settings: DefiniteCanisterSettings,
     pub module_hash: Option<Vec<u8>>,
