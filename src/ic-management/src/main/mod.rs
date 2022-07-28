@@ -8,7 +8,7 @@ pub use types::*;
 /// create_canister : (record {
 ///   settings : opt canister_settings
 /// }) -> (record {canister_id : canister_id});
-pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CreateCanisterReply,)> {
+pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CanisterIdRecord,)> {
     call(Principal::management_canister(), "create_canister", (arg,)).await
 }
 
@@ -31,17 +31,17 @@ pub async fn install_code(arg: InstallCodeArgument) -> CallResult<()> {
 }
 
 /// uninstall_code : (record {canister_id : canister_id}) -> ();
-pub async fn uninstall_code(arg: CanisterIdArg) -> CallResult<()> {
+pub async fn uninstall_code(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "uninstall_code", (arg,)).await
 }
 
 /// start_canister : (record {canister_id : canister_id}) -> ();
-pub async fn start_canister(arg: CanisterIdArg) -> CallResult<()> {
+pub async fn start_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "start_canister", (arg,)).await
 }
 
 /// stop_canister : (record {canister_id : canister_id}) -> ();
-pub async fn stop_canister(arg: CanisterIdArg) -> CallResult<()> {
+pub async fn stop_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "stop_canister", (arg,)).await
 }
 
@@ -53,17 +53,17 @@ pub async fn stop_canister(arg: CanisterIdArg) -> CallResult<()> {
 ///   cycles: nat;
 ///   idle_cycles_burned_per_day: nat;
 /// });
-pub async fn canister_status(arg: CanisterIdArg) -> CallResult<(CanisterStatusReply,)> {
+pub async fn canister_status(arg: CanisterIdRecord) -> CallResult<(CanisterStatusReply,)> {
     call(Principal::management_canister(), "canister_status", (arg,)).await
 }
 
 /// delete_canister : (record {canister_id : canister_id}) -> ();
-pub async fn delete_canister(arg: CanisterIdArg) -> CallResult<()> {
+pub async fn delete_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "delete_canister", (arg,)).await
 }
 
 /// deposit_cycles : (record {canister_id : canister_id}) -> ();
-pub async fn deposit_cycles(arg: CanisterIdArg) -> CallResult<()> {
+pub async fn deposit_cycles(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "deposit_cycles", (arg,)).await
 }
 

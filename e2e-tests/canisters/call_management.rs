@@ -61,7 +61,7 @@ async fn call_install_code() {
 #[update]
 async fn call_uninstall_code() {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         uninstall_code(arg).await.unwrap();
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");
@@ -71,7 +71,7 @@ async fn call_uninstall_code() {
 #[update]
 async fn call_start_canister() {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         start_canister(arg).await.unwrap();
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");
@@ -81,7 +81,7 @@ async fn call_start_canister() {
 #[update]
 async fn call_stop_canister() {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         stop_canister(arg).await.unwrap();
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");
@@ -91,7 +91,7 @@ async fn call_stop_canister() {
 #[update]
 async fn call_canister_status() -> CanisterStatusReply {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         canister_status(arg).await.unwrap().0
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");
@@ -101,7 +101,7 @@ async fn call_canister_status() -> CanisterStatusReply {
 #[update]
 async fn call_delete_canister() {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         delete_canister(arg).await.unwrap();
         CANISTER_ID.with(|id| *id.borrow_mut() = None);
     } else {
@@ -112,7 +112,7 @@ async fn call_delete_canister() {
 #[update]
 async fn call_deposit_cycles() {
     if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
-        let arg = CanisterIdArg { canister_id };
+        let arg = CanisterIdRecord { canister_id };
         deposit_cycles(arg).await.unwrap();
     } else {
         ic_cdk::api::trap("Canister hasn't been created yet!");

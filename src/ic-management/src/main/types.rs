@@ -18,11 +18,6 @@ pub struct CreateCanisterArgument {
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct CreateCanisterReply {
-    pub canister_id: CanisterId,
-}
-
-#[derive(Clone, CandidType, Deserialize, Debug)]
 pub struct UpdateSettingsArgument {
     pub canister_id: CanisterId,
     pub settings: CanisterSettings,
@@ -53,7 +48,7 @@ pub struct InstallCodeArgument {
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct CanisterIdArg {
+pub struct CanisterIdRecord {
     pub canister_id: CanisterId,
 }
 
