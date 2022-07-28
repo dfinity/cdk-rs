@@ -1,6 +1,6 @@
 use candid::{CandidType, Nat, Principal};
 use ic_cdk::api::call::{call, CallResult};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{CanisterId, CanisterIdRecord, CanisterSettings};
 

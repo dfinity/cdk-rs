@@ -1,7 +1,6 @@
 use candid::Principal;
 use ic_cdk::api::call::{call, CallResult};
 
-mod provisional;
 mod types;
 pub use types::*;
 
