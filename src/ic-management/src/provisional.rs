@@ -37,9 +37,7 @@ pub async fn provisional_create_canister_with_cycles(
 provisional_top_up_canister :
   (record { canister_id: canister_id; amount: nat }) -> ();
 */
-pub async fn provisional_top_up_canister(
-    arg: ProvisionalTopUpCanisterArgument,
-) -> CallResult<(CanisterIdRecord,)> {
+pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) -> CallResult<()> {
     call(
         Principal::management_canister(),
         "provisional_top_up_canister",

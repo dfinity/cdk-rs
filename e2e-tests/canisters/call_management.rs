@@ -124,4 +124,38 @@ async fn call_raw_rand() -> Vec<u8> {
     raw_rand().await.unwrap().0
 }
 
+#[update]
+async fn call_provisional_create_canister_with_cycles() -> () {
+    use ic_management::provisional::*;
+    match CANISTER_ID.with(|id| id.borrow().clone()) {
+        Some(canister_id) => {
+            ic_cdk::api::print(format!("Canister already created. {}", canister_id));
+        }
+        None => {
+            let canister_id = provisional_create_canister_with_cycles(
+                ProvisionalCreateCanisterWithCyclesArgument::default(),
+            )
+            .await
+            .unwrap()
+            .0
+            .canister_id;
+            CANISTER_ID.with(|id| *id.borrow_mut() = Some(canister_id));
+        }
+    }
+}
+
+#[update]
+async fn call_provisional_top_up_canister() {
+    use ic_management::provisional::*;
+    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        let arg = ProvisionalTopUpCanisterArgument {
+            canister_id,
+            amount: 1_000_000_000u64.into(),
+        };
+        provisional_top_up_canister(arg).await.unwrap();
+    } else {
+        ic_cdk::api::trap("Canister hasn't been created yet!");
+    }
+}
+
 fn main() {}
