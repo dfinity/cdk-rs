@@ -1,5 +1,5 @@
+use crate::api::call::{call, CallResult};
 use candid::Principal;
-use ic_cdk::api::call::{call, CallResult};
 
 mod types;
 pub use types::*;

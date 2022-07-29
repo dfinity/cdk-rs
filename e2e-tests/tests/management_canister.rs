@@ -27,7 +27,7 @@ fn main_canister() {
     let result: Result<(), _> = call_candid(&env, canister_id, "call_stop_canister", ());
     assert!(result.is_ok());
 
-    let result: Result<(ic_management::CanisterStatusReply,), _> =
+    let result: Result<(ic_cdk::api::management_canister::CanisterStatusReply,), _> =
         call_candid(&env, canister_id, "call_canister_status", ());
     assert!(result.is_ok());
 
@@ -75,7 +75,9 @@ fn threshold_ecdsa() {
     let rev = cargo_build_canister("call-management");
     let canister_id = env.install_canister(rev, vec![], None).unwrap();
 
-    let result: Result<(ic_management::threshold_ecdsa::EcdsaPublicKeyReply,), _> =
-        call_candid(&env, canister_id, "call_ecdsa_public_key", ());
+    let result: Result<
+        (ic_cdk::api::management_canister::threshold_ecdsa::EcdsaPublicKeyReply,),
+        _,
+    > = call_candid(&env, canister_id, "call_ecdsa_public_key", ());
     assert!(result.is_ok());
 }

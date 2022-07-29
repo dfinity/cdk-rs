@@ -1,7 +1,7 @@
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-use crate::main::CanisterId;
+use super::super::main::CanisterId;
 
 #[derive(CandidType, Serialize, Debug)]
 pub struct EcdsaPublicKeyArgument {

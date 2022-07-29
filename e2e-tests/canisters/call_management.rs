@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
+use ic_cdk::api::management_canister::*;
 use ic_cdk_macros::update;
-use ic_management::*;
 
 thread_local! {
     static CANISTER_ID: RefCell<Option<CanisterId>> = RefCell::default();
@@ -126,7 +126,7 @@ async fn call_raw_rand() -> Vec<u8> {
 
 mod provisional {
     use super::*;
-    use ic_management::provisional::*;
+    use ic_cdk::api::management_canister::provisional::*;
 
     #[update]
     async fn call_provisional_create_canister_with_cycles() -> () {
@@ -163,7 +163,7 @@ mod provisional {
 
 mod threshold_ecdsa {
     use super::*;
-    use ic_management::threshold_ecdsa::*;
+    use ic_cdk::api::management_canister::threshold_ecdsa::*;
 
     #[update]
     async fn call_ecdsa_public_key() -> EcdsaPublicKeyReply {

@@ -13,7 +13,6 @@ cargo_metadata = "0.14.2"
 escargot = { version = "0.5.7", features = ["print"] }
 ic-cdk = { path = "../src/ic-cdk" }
 ic-cdk-macros = { path = "../src/ic-cdk-macros" }
-ic-management = { path = "../src/ic-management" }
 lazy_static = "1.4.0"
 serde_bytes = "0.11"
 

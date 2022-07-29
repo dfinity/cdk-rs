@@ -1,5 +1,5 @@
+use crate::api::call::{call, CallResult};
 use candid::{CandidType, Nat, Principal};
-use ic_cdk::api::call::{call, CallResult};
 use serde::{Deserialize, Serialize};
 
 #[derive(CandidType, Clone, Deserialize, Debug, Eq, Hash, PartialEq, Serialize)]
