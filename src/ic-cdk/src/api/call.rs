@@ -2,7 +2,7 @@
 use crate::api::{ic0, trap};
 use crate::export::Principal;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args, CandidType};
+use candid::{decode_args, encode_args, write_args, CandidType, Deserialize};
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
@@ -130,7 +130,7 @@ use rc::{InnerCell, WasmCell};
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[allow(missing_docs)]
 #[repr(i32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
     NoError = 0,
 
