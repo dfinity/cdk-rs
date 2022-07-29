@@ -9,7 +9,7 @@ thread_local! {
 
 #[update]
 async fn call_create_canister() {
-    match CANISTER_ID.with(|id| id.borrow().clone()) {
+    match CANISTER_ID.with(|id| *id.borrow()) {
         Some(canister_id) => {
             ic_cdk::api::print(format!("Canister already created. {}", canister_id));
         }
@@ -26,7 +26,7 @@ async fn call_create_canister() {
 
 #[update]
 async fn call_update_settings() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = UpdateSettingsArgument {
             canister_id,
             settings: CanisterSettings {
@@ -43,7 +43,7 @@ async fn call_update_settings() {
 
 #[update]
 async fn call_install_code() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = InstallCodeArgument {
             mode: CanisterInstallMode::Install,
             canister_id,
@@ -60,7 +60,7 @@ async fn call_install_code() {
 
 #[update]
 async fn call_uninstall_code() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         uninstall_code(arg).await.unwrap();
     } else {
@@ -70,7 +70,7 @@ async fn call_uninstall_code() {
 
 #[update]
 async fn call_start_canister() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         start_canister(arg).await.unwrap();
     } else {
@@ -80,7 +80,7 @@ async fn call_start_canister() {
 
 #[update]
 async fn call_stop_canister() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         stop_canister(arg).await.unwrap();
     } else {
@@ -90,7 +90,7 @@ async fn call_stop_canister() {
 
 #[update]
 async fn call_canister_status() -> CanisterStatusReply {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         canister_status(arg).await.unwrap().0
     } else {
@@ -100,7 +100,7 @@ async fn call_canister_status() -> CanisterStatusReply {
 
 #[update]
 async fn call_delete_canister() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         delete_canister(arg).await.unwrap();
         CANISTER_ID.with(|id| *id.borrow_mut() = None);
@@ -111,7 +111,7 @@ async fn call_delete_canister() {
 
 #[update]
 async fn call_deposit_cycles() {
-    if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+    if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
         let arg = CanisterIdRecord { canister_id };
         deposit_cycles(arg).await.unwrap();
     } else {
@@ -129,8 +129,8 @@ mod provisional {
     use ic_cdk::api::management_canister::provisional::*;
 
     #[update]
-    async fn call_provisional_create_canister_with_cycles() -> () {
-        match CANISTER_ID.with(|id| id.borrow().clone()) {
+    async fn call_provisional_create_canister_with_cycles() {
+        match CANISTER_ID.with(|id| *id.borrow()) {
             Some(canister_id) => {
                 ic_cdk::api::print(format!("Canister already created. {}", canister_id));
             }
@@ -149,7 +149,7 @@ mod provisional {
 
     #[update]
     async fn call_provisional_top_up_canister() {
-        if let Some(canister_id) = CANISTER_ID.with(|id| id.borrow().clone()) {
+        if let Some(canister_id) = CANISTER_ID.with(|id| *id.borrow()) {
             let arg = ProvisionalTopUpCanisterArgument {
                 canister_id,
                 amount: 1_000_000_000u64.into(),

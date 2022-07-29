@@ -108,4 +108,3 @@ fn test_api_call() {
         .expect("failed to query instruction_counter");
     assert!(result > 0);
 }
-

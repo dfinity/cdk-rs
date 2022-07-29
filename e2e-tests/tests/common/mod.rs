@@ -50,7 +50,7 @@ where
 /// Query a canister candid method.
 // This function is indeed used by tests.
 // Might be a bug with cargo.
-#[allow(dead_code)] 
+#[allow(dead_code)]
 pub fn query_candid<Input, Output>(
     env: &StateMachine,
     canister_id: CanisterId,
