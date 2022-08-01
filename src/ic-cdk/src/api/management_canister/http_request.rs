@@ -1,5 +1,5 @@
 use crate::api::call::{call, CallResult};
-use candid::{CandidType, Nat, Principal};
+use candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 
 #[derive(CandidType, Clone, Deserialize, Debug, Eq, Hash, PartialEq, Serialize)]
@@ -31,7 +31,8 @@ record {
 pub struct CanisterHttpRequestArgument {
     pub url: String,
     pub max_response_bytes: Option<u64>,
-    pub method: HttpMethod,
+    // TODO: Different name in the Spec.
+    pub http_method: HttpMethod,
     pub headers: Vec<HttpHeader>,
     pub body: Option<Vec<u8>>,
     // TODO: Here is a discrepancy between System API and the implementation.
@@ -40,7 +41,8 @@ pub struct CanisterHttpRequestArgument {
 
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
 pub struct CanisterHttpResponse {
-    pub status: Nat,
+    // TODO: Different type in the Spec.
+    pub status: u64,
     pub headers: Vec<HttpHeader>,
     pub body: Vec<u8>,
 }
