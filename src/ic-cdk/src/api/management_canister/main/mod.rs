@@ -1,14 +1,23 @@
-use crate::api::call::{call, CallResult};
+use crate::api::call::{call, call_with_payment128, CallResult};
 use candid::Principal;
 
 mod types;
 pub use types::*;
 
+// https://internetcomputer.org/docs/current/developer-docs/deploy/computation-and-storage-costs
+const CREATE_CANISTER_CYCLES: u128 = 1_000_000_000_000u128;
+
 /// create_canister : (record {
 ///   settings : opt canister_settings
 /// }) -> (record {canister_id : canister_id});
 pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CanisterIdRecord,)> {
-    call(Principal::management_canister(), "create_canister", (arg,)).await
+    call_with_payment128(
+        Principal::management_canister(),
+        "create_canister",
+        (arg,),
+        CREATE_CANISTER_CYCLES,
+    )
+    .await
 }
 
 /// update_settings : (record {
