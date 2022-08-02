@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use ic_cdk::api::management_canister::*;
+use ic_cdk::api::management_canister::main::*;
 use ic_cdk_macros::update;
 
 thread_local! {

@@ -27,7 +27,7 @@ fn main_canister() {
     let result: Result<(), _> = call_candid(&env, canister_id, "call_stop_canister", ());
     assert!(result.is_ok());
 
-    let result: Result<(ic_cdk::api::management_canister::CanisterStatusReply,), _> =
+    let result: Result<(ic_cdk::api::management_canister::main::CanisterStatusReply,), _> =
         call_candid(&env, canister_id, "call_canister_status", ());
     assert!(result.is_ok());
 

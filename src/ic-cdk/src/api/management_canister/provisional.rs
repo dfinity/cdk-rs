@@ -2,7 +2,7 @@ use crate::api::call::{call, CallResult};
 use candid::{CandidType, Nat, Principal};
 use serde::Deserialize;
 
-use super::{CanisterId, CanisterIdRecord, CanisterSettings};
+pub use super::main::{CanisterId, CanisterIdRecord, CanisterSettings};
 
 #[derive(Default, Clone, CandidType, Deserialize, Debug)]
 pub struct ProvisionalCreateCanisterWithCyclesArgument {
