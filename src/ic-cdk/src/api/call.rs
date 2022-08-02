@@ -580,7 +580,8 @@ pub fn reply_raw(buf: &[u8]) {
     }
 }
 
-/// Returns the argument data in the current call.
+/// Returns the argument data in the current call. Traps if the data cannot be
+/// decoded.
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = arg_data_raw();
 
