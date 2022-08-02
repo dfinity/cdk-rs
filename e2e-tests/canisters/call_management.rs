@@ -161,24 +161,4 @@ mod provisional {
     }
 }
 
-mod threshold_ecdsa {
-    use super::*;
-    use ic_cdk::api::management_canister::threshold_ecdsa::*;
-
-    #[update]
-    async fn call_ecdsa_public_key() -> EcdsaPublicKeyReply {
-        let key_id = EcdsaKeyId {
-            curve: EcdsaCurve::Secp256k1,
-            name: "dfx_test_key".to_string(),
-        };
-        let caller = ic_cdk::caller().as_slice().to_vec();
-        let arg = EcdsaPublicKeyArgument {
-            canister_id: None,
-            derivation_path: vec![caller],
-            key_id,
-        };
-        ecdsa_public_key(arg).await.unwrap().0
-    }
-}
-
 fn main() {}

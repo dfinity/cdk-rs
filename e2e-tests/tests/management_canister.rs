@@ -67,17 +67,3 @@ fn provisional() {
         call_candid(&env, canister_id, "call_provisional_top_up_canister", ());
     assert!(result.is_ok());
 }
-
-#[test]
-#[ignore] // TODO: Figure out if it's possible to test here
-fn threshold_ecdsa() {
-    let env = StateMachine::new();
-    let rev = cargo_build_canister("call-management");
-    let canister_id = env.install_canister(rev, vec![], None).unwrap();
-
-    let result: Result<
-        (ic_cdk::api::management_canister::threshold_ecdsa::EcdsaPublicKeyReply,),
-        _,
-    > = call_candid(&env, canister_id, "call_ecdsa_public_key", ());
-    assert!(result.is_ok());
-}
