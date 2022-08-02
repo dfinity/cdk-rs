@@ -40,14 +40,14 @@ pub struct CanisterHttpRequestArgument {
 }
 
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
-pub struct CanisterHttpResponse {
+pub struct HttpResponse {
     // TODO: Different type in the Spec.
     pub status: u64,
     pub headers: Vec<HttpHeader>,
     pub body: Vec<u8>,
 }
 
-pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(CanisterHttpResponse,)> {
+pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
     let cycles = http_request_required_cycles(&arg);
     call_with_payment128(
         Principal::management_canister(),
