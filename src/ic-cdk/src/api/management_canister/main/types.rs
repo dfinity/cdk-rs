@@ -47,7 +47,7 @@ pub struct InstallCodeArgument {
     pub arg: Vec<u8>,
 }
 
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(Clone, Copy, CandidType, Deserialize, Debug)]
 pub struct CanisterIdRecord {
     pub canister_id: CanisterId,
 }
