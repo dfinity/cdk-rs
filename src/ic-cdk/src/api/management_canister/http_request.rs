@@ -1,4 +1,4 @@
-use crate::api::call::{call, CallResult};
+use crate::api::call::{call_with_payment128, CallResult};
 use candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 
@@ -48,5 +48,55 @@ pub struct CanisterHttpResponse {
 }
 
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(CanisterHttpResponse,)> {
-    call(Principal::management_canister(), "http_request", (arg,)).await
+    let cycles = http_request_required_cycles(&arg);
+    call_with_payment128(
+        Principal::management_canister(),
+        "http_request",
+        (arg,),
+        cycles,
+    )
+    .await
+}
+
+fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
+    let max_response_bytes = match arg.max_response_bytes {
+        Some(ref n) => *n as u128,
+        None => 2 * 1024 * 1024u128, // default 2MiB
+    };
+    let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
+    // TODO: this formula should be documented somewhere
+    400_000_000u128 + 100_000u128 * (arg_raw.len() as u128 + 12u128 + max_response_bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn required_cycles_some_max() {
+        let url = "https://example.com".to_string();
+        let arg = CanisterHttpRequestArgument {
+            url,
+            max_response_bytes: Some(3000),
+            http_method: HttpMethod::GET,
+            headers: vec![],
+            body: None,
+            transform_method_name: None,
+        };
+        assert_eq!(http_request_required_cycles(&arg), 713100000u128);
+    }
+
+    #[test]
+    fn required_cycles_none_max() {
+        let url = "https://example.com".to_string();
+        let arg = CanisterHttpRequestArgument {
+            url,
+            max_response_bytes: None,
+            http_method: HttpMethod::GET,
+            headers: vec![],
+            body: None,
+            transform_method_name: None,
+        };
+        assert_eq!(http_request_required_cycles(&arg), 210127500000u128);
+    }
 }
