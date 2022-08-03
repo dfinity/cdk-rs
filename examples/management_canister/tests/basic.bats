@@ -1,6 +1,7 @@
 # Executed before each test.
 setup() {
   cd examples/management_canister
+  bitcoind -regtest -daemonwait
   # Make sure the directory is clean.
   dfx start --clean --background --host "127.0.0.1:0"
   local webserver_port=$(cat .dfx/webserver-port)
@@ -11,6 +12,7 @@ setup() {
 # executed after each test
 teardown() {
   dfx stop
+  bitcoin-cli -regtest stop
   mv dfx.json.bk dfx.json
 }
 
