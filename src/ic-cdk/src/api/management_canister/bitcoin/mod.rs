@@ -37,7 +37,7 @@ pub async fn bitcoin_get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResp
 /// bitcoin_send_transaction: (send_transaction_request) -> ();
 pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
     let cycles = SEND_TRANSACTION_BASE_CYCLES
-        + (*&arg.transaction.len() as u128) * SEND_TRANSACTION_PER_BYTE_CYCLES;
+        + (arg.transaction.len() as u128) * SEND_TRANSACTION_PER_BYTE_CYCLES;
     call_with_payment128(
         Principal::management_canister(),
         "bitcoin_send_transaction",
