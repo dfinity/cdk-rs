@@ -5,15 +5,18 @@ pub type Satoshi = u64;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType, Copy)]
 pub enum BitcoinNetwork {
-    #[serde(rename = "mainnet")]
+    // TODO: The variants are Capitalized while they are lowercase in the spec
     Mainnet,
-    #[serde(rename = "testnet")]
     Testnet,
+    // TODO: the spec doesn't have this type of network
+    Regtest,
 }
 
 pub type BitcoinAddress = String;
 
 pub type BlockHash = Vec<u8>;
+
+pub type MillisatoshiPerByte = u64;
 
 #[derive(Clone, CandidType, Deserialize, Debug, Default)]
 pub struct Outpoint {
@@ -30,10 +33,18 @@ pub struct Utxo {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType)]
 pub enum UtxoFilter {
-    #[serde(rename = "min_confirmations")]
+    // TODO: In the spec, variants are in snake case
+    // #[serde(rename = "min_confirmations")]
     MinConfirmations(u32),
-    #[serde(rename = "page")]
+    // #[serde(rename = "page")]
     Page(Vec<u8>),
+}
+
+#[derive(Clone, CandidType, Deserialize, Debug)]
+pub struct GetBalanceRequest {
+    pub address: BitcoinAddress,
+    pub network: BitcoinNetwork,
+    pub min_confirmations: Option<u32>,
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
@@ -41,11 +52,6 @@ pub struct GetUtxosRequest {
     pub address: BitcoinAddress,
     pub network: BitcoinNetwork,
     pub filter: Option<UtxoFilter>,
-}
-
-#[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct GetCurrentFeePercentilesRequest {
-    pub network: BitcoinNetwork,
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
@@ -57,16 +63,12 @@ pub struct GetUtxosResponse {
 }
 
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct GetBalanceRequest {
-    pub address: BitcoinAddress,
-    pub network: BitcoinNetwork,
-    pub min_confirmations: Option<u32>,
-}
-
-#[derive(Clone, CandidType, Deserialize, Debug)]
 pub struct SendTransactionRequest {
     pub transaction: Vec<u8>,
     pub network: BitcoinNetwork,
 }
 
-pub type MillisatoshiPerByte = u64;
+#[derive(Clone, CandidType, Deserialize, Debug)]
+pub struct GetCurrentFeePercentilesRequest {
+    pub network: BitcoinNetwork,
+}
