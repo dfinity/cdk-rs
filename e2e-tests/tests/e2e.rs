@@ -1,10 +1,10 @@
-pub use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use ic_cdk_e2e_tests::cargo_build_canister;
-pub use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
+use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
-pub enum CallError {
+enum CallError {
     Reject(String),
     UserError(UserError),
 }
@@ -50,9 +50,6 @@ where
 }
 
 /// Query a canister candid method.
-// This function is indeed used by tests.
-// Might be a bug with cargo.
-#[allow(dead_code)]
 fn query_candid<Input, Output>(
     env: &StateMachine,
     canister_id: CanisterId,
