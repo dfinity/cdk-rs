@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Derive common traits for `RejectionCode` (#294)
-- `ManualReply::reject` function
+- `ManualReply::reject` function (#297)
 
 ## [0.5.5] - 2022-07-22
 
