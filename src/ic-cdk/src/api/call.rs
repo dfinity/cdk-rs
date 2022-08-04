@@ -648,6 +648,13 @@ impl<T: ?Sized> ManualReply<T> {
         reply((value,));
         Self::empty()
     }
+
+    /// Rejects the call with the specified message and returns a new
+    /// `ManualReply`, for a useful reply-then-return shortcut.
+    pub fn reject(message: impl AsRef<str>) -> Self {
+        reject(message.as_ref());
+        Self::empty()
+    }
 }
 
 impl<T> CandidType for ManualReply<T>
