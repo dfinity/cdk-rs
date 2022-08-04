@@ -1,4 +1,5 @@
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid::Encode;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;
@@ -166,4 +167,9 @@ fn test_api_call() {
     let (result,): (u64,) = query_candid(&env, canister_id, "instruction_counter", ())
         .expect("failed to query instruction_counter");
     assert!(result > 0);
+
+    let result = env
+        .query(canister_id, "manual_reject", Encode!().unwrap())
+        .unwrap();
+    assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
 }
