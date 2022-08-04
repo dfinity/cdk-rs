@@ -7,9 +7,9 @@ setup() {
   cp dfx.json dfx.json.bk
   cat <<<$(jq .networks.local.bind=\"127.0.0.1:${webserver_port}\" dfx.json) >dfx.json
 
-  run dfx identity new alice
-  run dfx identity new bob
-  run dfx identity new charlie
+  run dfx identity new alice --disable-encryption
+  run dfx identity new bob --disable-encryption
+  run dfx identity new charlie --disable-encryption
 }
 
 # executed after each test
