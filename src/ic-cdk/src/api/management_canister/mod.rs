@@ -11,7 +11,7 @@
 //! [2]: https://internetcomputer.org/assets/files/ic-a45d11feb0ba0494055083f9d2d21ddf.did
 
 pub mod bitcoin;
+pub mod ecdsa;
 pub mod http_request;
 pub mod main;
 pub mod provisional;
-pub mod ecdsa;

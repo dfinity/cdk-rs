@@ -1,3 +1,5 @@
+//! The IC Bitcoin API.
+
 use crate::api::call::{call_with_payment128, CallResult};
 use candid::Principal;
 
@@ -12,7 +14,7 @@ const GET_CURRENT_FEE_PERCENTILES_CYCLES: u128 = 100_000_000;
 const SEND_TRANSACTION_BASE_CYCLES: u128 = 5_000_000_000;
 const SEND_TRANSACTION_PER_BYTE_CYCLES: u128 = 20_000_000;
 
-/// bitcoin_get_balance: (get_balance_request) -> (satoshi);
+/// See [IC method `bitcoin_get_balance`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_balance)
 pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,)> {
     call_with_payment128(
         Principal::management_canister(),
@@ -23,7 +25,7 @@ pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,
     .await
 }
 
-/// bitcoin_get_utxos: (get_utxos_request) -> (get_utxos_response);
+/// See [IC method `bitcoin_get_utxos`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_utxos)
 pub async fn bitcoin_get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResponse,)> {
     call_with_payment128(
         Principal::management_canister(),
@@ -34,7 +36,7 @@ pub async fn bitcoin_get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResp
     .await
 }
 
-/// bitcoin_send_transaction: (send_transaction_request) -> ();
+/// See [IC method `bitcoin_send_transaction`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_send_transaction)
 pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
     let cycles = SEND_TRANSACTION_BASE_CYCLES
         + (arg.transaction.len() as u128) * SEND_TRANSACTION_PER_BYTE_CYCLES;
@@ -47,7 +49,7 @@ pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult
     .await
 }
 
-/// bitcoin_get_current_fee_percentiles: (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+/// See [IC method `bitcoin_get_current_fee_percentiles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_current_fee_percentiles)
 pub async fn bitcoin_get_current_fee_percentiles(
     arg: GetCurrentFeePercentilesRequest,
 ) -> CallResult<(Vec<MillisatoshiPerByte>,)> {
