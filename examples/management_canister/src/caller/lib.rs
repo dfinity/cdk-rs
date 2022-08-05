@@ -34,12 +34,12 @@ mod main {
         uninstall_code(arg).await.unwrap();
         start_canister(arg).await.unwrap();
         stop_canister(arg).await.unwrap();
-        let reply = canister_status(arg).await.unwrap().0;
-        assert_eq!(reply.status, CanisterStatusType::Stopped);
+        let response = canister_status(arg).await.unwrap().0;
+        assert_eq!(response.status, CanisterStatusType::Stopped);
         deposit_cycles(arg, 1_000_000_000_000u128).await.unwrap();
         delete_canister(arg).await.unwrap();
-        let reply = raw_rand().await.unwrap().0;
-        assert_eq!(reply.len(), 32);
+        let response = raw_rand().await.unwrap().0;
+        assert_eq!(response.len(), 32);
     }
 }
 
@@ -88,10 +88,10 @@ mod http_request {
             body: None,
             transform_method_name: Some("transform".to_string()),
         };
-        let reply = http_request(arg).await.unwrap().0;
-        assert_eq!(reply.status, 200);
+        let response = http_request(arg).await.unwrap().0;
+        assert_eq!(response.status, 200);
         assert_eq!(
-            reply.headers.get(0),
+            response.headers.get(0),
             Some(&HttpHeader {
                 name: "custom-header".to_string(),
                 value: "test".to_string(),
@@ -99,7 +99,7 @@ mod http_request {
         );
     }
 
-    // TODO: transform function must be a *query* method of the canister
+    // transform function must be a *query* method of the canister
     #[query]
     async fn transform(arg: HttpResponse) -> HttpResponse {
         HttpResponse {
@@ -129,7 +129,7 @@ mod ecdsa {
             derivation_path: derivation_path.clone(),
             key_id: key_id.clone(),
         };
-        let EcdsaPublicKeyReply {
+        let EcdsaPublicKeyResponse {
             public_key,
             chain_code,
         } = ecdsa_public_key(arg).await.unwrap().0;
@@ -143,7 +143,7 @@ mod ecdsa {
             derivation_path,
             key_id,
         };
-        let SignWithEcdsaReply { signature } = sign_with_ecdsa(arg).await.unwrap().0;
+        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg).await.unwrap().0;
         assert_eq!(signature.len(), 64);
     }
 }
@@ -171,10 +171,7 @@ mod bitcoin {
         };
         let _response = bitcoin_get_utxos(arg).await.unwrap().0;
 
-        // TODO: Following code causes local replica crash.
-        // Might be a bug in bitcoin integration.
-        // In the IC repo, Page is ByteBuf. Here we are using Vec<u8>
-        // Not sure if this is the reason.
+        // TODO: turn on following test when new dfx has replica support it.
 
         // let arg = GetUtxosRequest {
         //     address: address.clone(),
@@ -190,9 +187,9 @@ mod bitcoin {
             transaction: vec![],
             network,
         };
-        let reply = bitcoin_send_transaction(arg).await;
-        assert!(reply.is_err());
-        if let Err((rejection_code, rejection_reason)) = reply {
+        let response = bitcoin_send_transaction(arg).await;
+        assert!(response.is_err());
+        if let Err((rejection_code, rejection_reason)) = response {
             assert_eq!(rejection_code, RejectionCode::CanisterReject);
             assert_eq!(&rejection_reason, "bitcoin_send_transaction failed: Can't deserialize transaction because it's malformed.");
         };
