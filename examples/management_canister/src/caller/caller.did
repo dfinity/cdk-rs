@@ -2,6 +2,6 @@ service : {
     "execute_main_methods" : () -> ();
     "execute_provisional_methods" : () -> ();
     "http_request_example" : () -> ();
-    "execute_threshold_ecdsa_methods" : () -> ();
+    "execute_ecdsa_methods" : () -> ();
     "execute_bitcoin_methods" : () -> ();
 }

@@ -112,13 +112,13 @@ mod http_request {
     }
 }
 
-mod threshold_ecdsa {
+mod ecdsa {
     use super::*;
-    use ic_cdk::api::management_canister::threshold_ecdsa::*;
+    use ic_cdk::api::management_canister::ecdsa::*;
     use sha2::Digest;
 
     #[update]
-    async fn execute_threshold_ecdsa_methods() {
+    async fn execute_ecdsa_methods() {
         let key_id = EcdsaKeyId {
             curve: EcdsaCurve::Secp256k1,
             name: "dfx_test_key".to_string(),
