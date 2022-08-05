@@ -1,7 +1,7 @@
 //! The main functionalities in [the IC management canister][1].
 //!
 //! Most of the functions are for managing canister lifecycle.
-//! [`raw_rand`] is also included in this module.
+//! [raw_rand] is also included in this module.
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
@@ -65,7 +65,7 @@ pub async fn stop_canister(arg: CanisterIdRecord) -> CallResult<()> {
 /// Get status information about the canister.
 ///
 /// See [IC method `canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status)
-pub async fn canister_status(arg: CanisterIdRecord) -> CallResult<(CanisterStatusReply,)> {
+pub async fn canister_status(arg: CanisterIdRecord) -> CallResult<(CanisterStatusResponse,)> {
     call(Principal::management_canister(), "canister_status", (arg,)).await
 }
 

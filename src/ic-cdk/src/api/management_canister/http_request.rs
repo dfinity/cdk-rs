@@ -26,7 +26,7 @@ pub enum HttpMethod {
     HEAD,
 }
 
-/// See [`http_request`].
+/// Argument type of [http_request].
 #[derive(CandidType, Deserialize, Debug)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.

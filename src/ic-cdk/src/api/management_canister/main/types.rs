@@ -20,19 +20,19 @@ pub struct CanisterSettings {
     pub freezing_threshold: Option<Nat>,
 }
 
-/// See [`super::create_canister`].
+/// Argument type of [create_canister](super::create_canister).
 #[derive(Default, Clone, CandidType, Deserialize, Debug)]
 pub struct CreateCanisterArgument {
-    /// See [`CanisterSettings`].
+    /// See [CanisterSettings].
     pub settings: Option<CanisterSettings>,
 }
 
-/// See [`super::update_settings`].
+/// Argument type of [update_settings](super::update_settings).
 #[derive(Clone, CandidType, Deserialize, Debug)]
 pub struct UpdateSettingsArgument {
     /// Principle of the canister.
     pub canister_id: CanisterId,
-    /// See [`CanisterSettings`].
+    /// See [CanisterSettings].
     pub settings: CanisterSettings,
 }
 
@@ -53,10 +53,10 @@ pub enum CanisterInstallMode {
 /// WASM module.
 pub type WasmModule = Vec<u8>;
 
-/// See [`super::install_code`].
+/// Argument type of [install_code](super::install_code).
 #[derive(Clone, CandidType, Deserialize, Debug)]
 pub struct InstallCodeArgument {
-    /// See [`CanisterInstallMode`].
+    /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// Principle of the canister.
     pub canister_id: CanisterId,
@@ -87,7 +87,7 @@ pub enum CanisterStatusType {
     Stopped,
 }
 
-/// Like [`CanisterSettings`].
+/// Like [CanisterSettings].
 #[derive(Default, Clone, CandidType, Deserialize, Debug)]
 pub struct DefiniteCanisterSettings {
     /// Controllers of the canister.
@@ -100,12 +100,12 @@ pub struct DefiniteCanisterSettings {
     pub freezing_threshold: Nat,
 }
 
-/// See [`super::canister_status].
+/// Argument type of [canister_status](super::canister_status).
 #[derive(Clone, CandidType, Deserialize, Debug)]
-pub struct CanisterStatusReply {
-    /// See [`CanisterStatusType`].
+pub struct CanisterStatusResponse {
+    /// See [CanisterStatusType].
     pub status: CanisterStatusType,
-    /// See [`DefiniteCanisterSettings`].
+    /// See [DefiniteCanisterSettings].
     pub settings: DefiniteCanisterSettings,
     /// A SHA256 hash of the module installed on the canister. This is null if the canister is empty.
     pub module_hash: Option<Vec<u8>>,

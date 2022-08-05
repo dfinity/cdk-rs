@@ -6,16 +6,16 @@ use serde::Deserialize;
 
 pub use super::main::{CanisterId, CanisterIdRecord, CanisterSettings};
 
-/// See [`provisional_create_canister_with_cycles`].
+/// Argument type of [provisional_create_canister_with_cycles].
 #[derive(Default, Clone, CandidType, Deserialize, Debug)]
 pub struct ProvisionalCreateCanisterWithCyclesArgument {
     /// The created canister will have this amount of cycles.
     pub amount: Option<Nat>,
-    /// See [`CanisterSettings`].
+    /// See [CanisterSettings].
     pub settings: Option<CanisterSettings>,
 }
 
-/// See [`provisional_top_up_canister`]
+/// Argument type of [provisional_top_up_canister].
 #[derive(Clone, CandidType, Deserialize, Debug)]
 pub struct ProvisionalTopUpCanisterArgument {
     /// Canister ID.

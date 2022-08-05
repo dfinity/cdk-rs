@@ -10,7 +10,7 @@ pub struct EcdsaPublicKeyArgument {
     pub canister_id: Option<CanisterId>,
     /// A vector of variable length byte strings.
     pub derivation_path: Vec<Vec<u8>>,
-    /// See [`EcdsaKeyId`].
+    /// See [EcdsaKeyId].
     pub key_id: EcdsaKeyId,
 }
 
@@ -30,7 +30,7 @@ pub struct SignWithEcdsaArgument {
     pub message_hash: Vec<u8>,
     /// A vector of variable length byte strings.
     pub derivation_path: Vec<Vec<u8>>,
-    /// See [`EcdsaKeyId`].
+    /// See [EcdsaKeyId].
     pub key_id: EcdsaKeyId,
 }
 
@@ -44,7 +44,7 @@ pub struct SignWithEcdsaResponse {
 /// ECDSA KeyId.
 #[derive(CandidType, Serialize, Debug, Clone)]
 pub struct EcdsaKeyId {
-    /// See [`EcdsaCurve`].
+    /// See [EcdsaCurve].
     pub curve: EcdsaCurve,
     /// Name.
     pub name: String,
