@@ -17,7 +17,7 @@ jobs:
           - build: linux-stable
             os: ubuntu-latest
             rust: 1.60.0
-            dfx: 0.9.3
+            dfx: 0.11.1
 
     steps:
       - uses: actions/checkout@v2
@@ -47,10 +47,26 @@ jobs:
         with:
           bats-version: 1.2.1
 
+      - name: Install bitcoin
+        run: |
+          CWD=$(pwd)
+          cd "$(mktemp -d)"
+          BITCOIN_CORE_VERSION=22.0
+          BITCOIN_CORE_FILENAME="bitcoin-$BITCOIN_CORE_VERSION-x86_64-linux-gnu.tar.gz"
+          BITCOIN_CORE_TARBALL_SHA="59ebd25dd82a51638b7a6bb914586201e67db67b919b2a1ff08925a7936d1b16"
+          wget -nv "https://bitcoin.org/bin/bitcoin-core-$BITCOIN_CORE_VERSION/$BITCOIN_CORE_FILENAME"
+          echo "$BITCOIN_CORE_TARBALL_SHA  $BITCOIN_CORE_FILENAME" | shasum -c
+          tar xzf "$BITCOIN_CORE_FILENAME"
+          cd "bitcoin-$BITCOIN_CORE_VERSION/bin"
+          sudo install -m 0755 -o root -g root -t /usr/local/bin *
+          cd "$CWD"
+
       - name: Run Tests
         shell: bash
         run: |
           echo CWD: $(pwd)
+          echo bitcoind: $(which bitcoind)
+          echo bitcoin-cli: $(which bitcoin-cli)
           export PATH=$PATH:$HOME/bin
           bats -r examples
         env:
