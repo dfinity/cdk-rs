@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 pub type Satoshi = u64;
 
 /// Bitcoin Network.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType, Copy)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 pub enum BitcoinNetwork {
     // TODO: The variants are Capitalized while they are lowercase in the spec
     /// Mainnet.
@@ -15,6 +17,12 @@ pub enum BitcoinNetwork {
     // TODO: the spec doesn't have this type of network
     /// Regtest.
     Regtest,
+}
+
+impl Default for BitcoinNetwork {
+    fn default() -> Self {
+        Self::Regtest
+    }
 }
 
 /// Bitcoin Address.
@@ -27,7 +35,9 @@ pub type BlockHash = Vec<u8>;
 pub type MillisatoshiPerByte = u64;
 
 /// Identifier of [Utxo].
-#[derive(Clone, CandidType, Deserialize, Debug, Default)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct Outpoint {
     /// Transaction Identifier.
     pub txid: Vec<u8>,
@@ -36,7 +46,9 @@ pub struct Outpoint {
 }
 
 /// Unspent transaction output (UTXO).
-#[derive(Clone, CandidType, Deserialize, Debug, Default)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct Utxo {
     /// See [Outpoint].
     pub outpoint: Outpoint,
@@ -47,13 +59,13 @@ pub struct Utxo {
 }
 
 /// Filter for requesting UTXOs.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub enum UtxoFilter {
     // TODO: In the spec, variants are in snake case
-    // #[serde(rename = "min_confirmations")]
     /// Minimum number of confirmations. There is an upper bound of 144. Typically set to a value around 6 in practice.
     MinConfirmations(u32),
-    // #[serde(rename = "page")]
     /// Page reference.
     ///
     /// DON'T construct it from scratch.
@@ -62,7 +74,9 @@ pub enum UtxoFilter {
 }
 
 /// Argument type of [bitcoin_get_balance](super::bitcoin_get_balance).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct GetBalanceRequest {
     /// See [BitcoinAddress].
     pub address: BitcoinAddress,
@@ -73,7 +87,9 @@ pub struct GetBalanceRequest {
 }
 
 /// Argument type of [bitcoin_get_utxos](super::bitcoin_get_utxos).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct GetUtxosRequest {
     /// See [BitcoinAddress].
     pub address: BitcoinAddress,
@@ -84,7 +100,9 @@ pub struct GetUtxosRequest {
 }
 
 /// Response type of [bitcoin_get_utxos](super::bitcoin_get_utxos).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct GetUtxosResponse {
     /// List of UTXOs.
     pub utxos: Vec<Utxo>,
@@ -99,7 +117,9 @@ pub struct GetUtxosResponse {
 }
 
 /// Argument type of [bitcoin_send_transaction](super::bitcoin_send_transaction).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct SendTransactionRequest {
     /// The serialized transaction data.
     ///
@@ -111,7 +131,20 @@ pub struct SendTransactionRequest {
 }
 
 /// Argument type of [bitcoin_get_current_fee_percentiles](super::bitcoin_get_current_fee_percentiles).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
 pub struct GetCurrentFeePercentilesRequest {
     /// See [BitcoinNetwork].
     pub network: BitcoinNetwork,

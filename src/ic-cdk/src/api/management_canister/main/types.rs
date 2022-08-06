@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 /// Canister ID is Principal.
 pub type CanisterId = Principal;
 
-// TODO: what common traits should we derive for these structs?
 /// Canister settings.
 ///
 /// See [`settings`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
-#[derive(Default, Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct CanisterSettings {
     /// A list of principals. Must be between 0 and 10 in size.
     pub controllers: Option<Vec<Principal>>,
@@ -21,14 +22,18 @@ pub struct CanisterSettings {
 }
 
 /// Argument type of [create_canister](super::create_canister).
-#[derive(Default, Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct CreateCanisterArgument {
     /// See [CanisterSettings].
     pub settings: Option<CanisterSettings>,
 }
 
 /// Argument type of [update_settings](super::update_settings).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct UpdateSettingsArgument {
     /// Principle of the canister.
     pub canister_id: CanisterId,
@@ -37,7 +42,9 @@ pub struct UpdateSettingsArgument {
 }
 
 /// The mode with which a canister is installed.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq, Hash, CandidType, Copy)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum CanisterInstallMode {
     /// A fresh install of a new canister.
@@ -52,7 +59,9 @@ pub enum CanisterInstallMode {
 pub type WasmModule = Vec<u8>;
 
 /// Argument type of [install_code](super::install_code).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct InstallCodeArgument {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
@@ -65,14 +74,18 @@ pub struct InstallCodeArgument {
 }
 
 /// A wrapper of canister id.
-#[derive(Clone, Copy, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 pub struct CanisterIdRecord {
     /// Principle of the canister.
     pub canister_id: CanisterId,
 }
 
 /// Status of a canister.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, CandidType)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum CanisterStatusType {
     /// The canister is running.
@@ -84,7 +97,9 @@ pub enum CanisterStatusType {
 }
 
 /// Like [CanisterSettings].
-#[derive(Default, Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct DefiniteCanisterSettings {
     /// Controllers of the canister.
     pub controllers: Vec<Principal>,
@@ -97,7 +112,9 @@ pub struct DefiniteCanisterSettings {
 }
 
 /// Argument type of [canister_status](super::canister_status).
-#[derive(Clone, CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct CanisterStatusResponse {
     /// See [CanisterStatusType].
     pub status: CanisterStatusType,

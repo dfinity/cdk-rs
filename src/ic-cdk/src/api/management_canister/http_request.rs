@@ -5,7 +5,9 @@ use candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 
 /// HTTP header.
-#[derive(CandidType, Clone, Deserialize, Debug, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct HttpHeader {
     /// Name
     pub name: String,
@@ -16,7 +18,9 @@ pub struct HttpHeader {
 /// HTTP method.
 ///
 /// Currently support following methods.
-#[derive(Clone, Debug, PartialEq, CandidType, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 pub enum HttpMethod {
     /// GET
     GET,
@@ -27,7 +31,9 @@ pub enum HttpMethod {
 }
 
 /// Argument type of [http_request].
-#[derive(CandidType, Deserialize, Debug)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.
     pub url: String,
@@ -46,7 +52,9 @@ pub struct CanisterHttpRequestArgument {
 }
 
 /// The returned HTTP response.
-#[derive(CandidType, Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct HttpResponse {
     // TODO: Different type in the Spec.
     /// The response status (e.g., 200, 404).
