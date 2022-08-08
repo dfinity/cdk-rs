@@ -144,12 +144,18 @@ jobs:
     needs: [build, build-ic-cdk-optimizer, test, fmt, clippy]
     runs-on: ubuntu-latest
     steps:
-      - name: check step result directly
-        if: >
-          ${{
-          needs.build.result != 'success' ||
-          needs.build-ic-cdk-optimizer.result != 'success' ||
-          needs.test.result != 'success' ||
-          needs.fmt.result != 'success' ||
-          needs.clippy.result != 'success' }}
+      - name: check build result
+        if: ${{ needs.build.result != 'success' }}
+        run: exit 1
+      - name: check build-ic-cdk-optimizer result
+        if: ${{ needs.build-ic-cdk-optimizer.result != 'success' }}
+        run: exit 1
+      - name: check test result
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1
+      - name: check fmt result
+        if: ${{ needs.fmt.result != 'success' }}
+        run: exit 1
+      - name: check clippy result
+        if: ${{ needs.clippy.result != 'success' }}
         run: exit 1
