@@ -127,3 +127,19 @@ jobs:
       - name: Run clippy
         run: |
           cargo clippy --tests --benches -- -D clippy::all
+
+  aggregate:
+    name: ci:required
+    if: ${{ always() }}
+    needs: [build, build-ic-cdk-optimizer, test, fmt, clippy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: check step result directly
+        if: >
+          ${{
+          needs.build.result != 'success' ||
+          needs.build-ic-cdk-optimizer.result != 'success' ||
+          needs.test.result != 'success' ||
+          needs.fmt.result != 'success' ||
+          needs.clippy.result != 'success' }}
+        run: exit 1
