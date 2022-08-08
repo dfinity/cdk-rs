@@ -71,9 +71,5 @@ fn ai_move(name: String) {
 
 #[query(name = "getFen")]
 fn get_fen(name: String) -> Option<String> {
-    STORE.with(|game_store| {
-        game_store
-            .borrow()
-            .get(&name).map(|game| game.board.fen())
-    })
+    STORE.with(|game_store| game_store.borrow().get(&name).map(|game| game.board.fen()))
 }
