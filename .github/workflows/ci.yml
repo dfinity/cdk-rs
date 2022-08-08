@@ -25,7 +25,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}
+          key: ${{ runner.os }}-build
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -55,7 +55,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}
+          key: ${{ runner.os }}-optimizer
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -79,7 +79,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}
+          key: ${{ runner.os }}-test
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -103,7 +103,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}
+          key: ${{ runner.os }}-fmt
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -119,6 +119,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-clippy
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
