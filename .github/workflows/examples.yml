@@ -6,14 +6,16 @@ on:
       - main
   pull_request:
 
+env:
+  rust-version: 1.60.0
+  dfx-version: 0.11.1
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.60.0]
-        dfx: [0.11.1]
         project-name:
           [asset_storage, chess, counter, management_canister, print, profile]
 
@@ -35,13 +37,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: ${{ env.rust-version }}
           target: wasm32-unknown-unknown
           components: rustfmt
 
       - name: Install DFX
         run: |
-          export DFX_VERSION=${{ matrix.dfx }}
+          export DFX_VERSION=${{env.dfx-version }}
           echo Install DFX v$DFX_VERSION
           yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 
