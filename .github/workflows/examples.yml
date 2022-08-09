@@ -1,4 +1,3 @@
-
 name: Examples
 
 on:
@@ -7,40 +6,49 @@ on:
       - main
   pull_request:
 
+env:
+  rust-version: 1.60.0
+  dfx-version: 0.11.1
+
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        build: [ linux-stable ]
-        include:
-          - build: linux-stable
-            os: ubuntu-latest
-            rust: 1.60.0
-            dfx: 0.11.1
+        project-name:
+          [asset_storage, chess, counter, management_canister, print, profile]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - uses: actions/cache@v2
+      - name: Cache
+        uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            **/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            examples/${{ matrix.project-name }}/target/
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.project-name }}-
+            ${{ runner.os }}-
 
       - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+          target: wasm32-unknown-unknown
+          components: rustfmt
 
       - name: Install DFX
         run: |
-          export DFX_VERSION=${{ matrix.dfx }}
-          echo Install DFX Version: $DFX_VERSION
-          yes | sh -ci "$(curl -fsSL https://sdk.dfinity.org/install.sh)"
+          export DFX_VERSION=${{env.dfx-version }}
+          echo Install DFX v$DFX_VERSION
+          yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 
       - name: Setup BATS
         uses: mig4/setup-bats@v1.0.2
@@ -48,6 +56,7 @@ jobs:
           bats-version: 1.2.1
 
       - name: Install bitcoin
+        if: ${{ matrix.project-name == 'management_canister' }}
         run: |
           CWD=$(pwd)
           cd "$(mktemp -d)"
@@ -64,23 +73,15 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          echo CWD: $(pwd)
-          echo bitcoind: $(which bitcoind)
-          echo bitcoin-cli: $(which bitcoin-cli)
-          export PATH=$PATH:$HOME/bin
-          bats -r examples
+          bats -r examples/${{ matrix.project-name }}
         env:
           RUST_BACKTRACE: 1
 
-      - name: Purge for OSX
-        if: matrix.os == 'macos-latest'
+      - name: cargo fmt # no clippy because #[import] makes it fail
         run: |
-          # There is a bug with BSD tar on macOS where the first 8MB of the file are
-          # sometimes all NUL bytes. See https://github.com/actions/cache/issues/403
-          # and https://github.com/rust-lang/cargo/issues/8603 for some more
-          # information. An alternative solution here is to install GNU tar, but
-          # flushing the disk cache seems to work, too.
-          sudo /usr/sbin/purge
+          pushd examples/${{ matrix.project-name }}
+          cargo fmt --check
+          popd
 
   aggregate:
     name: examples:required
@@ -88,6 +89,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: check step result directly
+      - name: Check step result directly
         if: ${{ needs.test.result != 'success' }}
         run: exit 1

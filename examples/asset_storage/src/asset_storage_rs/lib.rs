@@ -1,8 +1,4 @@
-use ic_cdk::{
-    api::call::ManualReply,
-    export::Principal,
-    storage,
-};
+use ic_cdk::{api::call::ManualReply, export::Principal, storage};
 use ic_cdk_macros::*;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
