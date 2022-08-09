@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "src/print_rs",
+    "src/caller",
 ]
 
 [patch.crates-io]

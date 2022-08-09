@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "canisters": {
+    "caller": {
+      "type": "custom",
+      "candid": "src/caller/caller.did",
+      "wasm": "target/wasm32-unknown-unknown/release/caller-opt.wasm",
+      "build": "sh ../build.sh management_canister caller"
+    }
+  },
+  "defaults": {
+    "canister_http": {
+      "enabled": true
+    },
+    "bitcoin": {
+      "enabled": true
+    }
+  }
+}

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Added
+- New `ic_cdk::api::management_canister` module for calling the IC management canister (#295)
 - Derive common traits for `RejectionCode` (#294)
 - `ManualReply::reject` function (#297)
 - `CallFutureRaw` the return type of the `call_raw` and `call_raw128` functions, know if the CallFutureRaw.await will yeild or not. (#298)
