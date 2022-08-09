@@ -2,6 +2,3 @@
 members = [
     "src/caller",
 ]
-
-[patch.crates-io]
-candid = { git = "https://github.com/dfinity/candid.git", rev = "73a8af2096093129274b23347be0c012e2362655"}
