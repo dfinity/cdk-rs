@@ -32,7 +32,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             examples/${{ matrix.project-name }}/target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.project-name }}-
+            ${{ runner.os }}-
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
