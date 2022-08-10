@@ -117,6 +117,11 @@ fn test_panic_after_async_frees_resources() {
 
         assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
     }
+
+    let (message,): (String,) =
+        call_candid(&env, canister_id, "invalid_reply_payload_does_not_trap", ())
+            .expect("call failed");
+    assert_eq!(&message, "handled decoding error gracefully with code 5");
 }
 
 #[test]
