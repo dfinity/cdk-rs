@@ -404,7 +404,16 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, 0);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(|err| {
+            (
+                RejectionCode::CanisterError,
+                format!(
+                    "failed to decode canister response as {}: {}",
+                    std::any::type_name::<T>(),
+                    err
+                ),
+            )
+        })
     }
 }
 

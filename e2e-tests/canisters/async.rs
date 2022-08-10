@@ -53,4 +53,24 @@ fn notify(whom: Principal, method: String) {
     });
 }
 
+#[query]
+fn greet(name: String) -> String {
+    format!("Hello, {}", name)
+}
+
+#[update]
+async fn invalid_reply_payload_does_not_trap() -> String {
+    // We're decoding an integer instead of a string, decoding must fail.
+    let result: Result<(u64,), _> =
+        ic_cdk::call(ic_cdk::api::id(), "greet", ("World".to_string(),)).await;
+
+    match result {
+        Ok((_n,)) => ic_cdk::api::trap("expected the decoding to fail"),
+        Err((err_code, _)) => format!(
+            "handled decoding error gracefully with code {}",
+            err_code as i32
+        ),
+    }
+}
+
 fn main() {}
