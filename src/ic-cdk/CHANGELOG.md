@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.5.6] - 2022-08-10
+
 ### Added
 - New `ic_cdk::api::management_canister` module for calling the IC management canister (#295)
 - Derive common traits for `RejectionCode` (#294)
@@ -13,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Failure to decode the reply in `ic_cdk::call` does not trap anymore (#301).
+- Failure to decode the reply in `ic_cdk::call` does not trap anymore (#301)
 
 ## [0.5.5] - 2022-07-22
 
