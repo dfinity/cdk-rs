@@ -394,6 +394,17 @@ fn call_raw_internal(
     CallFuture { state }
 }
 
+fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
+    (
+        RejectionCode::CanisterError,
+        format!(
+            "failed to decode canister response as {}: {}",
+            std::any::type_name::<T>(),
+            err
+        ),
+    )
+}
+
 /// Performs an asynchronous call to another canister using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
 ///
 /// If the reply payload is not a valid encoding of the expected type [T],
@@ -407,16 +418,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, 0);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| {
-            (
-                RejectionCode::CanisterError,
-                format!(
-                    "failed to decode canister response as {}: {}",
-                    std::any::type_name::<T>(),
-                    err
-                ),
-            )
-        })
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -431,7 +433,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -446,7 +448,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw128(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
