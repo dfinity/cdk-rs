@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
 [![License](https://img.shields.io/crates/l/ic-cdk.svg)](https://github.com/dfinity/cdk-rs/blob/main/src/ic-cdk/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
-[![Test Status](https://github.com/dfinity/cdk-rs/actions/workflows/test.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions)
+[![CI](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml)
 
 **Rust CDK provides tools for building Canisters on Internet Computer (IC).**
 
@@ -43,7 +43,7 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.7.15" # this is required if you want to use the `#[import]` macro
+candid = "0.7.16" # this is required if you want to use the `#[import]` macro
 ic-cdk = "0.5"
 ic-cdk-macros = "0.5"
 ```
