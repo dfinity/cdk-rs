@@ -473,6 +473,7 @@ impl State {
         callback: Func,
     ) -> HttpResponse {
         let mut encodings = vec![];
+        // waiting for https://dfinity.atlassian.net/browse/BOUN-446
         let etags = Vec::new();
         for (name, value) in req.headers.iter() {
             if name.eq_ignore_ascii_case("Accept-Encoding") {
