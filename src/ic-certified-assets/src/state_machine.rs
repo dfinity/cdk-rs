@@ -473,39 +473,11 @@ impl State {
         callback: Func,
     ) -> HttpResponse {
         let mut encodings = vec![];
-        let mut etags = Vec::new();
+        let etags = Vec::new();
         for (name, value) in req.headers.iter() {
             if name.eq_ignore_ascii_case("Accept-Encoding") {
                 for v in value.split(',') {
                     encodings.push(v.trim().to_string());
-                }
-            }
-            if name.eq_ignore_ascii_case("Host") {
-                if let Some(replacement_url) = redirect_to_url(value, &req.url) {
-                    return HttpResponse {
-                        status_code: 308,
-                        headers: vec![("Location".to_string(), replacement_url)],
-                        body: RcBytes::from(ByteBuf::default()),
-                        streaming_strategy: None,
-                    };
-                }
-            }
-            if name.eq_ignore_ascii_case("If-None-Match") {
-                match decode_etag_seq(value) {
-                    Ok(decoded_etags) => {
-                        etags = decoded_etags;
-                    }
-                    Err(err) => {
-                        return HttpResponse {
-                            status_code: 400,
-                            headers: vec![],
-                            body: RcBytes::from(ByteBuf::from(format!(
-                                "Invalid {} header value: {}",
-                                name, err
-                            ))),
-                            streaming_strategy: None,
-                        };
-                    }
                 }
             }
         }
@@ -824,16 +796,4 @@ fn build_404(certificate_header: HeaderField) -> HttpResponse {
         body: RcBytes::from(ByteBuf::from("not found")),
         streaming_strategy: None,
     }
-}
-
-fn redirect_to_url(host: &str, url: &str) -> Option<String> {
-    if let Some(host) = host.split(':').next() {
-        let host = host.trim();
-        if host == "raw.ic0.app" {
-            return Some(format!("https://ic0.app{}", url));
-        } else if let Some(base) = host.strip_suffix(".raw.ic0.app") {
-            return Some(format!("https://{}.ic0.app{}", base, url));
-        }
-    }
-    None
 }
