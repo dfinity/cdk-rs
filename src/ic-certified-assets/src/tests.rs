@@ -8,7 +8,6 @@ use crate::types::{
 use crate::url_decode::{url_decode, UrlDecodeError};
 use candid::Principal;
 use serde_bytes::ByteBuf;
-use sha2::Digest;
 
 fn some_principal() -> Principal {
     Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap()
@@ -338,82 +337,6 @@ fn uses_streaming_for_multichunk_assets() {
 }
 
 #[test]
-fn supports_etag_caching() {
-    let mut state = State::default();
-    let time_now = 100_000_000_000;
-
-    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
-    let hash: [u8; 32] = sha2::Sha256::digest(BODY).into();
-    let etag = hex::encode(hash);
-
-    create_assets(
-        &mut state,
-        time_now,
-        vec![AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY])],
-    );
-
-    let response = state.http_request(
-        RequestBuilder::get("/contents.html")
-            .with_header("Accept-Encoding", "gzip,identity")
-            .build(),
-        &[],
-        unused_callback(),
-    );
-
-    assert_eq!(response.status_code, 200);
-    assert_eq!(response.body.as_ref(), BODY);
-    assert_eq!(
-        lookup_header(&response, "ETag"),
-        Some(format!("\"{}\"", etag).as_str()),
-        "No matching ETag header in response: {:#?}, expected ETag {}",
-        response,
-        etag
-    );
-    assert!(
-        lookup_header(&response, "IC-Certificate").is_some(),
-        "No IC-Certificate header in response: {:#?}",
-        response
-    );
-
-    let response = state.http_request(
-        RequestBuilder::get("/contents.html")
-            .with_header("Accept-Encoding", "gzip,identity")
-            .with_header("If-None-Match", format!("\"{}\"", etag))
-            .build(),
-        &[],
-        unused_callback(),
-    );
-
-    assert_eq!(response.status_code, 304);
-    assert_eq!(response.body.as_ref(), &[] as &[u8]);
-}
-
-#[test]
-fn returns_400_on_invalid_etag() {
-    let mut state = State::default();
-    let time_now = 100_000_000_000;
-
-    const BODY: &[u8] = b"<!DOCTYPE html><html></html>";
-
-    create_assets(
-        &mut state,
-        time_now,
-        vec![AssetBuilder::new("/contents.html", "text/html").with_encoding("identity", vec![BODY])],
-    );
-
-    let response = state.http_request(
-        RequestBuilder::get("/contents.html")
-            .with_header("Accept-Encoding", "gzip,identity")
-            .with_header("If-None-Match", "cafe")
-            .build(),
-        &[],
-        unused_callback(),
-    );
-
-    assert_eq!(response.status_code, 400);
-}
-
-#[test]
 fn supports_max_age_headers() {
     let mut state = State::default();
     let time_now = 100_000_000_000;
@@ -463,59 +386,6 @@ fn supports_max_age_headers() {
         "No matching Cache-Control header in response: {:#?}",
         response,
     );
-}
-
-#[test]
-fn redirects_cleanly() {
-    fn fake(host: &str) -> HttpRequest {
-        RequestBuilder::get("/asset.blob")
-            .with_header("Host", host)
-            .build()
-    }
-    fn assert_308(resp: &HttpResponse, expected: &str) {
-        assert_eq!(resp.status_code, 308);
-        assert!(resp
-            .headers
-            .iter()
-            .any(|(key, value)| key == "Location" && value == expected));
-    }
-
-    let state = State::default();
-    let fake_cert = [0xca, 0xfe];
-
-    assert_308(
-        &state.http_request(fake("aaaaa-aa.raw.ic0.app"), &fake_cert, unused_callback()),
-        "https://aaaaa-aa.ic0.app/asset.blob",
-    );
-    assert_308(
-        &state.http_request(
-            fake("my.http.files.raw.ic0.app"),
-            &fake_cert,
-            unused_callback(),
-        ),
-        "https://my.http.files.ic0.app/asset.blob",
-    );
-    assert_308(
-        &state.http_request(
-            fake("raw.ic0.app.raw.ic0.app"),
-            &fake_cert,
-            unused_callback(),
-        ),
-        "https://raw.ic0.app.ic0.app/asset.blob",
-    );
-    assert_308(
-        &state.http_request(fake("raw.ic0.app"), &fake_cert, unused_callback()), // for ?canisterId=
-        "https://ic0.app/asset.blob",
-    );
-    let no_redirect = state
-        .http_request(fake("raw.ic0.app.ic0.app"), &fake_cert, unused_callback())
-        .status_code;
-    assert!(!matches!(no_redirect, 308));
-
-    let no_redirect2 = state
-        .http_request(fake("straw.ic0.app"), &fake_cert, unused_callback())
-        .status_code;
-    assert!(!matches!(no_redirect2, 308));
 }
 
 #[test]
