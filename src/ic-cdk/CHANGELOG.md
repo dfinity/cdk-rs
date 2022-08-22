@@ -6,17 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.5.6] - 2022-08-10
+
+### Added
+- New `ic_cdk::api::management_canister` module for calling the IC management canister (#295)
+- Derive common traits for `RejectionCode` (#294)
+- `ManualReply::reject` function (#297)
+
+### Fixed
+
+- Failure to decode the reply in `ic_cdk::call` does not trap anymore (#301)
+
+## [0.5.5] - 2022-07-22
+
+### Added
+- Derive `CandidType` and `Deserialize` for `RejectionCode` (#291, #293)
+
 ## [0.5.3] - 2022-07-19
 
 ### Added
-- `instruction_counter` function as a shorthand for `performance_counter(0)` (#283).
+- `instruction_counter` function as a shorthand for `performance_counter(0)` (#283)
 
 ### Changed
 - Make `CanisterStableMemory` public (#281)
-- BREAKING CHANGE: move performance_counter from the `ic_cdk::api::call` to `ic_cdk::api` module (#283).
+- BREAKING CHANGE: move performance_counter from the `ic_cdk::api::call` to `ic_cdk::api` module (#283)
 
 ### Fixed
-- Outdated documentation for `ManualReply` (#286).
+- Outdated documentation for `ManualReply` (#286)
 
 ## [0.5.2] - 2022-06-23
 ### Added

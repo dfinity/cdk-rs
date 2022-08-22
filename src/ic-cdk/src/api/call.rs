@@ -2,7 +2,7 @@
 use crate::api::{ic0, trap};
 use crate::export::Principal;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args, CandidType};
+use candid::{decode_args, encode_args, write_args, CandidType, Deserialize};
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
@@ -130,7 +130,7 @@ use rc::{InnerCell, WasmCell};
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[allow(missing_docs)]
 #[repr(i32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
     NoError = 0,
 
@@ -394,7 +394,21 @@ fn call_raw_internal(
     CallFuture { state }
 }
 
-/// Performs an asynchronous call to another canister via ic0.
+fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
+    (
+        RejectionCode::CanisterError,
+        format!(
+            "failed to decode canister response as {}: {}",
+            std::any::type_name::<T>(),
+            err
+        ),
+    )
+}
+
+/// Performs an asynchronous call to another canister using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+///
+/// If the reply payload is not a valid encoding of the expected type [T],
+/// the call results in [RejectionCode::CanisterError] error.
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -404,7 +418,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, 0);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -419,7 +433,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -434,7 +448,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw128(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -580,7 +594,8 @@ pub fn reply_raw(buf: &[u8]) {
     }
 }
 
-/// Returns the argument data in the current call.
+/// Returns the argument data in the current call. Traps if the data cannot be
+/// decoded.
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = arg_data_raw();
 
@@ -645,6 +660,13 @@ impl<T: ?Sized> ManualReply<T> {
         U: CandidType,
     {
         reply((value,));
+        Self::empty()
+    }
+
+    /// Rejects the call with the specified message and returns a new
+    /// `ManualReply`, for a useful reply-then-return shortcut.
+    pub fn reject(message: impl AsRef<str>) -> Self {
+        reject(message.as_ref());
         Self::empty()
     }
 }
