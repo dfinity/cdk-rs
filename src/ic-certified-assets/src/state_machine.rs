@@ -564,7 +564,8 @@ impl From<StableState> for State {
     }
 }
 
-fn decode_etag_seq(value: &str) -> Result<Vec<Hash>, String> {
+// TODO: remove the prefix underscore when add etag support back
+fn _decode_etag_seq(value: &str) -> Result<Vec<Hash>, String> {
     // Hex-encoded 32-byte hash + 2 quotes
     const EXPECTED_ETAG_LEN: usize = 66;
     let mut etags = Vec::with_capacity(1);
@@ -607,7 +608,7 @@ fn test_decode_seq() {
             vec![[0u8; 32], [17u8; 32]],
         ),
     ] {
-        let decoded = decode_etag_seq(value)
+        let decoded = _decode_etag_seq(value)
             .unwrap_or_else(|e| panic!("failed to parse good ETag value {}: {}", value, e));
         assert_eq!(decoded, expected);
     }
@@ -618,7 +619,7 @@ fn test_decode_seq() {
         r#""0000000000000000000000000000000000000000000000000000000000000000" "1111111111111111111111111111111111111111111111111111111111111111""#,
         r#"0000000000000000000000000000000000000000000000000000000000000000 1111111111111111111111111111111111111111111111111111111111111111"#,
     ] {
-        let result = decode_etag_seq(value);
+        let result = _decode_etag_seq(value);
         assert!(
             result.is_err(),
             "should have failed to parse invalid ETag value {}, got: {:?}",
