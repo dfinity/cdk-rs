@@ -11,7 +11,7 @@
 You may be looking for:
 
 - [Documentation Site of the Internet Computer](https://smartcontracts.org/)
-- [Tutorials of Rust CDK](https://smartcontracts.org/docs/rust-guide/rust-intro.html)
+- [Tutorials of Rust CDK](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/)
 - [Examples](https://github.com/dfinity/cdk-rs/tree/main/examples)
 - [`dfx` for managing IC projects](https://github.com/dfinity/sdk)
 
@@ -57,4 +57,4 @@ fn print() {
 }
 ```
 
-Check [tutorial](https://sdk.dfinity.org/docs/rust-guide/rust-quickstart.html) for a detailed guidance.
+Check [tutorial](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/rust-quickstart) for a detailed guidance.
