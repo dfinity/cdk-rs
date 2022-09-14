@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Deviation from specification of `transform` type in `http_request` call
+
 ## [0.5.6] - 2022-08-10
 
 ### Added
