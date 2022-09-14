@@ -1,8 +1,40 @@
 //! Canister HTTP request.
 
 use crate::api::call::{call_with_payment128, CallResult};
-use candid::{CandidType, Principal};
+use candid::{
+    parser::types::FuncMode,
+    types::{Function, Serializer, Type},
+    CandidType, Principal,
+};
+use core::hash::Hash;
 use serde::{Deserialize, Serialize};
+
+/// "transform" function of type:  `func (http_response) -> (http_response) query`
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct TransformFunc(pub candid::Func);
+
+impl CandidType for TransformFunc {
+    fn _ty() -> Type {
+        Type::Func(Function {
+            modes: vec![FuncMode::Query],
+            args: vec![HttpResponse::ty()],
+            rets: vec![HttpResponse::ty()],
+        })
+    }
+
+    fn idl_serialize<S: Serializer>(&self, serializer: S) -> Result<(), S::Error> {
+        serializer.serialize_function(self.0.principal.as_slice(), &self.0.method)
+    }
+}
+
+/// "transform" reference function type:
+/// `opt variant { function: func (http_response) -> (http_response) query }`
+#[derive(Clone, Debug, CandidType, Deserialize, PartialEq)]
+pub enum TransformType {
+    /// reference function with signature: `func (http_response) -> (http_response) query`
+    #[serde(rename = "function")]
+    Function(TransformFunc),
+}
 
 /// HTTP header.
 #[derive(
@@ -31,9 +63,7 @@ pub enum HttpMethod {
 }
 
 /// Argument type of [http_request].
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
+#[derive(CandidType, Deserialize, Debug, PartialEq, Clone)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.
     pub url: String,
@@ -46,9 +76,8 @@ pub struct CanisterHttpRequestArgument {
     pub headers: Vec<HttpHeader>,
     /// Optionally provide request body.
     pub body: Option<Vec<u8>>,
-    // TODO: Here is a discrepancy between System API and the implementation.
     /// Name of the transform function which is `func (http_response) -> (http_response) query`.
-    pub transform_method_name: Option<String>,
+    pub transform_method_name: Option<TransformType>,
 }
 
 /// The returned HTTP response.
@@ -56,7 +85,6 @@ pub struct CanisterHttpRequestArgument {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct HttpResponse {
-    // TODO: Different type in the Spec.
     /// The response status (e.g., 200, 404).
     pub status: u64,
     /// List of HTTP response headers and their corresponding values.
