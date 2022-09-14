@@ -31,15 +31,12 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
-            binary_path: target/x86_64-apple-darwin/release/ic-cdk-optimizer
             tar: gtar
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_path: target/x86_64-unknown-linux-gnu/release/ic-cdk-optimizer
             tar: tar
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary_path: target/x86_64-pc-windows-msvc/release/ic-cdk-optimizer.exe
 
     steps:
       - name: Checkout repository
@@ -49,25 +46,32 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          target: ${{ matrix.target }}
 
       - name: Run builds
         run: |
-          cargo build -p ic-cdk-optimizer --release
+          cargo build -p ic-cdk-optimizer --release --target ${{ matrix.target }}
 
       - name: Strip release binary (linux and macos)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
-        run: strip "${{ matrix.binary_path }}"
+        run: |
+          pushd target/release
+          sudo chown -R $(whoami) .
+          strip ic-cdk-optimizer
+          popd
 
       - name: Create archives
+        shell: bash
         run: |
           staging="ic-cdk-optimizer-0.3.4-${{ matrix.target }}"
           mkdir -p "$staging"
-          cp "${{ matrix.binary_path }}" "$staging/"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp target/release/ic-cdk-optimizer.exe "$staging/"
             7z a "$staging.zip" "$staging"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
+            cp target/release/ic-cdk-optimizer "$staging/"
             tar czf "$staging.tar.gz" "$staging"
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
