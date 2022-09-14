@@ -17,8 +17,13 @@ jobs:
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: 0.3.4
+          release_name: 0.3.4
 
-  build:
+  build-release:
+    name: build-release
+    needs: ["create-release"]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,42 +42,42 @@ jobs:
             binary_path: target/x86_64-pc-windows-msvc/release/ic-cdk-optimizer.exe
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@v1
-      with:
-        toolchain: ${{ env.rust-version }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
 
-    - name: Run builds
-      run: |
-        cargo build -p ic-cdk-optimizer --release
+      - name: Run builds
+        run: |
+          cargo build -p ic-cdk-optimizer --release
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
-      run: strip "${{ matrix.binary_path }}"
+      - name: Strip release binary (linux and macos)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: strip "${{ matrix.binary_path }}"
 
-    - name: Create archives 
-      run: |
-        staging="ic-cdk-optimizer-0.3.4-${{ matrix.target }}"
-        mkdir -p "$staging"
-        cp "${{ matrix.binary_path }}" "$staging/"
+      - name: Create archives
+        run: |
+          staging="ic-cdk-optimizer-0.3.4-${{ matrix.target }}"
+          mkdir -p "$staging"
+          cp "${{ matrix.binary_path }}" "$staging/"
 
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          7z a "$staging.zip" "$staging"
-          echo "ASSET=$staging.zip" >> $GITHUB_ENV
-        else
-          tar czf "$staging.tar.gz" "$staging"
-          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
-        fi
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a "$staging.zip" "$staging"
+            echo "ASSET=$staging.zip" >> $GITHUB_ENV
+          else
+            tar czf "$staging.tar.gz" "$staging"
+            echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+          fi
 
-    - name: Upload release archive
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ env.ASSET }}
-        asset_name: ${{ env.ASSET }}
-        asset_content_type: application/octet-stream
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
