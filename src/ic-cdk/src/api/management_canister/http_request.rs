@@ -136,7 +136,7 @@ mod tests {
             body: None,
             transform_method_name: None,
         };
-        assert_eq!(http_request_required_cycles(&arg), 713100000u128);
+        assert_eq!(http_request_required_cycles(&arg), 716500000u128);
     }
 
     #[test]
@@ -150,6 +150,6 @@ mod tests {
             body: None,
             transform_method_name: None,
         };
-        assert_eq!(http_request_required_cycles(&arg), 210127500000u128);
+        assert_eq!(http_request_required_cycles(&arg), 210130900000u128);
     }
 }

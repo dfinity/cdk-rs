@@ -86,7 +86,10 @@ mod http_request {
             http_method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform_method_name: Some("transform".to_string()),
+            transform_method_name: Some(TransformType::Function(TransformFunc(candid::Func {
+                principal: ic_cdk::caller(),
+                method: "transform".to_string(),
+            }))),
         };
         let response = http_request(arg).await.unwrap().0;
         assert_eq!(response.status, 200);
