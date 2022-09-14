@@ -55,10 +55,7 @@ jobs:
       - name: Strip release binary (linux and macos)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
-          pushd target/release
-          sudo chown -R $(whoami) .
-          strip ic-cdk-optimizer
-          popd
+          strip target/${{ matrix.target }}/release/ic-cdk-optimizer
 
       - name: Create archives
         shell: bash
@@ -67,11 +64,11 @@ jobs:
           mkdir -p "$staging"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp target/release/ic-cdk-optimizer.exe "$staging/"
+            cp target/${{ matrix.target }}/release/ic-cdk-optimizer.exe "$staging/"
             7z a "$staging.zip" "$staging"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
-            cp target/release/ic-cdk-optimizer "$staging/"
+            cp target/${{ matrix.target }}/release/ic-cdk-optimizer "$staging/"
             tar czf "$staging.tar.gz" "$staging"
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
