@@ -48,7 +48,7 @@ jobs:
         cargo build -p ic-cdk-optimizer --release
 
     - name: Strip release binary (linux and macos)
-      if: matrix.os == 'ubuntu-latest' || matrix.0s == 'macos-latest'
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
       run: strip "${{ matrix.binary_path }}"
 
     - name: Create archives 
