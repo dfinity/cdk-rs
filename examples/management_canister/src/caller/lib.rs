@@ -75,7 +75,7 @@ mod provisional {
 
 mod http_request {
     use super::*;
-    use ic_cdk::api::management_canister::http_request::*;
+    use ic_cdk::{api::management_canister::http_request::*, export::candid};
 
     #[update]
     async fn http_request_example() {
