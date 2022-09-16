@@ -45,8 +45,11 @@ jobs:
           components: rustfmt
 
       - name: Install ic-wasm
+        # might already in cache
         run: |
-          cargo install ic-wasm
+          if ! [ -x "$(command -v ic-wasm)" ]; then
+            cargo install ic-wasm
+          fi
 
       - name: Install DFX
         run: |
