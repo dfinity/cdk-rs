@@ -12,6 +12,6 @@ cargo build --manifest-path="$example_root/Cargo.toml" \
     --release \
     --package "$package"
 
-cargo run --manifest-path="$root/Cargo.toml" --bin ic-cdk-optimizer -- \
+ic-wasm "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" \
     -o "$example_root/target/wasm32-unknown-unknown/release/$package-opt.wasm" \
-    "$example_root/target/wasm32-unknown-unknown/release/$package.wasm"
+    shrink

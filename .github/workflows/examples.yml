@@ -44,6 +44,10 @@ jobs:
           target: wasm32-unknown-unknown
           components: rustfmt
 
+      - name: Install ic-wasm
+        run: |
+          cargo install ic-wasm
+
       - name: Install DFX
         run: |
           export DFX_VERSION=${{env.dfx-version }}
