@@ -47,8 +47,7 @@ jobs:
       - name: Install ic-wasm
         # might already in cache
         run: |
-          if ! command -v <the_command> &> /dev/null
-          then
+          if ! [ -x "$(command -v ic-wasm)" ]; then
             cargo install ic-wasm
           fi
 
