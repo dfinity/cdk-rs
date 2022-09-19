@@ -6,6 +6,8 @@ use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
+mod encoding;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Color {
     Red,
@@ -172,6 +174,17 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
 
     fn update_subtree_hash(&mut self) {
         self.subtree_hash = self.compute_subtree_hash();
+    }
+
+    #[cfg(debug_assertions)]
+    fn validate_subtree_hash(&self) {
+        if let Some(left) = self.left.as_ref() {
+            left.validate_subtree_hash();
+        }
+        if let Some(right) = self.right.as_ref() {
+            right.validate_subtree_hash();
+        }
+        assert_eq!(self.subtree_hash, self.compute_subtree_hash());
     }
 
     fn compute_subtree_hash(&self) -> Hash {
@@ -956,7 +969,7 @@ fn flip_colors<K, V>(h: &mut Box<Node<K, V>>) {
     h.right.as_mut().unwrap().color.flip_assign();
 }
 
-#[cfg(test)]
+#[cfg(debug_assertions)]
 fn is_balanced<K, V>(root: &NodeRef<K, V>) -> bool {
     fn go<K, V>(node: &NodeRef<K, V>, mut num_black: usize) -> bool {
         match node {
