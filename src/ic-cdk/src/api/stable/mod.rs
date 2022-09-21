@@ -276,7 +276,7 @@ impl<M: StableMemory> StableReader<M> {
     }
 
     /// Reads data from the stable memory location specified by an offset.
-    /// 
+    ///
     /// Note:
     /// The stable memory size is cached on creation of the StableReader.
     /// Therefore, in following scenario, it will get an `OutOfBounds` error:
