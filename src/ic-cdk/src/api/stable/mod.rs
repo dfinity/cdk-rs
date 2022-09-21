@@ -276,6 +276,13 @@ impl<M: StableMemory> StableReader<M> {
     }
 
     /// Reads data from the stable memory location specified by an offset.
+    /// 
+    /// Note:
+    /// The stable memory size is cached on creation of the StableReader.
+    /// Therefore, in following scenario, it will get an `OutOfBounds` error:
+    /// 1. Create a StableReader
+    /// 2. Write some data to the stable memory which causes it grow
+    /// 3. call `read()` to read the newly written bytes
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, StableMemoryError> {
         let capacity_bytes = self.capacity as usize * WASM_PAGE_SIZE_IN_BYTES;
         let read_buf = if buf.len() + self.offset > capacity_bytes {
