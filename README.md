@@ -11,7 +11,7 @@
 You may be looking for:
 
 - [Documentation Site of the Internet Computer](https://smartcontracts.org/)
-- [Tutorials of Rust CDK](https://smartcontracts.org/docs/rust-guide/rust-intro.html)
+- [Tutorials of Rust CDK](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/)
 - [Examples](https://github.com/dfinity/cdk-rs/tree/main/examples)
 - [`dfx` for managing IC projects](https://github.com/dfinity/sdk)
 
@@ -22,17 +22,18 @@ you may want to check [agent-rs](https://github.com/dfinity/agent-rs).
 
 A `canister` is a WebAssembly (wasm) module that can run on the Internet Computer.
 
-To be a `canister`, a wasm module should communicate with the execution environment using [Canister interfaces (System API)](https://sdk.dfinity.org/docs/interface-spec/index.html#system-api).
+To be a `canister`, a wasm module should communicate with the execution environment using [Canister interfaces (System API)](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api).
 
 This repo provides libraries and tools to facilitate developing canisters in Rust.
 
-- [`ic-cdk`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk):
+- [`ic-cdk`](src/ic-cdk):
 Bindings of the System API.
-- [`ic-cdk-macros`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk-macros):
+- [`ic-cdk-macros`](src/ic-cdk-macros):
 Annotate functions with attribute macros to make them exposed public interfaces.
-- [`ic-cdk-optimizer`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-cdk-optimizer):
-A binary tool to reduing size of the compiled wasm module.
-- [`ic-certified-map`](https://github.com/dfinity/cdk-rs/tree/main/src/ic-certified-map): An implementation of map which support *certified queries*.
+- [`ic-certified-map`](library/ic-certified-map):
+An implementation of map which support *certified queries*.
+- [`ic-ledger-types`](library/ic-ledger-types):
+Type definitions to communicate with the ICP ledger canister.
 
 ## Rust CDK in Action
 
@@ -57,4 +58,4 @@ fn print() {
 }
 ```
 
-Check [tutorial](https://sdk.dfinity.org/docs/rust-guide/rust-quickstart.html) for a detailed guidance.
+Check [tutorial](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/rust-quickstart) for a detailed guidance.
