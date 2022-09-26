@@ -7,8 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Fixed
-
-- Deviation from specification of `transform` type in `http_request` call
+- overhaul management canister, especially `transform` type in `http_request`  (#312)
 
 ## [0.5.6] - 2022-08-10
 
@@ -18,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ManualReply::reject` function (#297)
 
 ### Fixed
-
 - Failure to decode the reply in `ic_cdk::call` does not trap anymore (#301)
 
 ## [0.5.5] - 2022-07-22
