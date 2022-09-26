@@ -9,8 +9,8 @@ use candid::{
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
 
-/// "transform" function of type:  `func (http_response) -> (http_response) query`
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+/// "transform" function of type: `func (http_response) -> (http_response) query`
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct TransformFunc(pub candid::Func);
 
 impl CandidType for TransformFunc {
@@ -29,11 +29,21 @@ impl CandidType for TransformFunc {
 
 /// "transform" reference function type:
 /// `opt variant { function: func (http_response) -> (http_response) query }`
-#[derive(Clone, Debug, CandidType, Deserialize, PartialEq)]
+#[derive(CandidType, Deserialize, Debug, PartialEq, Clone)]
 pub enum TransformType {
     /// reference function with signature: `func (http_response) -> (http_response) query`
     #[serde(rename = "function")]
     Function(TransformFunc),
+}
+
+impl TransformType {
+    /// Constuct `TransformType` from name of the transform function.
+    pub fn from_transform_function_name(name: &str) -> Self {
+        Self::Function(TransformFunc(candid::Func {
+            principal: crate::id(),
+            method: name.to_string(),
+        }))
+    }
 }
 
 /// HTTP header.
