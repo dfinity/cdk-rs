@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   rust-version: 1.60.0
   dfx-version: 0.11.1
@@ -43,6 +47,13 @@ jobs:
           toolchain: ${{ env.rust-version }}
           target: wasm32-unknown-unknown
           components: rustfmt
+
+      - name: Install ic-wasm
+        # might already in cache
+        run: |
+          if ! [ -x "$(command -v ic-wasm)" ]; then
+            cargo install ic-wasm
+          fi
 
       - name: Install DFX
         run: |
