@@ -55,10 +55,13 @@ pub struct HttpHeader {
 )]
 pub enum HttpMethod {
     /// GET
+    #[serde(rename = "get")]
     GET,
     /// POST
+    #[serde(rename = "post")]
     POST,
     /// HEAD
+    #[serde(rename = "head")]
     HEAD,
 }
 
@@ -69,15 +72,14 @@ pub struct CanisterHttpRequestArgument {
     pub url: String,
     /// The maximal size of the response in bytes. If None, 2MiB will be the limit.
     pub max_response_bytes: Option<u64>,
-    // TODO: Different name in the Spec.
     /// The method of HTTP request.
-    pub http_method: HttpMethod,
+    pub method: HttpMethod,
     /// List of HTTP request headers and their corresponding values.
     pub headers: Vec<HttpHeader>,
     /// Optionally provide request body.
     pub body: Option<Vec<u8>>,
     /// Name of the transform function which is `func (http_response) -> (http_response) query`.
-    pub transform_method_name: Option<TransformType>,
+    pub transform: Option<TransformType>,
 }
 
 /// The returned HTTP response.
@@ -86,7 +88,7 @@ pub struct CanisterHttpRequestArgument {
 )]
 pub struct HttpResponse {
     /// The response status (e.g., 200, 404).
-    pub status: u64,
+    pub status: candid::Nat,
     /// List of HTTP response headers and their corresponding values.
     pub headers: Vec<HttpHeader>,
     /// The response’s body.
@@ -131,10 +133,10 @@ mod tests {
         let arg = CanisterHttpRequestArgument {
             url,
             max_response_bytes: Some(3000),
-            http_method: HttpMethod::GET,
+            method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform_method_name: None,
+            transform: None,
         };
         assert_eq!(http_request_required_cycles(&arg), 716500000u128);
     }
@@ -145,10 +147,10 @@ mod tests {
         let arg = CanisterHttpRequestArgument {
             url,
             max_response_bytes: None,
-            http_method: HttpMethod::GET,
+            method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform_method_name: None,
+            transform: None,
         };
         assert_eq!(http_request_required_cycles(&arg), 210130900000u128);
     }
