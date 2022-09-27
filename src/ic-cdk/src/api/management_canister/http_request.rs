@@ -37,12 +37,34 @@ pub enum TransformType {
 }
 
 impl TransformType {
-    /// Constuct `TransformType` from name of the transform function.
-    pub fn from_transform_function_name(name: &str) -> Self {
+    /// Construct `TransformType` from a transform function.
+    ///
+    /// # example
+    ///
+    /// ```ignore
+    /// #[ic_cdk_macros::query]
+    /// fn my_transform(arg: HttpResponse) -> HttpResponse {
+    ///     ...
+    /// }
+    ///
+    /// let transform = TransformType::from_transform_function(my_transform);
+    /// ```
+    pub fn from_transform_function<T>(func: T) -> Self
+    where
+        T: Fn(HttpResponse) -> HttpResponse,
+    {
         Self::Function(TransformFunc(candid::Func {
             principal: crate::id(),
-            method: name.to_string(),
+            method: get_function_name(func).to_string(),
         }))
+    }
+}
+
+fn get_function_name<F>(_: F) -> &'static str {
+    let full_name = std::any::type_name::<F>();
+    match full_name.rfind(':') {
+        Some(index) => &full_name[index + 1..],
+        None => full_name,
     }
 }
 
@@ -163,5 +185,11 @@ mod tests {
             transform: None,
         };
         assert_eq!(http_request_required_cycles(&arg), 210130900000u128);
+    }
+
+    #[test]
+    fn get_function_name_work() {
+        fn func() {}
+        assert_eq!(get_function_name(func), "func");
     }
 }

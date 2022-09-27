@@ -75,7 +75,7 @@ mod provisional {
 
 mod http_request {
     use super::*;
-    use ic_cdk::{api::management_canister::http_request::*, export::candid};
+    use ic_cdk::api::management_canister::http_request::*;
 
     #[update]
     async fn http_request_example() {
@@ -86,7 +86,7 @@ mod http_request {
             method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform: Some(TransformType::from_transform_function_name("transform")),
+            transform: Some(TransformType::from_transform_function(transform)),
         };
         let response = http_request(arg).await.unwrap().0;
         assert_eq!(response.status, 200);
@@ -101,7 +101,7 @@ mod http_request {
 
     // transform function must be a *query* method of the canister
     #[query]
-    async fn transform(arg: HttpResponse) -> HttpResponse {
+    fn transform(arg: HttpResponse) -> HttpResponse {
         HttpResponse {
             headers: vec![HttpHeader {
                 name: "custom-header".to_string(),
