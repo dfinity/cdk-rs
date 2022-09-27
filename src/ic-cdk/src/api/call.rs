@@ -407,7 +407,7 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 
 /// Performs an asynchronous call to another canister using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
 ///
-/// If the reply payload is not a valid encoding of the expected type [T],
+/// If the reply payload is not a valid encoding of the expected type `T`,
 /// the call results in [RejectionCode::CanisterError] error.
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
