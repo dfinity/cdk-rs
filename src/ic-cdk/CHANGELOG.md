@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.5.7] - 2022-09-27
+
 ### Fixed
 - overhaul management canister, especially `transform` type in `http_request`  (#312)
 
