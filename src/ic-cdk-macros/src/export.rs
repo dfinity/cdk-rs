@@ -10,7 +10,13 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    /// The name of the function to use to serialize the response to bytes, if none, the response
+    /// will be serialized using candid.
+    /// `fn<T>(response: T) -> Vec<u8>`
     pub serializer: Option<String>,
+    /// The name of the function to use to deserialize the request from bytes, if none, the request
+    /// will be deserialized using candid.
+    /// `fn<T>(bytes: &[u8]) -> T`
     pub deserializer: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
