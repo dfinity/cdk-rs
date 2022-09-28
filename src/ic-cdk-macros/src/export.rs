@@ -16,7 +16,13 @@ struct ExportAttributes {
     pub serializer: Option<String>,
     /// The name of the function to use to deserialize the request from bytes, if none, the request
     /// will be deserialized using candid.
-    /// `fn<T>(bytes: &[u8]) -> T`
+    ///
+    /// If the request takes a single arg, the deserializer function must return that arg.
+    /// fn<T>(bytes: &[u8]) -> T
+    ///
+    /// If the request takes multiple args, the deserializer function must return a tuple containing
+    /// each of the args in turn.
+    /// fn<T1, T2>(bytes: &[u8]) -> (T1, T2)
     pub deserializer: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
