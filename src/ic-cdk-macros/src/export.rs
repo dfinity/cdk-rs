@@ -169,10 +169,7 @@ fn dfn_macro(
         quote! {}
     } else if let Some(serializer) = attrs.serializer {
         let serializer_ident = syn::Ident::new(&serializer, Span::call_site());
-        match return_length {
-            0 => quote! { ic_cdk::api::call::reply_raw(&#serializer_ident (())) },
-            _ => quote! { ic_cdk::api::call::reply_raw(&#serializer_ident (result)) },
-        }
+        quote! { ic_cdk::api::call::reply_raw(&#serializer_ident (result)) }
     } else {
         match return_length {
             0 => quote! { ic_cdk::api::call::reply(()) },
