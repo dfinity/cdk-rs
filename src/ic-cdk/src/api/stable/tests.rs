@@ -153,6 +153,25 @@ mod stable_writer_tests {
         assert_eq!(capacity_pages, min_pages_required as u64);
     }
 
+    #[test]
+    fn check_offset() {
+        const WRITE_SIZE: usize = 1025;
+
+        let memory = Rc::new(Mutex::new(Vec::new()));
+        let mut writer = StableWriter::with_memory(TestStableMemory::new(memory.clone()), 0);
+        assert_eq!(writer.offset(), 0);
+        assert_eq!(writer.write(&vec![0; WRITE_SIZE]).unwrap(), WRITE_SIZE);
+        assert_eq!(writer.offset(), WRITE_SIZE);
+
+        let mut writer = BufferedStableWriter::with_writer(
+            WRITE_SIZE - 1,
+            StableWriter::with_memory(TestStableMemory::new(memory), 0),
+        );
+        assert_eq!(writer.offset(), 0);
+        assert_eq!(writer.write(&vec![0; WRITE_SIZE]).unwrap(), WRITE_SIZE);
+        assert_eq!(writer.offset(), WRITE_SIZE);
+    }
+
     fn build_writer(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Write> {
         let writer = StableWriter::with_memory(memory, 0);
         if let Some(buffer_size) = buffer_size {
@@ -183,6 +202,27 @@ mod stable_reader_tests {
         reader.read_to_end(&mut output).unwrap();
 
         assert_eq!(input, output[..input.len()]);
+    }
+
+    #[test]
+    fn check_offset() {
+        const READ_SIZE: usize = 1025;
+
+        let memory = Rc::new(Mutex::new(vec![1; READ_SIZE]));
+        let mut reader = StableReader::with_memory(TestStableMemory::new(memory.clone()), 0);
+        assert_eq!(reader.offset(), 0);
+        let mut bytes = vec![0; READ_SIZE];
+        assert_eq!(reader.read(&mut bytes).unwrap(), READ_SIZE);
+        assert_eq!(reader.offset(), READ_SIZE);
+
+        let mut reader = BufferedStableReader::with_reader(
+            READ_SIZE - 1,
+            StableReader::with_memory(TestStableMemory::new(memory), 0),
+        );
+        assert_eq!(reader.offset(), 0);
+        let mut bytes = vec![0; READ_SIZE];
+        assert_eq!(reader.read(&mut bytes).unwrap(), READ_SIZE);
+        assert_eq!(reader.offset(), READ_SIZE);
     }
 
     fn build_reader(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Read> {
