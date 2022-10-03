@@ -1,5 +1,7 @@
-use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid::Encode;
+// use ic_cdk::export::candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+// use ic_cdk::export::candid::Encode;
+use candid_legecy::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid_legecy::Encode;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;

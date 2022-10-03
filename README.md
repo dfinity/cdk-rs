@@ -44,9 +44,9 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.7.16" # this is required if you want to use the `#[import]` macro
-ic-cdk = "0.5"
-ic-cdk-macros = "0.5"
+candid = "0.8.0" # this is required if you want to use the `#[import]` macro
+ic-cdk = "0.6"
+ic-cdk-macros = "0.6"
 ```
 
 Then in your rust source code:

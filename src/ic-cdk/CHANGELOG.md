@@ -6,10 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Upgrade `candid` to `0.8.0`
+
 ## [0.5.7] - 2022-09-27
 
 ### Fixed
-- overhaul management canister, especially `transform` type in `http_request`  (#312)
+- Overhaul management canister, especially `transform` type in `http_request`  (#312)
 
 ## [0.5.6] - 2022-08-10
 
