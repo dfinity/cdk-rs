@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-macros"
-version = "0.5.7"
+version = "0.6.0"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit macros."
@@ -18,8 +18,8 @@ rust-version = "1.60.0"
 proc-macro = true
 
 [dependencies]
-candid = "0.7.15"
-ic-cdk = { path = "../ic-cdk", version = "0.5" }
+candid = "0.8.0"
+ic-cdk = { path = "../ic-cdk", version = "0.6" }
 syn = { version = "1.0.58", features = ["fold", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"

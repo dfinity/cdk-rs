@@ -1,5 +1,5 @@
 //! System API and low level functions for it.
-use crate::export::Principal;
+use candid::Principal;
 use std::convert::TryFrom;
 
 pub mod call;

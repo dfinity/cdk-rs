@@ -23,7 +23,7 @@ static mut DONE: bool = false;
 /// Re-exports crates those are necessary for using ic-cdk
 pub mod export {
     pub use candid;
-    pub use candid::types::ic_types::Principal;
+    pub use candid::Principal;
     pub use serde;
 }
 
