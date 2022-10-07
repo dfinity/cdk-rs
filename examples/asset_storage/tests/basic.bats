@@ -2,10 +2,7 @@
 setup() {
   cd examples/asset_storage
   # Make sure the directory is clean.
-  dfx start --clean --background --host "127.0.0.1:0"
-  local webserver_port=$(cat .dfx/webserver-port)
-  cp dfx.json dfx.json.bk
-  cat <<<$(jq .networks.local.bind=\"127.0.0.1:${webserver_port}\" dfx.json) >dfx.json
+  dfx start --clean --background 
 
   run dfx identity new alice --disable-encryption
   run dfx identity new bob --disable-encryption
@@ -15,7 +12,6 @@ setup() {
 # executed after each test
 teardown() {
   dfx stop
-  mv dfx.json.bk dfx.json
 }
 
 @test "Can store and restore assets" {

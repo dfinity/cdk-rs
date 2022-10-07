@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.0] - 2022-10-03
+
+### Changed
+
+- Upgrade `candid` to `0.8.0` (#321)
+
+## [0.5.7] - 2022-09-27
+
+### Fixed
+- Overhaul management canister, especially `transform` type in `http_request`  (#312)
+
 ## [0.5.6] - 2022-08-10
 
 ### Added
@@ -14,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ManualReply::reject` function (#297)
 
 ### Fixed
-
 - Failure to decode the reply in `ic_cdk::call` does not trap anymore (#301)
 
 ## [0.5.5] - 2022-07-22

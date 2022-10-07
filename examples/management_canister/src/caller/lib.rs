@@ -7,8 +7,8 @@ mod main {
     async fn execute_main_methods() {
         let arg = CreateCanisterArgument {
             settings: Some(CanisterSettings {
-                controllers: Some(vec![ic_cdk::caller()]),
-                compute_allocation: Some(50.into()),
+                controllers: Some(vec![ic_cdk::id()]),
+                compute_allocation: Some(0.into()),
                 memory_allocation: Some(10000.into()),
                 freezing_threshold: Some(10000.into()),
             }),
@@ -83,10 +83,10 @@ mod http_request {
         let arg = CanisterHttpRequestArgument {
             url,
             max_response_bytes: Some(3000),
-            http_method: HttpMethod::GET,
+            method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform_method_name: Some("transform".to_string()),
+            transform: Some(TransformType::from_transform_function(transform)),
         };
         let response = http_request(arg).await.unwrap().0;
         assert_eq!(response.status, 200);
@@ -101,7 +101,7 @@ mod http_request {
 
     // transform function must be a *query* method of the canister
     #[query]
-    async fn transform(arg: HttpResponse) -> HttpResponse {
+    fn transform(arg: HttpResponse) -> HttpResponse {
         HttpResponse {
             headers: vec![HttpHeader {
                 name: "custom-header".to_string(),
@@ -160,25 +160,26 @@ mod bitcoin {
         let arg = GetBalanceRequest {
             address: address.clone(),
             network,
-            min_confirmations: Some(3),
+            min_confirmations: Some(1),
         };
         let _balance = bitcoin_get_balance(arg).await.unwrap().0;
 
         let arg = GetUtxosRequest {
             address: address.clone(),
             network,
-            filter: Some(UtxoFilter::MinConfirmations(6)),
+            filter: Some(UtxoFilter::MinConfirmations(1)),
         };
-        let _response = bitcoin_get_utxos(arg).await.unwrap().0;
+        let mut response = bitcoin_get_utxos(arg).await.unwrap().0;
 
-        // TODO: turn on following test when new dfx has replica support it.
-
-        // let arg = GetUtxosRequest {
-        //     address: address.clone(),
-        //     network,
-        //     filter: Some(UtxoFilter::Page(vec![])),
-        // };
-        // let _response = bitcoin_get_utxos(arg).await.unwrap().0;
+        while let Some(page) = response.next_page {
+            ic_cdk::println!("bitcoin_get_utxos next page");
+            let arg = GetUtxosRequest {
+                address: address.clone(),
+                network,
+                filter: Some(UtxoFilter::Page(page)),
+            };
+            response = bitcoin_get_utxos(arg).await.unwrap().0;
+        }
 
         let arg = GetCurrentFeePercentilesRequest { network };
         let _percentiles = bitcoin_get_current_fee_percentiles(arg).await.unwrap().0;
