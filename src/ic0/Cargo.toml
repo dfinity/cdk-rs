@@ -1,9 +1,15 @@
 [package]
 name = "ic0"
 version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Internet Computer System API Binding."
+license = "Apache-2.0"
+readme = "README.md"
+categories = ["api-bindings", "development-tools::ffi"]
+keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.60.0"
 
 [build-dependencies]
 quote = "1.0"
