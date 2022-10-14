@@ -13,8 +13,10 @@ mod main {
                 freezing_threshold: Some(10000.into()),
             }),
         };
-        let canister_id = create_canister(arg).await.unwrap().0.canister_id;
+        create_canister(arg).await.unwrap();
 
+        let canister_id = create_canister_with_extra_cycles(CreateCanisterArgument::default(), 1_000_000_000_000u128).await.unwrap().0.canister_id;
+        
         let arg = UpdateSettingsArgument {
             canister_id,
             settings: CanisterSettings::default(),
