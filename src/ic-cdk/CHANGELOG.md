@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.1] - 2022-10-14
+
+### Added
+
+- `create_canister_with_extra_cycles` to specify cycles when create canister (#322)
+
+### Fixed
+
+- `create_canister` should charge 0.1T cycles (#322)
+
 ## [0.6.0] - 2022-10-03
 
 ### Changed
