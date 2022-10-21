@@ -37,7 +37,7 @@ impl Parse for SystemAPI {
                 FnArg::Receiver(r) => return Err(Error::new(r.span(), "receiver not expected")),
                 FnArg::Typed(pat_type) => match &*pat_type.ty {
                     syn::Type::Path(ty) => {
-                        type_supported(&ty)?;
+                        type_supported(ty)?;
                     }
                     _ => return Err(Error::new(pat_type.span(), "expected type as i32")),
                 },
