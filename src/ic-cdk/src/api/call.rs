@@ -1,5 +1,5 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::{ic0, trap};
+use crate::api::trap;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Principal};
 use serde::ser::Error;
