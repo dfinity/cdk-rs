@@ -18,7 +18,7 @@ rust-version = "1.60.0"
 candid = "0.8"
 cfg-if = "1.0.0"
 serde = "1.0.110"
-ic0 = { path = "../ic0" }
+ic0 = { path = "../ic0", version = "0.18.4" }
 
 [dev-dependencies]
 rstest = "0.12.0"
