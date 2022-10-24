@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.2] - 2022-10-24
+
+## Refactored
+
+- Separate `ic0` crate for system API. (#324)
+
 ## [0.6.1] - 2022-10-14
 
 ### Added

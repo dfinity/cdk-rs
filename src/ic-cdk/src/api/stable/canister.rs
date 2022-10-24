@@ -1,5 +1,4 @@
 use super::*;
-use crate::api::ic0;
 
 /// A standard implementation of [`StableMemory`].
 ///
