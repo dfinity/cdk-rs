@@ -110,13 +110,13 @@ mod http_request {
 
     // transform function must be a *query* method of the canister
     #[query]
-    fn transform(arg: HttpResponse) -> HttpResponse {
+    fn transform(arg: TransformArgs) -> HttpResponse {
         HttpResponse {
             headers: vec![HttpHeader {
                 name: "custom-header".to_string(),
                 value: "test".to_string(),
             }],
-            ..arg
+            ..arg.response
         }
     }
 }
