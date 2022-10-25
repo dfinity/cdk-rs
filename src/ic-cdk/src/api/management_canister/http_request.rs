@@ -17,7 +17,7 @@ impl CandidType for TransformFunc {
     fn _ty() -> Type {
         Type::Func(Function {
             modes: vec![FuncMode::Query],
-            args: vec![HttpResponse::ty()],
+            args: vec![TransformArgs::ty()],
             rets: vec![HttpResponse::ty()],
         })
     }
@@ -27,45 +27,34 @@ impl CandidType for TransformFunc {
     }
 }
 
-/// "transform" reference function type:
-/// `opt variant { function: func (http_response) -> (http_response) query }`
-#[derive(CandidType, Deserialize, Debug, PartialEq, Clone)]
-pub enum TransformType {
-    /// reference function with signature: `func (http_response) -> (http_response) query`
-    #[serde(rename = "function")]
-    Function(TransformFunc),
+/// Type used for encoding/decoding:
+/// `record {
+///     response : http_response;
+///     context : blob;
+/// }`
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TransformArgs {
+    /// Raw response from remote service, to be transformed
+    pub response: HttpResponse,
+
+    /// Context for response transformation
+    #[serde(with = "serde_bytes")]
+    pub context: Vec<u8>,
 }
 
-impl TransformType {
-    /// Construct `TransformType` from a transform function.
-    ///
-    /// # example
-    ///
-    /// ```ignore
-    /// #[ic_cdk_macros::query]
-    /// fn my_transform(arg: HttpResponse) -> HttpResponse {
-    ///     ...
-    /// }
-    ///
-    /// let transform = TransformType::from_transform_function(my_transform);
-    /// ```
-    pub fn from_transform_function<T>(func: T) -> Self
-    where
-        T: Fn(HttpResponse) -> HttpResponse,
-    {
-        Self::Function(TransformFunc(candid::Func {
-            principal: crate::id(),
-            method: get_function_name(func).to_string(),
-        }))
-    }
-}
+/// Type used for encoding/decoding:
+/// `record {
+//       function : func (record {response : http_response; context : blob}) -> (http_response) query;
+//       context : blob;
+//   }`
+#[derive(Clone, Debug, PartialEq, CandidType, Deserialize)]
+pub struct TransformContext {
+    /// Reference function with signature: `func (record {response : http_response; context : blob}) -> (http_response) query;`.
+    pub function: TransformFunc,
 
-fn get_function_name<F>(_: F) -> &'static str {
-    let full_name = std::any::type_name::<F>();
-    match full_name.rfind(':') {
-        Some(index) => &full_name[index + 1..],
-        None => full_name,
-    }
+    /// Context to be passed to `transform` function to transform HTTP response for consensus
+    #[serde(with = "serde_bytes")]
+    pub context: Vec<u8>,
 }
 
 /// HTTP header.
@@ -110,8 +99,8 @@ pub struct CanisterHttpRequestArgument {
     pub headers: Vec<HttpHeader>,
     /// Optionally provide request body.
     pub body: Option<Vec<u8>>,
-    /// Name of the transform function which is `func (http_response) -> (http_response) query`.
-    pub transform: Option<TransformType>,
+    /// Name of the transform function which is `func (transform_args) -> (http_response) query`.
+    pub transform: Option<TransformContext>,
 }
 
 /// The returned HTTP response.
