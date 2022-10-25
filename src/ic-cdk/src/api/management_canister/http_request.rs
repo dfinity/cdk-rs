@@ -47,7 +47,7 @@ pub struct TransformArgs {
 //       function : func (record {response : http_response; context : blob}) -> (http_response) query;
 //       context : blob;
 //   }`
-#[derive(Clone, Debug, PartialEq, CandidType, Deserialize)]
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq)]
 pub struct TransformContext {
     /// Reference function with signature: `func (record {response : http_response; context : blob}) -> (http_response) query;`.
     pub function: TransformFunc,
