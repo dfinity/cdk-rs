@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.2] - 2022-10-24
 
-## Refactored
+### Refactored
 
 - Separate `ic0` crate for system API. (#324)
+
+### Changed
+
+- `http_request` to support `context` field in callback function (#326)
 
 ## [0.6.1] - 2022-10-14
 
