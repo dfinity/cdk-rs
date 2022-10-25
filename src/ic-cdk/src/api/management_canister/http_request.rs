@@ -194,7 +194,7 @@ mod tests {
             body: None,
             transform: None,
         };
-        assert_eq!(http_request_required_cycles(&arg), 716500000u128);
+        assert_eq!(http_request_required_cycles(&arg), 718500000u128);
     }
 
     #[test]
@@ -208,7 +208,7 @@ mod tests {
             body: None,
             transform: None,
         };
-        assert_eq!(http_request_required_cycles(&arg), 210130900000u128);
+        assert_eq!(http_request_required_cycles(&arg), 210132900000u128);
     }
 
     #[test]
