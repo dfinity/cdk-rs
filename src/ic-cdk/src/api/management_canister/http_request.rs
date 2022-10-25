@@ -57,6 +57,41 @@ pub struct TransformContext {
     pub context: Vec<u8>,
 }
 
+impl TransformContext {
+    /// Construct `TransformType` from a transform function.
+    ///
+    /// # example
+    ///
+    /// ```ignore
+    /// #[ic_cdk_macros::query]
+    /// fn my_transform(arg: TransformArgs) -> HttpResponse {
+    ///     ...
+    /// }
+    ///
+    /// let transform = TransformType::from_transform_function(my_transform);
+    /// ```
+    pub fn new<T>(func: T, context: Vec<u8>) -> Self
+    where
+        T: Fn(TransformArgs) -> HttpResponse,
+    {
+        Self {
+            function: TransformFunc(candid::Func {
+                principal: crate::id(),
+                method: get_function_name(func).to_string(),
+            }),
+            context,
+        }
+    }
+}
+
+fn get_function_name<F>(_: F) -> &'static str {
+    let full_name = std::any::type_name::<F>();
+    match full_name.rfind(':') {
+        Some(index) => &full_name[index + 1..],
+        None => full_name,
+    }
+}
+
 /// HTTP header.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,

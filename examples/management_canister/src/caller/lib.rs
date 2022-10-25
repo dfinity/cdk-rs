@@ -95,13 +95,7 @@ mod http_request {
             method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform: Some(TransformContext {
-                function: TransformFunc(candid::Func {
-                    principal: caller_canister.get().0,
-                    method: "transform".clone(),
-                }),
-                context: vec![],
-            }),
+            transform: Some(TransformContext::new(transform, vec![])),
         };
         let response = http_request(arg).await.unwrap().0;
         assert_eq!(response.status, 200);
