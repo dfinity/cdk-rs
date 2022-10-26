@@ -11,6 +11,11 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.60.0"
 
-[build-dependencies]
-quote = "1.0"
+[dev-dependencies]
+quote = { version = "1.0" }
 syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
+
+# This is not a real example but a utility for auto-generating ic0.rs
+[[example]]
+name = "ic0build"
+path = "util/ic0build.rs"
