@@ -8,6 +8,7 @@ use syn::{FnArg, Ident, Token, TypePath};
 
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Clone, Debug)]
@@ -105,13 +106,13 @@ impl Parse for IC0 {
 }
 
 fn main() {
-    let s = include_str!("ic0.txt");
+    let s = include_str!("../ic0.txt");
     let ic0: IC0 = syn::parse_str(s).unwrap();
 
-    // let out_dir = env::var_os("OUT_DIR").unwrap();
-    // let dest_path = Path::new(&out_dir).join("ic0.rs");
+    let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    d.push("src/ic0.rs");
 
-    let mut f = fs::File::create("src/ic0.rs").unwrap();
+    let mut f = fs::File::create(d).unwrap();
 
     writeln!(
         f,
@@ -146,7 +147,4 @@ extern "C" {{"#,
         .args(["fmt"])
         .output()
         .expect("`cargo fmt` failed");
-
-    println!("cargo:rerun-if-changed=ic0.txt");
-    println!("cargo:rerun-if-changed=build.rs");
 }
