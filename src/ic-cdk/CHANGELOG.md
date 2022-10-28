@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.4] - 2022-10-28
+
 ### Added
 
-- `offset` for exposing offsets of `StableReader` and `StableWriter` implementations
+- Expose `offset` of `StableReader` and `StableWriter`. (#330)
 
 ## [0.6.3] - 2022-10-26
 
