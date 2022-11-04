@@ -95,7 +95,7 @@ mod http_request {
             method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform: Some(TransformType::from_transform_function(transform)),
+            transform: Some(TransformContext::new(transform, vec![])),
         };
         let response = http_request(arg).await.unwrap().0;
         assert_eq!(response.status, 200);
@@ -110,13 +110,13 @@ mod http_request {
 
     // transform function must be a *query* method of the canister
     #[query]
-    fn transform(arg: HttpResponse) -> HttpResponse {
+    fn transform(arg: TransformArgs) -> HttpResponse {
         HttpResponse {
             headers: vec![HttpHeader {
                 name: "custom-header".to_string(),
                 value: "test".to_string(),
             }],
-            ..arg
+            ..arg.response
         }
     }
 }
