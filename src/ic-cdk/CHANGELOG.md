@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.5] - 2022-11-04
+
+### Changed
+
+BREAKING CHANGE of experimental API:
+- `http_request` to support `context` field in callback function. (#326)
+
 ## [0.6.4] - 2022-10-28
 
 ### Added
@@ -23,10 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 
 - Separate `ic0` crate for system API. (#324)
-
-### Changed
-
-- `http_request` to support `context` field in callback function (#326)
 
 ## [0.6.1] - 2022-10-14
 

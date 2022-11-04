@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-macros"
-version = "0.6.4"
+version = "0.6.5"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit macros."
