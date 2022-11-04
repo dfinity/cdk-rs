@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.4] - 2022-10-28
+
+### Added
+
+- Expose `offset` of `StableReader` and `StableWriter`. (#330)
+
+## [0.6.3] - 2022-10-26
+
+### Fixed
+
+- Doc can build on docs.rs. (#327)
+
 ## [0.6.2] - 2022-10-24
 
 ### Refactored
