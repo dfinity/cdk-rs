@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added `StableIO` to implement both `io::Write` and `io::Read` for stable memory.
+- Added 64-bit support for `io::Write` and `io::Read` via `StableIO`.
+- Implement `io::Seek` for stable storage.
+
+### Changed
+
+-  `StableWriter` and `StableReader` are now wrappers around `StableIO`. 
+
 ## [0.6.5] - 2022-11-04
 
 ### Changed
