@@ -42,6 +42,7 @@ jobs:
         run: |
           cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
           cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown --release
+          cargo build --example=work
 
   test:
     name: cargo test
