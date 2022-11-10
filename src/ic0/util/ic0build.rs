@@ -118,20 +118,21 @@ fn main() {
         f,
         r#"// This file is generated from ic0.txt.
 // Don't manually modify it.
+#[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "ic0")]
 extern "C" {{"#,
     )
     .unwrap();
 
-    for api in ic0.apis {
-        let fn_name = api.name;
-        let args = api.args;
+    for api in &ic0.apis {
+        let fn_name = &api.name;
+        let args = &api.args;
 
         let mut r = quote! {
             pub fn #fn_name(#(#args),*)
         };
 
-        if let Some(output) = api.output {
+        if let Some(output) = &api.output {
             r = quote! {
                 #r -> #output
             }
@@ -142,6 +143,50 @@ extern "C" {{"#,
     }
 
     writeln!(f, "}}").unwrap();
+
+    writeln!(
+        f,
+        r#"
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(unused_variables)]
+#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::too_many_arguments)]
+mod non_wasm{{"#,
+    )
+    .unwrap();
+
+    for api in &ic0.apis {
+        let fn_name = &api.name;
+        let args = &api.args;
+
+        let mut r = quote! {
+            pub unsafe fn #fn_name(#(#args),*)
+        };
+
+        if let Some(output) = &api.output {
+            r = quote! {
+                #r -> #output
+            }
+        }
+
+        let panic_str = format!("{} should only be called inside canisters.", fn_name);
+
+        r = quote! {
+        #r {
+            panic!(#panic_str);
+        }};
+        writeln!(f, "{}", r).unwrap();
+    }
+
+    writeln!(
+        f,
+        r#"}}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use non_wasm::*;
+"#
+    )
+    .unwrap();
 
     Command::new("cargo")
         .args(["fmt"])
