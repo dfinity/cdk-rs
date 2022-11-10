@@ -149,6 +149,8 @@ extern "C" {{"#,
         r#"
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
+#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::too_many_arguments)]
 mod non_wasm{{"#,
     )
     .unwrap();

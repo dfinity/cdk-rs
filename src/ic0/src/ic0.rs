@@ -62,6 +62,8 @@ extern "C" {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
+#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::too_many_arguments)]
 mod non_wasm {
     pub unsafe fn msg_arg_data_size() -> i32 {
         panic!("msg_arg_data_size should only be called inside canisters.");
