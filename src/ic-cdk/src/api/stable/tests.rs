@@ -80,7 +80,7 @@ fn pages_required(bytes_len: usize) -> usize {
 mod stable_writer_tests {
     use super::*;
     use rstest::rstest;
-    use std::io::Write;
+    use std::io::{Seek, Write};
 
     #[rstest]
     #[case(None)]
@@ -172,6 +172,26 @@ mod stable_writer_tests {
         assert_eq!(writer.offset(), WRITE_SIZE);
     }
 
+    #[test]
+    fn test_seek() {
+        let memory = Rc::new(Mutex::new(Vec::new()));
+        let mut writer = StableWriter::with_memory(TestStableMemory::new(memory.clone()), 0);
+        writer
+            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES as u64))
+            .unwrap();
+        assert_eq!(
+            writer.stream_position().unwrap() as usize,
+            WASM_PAGE_SIZE_IN_BYTES
+        );
+        assert_eq!(writer.write(&[1_u8]).unwrap(), 1);
+        assert_eq!(
+            writer.seek(std::io::SeekFrom::End(0)).unwrap() as usize,
+            WASM_PAGE_SIZE_IN_BYTES * 2
+        );
+        let capacity_pages = TestStableMemory::new(memory).stable64_size();
+        assert_eq!(capacity_pages, 2);
+    }
+
     fn build_writer(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Write> {
         let writer = StableWriter::with_memory(memory, 0);
         if let Some(buffer_size) = buffer_size {
@@ -185,7 +205,7 @@ mod stable_writer_tests {
 mod stable_reader_tests {
     use super::*;
     use rstest::rstest;
-    use std::io::Read;
+    use std::io::{Read, Seek};
 
     #[rstest]
     #[case(None)]
@@ -223,6 +243,31 @@ mod stable_reader_tests {
         let mut bytes = vec![0; READ_SIZE];
         assert_eq!(reader.read(&mut bytes).unwrap(), READ_SIZE);
         assert_eq!(reader.offset(), READ_SIZE);
+    }
+
+    #[test]
+    fn test_seek() {
+        const SIZE: usize = 1025;
+        let memory = Rc::new(Mutex::new((0..SIZE).map(|v| v as u8).collect::<Vec<u8>>()));
+        let mut reader = StableReader::with_memory(TestStableMemory::new(memory), 0);
+        let mut bytes = vec![0_u8; 1];
+
+        const OFFSET: usize = 200;
+        reader
+            .seek(std::io::SeekFrom::Start(OFFSET as u64))
+            .unwrap();
+        assert_eq!(reader.stream_position().unwrap() as usize, OFFSET);
+        assert_eq!(reader.read(&mut bytes).unwrap(), 1);
+        assert_eq!(&bytes, &[OFFSET as u8]);
+        assert_eq!(
+            reader.seek(std::io::SeekFrom::End(0)).unwrap() as usize,
+            WASM_PAGE_SIZE_IN_BYTES
+        );
+        reader
+            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES as u64 * 2))
+            .unwrap();
+        // out of bounds so should fail
+        assert!(reader.read(&mut bytes).is_err());
     }
 
     fn build_reader(memory: TestStableMemory, buffer_size: Option<usize>) -> Box<dyn Read> {
