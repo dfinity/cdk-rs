@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.7] - 2022-11-16
+
+### Changed
+
+- Improve error message on trap while decoding arguments. (#339)
+
 ## [0.6.6] - 2022-11-09
 
 ### Added
