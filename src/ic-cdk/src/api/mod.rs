@@ -6,8 +6,6 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
-mod ic0;
-
 /// Prints the given message.
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
