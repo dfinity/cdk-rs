@@ -134,13 +134,16 @@ fn dfn_macro(
     let outer_function_ident = Ident::new(&format!("{}_{}_", name, crate::id()), Span::call_site());
 
     let export_name = if method.is_lifecycle() {
-        format!("canister_{}", method)
+        format!("canister_{method}")
     } else {
-        format!(
-            "canister_{0} {1}",
-            method,
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        let function_name = attrs.name.unwrap_or_else(|| name.to_string());
+        if function_name.starts_with("<ic-cdk internal>") {
+            return Err(Error::new(
+                Span::call_site(),
+                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
+            ));
+        }
+        format!("canister_{method} {function_name}")
     };
 
     let function_call = if is_async {
