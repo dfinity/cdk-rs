@@ -217,7 +217,7 @@ extern "C" fn timer_executor() {
     // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
     let task = TASKS.with(|tasks| {
         let mut tasks = tasks.borrow_mut();
-        tasks.get_mut(task_id).map(|task| mem::take(task))
+        tasks.get_mut(task_id).map(mem::take)
     });
     if let Some(mut task) = task {
         match task {
