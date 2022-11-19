@@ -82,8 +82,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
 
         // We check the validity of the canister_id early so it fails if the
         // ID isn't in the right text format.
-        let principal: ic_cdk::export::Principal =
-            ic_cdk::export::Principal::from_text(canister_id).unwrap();
+        let principal: candid::Principal = candid::Principal::from_text(canister_id).unwrap();
 
         Ok(format!(
             r#"
