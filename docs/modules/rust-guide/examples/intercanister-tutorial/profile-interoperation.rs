@@ -1,4 +1,4 @@
-use ic_cdk_macros::*;
+use ic_cdk::{import, update};
 
 #[import(canister = "rust_profile")]
 struct ProfileCanister;

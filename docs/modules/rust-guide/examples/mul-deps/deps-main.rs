@@ -1,5 +1,4 @@
-use ic_cdk_macros::*;
-use ic_cdk::export::candid;
+use ic_cdk::{import, update, export::candid};
 
 #[import(canister = "multiply_deps")]
 struct CounterCanister;

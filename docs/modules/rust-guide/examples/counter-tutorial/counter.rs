@@ -1,5 +1,4 @@
-use ic_cdk_macros::*;
-use ic_cdk::export::candid;
+use ic_cdk::{export::candid, init, query, update};
 
 static mut COUNTER: Option<candid::Nat> = None;
 
