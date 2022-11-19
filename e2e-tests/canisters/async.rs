@@ -1,5 +1,4 @@
-use ic_cdk::export::Principal;
-use ic_cdk_macros::{query, update};
+use ic_cdk::{export::Principal, query, update};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
 

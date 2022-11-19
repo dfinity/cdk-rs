@@ -1,8 +1,8 @@
 use ic_cdk::{
     api::call::ManualReply,
     export::{candid, Principal},
+    init, query, update,
 };
-use ic_cdk_macros::*;
 use std::cell::{Cell, RefCell};
 
 thread_local! {

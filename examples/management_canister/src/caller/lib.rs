@@ -1,4 +1,4 @@
-use ic_cdk_macros::*;
+use ic_cdk::*;
 
 mod main {
     use super::*;
