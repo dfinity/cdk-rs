@@ -1,4 +1,4 @@
-use ic_cdk::{update, import, export::candid};
+use ic_cdk::{export::candid, import, update};
 
 #[import(canister = "counter_mo")]
 struct CounterCanister;
