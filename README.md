@@ -46,13 +46,12 @@ crate-type = ["cdylib"]
 [dependencies]
 candid = "0.8.0" # this is required if you want to use the `#[import]` macro
 ic-cdk = "0.6"
-ic-cdk-macros = "0.6"
 ```
 
 Then in your rust source code:
 
 ```rust
-#[ic_cdk_macros::query]
+#[ic_cdk::query]
 fn print() {
     ic_cdk::print("Hello World from DFINITY!");
 }

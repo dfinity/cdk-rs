@@ -71,7 +71,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::query;
+/// # use ic_cdk::query;
 /// #[query]
 /// fn query_function() {
 ///     // ...
@@ -82,7 +82,7 @@ where
 /// You can also specify the name of the exported function.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::query;
 /// #[query(name = "some_name")]
 /// fn query_function() {
 ///     // ...
@@ -94,7 +94,7 @@ where
 /// When the guard function returns an error, the query function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::query;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -113,7 +113,7 @@ where
 /// ```rust
 /// # fn calculate_result() {}
 /// # type MyResult = ();
-/// # use ic_cdk_macros::query;
+/// # use ic_cdk::query;
 /// use ic_cdk::api::call::{self, ManualReply};
 /// #[query(manual_reply = true)]
 /// fn query_function() -> ManualReply<MyResult> {
@@ -122,7 +122,7 @@ where
 /// }
 /// ```
 ///
-/// [`call::reply`]: ic_cdk::api::call::reply
+/// [`call::reply`]: https://docs.rs/ic-cdk/latest/ic_cdk/api/call/fn.reply.html
 #[proc_macro_attribute]
 pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_query, "ic_query", attr, item)
@@ -136,7 +136,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::update;
+/// # use ic_cdk::update;
 /// #[update]
 /// fn update_function() {
 ///     // ...
@@ -147,7 +147,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// You can also specify the name of the exported function.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::update;
 /// #[update(name = "some_name")]
 /// fn update_function() {
 ///     // ...
@@ -159,7 +159,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the update function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::update;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -178,7 +178,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```rust
 /// # fn calculate_result() {}
 /// # type MyResult = ();
-/// # use ic_cdk_macros::update;
+/// # use ic_cdk::update;
 /// use ic_cdk::api::call::{self, ManualReply};
 /// #[update(manual_reply = true)]
 /// fn update_function() -> ManualReply<MyResult> {
@@ -205,7 +205,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::init;
+/// # use ic_cdk::init;
 /// #[init]
 /// fn init_function() {
 ///     // ...
@@ -217,7 +217,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the init function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::init;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -232,7 +232,7 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// The init function may accept an argument, if that argument is a `CandidType`:
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::init;
 /// # use candid::*;
 ///
 /// #[derive(Clone, Debug, CandidType, Deserialize)]
@@ -267,7 +267,7 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::pre_upgrade;
+/// # use ic_cdk::pre_upgrade;
 /// #[pre_upgrade]
 /// fn pre_upgrade_function() {
 ///     // ...
@@ -279,7 +279,7 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the pre_upgrade function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::pre_upgrade;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -307,7 +307,7 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::post_upgrade;
+/// # use ic_cdk::post_upgrade;
 /// #[post_upgrade]
 /// fn post_upgrade_function() {
 ///     // ...
@@ -319,7 +319,7 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the post_upgrade function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::post_upgrade
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -347,7 +347,7 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::heartbeat;
+/// # use ic_cdk::heartbeat;
 /// #[heartbeat]
 /// fn heartbeat_function() {
 ///     // ...
@@ -359,7 +359,7 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the heartbeat function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::heartbeat;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -387,7 +387,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use ic_cdk_macros::inspect_message;
+/// # use ic_cdk::inspect_message;
 /// #[inspect_message]
 /// fn inspect_message_function() {
 ///     // ...
@@ -399,7 +399,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the inspect_message function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::*;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()
@@ -428,7 +428,7 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// During `dfx build`, the imported canister will be correctly resolved.
 ///
 /// ```rust,ignore
-/// # use ic_cdk_macros::import;
+/// # use ic_cdk::import;
 /// #[import(canister = "some_canister")]
 /// struct SomeCanister;
 /// ```
@@ -436,7 +436,7 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Or you can specify both the `canister_id` and the `candid_path`.
 ///
 /// ```rust,ignore
-/// # use ic_cdk_macros::import;
+/// # use ic_cdk::import;
 /// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
 /// struct SomeCanister;
 /// ```

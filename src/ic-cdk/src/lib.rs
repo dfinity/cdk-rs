@@ -10,6 +10,9 @@
 #[cfg(target_feature = "atomics")]
 compile_error!("This version of the CDK does not support multithreading.");
 
+#[doc(inline)]
+pub use ic_cdk_macros::*;
+
 pub mod api;
 mod futures;
 mod printer;
