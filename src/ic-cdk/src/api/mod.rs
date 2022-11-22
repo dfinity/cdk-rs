@@ -124,5 +124,6 @@ pub fn instruction_counter() -> u64 {
 /// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
 #[inline]
 pub fn performance_counter(counter_type: u32) -> u64 {
+    // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }

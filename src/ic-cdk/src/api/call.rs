@@ -266,6 +266,7 @@ fn add_payment(payment: u128) {
     }
     let high = (payment >> 64) as u64;
     let low = (payment & u64::MAX as u128) as u64;
+    // SAFETY: ic0.call_cycles_add128 is always safe to call.
     unsafe {
         ic0::call_cycles_add128(high as i64, low as i64);
     }
@@ -323,6 +324,14 @@ pub fn notify_raw(
     // is not a valid function. See
     // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
     // for more context.
+
+    // SAFETY:
+    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // -1, i.e. usize::MAX, is a function pointer the wasm module cannot possibly contain, and therefore can be passed as both reply and reject fn for ic0.call_new.
+    // Since the callback function will never be called, any value can be passed as its context parameter, and therefore -1 can be passed for those values.
+    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+    // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
@@ -614,8 +623,9 @@ pub fn arg_data_raw() -> Vec<u8> {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     let len: usize = unsafe { ic0::msg_arg_data_size() as usize };
     let mut bytes = Vec::with_capacity(len);
-    // SAFETY: `bytes[0..len] is writable, so it is safe to pas to `ic0.msg_arg_data_copy`.
-    // `ic0.msg_arg_data_copy writes to all of bytes[0..len], so `set_len` is safe to call with the new len.
+    // SAFETY:
+    // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
+    // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
     unsafe {
         ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
         bytes.set_len(len);
@@ -631,12 +641,12 @@ pub fn arg_data_raw_size() -> usize {
 
 /// Replies with the bytes passed
 pub fn reply_raw(buf: &[u8]) {
-    unsafe {
-        if !buf.is_empty() {
-            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32)
-        };
-        ic0::msg_reply();
-    }
+    if !buf.is_empty() {
+        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
+        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32) }
+    };
+    // SAFETY: ic0.msg_reply is always safe to call.
+    unsafe { ic0::msg_reply() };
 }
 
 /// Returns the argument data in the current call. Traps if the data cannot be
@@ -675,6 +685,7 @@ pub fn method_name() -> String {
 /// Supported counter type:
 /// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
 pub fn performance_counter(counter_type: u32) -> u64 {
+    // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }
 
