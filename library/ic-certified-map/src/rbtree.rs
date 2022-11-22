@@ -268,7 +268,7 @@ impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
 /// Implements mutable left-leaning red-black trees as defined in
 /// https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf
 #[derive(Default, Clone)]
-pub struct RbTree<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> {
+pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
 }
 
@@ -345,17 +345,19 @@ where
     }
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
+impl<K, V> RbTree<K, V> {
     /// Constructs a new empty tree.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { root: None }
     }
 
     /// Returns true if the map is empty.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.root.is_none()
     }
+}
 
+impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     pub fn get(&self, key: &[u8]) -> Option<&V> {
         let mut root = self.root.as_ref();
         while let Some(n) = root {

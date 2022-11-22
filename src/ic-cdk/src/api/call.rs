@@ -599,7 +599,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = arg_data_raw();
 
     match decode_args(&bytes) {
-        Err(e) => trap(&format!("{:?}", e)),
+        Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
         Ok(r) => r,
     }
 }

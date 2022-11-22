@@ -1,6 +1,6 @@
 [package]
 name = "ic0"
-version = "0.18.5"
+version = "0.18.6"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Internet Computer System API Binding."
@@ -20,3 +20,7 @@ syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
 [[example]]
 name = "ic0build"
 path = "util/ic0build.rs"
+
+[[example]]
+name = "work"
+path = "util/work.rs"

@@ -1,4 +1,4 @@
-use ic_cdk_macros::query;
+use ic_cdk::query;
 
 #[query]
 fn method<T>(_arg: T) {}

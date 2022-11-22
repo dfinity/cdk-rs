@@ -1,5 +1,4 @@
-use ic_cdk::api::call::ManualReply;
-use ic_cdk_macros::query;
+use ic_cdk::{api::call::ManualReply, query};
 
 #[query]
 fn instruction_counter() -> u64 {

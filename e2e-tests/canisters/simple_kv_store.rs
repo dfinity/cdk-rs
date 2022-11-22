@@ -1,4 +1,4 @@
-use ic_cdk_macros::{post_upgrade, pre_upgrade, query, update};
+use ic_cdk::{post_upgrade, pre_upgrade, query, update};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::collections::BTreeMap;

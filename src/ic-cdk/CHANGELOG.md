@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.7] - 2022-11-16
+
+### Changed
+
+- Improve error message on trap while decoding arguments. (#339)
+
+## [0.6.6] - 2022-11-09
+
+### Added
+
+- Added `StableIO` to implement both `io::Write` and `io::Read` for stable memory. (#335)
+- Added 64-bit support for `io::Write` and `io::Read` via `StableIO`.
+- Implement `io::Seek` for stable storage.
+
+### Changed
+
+-  `StableWriter` and `StableReader` are now wrappers around `StableIO`. 
+
 ## [0.6.5] - 2022-11-04
 
 ### Changed

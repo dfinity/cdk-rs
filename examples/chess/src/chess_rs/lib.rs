@@ -1,5 +1,4 @@
-use ic_cdk::export::candid::CandidType;
-use ic_cdk_macros::*;
+use ic_cdk::{export::candid::CandidType, query, update};
 use pleco::tools::Searcher;
 use serde::Serialize;
 use std::cell::RefCell;

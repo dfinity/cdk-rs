@@ -1,4 +1,4 @@
-use ic_cdk_macros::*;
+use ic_cdk::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade, query, update};
 
 #[init]
 fn init() {}
