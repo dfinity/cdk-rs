@@ -5,7 +5,7 @@
     clippy::missing_safety_doc
 )]
 
-//! This crate provides building blocks for developing Internet Computer Canister.
+//! This crate provides building blocks for developing Internet Computer canisters.
 //!
 //! You can check the [Internet Computer Specification](
 //! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)

@@ -74,9 +74,6 @@ mod rc {
     }
 }
 
-#[cfg(all(target_arch = "wasm32-unknown-unknown", target_feature = "atomics"))]
-compile_error!("The CDK is not usable when targeting atomic WASM.");
-
 #[cfg(not(target_arch = "wasm32-unknown-unknown"))]
 #[allow(dead_code)]
 mod rc {
@@ -569,7 +566,7 @@ pub fn msg_cycles_available() -> u64 {
 /// of the current call, and is still available in this message.
 pub fn msg_cycles_available128() -> u128 {
     let mut recv = 0u128;
-    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available
+    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
     unsafe {
         ic0::msg_cycles_available128(&mut recv as *mut u128 as i32);
     }
@@ -672,7 +669,7 @@ pub fn accept_message() {
 pub fn method_name() -> String {
     // SAFETY: ic0.msg_method_name_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
-    let mut bytes = vec![0; len as usize];
+    let mut bytes = vec![0u8; len as usize];
     // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
     unsafe {
         ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);

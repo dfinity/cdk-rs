@@ -9,7 +9,7 @@ pub mod stable;
 /// Prints the given message.
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
-    // SAFETY: Because `s` is a &str, it can safely be passed to ic0.debug_print.
+    // SAFETY: `s`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
     unsafe {
         ic0::debug_print(s.as_ptr() as i32, s.len() as i32);
     }
@@ -17,7 +17,7 @@ pub fn print<S: std::convert::AsRef<str>>(s: S) {
 
 /// Traps with the given message.
 pub fn trap(message: &str) -> ! {
-    // SAFETY: Because `message` is a &str, it can safely be passed to ic0.trap.
+    // SAFETY: `message`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.trap.
     unsafe {
         ic0::trap(message.as_ptr() as i32, message.len() as i32);
     }
