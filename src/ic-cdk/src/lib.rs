@@ -11,6 +11,12 @@
 //! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
 //! for a full list of the system API functions.
 
+#[cfg(target_feature = "atomics")]
+compile_error!("This version of the CDK does not support multithreading.");
+
+#[doc(inline)]
+pub use ic_cdk_macros::*;
+
 pub mod api;
 mod futures;
 mod printer;
@@ -19,6 +25,7 @@ pub mod storage;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use api::call::call;
+pub use api::call::notify;
 pub use api::{caller, id, print, trap};
 
 static DONE: AtomicBool = AtomicBool::new(false);
@@ -26,7 +33,7 @@ static DONE: AtomicBool = AtomicBool::new(false);
 /// Re-exports crates those are necessary for using ic-cdk
 pub mod export {
     pub use candid;
-    pub use candid::types::ic_types::Principal;
+    pub use candid::Principal;
     pub use serde;
 }
 

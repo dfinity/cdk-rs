@@ -2,16 +2,12 @@
 setup() {
   cd examples/profile
   # Make sure the directory is clean.
-  dfx start --clean --background --host "127.0.0.1:0"
-  local webserver_port=$(cat .dfx/webserver-port)
-  cp dfx.json dfx.json.bk
-  cat <<<$(jq .networks.local.bind=\"127.0.0.1:${webserver_port}\" dfx.json) >dfx.json
+  dfx start --clean --background
 }
 
 # executed after each test
 teardown() {
   dfx stop
-  mv dfx.json.bk dfx.json
 }
 
 @test "Can get, update, search (profile_rs)" {

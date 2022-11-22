@@ -1,5 +1,4 @@
-use ic_cdk::export::candid::CandidType;
-use ic_cdk_macros::*;
+use ic_cdk::{export::candid::CandidType, query, update};
 use pleco::tools::Searcher;
 use serde::Serialize;
 use std::cell::RefCell;
@@ -21,7 +20,7 @@ thread_local! {
 }
 
 #[update]
-fn new(name: String, white: bool) -> () {
+fn new(name: String, white: bool) {
     STORE.with(|game_store| {
         game_store.borrow_mut().insert(
             name.clone(),
@@ -55,7 +54,7 @@ fn uci_move(name: String, m: String) -> bool {
 }
 
 #[update(name = "aiMove")]
-fn ai_move(name: String) -> () {
+fn ai_move(name: String) {
     STORE.with(|game_store| {
         let mut game_store = game_store.borrow_mut();
         let game = game_store
@@ -71,10 +70,5 @@ fn ai_move(name: String) -> () {
 
 #[query(name = "getFen")]
 fn get_fen(name: String) -> Option<String> {
-    STORE.with(|game_store| {
-        game_store
-            .borrow()
-            .get(&name)
-            .and_then(|game| Some(game.board.fen()))
-    })
+    STORE.with(|game_store| game_store.borrow().get(&name).map(|game| game.board.fen()))
 }

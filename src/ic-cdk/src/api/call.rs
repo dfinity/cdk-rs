@@ -1,8 +1,7 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::{ic0, trap};
-use crate::export::Principal;
+use crate::api::trap;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args, CandidType};
+use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Principal};
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
@@ -140,7 +139,7 @@ use rc::{InnerCell, WasmCell};
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[allow(missing_docs)]
 #[repr(i32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
     NoError = 0,
 
@@ -242,20 +241,106 @@ unsafe fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
 unsafe fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a WasmCell as userdata.
     let state = unsafe { WasmCell::from_raw(state_ptr) };
-    // We set the call result, even though it won't be read on the default executor, because we can't guarantee it was called on our executor.
-    // None of these calls trap - the rollback from the previous trap ensures that the Mutex is not in a poisoned state.
-    {
-        state.borrow_mut().result = Some(match reject_code() {
-            RejectionCode::NoError => Ok(arg_data_raw()),
-            n => Err((n, reject_message())),
-        });
-    }
+    // We set the call result, even though it won't be read on the
+    // default executor, because we can't guarantee it was called on
+    // our executor. However, we are not allowed to inspect
+    // reject_code() inside of a cleanup callback, so always set the
+    // result to a reject.
+    //
+    // Borrowing does not trap - the rollback from the
+    // previous trap ensures that the WasmCell can be borrowed again.
+    state.borrow_mut().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
     let w = state.borrow_mut().waker.take();
     if let Some(waker) = w {
-        // Flag that we do not want to actually wake the task - we want to drop it *without* executing it.
+        // Flag that we do not want to actually wake the task - we
+        // want to drop it *without* executing it.
         crate::futures::CLEANUP.store(true, Ordering::Relaxed);
         waker.wake();
         crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+    }
+}
+
+fn add_payment(payment: u128) {
+    if payment == 0 {
+        return;
+    }
+    let high = (payment >> 64) as u64;
+    let low = (payment & u64::MAX as u128) as u64;
+    unsafe {
+        ic0::call_cycles_add128(high as i64, low as i64);
+    }
+}
+
+/// Sends a one-way message with `payment` cycles attached to it that invokes `method` with
+/// arguments `args` on the principal identified by `id`, ignoring the reply.
+///
+/// Returns `Ok(())` if the message was successfully enqueued, otherwise returns a reject code.
+///
+/// # Notes
+///
+///   * The caller has no way of checking whether the destination processed the notification.
+///     The system can drop the notification if the destination does not have resources to
+///     process the message (for example, if it's out of cycles or queue slots).
+///
+///   * The callee cannot tell whether the call is one-way or not.
+///     The callee must produce replies for all incoming messages.
+///
+///   * It is safe to upgrade a canister without stopping it first if it sends out *only*
+///     one-way messages.
+///
+///   * If the payment is non-zero and the system fails to deliver the notification, the behaviour
+///     is unspecified: the funds can be either reimbursed or consumed irrevocably by the IC depending
+///     on the underlying implementation of one-way calls.
+pub fn notify_with_payment128<T: ArgumentEncoder>(
+    id: Principal,
+    method: &str,
+    args: T,
+    payment: u128,
+) -> Result<(), RejectionCode> {
+    let args_raw = encode_args(args).expect("failed to encode arguments");
+    notify_raw(id, method, &args_raw, payment)
+}
+
+/// Like [notify_with_payment128], but sets the payment to zero.
+pub fn notify<T: ArgumentEncoder>(
+    id: Principal,
+    method: &str,
+    args: T,
+) -> Result<(), RejectionCode> {
+    notify_with_payment128(id, method, args, 0)
+}
+
+/// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
+pub fn notify_raw(
+    id: Principal,
+    method: &str,
+    args_raw: &[u8],
+    payment: u128,
+) -> Result<(), RejectionCode> {
+    let callee = id.as_slice();
+    // We set all callbacks to -1, which is guaranteed to be invalid callback index.
+    // The system will still deliver the reply, but it will trap immediately because the callback
+    // is not a valid function. See
+    // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
+    // for more context.
+    let err_code = unsafe {
+        ic0::call_new(
+            callee.as_ptr() as i32,
+            callee.len() as i32,
+            method.as_ptr() as i32,
+            method.len() as i32,
+            /* reply_fun = */ -1,
+            /* reply_env = */ -1,
+            /* reject_fun = */ -1,
+            /* reject_env = */ -1,
+        );
+        add_payment(payment);
+        ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+        ic0::call_perform()
+    };
+    match err_code {
+        0 => Ok(()),
+        c => Err(RejectionCode::from(c)),
     }
 }
 
@@ -285,15 +370,7 @@ pub fn call_raw128(
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     call_raw_internal(id, method, args_raw, move || {
-        if payment > 0 {
-            // SAFETY: ic0.call_cycles_add128 is always safe to call.
-            unsafe {
-                let high = (payment >> 64) as u64;
-                let low = (payment & u64::MAX as u128) as u64;
-                // This is called as part of the call_new lifecycle, and so will not trap.
-                ic0::call_cycles_add128(high as i64, low as i64);
-            }
-        }
+        add_payment(payment);
     })
 }
 
@@ -347,7 +424,21 @@ fn call_raw_internal(
     CallFuture { state }
 }
 
-/// Performs an asynchronous call to another canister via ic0.
+fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
+    (
+        RejectionCode::CanisterError,
+        format!(
+            "failed to decode canister response as {}: {}",
+            std::any::type_name::<T>(),
+            err
+        ),
+    )
+}
+
+/// Performs an asynchronous call to another canister using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+///
+/// If the reply payload is not a valid encoding of the expected type `T`,
+/// the call results in [RejectionCode::CanisterError] error.
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -357,7 +448,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, 0);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -372,7 +463,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -387,7 +478,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw128(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(|err| trap(&format!("{:?}", err)))
+        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
     }
 }
 
@@ -415,7 +506,7 @@ pub fn reject_code() -> RejectionCode {
 pub fn reject_message() -> String {
     // SAFETY: ic0.msg_reject_msg_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
-    let mut bytes = vec![0; len as usize];
+    let mut bytes = vec![0u8; len as usize];
     // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
     unsafe {
         ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
@@ -519,23 +610,42 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 }
 
 /// Returns the argument data as bytes.
-pub(crate) fn arg_data_raw() -> Vec<u8> {
+pub fn arg_data_raw() -> Vec<u8> {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     let len: usize = unsafe { ic0::msg_arg_data_size() as usize };
-    let mut bytes = vec![0u8; len as usize];
-    // SAFETY: ic0.msg_arg_data_copy is safe to call if `bytes` is allocated to a capacity of `len`.
+    let mut bytes = Vec::with_capacity(len);
+    // SAFETY: `bytes[0..len] is writable, so it is safe to pas to `ic0.msg_arg_data_copy`.
+    // `ic0.msg_arg_data_copy writes to all of bytes[0..len], so `set_len` is safe to call with the new len.
     unsafe {
         ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+        bytes.set_len(len);
     }
     bytes
 }
 
-/// Returns the argument data in the current call.
+/// Get the len of the raw-argument-data-bytes.
+pub fn arg_data_raw_size() -> usize {
+    // SAFETY: ic0.msg_arg_data_size is always safe to call.
+    unsafe { ic0::msg_arg_data_size() as usize }
+}
+
+/// Replies with the bytes passed
+pub fn reply_raw(buf: &[u8]) {
+    unsafe {
+        if !buf.is_empty() {
+            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32)
+        };
+        ic0::msg_reply();
+    }
+}
+
+/// Returns the argument data in the current call. Traps if the data cannot be
+/// decoded.
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
     let bytes = arg_data_raw();
 
     match decode_args(&bytes) {
-        Err(e) => trap(&format!("{:?}", e)),
+        Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
         Ok(r) => r,
     }
 }
@@ -560,10 +670,18 @@ pub fn method_name() -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
+/// Get the value of specified performance counter
+///
+/// Supported counter type:
+/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+pub fn performance_counter(counter_type: u32) -> u64 {
+    unsafe { ic0::performance_counter(counter_type as i32) as u64 }
+}
+
 /// Pretends to have the Candid type `T`, but unconditionally errors
 /// when serialized.
 ///
-/// Usable, but not required, as metadata when using `#[query(reply = false)]`,
+/// Usable, but not required, as metadata when using `#[query(manual_reply = true)]`,
 /// so an accurate Candid file can still be generated.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct ManualReply<T: ?Sized>(PhantomData<T>);
@@ -590,6 +708,13 @@ impl<T: ?Sized> ManualReply<T> {
         U: CandidType,
     {
         reply((value,));
+        Self::empty()
+    }
+
+    /// Rejects the call with the specified message and returns a new
+    /// `ManualReply`, for a useful reply-then-return shortcut.
+    pub fn reject(message: impl AsRef<str>) -> Self {
+        reject(message.as_ref());
         Self::empty()
     }
 }

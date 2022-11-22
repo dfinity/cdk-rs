@@ -4,8 +4,8 @@ use ic_cdk::{
         candid::{CandidType, Deserialize},
         Principal,
     },
+    query, update,
 };
-use ic_cdk_macros::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 

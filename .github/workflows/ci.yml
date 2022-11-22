@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  rust-version: 1.60.0
+
+jobs:
+  build:
+    name: cargo build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-build-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+          target: wasm32-unknown-unknown
+      - name: Run builds
+        run: |
+          cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
+          cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown --release
+          cargo build --example=work
+
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+      - name: Run tests
+        run: |
+          cargo test --all-targets
+
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-fmt-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-fmt-
+            ${{ runner.os }}-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+          components: rustfmt
+      - name: Check formatting
+        run: |
+          cargo fmt --all -- --check
+
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-clippy-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-clippy-
+            ${{ runner.os }}-
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+          components: clippy
+      - name: Run clippy
+        run: |
+          cargo clippy --tests --benches -- -D clippy::all
+
+  aggregate:
+    name: ci:required
+    if: ${{ always() }}
+    needs: [build, test, fmt, clippy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: check build result
+        if: ${{ needs.build.result != 'success' }}
+        run: exit 1
+      - name: check test result
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1
+      - name: check fmt result
+        if: ${{ needs.fmt.result != 'success' }}
+        run: exit 1
+      - name: check clippy result
+        if: ${{ needs.clippy.result != 'success' }}
+        run: exit 1
