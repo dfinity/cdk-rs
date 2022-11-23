@@ -126,9 +126,12 @@ jobs:
         with:
           toolchain: ${{ env.rust-version }}
           components: clippy
+      - name: Install protoc
+        run: |
+          sudo apt-get install -y protobuf-compiler
       - name: Run clippy
         run: |
-          cargo clippy --tests --benches --no-deps -- -D clippy::all
+          cargo clippy --tests --benches -- -D clippy::all
 
   aggregate:
     name: ci:required
