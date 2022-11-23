@@ -173,7 +173,7 @@ fn test_composite_query() {
         .install_canister(wasm.clone(), vec![], None)
         .expect("failed to install sender");
     let receiver_id = env
-        .install_canister(wasm.clone(), vec![], None)
+        .install_canister(wasm, vec![], None)
         .expect("failed to install sender");
     let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
         .expect("failed to query 'greet_self'");
