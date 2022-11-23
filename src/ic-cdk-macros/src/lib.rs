@@ -109,7 +109,7 @@ where
 /// To be able to make inter-canister calls from a query call, it must be a *composite* query (which cannot be executed in replicated mode).
 ///
 /// ```rust
-/// # use ic_cdk_macros::*;
+/// # use ic_cdk::query;
 /// # fn wallet_canister_principal() -> ic_cdk::export::Principal { unimplemented!() }
 /// #[query(composite = true)]
 /// async fn composite_query_function() {
