@@ -1,7 +1,7 @@
 // use ic_cdk::export::candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 // use ic_cdk::export::candid::Encode;
-use candid_legecy::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid_legecy::Encode;
+use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid::Encode;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;
@@ -163,6 +163,21 @@ fn test_notify_calls() {
     let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
         .expect("failed to query 'notifications_received'");
     assert_eq!(n, 1);
+}
+
+#[test]
+fn test_composite_query() {
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("async");
+    let sender_id = env
+        .install_canister(wasm.clone(), vec![], None)
+        .expect("failed to install sender");
+    let receiver_id = env
+        .install_canister(wasm.clone(), vec![], None)
+        .expect("failed to install sender");
+    let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
+        .expect("failed to query 'greet_self'");
+    assert_eq!(greeting, "Hello, myself");
 }
 
 #[test]

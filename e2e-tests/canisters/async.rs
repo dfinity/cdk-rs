@@ -57,6 +57,14 @@ fn greet(name: String) -> String {
     format!("Hello, {}", name)
 }
 
+#[query(composite = true)]
+async fn greet_self(greeter: Principal) -> String {
+    let (greeting,) = ic_cdk::api::call::call(greeter, "greet", ("myself",))
+        .await
+        .unwrap();
+    greeting
+}
+
 #[update]
 async fn invalid_reply_payload_does_not_trap() -> String {
     // We're decoding an integer instead of a string, decoding must fail.
