@@ -1,6 +1,11 @@
-#![warn(missing_docs)]
+#![warn(
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
 
-//! This crate provides building blocks for developing Internet Computer Canister.
+//! This crate provides building blocks for developing Internet Computer canisters.
 //!
 //! You can check the [Internet Computer Specification](
 //! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
@@ -17,11 +22,13 @@ mod futures;
 mod printer;
 pub mod storage;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 pub use api::call::call;
 pub use api::call::notify;
 pub use api::{caller, id, print, trap};
 
-static mut DONE: bool = false;
+static DONE: AtomicBool = AtomicBool::new(false);
 
 /// Re-exports crates those are necessary for using ic-cdk
 pub mod export {
@@ -32,13 +39,9 @@ pub mod export {
 
 /// Setup the stdlib hooks.
 pub fn setup() {
-    unsafe {
-        if DONE {
-            return;
-        }
-        DONE = true;
+    if !DONE.swap(true, Ordering::SeqCst) {
+        printer::hook()
     }
-    printer::hook()
 }
 
 /// See documentation for [spawn].
