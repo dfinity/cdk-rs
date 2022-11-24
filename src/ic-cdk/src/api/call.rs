@@ -9,7 +9,10 @@ use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::task::{Context, Poll, Waker};
 
-#[cfg(target_arch = "wasm32-unknown-unknown")]
+#[cfg(all(
+    target_arch = "wasm32-unknown-unknown",
+    not(target_feature = "atomics")
+))]
 #[allow(dead_code)]
 mod rc {
     use std::cell::{RefCell, RefMut};
@@ -42,7 +45,8 @@ mod rc {
         pub fn into_raw(self) -> *const InnerCell<T> {
             Rc::into_raw(self.0)
         }
-        #[allow(clippy::missing_safety_doc)]
+        /// # Safety
+        /// The pointer must have been created with [`into_raw`].
         pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
             Self(Rc::from_raw(ptr))
         }
@@ -94,9 +98,11 @@ mod rc {
         pub fn into_raw(self) -> *const InnerCell<T> {
             Arc::into_raw(self.0)
         }
-        #[allow(clippy::missing_safety_doc)]
+        /// # Safety
+        /// The pointer must have been created with [`into_raw`].
         pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
-            Self(Arc::from_raw(ptr))
+            // SAFETY: If the pointer was created from into_raw, it internally was created from Arc::into_raw.
+            Self(unsafe { Arc::from_raw(ptr) })
         }
         pub fn borrow_mut(&self) -> MutexGuard<'_, T> {
             self.0.lock().unwrap()
@@ -111,6 +117,7 @@ mod rc {
 
         #[allow(unused_mut)]
         fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+            // SAFETY: this is a projection of self, which is pinned
             unsafe { Pin::new_unchecked(&mut *self.0.lock().unwrap()) }.poll(ctx)
         }
     }
@@ -199,7 +206,12 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
 /// The callback from IC dereferences the future from a raw pointer, assigns the
 /// result and calls the waker. We cannot use a closure here because we pass raw
 /// pointers to the System and back.
-fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+///
+/// # Safety
+///
+/// This function must only be passed to the IC with a pointer from WasmCell::into_raw as userdata.
+unsafe fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a WasmCell as userdata.
     let state = unsafe { WasmCell::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
     {
@@ -219,7 +231,12 @@ fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
 /// This function is called when [callback] was just called with the same parameter, and trapped.
 /// We can't guarantee internal consistency at this point, but we can at least e.g. drop mutex guards.
 /// Waker is a very opaque API, so the best we can do is set a global flag and proceed normally.
-fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+///
+/// # Safety
+///
+/// This function must only be passed to the IC with a pointer from WasmCell::into_raw as userdata.
+unsafe fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a WasmCell as userdata.
     let state = unsafe { WasmCell::from_raw(state_ptr) };
     // We set the call result, even though it won't be read on the
     // default executor, because we can't guarantee it was called on
@@ -246,6 +263,7 @@ fn add_payment(payment: u128) {
     }
     let high = (payment >> 64) as u64;
     let low = (payment & u64::MAX as u128) as u64;
+    // SAFETY: ic0.call_cycles_add128 is always safe to call.
     unsafe {
         ic0::call_cycles_add128(high as i64, low as i64);
     }
@@ -303,6 +321,14 @@ pub fn notify_raw(
     // is not a valid function. See
     // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
     // for more context.
+
+    // SAFETY:
+    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // -1, i.e. usize::MAX, is a function pointer the wasm module cannot possibly contain, and therefore can be passed as both reply and reject fn for ic0.call_new.
+    // Since the callback function will never be called, any value can be passed as its context parameter, and therefore -1 can be passed for those values.
+    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+    // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
@@ -333,7 +359,9 @@ pub fn call_raw(
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     call_raw_internal(id, method, args_raw, move || {
         if payment > 0 {
+            // SAFETY: ic0.call_cycles_add is always safe to call.
             unsafe {
+                // This is called as part of the call_new lifecycle, and so will not trap.
                 ic0::call_cycles_add(payment as i64);
             }
         }
@@ -364,6 +392,15 @@ fn call_raw_internal(
         waker: None,
     });
     let state_ptr = WasmCell::into_raw(state.clone());
+    // SAFETY:
+    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
+    // `state_ptr` is a pointer created via WasmCell::into_raw, and can therefore be passed as the userdata for `callback`.
+    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+    // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
+    // `state_ptr` is a pointer created via WasmCell::into_raw, and can therefore be passed as the userdata for `cleanup`.
+    // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
             callee.as_ptr() as i32,
@@ -466,33 +503,38 @@ pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
 
 /// Returns the rejection code for the call.
 pub fn reject_code() -> RejectionCode {
+    // SAFETY: ic0.msg_reject_code is always safe to call.
     let code = unsafe { ic0::msg_reject_code() };
     RejectionCode::from(code)
 }
 
 /// Returns the rejection message.
 pub fn reject_message() -> String {
+    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
     let mut bytes = vec![0u8; len as usize];
+    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
     unsafe {
         ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
-    String::from_utf8_lossy(&bytes).to_string()
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// Rejects the current call with the message.
 pub fn reject(message: &str) {
     let err_message = message.as_bytes();
+    // SAFETY: `err_message`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
     unsafe {
         ic0::msg_reject(err_message.as_ptr() as i32, err_message.len() as i32);
     }
 }
 
-/// An io::Writer for message replies.
+/// An io::Write for message replies.
 pub struct CallReplyWriter;
 
 impl std::io::Write for CallReplyWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        // SAFETY: buf, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reply_data_append.
         unsafe {
             ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
         }
@@ -507,6 +549,7 @@ impl std::io::Write for CallReplyWriter {
 /// Replies to the current call with a candid argument.
 pub fn reply<T: ArgumentEncoder>(reply: T) {
     write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
+    // SAFETY: ic0.msg_reply is always safe to call.
     unsafe {
         ic0::msg_reply();
     }
@@ -515,6 +558,7 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
 /// Returns the amount of cycles that were transferred by the caller
 /// of the current call, and is still available in this message.
 pub fn msg_cycles_available() -> u64 {
+    // SAFETY: ic0.msg_cycles_available is always safe to call.
     unsafe { ic0::msg_cycles_available() as u64 }
 }
 
@@ -522,6 +566,7 @@ pub fn msg_cycles_available() -> u64 {
 /// of the current call, and is still available in this message.
 pub fn msg_cycles_available128() -> u128 {
     let mut recv = 0u128;
+    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
     unsafe {
         ic0::msg_cycles_available128(&mut recv as *mut u128 as i32);
     }
@@ -532,6 +577,7 @@ pub fn msg_cycles_available128() -> u128 {
 ///
 /// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded() -> u64 {
+    // SAFETY: ic0.msg_cycles_refunded is always safe to call
     unsafe { ic0::msg_cycles_refunded() as u64 }
 }
 
@@ -540,6 +586,7 @@ pub fn msg_cycles_refunded() -> u64 {
 /// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded128() -> u128 {
     let mut recv = 0u128;
+    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
     unsafe {
         ic0::msg_cycles_refunded128(&mut recv as *mut u128 as i32);
     }
@@ -550,7 +597,7 @@ pub fn msg_cycles_refunded128() -> u128 {
 ///
 /// The actual amount moved will be returned.
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
-    // TODO: should we assert the u64 input is within the range of i64?
+    // SAFETY: ic0.msg_cycles_accept is always safe to call.
     unsafe { ic0::msg_cycles_accept(max_amount as i64) as u64 }
 }
 
@@ -561,6 +608,7 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
     let high = (max_amount >> 64) as u64;
     let low = (max_amount & u64::MAX as u128) as u64;
     let mut recv = 0u128;
+    // SAFETY: `recv` is writable and sixteen bytes wide, and therefore safe to pass to ic0.msg_cycles_accept128
     unsafe {
         ic0::msg_cycles_accept128(high as i64, low as i64, &mut recv as *mut u128 as i32);
     }
@@ -569,28 +617,33 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 
 /// Returns the argument data as bytes.
 pub fn arg_data_raw() -> Vec<u8> {
+    // SAFETY: ic0.msg_arg_data_size is always safe to call.
+    let len: usize = unsafe { ic0::msg_arg_data_size() as usize };
+    let mut bytes = Vec::with_capacity(len);
+    // SAFETY:
+    // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
+    // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
     unsafe {
-        let len: usize = ic0::msg_arg_data_size() as usize;
-        let mut bytes = Vec::with_capacity(len);
         ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
         bytes.set_len(len);
-        bytes
     }
+    bytes
 }
 
 /// Get the len of the raw-argument-data-bytes.
 pub fn arg_data_raw_size() -> usize {
+    // SAFETY: ic0.msg_arg_data_size is always safe to call.
     unsafe { ic0::msg_arg_data_size() as usize }
 }
 
 /// Replies with the bytes passed
 pub fn reply_raw(buf: &[u8]) {
-    unsafe {
-        if !buf.is_empty() {
-            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32)
-        };
-        ic0::msg_reply();
-    }
+    if !buf.is_empty() {
+        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
+        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32) }
+    };
+    // SAFETY: ic0.msg_reply is always safe to call.
+    unsafe { ic0::msg_reply() };
 }
 
 /// Returns the argument data in the current call. Traps if the data cannot be
@@ -606,6 +659,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
 
 /// Accepts the ingress message.
 pub fn accept_message() {
+    // SAFETY: ic0.accept_message is always safe to call.
     unsafe {
         ic0::accept_message();
     }
@@ -613,12 +667,14 @@ pub fn accept_message() {
 
 /// Returns the name of current canister method.
 pub fn method_name() -> String {
+    // SAFETY: ic0.msg_method_name_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
     let mut bytes = vec![0u8; len as usize];
+    // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
     unsafe {
         ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
     }
-    String::from_utf8_lossy(&bytes).to_string()
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// Get the value of specified performance counter
@@ -626,6 +682,7 @@ pub fn method_name() -> String {
 /// Supported counter type:
 /// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
 pub fn performance_counter(counter_type: u32) -> u64 {
+    // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }
 

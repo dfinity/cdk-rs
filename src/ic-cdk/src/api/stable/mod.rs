@@ -123,6 +123,9 @@ pub fn stable64_read(offset: u64, buf: &mut [u8]) {
 pub fn stable_bytes() -> Vec<u8> {
     let size = (stable_size() as usize) << 16;
     let mut vec = Vec::with_capacity(size);
+    // SAFETY:
+    // `vec`, being mutable and allocated to `size` bytes, is safe to pass to ic0.stable_read with no offset.
+    // ic0.stable_read writes to all of `vec[0..size]`, so `set_len` is safe to call with the new size.
     unsafe {
         ic0::stable_read(vec.as_ptr() as i32, 0, size as i32);
         vec.set_len(size);
