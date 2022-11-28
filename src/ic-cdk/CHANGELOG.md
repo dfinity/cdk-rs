@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Refactored
+
+- Change from pleco to tanton for the chess library in the chess example. (#345)
+
 ## [0.6.7] - 2022-11-16
 
 ### Changed
