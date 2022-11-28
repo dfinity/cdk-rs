@@ -15,3 +15,4 @@ ic-cdk = { path = "../../../../src/ic-cdk" }
 ic-cdk-macros = { path = "../../../../src/ic-cdk-macros" }
 serde = "1.0.111"
 tanton = "1.0.0"
+getrandom = { version = "0.2", features = ["js"] } # tanton requires this to compile on wasm target
