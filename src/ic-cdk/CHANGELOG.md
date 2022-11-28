@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Implemented the canister timers API, located in module `ic_cdk::timer`.
+
 ## [0.6.7] - 2022-11-16
 
 ### Changed

@@ -1,7 +1,9 @@
+use std::time::{Duration, SystemTime};
+
 // use ic_cdk::export::candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 // use ic_cdk::export::candid::Encode;
-use candid_legecy::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid_legecy::Encode;
+use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid::Encode;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
 use serde_bytes::ByteBuf;
@@ -179,4 +181,42 @@ fn test_api_call() {
         .query(canister_id, "manual_reject", Encode!().unwrap())
         .unwrap();
     assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
+}
+
+#[test]
+fn test_timers() {
+    let env = StateMachine::new();
+    let time = SystemTime::now();
+    env.set_time(time);
+    let wasm = cargo_build_canister("timers");
+    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+    call_candid::<(), ()>(&env, canister_id, "schedule", ()).expect("Failed to call schedule");
+    advance_seconds(&env, 5);
+
+    call_candid::<_, ()>(&env, canister_id, "schedule_long", ())
+        .expect("Failed to call schedule_long");
+    advance_seconds(&env, 5);
+    call_candid::<_, ()>(&env, canister_id, "cancel_long", ()).expect("Failed to call cancel_long");
+    advance_seconds(&env, 5);
+
+    call_candid::<_, ()>(&env, canister_id, "start_repeating", ())
+        .expect("Failed to call start_repeating");
+    advance_seconds(&env, 3);
+    call_candid::<_, ()>(&env, canister_id, "stop_repeating", ())
+        .expect("Failed to call stop_repeating");
+    advance_seconds(&env, 2);
+
+    let (events,): (Vec<String>,) =
+        query_candid(&env, canister_id, "get_events", ()).expect("Failed to call get_events");
+    assert_eq!(
+        events[..],
+        ["1", "2", "3", "4", "repeat", "repeat", "repeat"]
+    );
+}
+
+fn advance_seconds(env: &StateMachine, seconds: u32) {
+    for _ in 0..seconds {
+        env.advance_time(Duration::from_secs(1));
+        env.tick();
+    }
 }

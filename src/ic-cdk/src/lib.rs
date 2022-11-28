@@ -4,6 +4,7 @@
     clippy::undocumented_unsafe_blocks,
     clippy::missing_safety_doc
 )]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! This crate provides building blocks for developing Internet Computer canisters.
 //!
@@ -21,6 +22,9 @@ pub mod api;
 mod futures;
 mod printer;
 pub mod storage;
+#[cfg(feature = "timers")]
+#[cfg_attr(docsrs, doc(cfg(feature = "timers")))]
+pub mod timer;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -63,8 +67,8 @@ pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
 macro_rules! println {
-    ($fmt:expr) => (ic_cdk::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => (ic_cdk::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message
@@ -79,8 +83,8 @@ macro_rules! println {
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
 macro_rules! eprintln {
-    ($fmt:expr) => (ic_cdk::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => (ic_cdk::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message

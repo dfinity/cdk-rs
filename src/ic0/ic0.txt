@@ -44,6 +44,8 @@ ic0.call_cycles_add : (amount : i64) -> ();                                 // U
 ic0.call_cycles_add128 : (amount_high : i64, amount_low: i64) -> ();        // U Ry Rt H
 ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt H
 
+ic0.global_timer_set : (timestamp : i64) -> i64;                            // I U Ry Rt C H
+
 ic0.stable_size : () -> (page_count : i32);                                 // *
 ic0.stable_grow : (new_pages : i32) -> (old_page_count : i32);              // *
 ic0.stable_write : (offset : i32, src : i32, size : i32) -> ();             // *
