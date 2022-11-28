@@ -12,6 +12,8 @@ struct ExportAttributes {
     pub guard: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
+    #[serde(default)]
+    pub composite: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -135,12 +137,20 @@ fn dfn_macro(
 
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
-    } else {
+    } else if method == MethodType::Query && attrs.composite {
         format!(
-            "canister_{0} {1}",
-            method,
+            "canister_composite_query {}",
             attrs.name.unwrap_or_else(|| name.to_string())
         )
+    } else {
+        let function_name = attrs.name.unwrap_or_else(|| name.to_string());
+        if function_name.starts_with("<ic-cdk internal>") {
+            return Err(Error::new(
+                Span::call_site(),
+                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
+            ));
+        }
+        format!("canister_{method} {function_name}")
     };
 
     let function_call = if is_async {

@@ -106,6 +106,17 @@ where
 /// }
 /// ```
 ///
+/// To be able to make inter-canister calls from a query call, it must be a *composite* query (which cannot be executed in replicated mode).
+///
+/// ```rust
+/// # use ic_cdk::query;
+/// # fn wallet_canister_principal() -> ic_cdk::export::Principal { unimplemented!() }
+/// #[query(composite = true)]
+/// async fn composite_query_function() {
+///    let (wallet_name,): (Option<String>,) = ic_cdk::call(wallet_canister_principal(), "name", ()).await.unwrap();
+/// }
+/// ```
+///
 /// If you would rather call the [`call::reply`] function than return a value,
 /// you will need to set `manual_reply` to `true` so that the canister does not
 /// trap.
