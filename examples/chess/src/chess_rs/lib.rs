@@ -1,8 +1,10 @@
 use ic_cdk::{export::candid::CandidType, query, update};
-use pleco::tools::Searcher;
 use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use tanton::tools::Searcher;
+
+mod getrandom_fail;
 
 type GameStore = BTreeMap<String, GameInternal>;
 
@@ -12,7 +14,7 @@ pub struct Game {
 }
 
 pub struct GameInternal {
-    pub board: pleco::Board,
+    pub board: tanton::Board,
 }
 
 thread_local! {
@@ -25,7 +27,7 @@ fn new(name: String, white: bool) {
         game_store.borrow_mut().insert(
             name.clone(),
             GameInternal {
-                board: pleco::Board::start_pos(),
+                board: tanton::Board::start_pos(),
             },
         );
     });
@@ -62,7 +64,7 @@ fn ai_move(name: String) {
             .unwrap_or_else(|| panic!("Game {} does not exist.", name));
 
         let b = game.board.shallow_clone();
-        let m = pleco::bots::MiniMaxSearcher::best_move(b, 3);
+        let m = tanton::bots::MiniMaxSearcher::best_move(b, 3);
 
         game.board.apply_move(m);
     });
