@@ -15,6 +15,9 @@ fn update() {}
 #[query]
 fn query() {}
 
+#[query(composite = true)]
+fn composite_query() {}
+
 #[heartbeat]
 fn heartbeat() {}
 

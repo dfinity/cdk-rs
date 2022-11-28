@@ -37,4 +37,4 @@ path = "canisters/timers.rs"
 
 [dev-dependencies]
 ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "dcbf401f27d9b48354e68389c6d8293c4233b055" }
-candid = { package = "candid", version = "0.8" }
+candid = "0.8"

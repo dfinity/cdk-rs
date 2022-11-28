@@ -168,6 +168,21 @@ fn test_notify_calls() {
 }
 
 #[test]
+fn test_composite_query() {
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("async");
+    let sender_id = env
+        .install_canister(wasm.clone(), vec![], None)
+        .expect("failed to install sender");
+    let receiver_id = env
+        .install_canister(wasm, vec![], None)
+        .expect("failed to install sender");
+    let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
+        .expect("failed to query 'greet_self'");
+    assert_eq!(greeting, "Hello, myself");
+}
+
+#[test]
 fn test_api_call() {
     let env = StateMachine::new();
     let rev = cargo_build_canister("api-call");

@@ -6,9 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.8] - 2022-11-28
+
 ### Added
 
-- Implemented the canister timers API, located in module `ic_cdk::timer`.
+- Added composite queries via `#[query(composite = true)]`. (#344)
+
+  Composite queries cannot be run as update calls, but can make inter-canister calls to other query functions.
+
+- Implemented the canister timers API, located in module `ic_cdk::timer`. (#342)
 
 ## [0.6.7] - 2022-11-16
 

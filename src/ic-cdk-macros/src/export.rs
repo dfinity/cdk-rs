@@ -12,6 +12,8 @@ struct ExportAttributes {
     pub guard: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
+    #[serde(default)]
+    pub composite: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -134,7 +136,12 @@ fn dfn_macro(
     let outer_function_ident = Ident::new(&format!("{}_{}_", name, crate::id()), Span::call_site());
 
     let export_name = if method.is_lifecycle() {
-        format!("canister_{method}")
+        format!("canister_{}", method)
+    } else if method == MethodType::Query && attrs.composite {
+        format!(
+            "canister_composite_query {}",
+            attrs.name.unwrap_or_else(|| name.to_string())
+        )
     } else {
         let function_name = attrs.name.unwrap_or_else(|| name.to_string());
         if function_name.starts_with("<ic-cdk internal>") {
