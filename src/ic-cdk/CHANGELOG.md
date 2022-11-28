@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.8] - 2022-11-28
+
 ### Added
 
 - Added composite queries via `#[query(composite = true)]`. (#344)
