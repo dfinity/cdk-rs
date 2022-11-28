@@ -1,8 +1,10 @@
 use ic_cdk::{export::candid::CandidType, query, update};
-use tanton::tools::Searcher;
 use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use tanton::tools::Searcher;
+
+mod getrandom_fail;
 
 type GameStore = BTreeMap<String, GameInternal>;
 
