@@ -24,6 +24,7 @@ extern "C" {
     pub fn canister_cycle_balance() -> i64;
     pub fn canister_cycle_balance128(dst: i32);
     pub fn canister_status() -> i32;
+    pub fn canister_version() -> i64;
     pub fn msg_method_name_size() -> i32;
     pub fn msg_method_name_copy(dst: i32, offset: i32, size: i32);
     pub fn accept_message();
@@ -128,6 +129,9 @@ mod non_wasm {
     }
     pub unsafe fn canister_status() -> i32 {
         panic!("canister_status should only be called inside canisters.");
+    }
+    pub unsafe fn canister_version() -> i64 {
+        panic!("canister_version should only be called inside canisters.");
     }
     pub unsafe fn msg_method_name_size() -> i32 {
         panic!("msg_method_name_size should only be called inside canisters.");
