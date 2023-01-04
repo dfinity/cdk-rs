@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Handle scenario where a repeated canister timer task is cancelled. (#356) 
+
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)
