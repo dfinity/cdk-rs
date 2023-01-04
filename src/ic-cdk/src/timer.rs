@@ -227,7 +227,13 @@ extern "C" fn timer_executor() {
             }
             Task::Repeated { ref mut func, .. } => {
                 func();
-                TASKS.with(|tasks| *tasks.borrow_mut().get_mut(task_id).unwrap() = task);
+                TASKS.with(|tasks| {
+                    // We need to check that the task still exists since it may have been cleared
+                    // during the processing of `func`
+                    if let Some(t) = tasks.borrow_mut().get_mut(task_id) {
+                        *t = task;
+                    }
+                });
             }
         }
     }
