@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Fix type name in error message when a deserialization error occurs after making a canister-to-canister call.
+
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)
