@@ -293,7 +293,7 @@ pub struct GetBlocksArgs {
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct QueryBlocksResponse {
     pub chain_length: u64,
-    /// The replica certificate for the last block hash (see https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding).
+    /// The replica certificate for the last block hash (see [Encoding of Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding)).
     /// Not available when querying blocks from a canister.
     pub certificate: Option<ByteBuf>,
     pub blocks: Vec<Block>,

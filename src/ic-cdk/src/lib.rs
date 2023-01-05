@@ -22,7 +22,7 @@ pub mod api;
 mod futures;
 mod printer;
 pub mod storage;
-#[cfg(feature = "timers")]
+#[cfg(any(doc, feature = "timers"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "timers")))]
 pub mod timer;
 
