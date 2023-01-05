@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)
+- Refactor the executor to prevent a double-free on `join_all`
 
 ## [0.6.8] - 2022-11-28
 
