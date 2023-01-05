@@ -8,21 +8,7 @@ use std::task::Context;
 use self::waker::WakerState;
 
 /// Must be called on every top-level future corresponding to a method call of a
-/// canister by the IC.
-///
-/// Saves the pointer to the future on the heap and kickstarts the future by
-/// polling it once. During the polling we also need to provide the waker
-/// callback which is triggered after the future made progress.
-/// The waker would then poll the future one last time to advance it to
-/// the final state. For that, we pass the future pointer to the waker, so that
-/// it can be restored into a box from a raw pointer and then dropped if not
-/// needed anymore.
-///
-/// Technically, we store 2 pointers on the heap: the pointer to the future
-/// itself, and a pointer to that pointer. The reason for this is that the waker
-/// API requires us to pass one thin pointer, while a a pointer to a `dyn Trait`
-/// can only be fat. So we create one additional thin pointer, pointing to the
-/// fat pointer and pass it instead.
+/// canister by the IC, other than async functions marked `#[update]` or similar.
 #[cfg_attr(not(target_arch = "wasm32"), allow(unused_variables, unreachable_code))]
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     #[cfg(not(target_arch = "wasm32"))]
