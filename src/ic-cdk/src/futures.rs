@@ -72,7 +72,7 @@ mod waker {
     // Our waker will be called if one of the response callbacks is triggered.
     // Then, the waker will restore the future from the pointer we passed into the
     // waker inside the `spawn` function and poll the future again. Rc takes care of
-    // the heap management for us. If TRAP_MESSAGE is set, then we're recovering from
+    // the heap management for us. If CLEANUP is set, then we're recovering from
     // a callback trap, and want to drop the future without executing any more of it;
     // if previous_trap is set, then we already recovered from a callback trap in a
     // different callback, and should immediately trap again in this one.
@@ -83,6 +83,7 @@ mod waker {
     unsafe fn wake(ptr: *const ()) {
         // SAFETY: The function's contract guarantees that the pointer is an Rc to a WakerState, and that this call takes ownership of the data.
         let state = unsafe { Rc::from_raw(ptr as *const WakerState) };
+        // Must check CLEANUP *before* previous_trap, as we may be recovering from the following immediate trap.
         if super::CLEANUP.load(Ordering::Relaxed) {
             state.previous_trap.set(true);
         } else if state.previous_trap.get() {
