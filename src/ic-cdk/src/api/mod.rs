@@ -24,7 +24,7 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-/// Get current timestamp
+/// Get current timestamp, in nanoseconds since the epoch (1970-01-01)
 pub fn time() -> u64 {
     // SAFETY: ic0.time is always safe to call.
     unsafe { ic0::time() as u64 }
