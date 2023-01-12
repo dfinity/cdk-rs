@@ -187,30 +187,12 @@ impl AccountIdentifier {
     }
 
     pub fn to_hex(&self) -> String {
-        hex::encode(self.to_vec())
-    }
-
-    /// Converts this account identifier into a binary "address".
-    /// The address is CRC32(identifier) . identifier.
-    pub fn to_address(&self) -> [u8; 32] {
-        let mut result = [0u8; 32];
-        result[0..4].copy_from_slice(&self.generate_checksum());
-        result[4..32].copy_from_slice(&self.hash);
-        result
-    }
-
-    /// Tries to parse an account identifier from a binary address.
-    pub fn from_address(blob: [u8; 32]) -> Result<Self, ChecksumError> {
-        check_sum(blob)
-    }
-
-    pub fn to_vec(&self) -> Vec<u8> {
-        [&self.generate_checksum()[..], &self.hash[..]].concat()
+        hex::encode(self.0)
     }
 
     pub fn generate_checksum(&self) -> [u8; 4] {
         let mut hasher = crc32fast::Hasher::new();
-        hasher.update(&self.hash);
+        hasher.update(&self.0[4..]);
         hasher.finalize().to_be_bytes()
     }
 }
@@ -219,16 +201,13 @@ fn check_sum(hex: [u8; 32]) -> Result<AccountIdentifier, ChecksumError> {
     // Get the checksum provided
     let found_checksum = &hex[0..4];
 
-    // Copy the hash into a new array
-    let mut hash = [0; 28];
-    hash.copy_from_slice(&hex[4..32]);
-
-    let account_id = AccountIdentifier(hash);
-    let expected_checksum = account_id.generate_checksum();
+    let mut hasher = crc32fast::Hasher::new();
+    hasher.update(&hex[4..]);
+    let expected_checksum = hasher.finalize().to_be_bytes();
 
     // Check the generated checksum matches
     if expected_checksum == found_checksum {
-        Ok(account_id)
+        Ok(AccountIdentifier(hex))
     } else {
         Err(ChecksumError {
             input: hex,
