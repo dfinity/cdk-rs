@@ -123,6 +123,16 @@ impl fmt::Display for Tokens {
 )]
 pub struct Subaccount(pub [u8; 32]);
 
+impl From<Principal> for Subaccount {
+    fn from(principal: Principal) -> Self {
+        let mut subaccount = [0; 32];
+        let principal = principal.as_slice();
+        subaccount[0] = principal.len().try_into().unwrap();
+        subaccount[1..1 + principal.len()].copy_from_slice(principal);
+        Subaccount(subaccount)
+    }
+}
+
 /// AccountIdentifier is a 32-byte array.
 /// The first 4 bytes is big-endian encoding of a CRC32 checksum of the last 28 bytes.
 #[derive(
