@@ -229,6 +229,27 @@ fn test_timers() {
     );
 }
 
+#[test]
+fn test_timers_can_cancel_themselves() {
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("timers");
+    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+
+    call_candid::<_, ()>(&env, canister_id, "set_self_cancelling_timer", ())
+        .expect("Failed to call set_self_cancelling_timer");
+    call_candid::<_, ()>(&env, canister_id, "set_self_cancelling_periodic_timer", ())
+        .expect("Failed to call set_self_cancelling_periodic_timer");
+
+    advance_seconds(&env, 1);
+
+    let (events,): (Vec<String>,) =
+        query_candid(&env, canister_id, "get_events", ()).expect("Failed to call get_events");
+    assert_eq!(
+        events,
+        ["timer cancelled self", "periodic timer cancelled self"]
+    );
+}
+
 fn advance_seconds(env: &StateMachine, seconds: u32) {
     for _ in 0..seconds {
         env.advance_time(Duration::from_secs(1));
