@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Implemented `From<Principal>` for `Subaccount` (#361)
+
 ## [0.6.9] - 2023-01-18
 
 ### Fixed
