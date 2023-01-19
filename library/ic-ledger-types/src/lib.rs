@@ -566,4 +566,15 @@ mod tests {
             Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()
         );
     }
+
+    #[test]
+    fn principal_to_subaccount() {
+        // The account generated is the account used to top up canister 4bkt6-4aaaa-aaaaf-aaaiq-cai
+        let principal = Principal::from_text("4bkt6-4aaaa-aaaaf-aaaiq-cai").unwrap();
+        let subaccount = Subaccount::from(principal);
+        assert_eq!(
+            AccountIdentifier::new(&MAINNET_CYCLES_MINTING_CANISTER_ID, &subaccount).to_string(),
+            "d8646d1cbe44002026fa3e0d86d51a560b1c31d669bc8b7f66421c1b2feaa59f"
+        )
+    }
 }
