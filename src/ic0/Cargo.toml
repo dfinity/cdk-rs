@@ -1,6 +1,6 @@
 [package]
 name = "ic0"
-version = "0.18.7"
+version = "0.18.9"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Internet Computer System API Binding."
