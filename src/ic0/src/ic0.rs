@@ -43,7 +43,6 @@ extern "C" {
     pub fn call_cycles_add(amount: i64);
     pub fn call_cycles_add128(amount_high: i64, amount_low: i64);
     pub fn call_perform() -> i32;
-    pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn stable_size() -> i32;
     pub fn stable_grow(new_pages: i32) -> i32;
     pub fn stable_write(offset: i32, src: i32, size: i32);
@@ -57,6 +56,7 @@ extern "C" {
     pub fn data_certificate_size() -> i32;
     pub fn data_certificate_copy(dst: i32, offset: i32, size: i32);
     pub fn time() -> i64;
+    pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn performance_counter(counter_type: i32) -> i64;
     pub fn debug_print(src: i32, size: i32);
     pub fn trap(src: i32, size: i32);
@@ -169,9 +169,6 @@ mod non_wasm {
     pub unsafe fn call_perform() -> i32 {
         panic!("call_perform should only be called inside canisters.");
     }
-    pub unsafe fn global_timer_set(timestamp: i64) -> i64 {
-        panic!("global_timer_set should only be called inside canisters.");
-    }
     pub unsafe fn stable_size() -> i32 {
         panic!("stable_size should only be called inside canisters.");
     }
@@ -210,6 +207,9 @@ mod non_wasm {
     }
     pub unsafe fn time() -> i64 {
         panic!("time should only be called inside canisters.");
+    }
+    pub unsafe fn global_timer_set(timestamp: i64) -> i64 {
+        panic!("global_timer_set should only be called inside canisters.");
     }
     pub unsafe fn performance_counter(counter_type: i32) -> i64 {
         panic!("performance_counter should only be called inside canisters.");
