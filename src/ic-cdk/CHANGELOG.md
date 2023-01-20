@@ -6,10 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.10] - 2023-01-20
+
 ### Added
 
-- Implemented `From<Principal>` for `Subaccount` (#361)
-- Added `ic0.canister_version` as a public function.
+- Added `ic0.canister_version` as a public function. (#350)
 
 ## [0.6.9] - 2023-01-18
 
