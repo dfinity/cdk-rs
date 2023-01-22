@@ -227,7 +227,7 @@ extern "C" fn timer_executor() {
             }
             Task::Repeated { ref mut func, .. } => {
                 func();
-                TASKS.with(|tasks| *tasks.borrow_mut().get_mut(task_id).unwrap() = task);
+                TASKS.with(|tasks| tasks.borrow_mut().get_mut(task_id).map(|slot| *slot = task));
             }
         }
     }

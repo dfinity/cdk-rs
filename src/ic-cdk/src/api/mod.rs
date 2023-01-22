@@ -127,3 +127,9 @@ pub fn performance_counter(counter_type: u32) -> u64 {
     // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }
+
+/// Get the value of canister version.
+pub fn canister_version() -> u64 {
+    // SAFETY: ic0.canister_version is always safe to call.
+    unsafe { ic0::canister_version() as u64 }
+}

@@ -41,6 +41,15 @@ fn schedule_long() {
 }
 
 #[update]
+fn set_self_cancelling_timer() {
+    let id = set_timer(Duration::from_secs(0), || {
+        cancel_long();
+        add_event("timer cancelled self");
+    });
+    LONG.with(|long| long.set(id));
+}
+
+#[update]
 fn cancel_long() {
     LONG.with(|long| clear_timer(long.get()));
 }
@@ -48,6 +57,15 @@ fn cancel_long() {
 #[update]
 fn start_repeating() {
     let id = set_timer_interval(Duration::from_secs(1), || add_event("repeat"));
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
+fn set_self_cancelling_periodic_timer() {
+    let id = set_timer_interval(Duration::from_secs(0), || {
+        stop_repeating();
+        add_event("periodic timer cancelled self")
+    });
     REPEATING.with(|repeating| repeating.set(id));
 }
 
