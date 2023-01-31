@@ -5,6 +5,8 @@ use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Dura
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
+use crate::api::call::RejectionCode;
+
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
 // which is more accurately a task ID. (The obvious solution to this, `pub use`, invokes a very silly compiler error.)
@@ -82,13 +84,14 @@ extern "C" fn global_timer() {
                             // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
                             // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
                             // become available, this code should be rewritten.
+                            let task_id = timer.task;
                             call_futures.push(async move {
                                 (
-                                    timer.task,
+                                    timer,
                                     crate::call(
                                         crate::api::id(),
                                         "<ic-cdk internal> timer_executor",
-                                        (timer.task.0.as_ffi(),),
+                                        (task_id.0.as_ffi(),),
                                     )
                                     .await,
                                 )
@@ -101,11 +104,27 @@ extern "C" fn global_timer() {
             }
         });
         // run all the collected tasks, and clean up after them if necessary
-        while let Some((task_id, res)) = call_futures.next().await {
+        while let Some((timer, res)) = call_futures.next().await {
+            let task_id = timer.task;
             match res {
                 Ok(()) => {}
                 Err((code, msg)) => {
                     crate::println!("in canister_global_timer: {code:?}: {msg}");
+                    match code {
+                        RejectionCode::SysTransient => {
+                            // Try to execute the timer again later.
+                            TIMERS.with(|timers| {
+                                timers.borrow_mut().push(timer);
+                            });
+                            continue;
+                        }
+                        RejectionCode::NoError
+                        | RejectionCode::SysFatal
+                        | RejectionCode::DestinationInvalid
+                        | RejectionCode::CanisterReject
+                        | RejectionCode::CanisterError
+                        | RejectionCode::Unknown => {}
+                    }
                 }
             }
             TASKS.with(|tasks| {
