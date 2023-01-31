@@ -221,6 +221,7 @@ fn update_ic0_timer() {
     TIMERS.with(|timers| {
         let timers = timers.borrow();
         let soonest_timer = timers.peek().map_or(0, |timer| timer.time);
+        // SAFETY: ic0::global_timer_set is always a safe call
         unsafe { ic0::global_timer_set(soonest_timer as i64) };
     });
 }

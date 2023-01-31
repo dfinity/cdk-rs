@@ -330,7 +330,7 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// When the guard function returns an error, the post_upgrade function will not proceed.
 ///
 /// ```rust
-/// # use ic_cdk::post_upgrade
+/// # use ic_cdk::post_upgrade;
 /// fn guard_function() -> Result<(), String> {
 ///     // ...
 /// # unimplemented!()

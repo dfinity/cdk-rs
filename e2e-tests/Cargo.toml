@@ -36,5 +36,5 @@ name = "timers"
 path = "canisters/timers.rs"
 
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "dcbf401f27d9b48354e68389c6d8293c4233b055" }
+ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "467663a9d0dc6eac152bcd92df18850e2aed1632" }
 candid = "0.8"
