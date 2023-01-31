@@ -31,13 +31,13 @@ impl StableMemory for TestStableMemory {
     }
 
     fn stable_grow(&self, new_pages: u32) -> Result<u32, StableMemoryError> {
-        let new_bytes = new_pages as usize * WASM_PAGE_SIZE_IN_BYTES as usize;
+        let new_bytes = new_pages as usize * WASM_PAGE_SIZE_IN_BYTES;
 
         let mut vec = self.memory.lock().unwrap();
         let previous_len = vec.len();
         let new_len = vec.len() + new_bytes;
         vec.resize(new_len, 0);
-        Ok((previous_len / WASM_PAGE_SIZE_IN_BYTES as usize) as u32)
+        Ok((previous_len / WASM_PAGE_SIZE_IN_BYTES) as u32)
     }
 
     fn stable64_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
@@ -73,7 +73,7 @@ impl StableMemory for TestStableMemory {
 }
 
 fn pages_required(bytes_len: usize) -> usize {
-    let page_size = WASM_PAGE_SIZE_IN_BYTES as usize;
+    let page_size = WASM_PAGE_SIZE_IN_BYTES;
     (bytes_len + page_size - 1) / page_size
 }
 
