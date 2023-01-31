@@ -167,7 +167,9 @@ fn test_notify_calls() {
     assert_eq!(n, 1);
 }
 
+// Composite queries are not enabled yet.
 #[test]
+#[ignore]
 fn test_composite_query() {
     let env = StateMachine::new();
     let wasm = cargo_build_canister("async");
