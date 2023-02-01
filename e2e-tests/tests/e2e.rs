@@ -252,6 +252,31 @@ fn test_timers_can_cancel_themselves() {
     );
 }
 
+#[test]
+fn test_scheduling_many_timers() {
+    // Must be more than the queue limit (500)
+    let timers_to_schedule = 1_000;
+    let env = StateMachine::new();
+    let wasm = cargo_build_canister("timers");
+    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+
+    let () = call_candid(
+        &env,
+        canister_id,
+        "schedule_n_timers",
+        (timers_to_schedule,),
+    )
+    .expect("Error calling schedule_n_timers");
+
+    // Up to 500 timers will be executed per round
+    advance_seconds(&env, timers_to_schedule / 500);
+
+    let (executed_timers,): (u32,) = query_candid(&env, canister_id, "executed_timers", ())
+        .expect("Error querying executed_timers");
+
+    assert_eq!(timers_to_schedule, executed_timers);
+}
+
 fn advance_seconds(env: &StateMachine, seconds: u32) {
     for _ in 0..seconds {
         env.advance_time(Duration::from_secs(1));

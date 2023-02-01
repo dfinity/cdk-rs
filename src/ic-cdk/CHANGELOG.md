@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Retry timers execution after a transient system error.
+
 ## [0.6.10] - 2023-01-20
 
 ### Added
