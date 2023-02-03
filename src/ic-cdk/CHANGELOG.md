@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.0] - 2023-02-03
+
 ### Changed
 
 - The timers API is not a feature anymore, it moved into a separate library, `ic-cdk-timers`. (#368)
