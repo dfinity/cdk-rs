@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 //! Canister HTTP request.
 
 use crate::api::call::{call_with_payment128, CallResult};
@@ -5,7 +7,7 @@ use candid::{CandidType, Principal};
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
 
-/// "transform" function of type: `func (http_response) -> (http_response) query`
+// "transform" function of type: `func (http_response) -> (http_response) query`
 candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpResponse) query);
 
 /// Type used for encoding/decoding:
