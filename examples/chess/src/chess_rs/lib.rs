@@ -1,4 +1,5 @@
-use ic_cdk::{export::candid::CandidType, query, update};
+use candid::CandidType;
+use ic_cdk::{query, update};
 use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::BTreeMap;

@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
 
 mod export;
-mod import;
+//mod import;
 
 // To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -426,6 +426,7 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
 }
 
+/*
 /// Import another canister as a rust struct.
 ///
 /// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
@@ -455,3 +456,4 @@ pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }
+*/

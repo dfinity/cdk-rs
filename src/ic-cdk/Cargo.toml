@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.7.0"
+version = "0.8.0-beta.0"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit for the Internet Computer."
@@ -15,9 +15,9 @@ repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.60.0"
 
 [dependencies]
-candid = "0.8"
+candid = "0.9.0-beta.2"
 ic0 = { path = "../ic0", version = "0.18.9" }
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.0-beta.0" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
 

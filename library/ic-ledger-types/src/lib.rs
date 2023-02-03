@@ -379,11 +379,7 @@ impl From<QueryArchiveFn> for Func {
 
 impl CandidType for QueryArchiveFn {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Func(candid::types::Function {
-            modes: vec![candid::parser::types::FuncMode::Query],
-            args: vec![GetBlocksArgs::_ty()],
-            rets: vec![GetBlocksResult::_ty()],
-        })
+        candid::func!((GetBlocksArgs) -> (GetBlocksResult) query)
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
