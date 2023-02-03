@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.0-beta.0] - 2023-02-03
+
+### Changed
+
+- Upgrade `candid` to `v0.9.0-beta.2`. (#367)
+
 ## [0.7.0] - 2023-02-03
 
 ### Changed

@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-timers"
-version = "0.1.1-beta.0"
+version = "0.2.0-beta.0"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Timers library for the Rust CDK."
