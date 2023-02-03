@@ -1,4 +1,13 @@
-//! Provides simple timer functionality for executing a function in the future.
+//! A library for Internet Computer canisters to schedule one-shot or repeating timers, to execute a function at some point in the future.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # use std::time::Duration;
+//! # fn main() {
+//! ic_cdk_timers::set_timer(Duration::from_secs(1), || ic_cdk::println!("Hello from the future!"));
+//! # }
+//! ```
 
 use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Duration};
 
