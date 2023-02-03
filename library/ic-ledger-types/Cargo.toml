@@ -17,7 +17,7 @@ rust-version = "1.60.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ic-cdk = { path = "../../src/ic-cdk", version = "0.6" }
+ic-cdk = { path = "../../src/ic-cdk", version = "0.7" }
 candid = "0.8.0"
 crc32fast = "1.2.0"
 hex = "0.4"

@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.0] - 2023-02-03
+
 ### Added
 
 - Initial release of the `ic-cdk-timers` library.
