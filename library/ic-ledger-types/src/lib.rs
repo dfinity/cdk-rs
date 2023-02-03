@@ -1,4 +1,4 @@
-use candid::{types::reference::Func, CandidType, Principal};
+use candid::{CandidType, Principal};
 use ic_cdk::api::call::CallResult;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -361,38 +361,7 @@ impl fmt::Display for GetBlocksError {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(transparent)]
-pub struct QueryArchiveFn(Func);
-
-impl From<Func> for QueryArchiveFn {
-    fn from(func: Func) -> Self {
-        Self(func)
-    }
-}
-
-impl From<QueryArchiveFn> for Func {
-    fn from(query_func: QueryArchiveFn) -> Self {
-        query_func.0
-    }
-}
-
-impl CandidType for QueryArchiveFn {
-    fn _ty() -> candid::types::Type {
-        candid::types::Type::Func(candid::types::Function {
-            modes: vec![candid::parser::types::FuncMode::Query],
-            args: vec![GetBlocksArgs::_ty()],
-            rets: vec![GetBlocksResult::_ty()],
-        })
-    }
-
-    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
-    where
-        S: candid::types::Serializer,
-    {
-        Func::from(self.clone()).idl_serialize(serializer)
-    }
-}
+candid::define_function!(pub QueryArchiveFn : (GetBlocksArgs) -> (GetBlocksResult) query);
 
 /// Calls the "account_balance" method on the specified canister.
 ///

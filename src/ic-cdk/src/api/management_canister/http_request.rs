@@ -1,31 +1,12 @@
 //! Canister HTTP request.
 
 use crate::api::call::{call_with_payment128, CallResult};
-use candid::{
-    parser::types::FuncMode,
-    types::{Function, Serializer, Type},
-    CandidType, Principal,
-};
+use candid::{CandidType, Principal};
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
 
 /// "transform" function of type: `func (http_response) -> (http_response) query`
-#[derive(Deserialize, Debug, PartialEq, Clone)]
-pub struct TransformFunc(pub candid::Func);
-
-impl CandidType for TransformFunc {
-    fn _ty() -> Type {
-        Type::Func(Function {
-            modes: vec![FuncMode::Query],
-            args: vec![TransformArgs::ty()],
-            rets: vec![HttpResponse::ty()],
-        })
-    }
-
-    fn idl_serialize<S: Serializer>(&self, serializer: S) -> Result<(), S::Error> {
-        serializer.serialize_function(self.0.principal.as_slice(), &self.0.method)
-    }
-}
+candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpResponse) query);
 
 /// Type used for encoding/decoding:
 /// `record {
