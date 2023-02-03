@@ -10,8 +10,9 @@ repository = "https://github.com/dfinity/cdk-rs"
 [dependencies]
 cargo_metadata = "0.14.2"
 escargot = { version = "0.5.7", features = ["print"] }
-ic-cdk = { path = "../src/ic-cdk", features = ["timers"] }
+ic-cdk = { path = "../src/ic-cdk" }
 ic-cdk-macros = { path = "../src/ic-cdk-macros" }
+ic-cdk-timers = { path = "../src/ic-cdk-timers" }
 lazy_static = "1.4.0"
 serde_bytes = "0.11"
 
