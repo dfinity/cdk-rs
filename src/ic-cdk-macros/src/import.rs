@@ -21,7 +21,7 @@ fn get_env_id_and_candid(canister_name: &str) -> Result<(String, PathBuf), Error
         std::env::var(canister_id_var_name).map_err(|_| {
             Error::new(
                 Span::call_site(),
-                &format!(
+                format!(
                     "Could not find DFX bindings for canister named '{}'. Did you build using DFX?",
                     canister_name
                 ),
@@ -199,7 +199,7 @@ pub(crate) fn ic_import(attr: TokenStream, item: TokenStream) -> Result<TokenStr
     };
     let struct_name = item.ident.to_string();
 
-    let candid_str = std::fs::read_to_string(&candid_path).unwrap();
+    let candid_str = std::fs::read_to_string(candid_path).unwrap();
     let prog = candid::IDLProg::from_str(&candid_str).map_err(|e| {
         Error::new(
             Span::call_site(),

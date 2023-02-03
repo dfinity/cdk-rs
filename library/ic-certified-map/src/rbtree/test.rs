@@ -36,7 +36,7 @@ fn get_leaf_values<'a>(ht: &'a HashTree<'a>) -> Vec<&'a [u8]> {
                 go(&lr.1, values);
             }
             HashTree::Labeled(_, t) => {
-                go(&*t, values);
+                go(t, values);
             }
             _ => (),
         }
