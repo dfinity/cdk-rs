@@ -1,10 +1,8 @@
-use ic_cdk::{
-    query,
-    timer::{clear_timer, set_timer, set_timer_interval, TimerId},
-    update,
-};
+use ic_cdk::{query, update};
+use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
 use std::{
     cell::{Cell, RefCell},
+    sync::atomic::{AtomicU32, Ordering},
     time::Duration,
 };
 
@@ -13,6 +11,8 @@ thread_local! {
     static LONG: Cell<TimerId> = Cell::default();
     static REPEATING: Cell<TimerId> = Cell::default();
 }
+
+static EXECUTED_TIMERS: AtomicU32 = AtomicU32::new(0);
 
 #[query]
 fn get_events() -> Vec<&'static str> {
@@ -32,6 +32,20 @@ fn schedule() {
         set_timer(Duration::from_secs(2), || add_event("3"));
     });
     set_timer(Duration::from_secs(4), || add_event("4"));
+}
+
+#[update]
+fn schedule_n_timers(n: u32) {
+    for i in 0..n {
+        ic_cdk_timers::set_timer(Duration::from_nanos(i.into()), move || {
+            EXECUTED_TIMERS.fetch_add(1, Ordering::Relaxed);
+        });
+    }
+}
+
+#[query]
+fn executed_timers() -> u32 {
+    EXECUTED_TIMERS.load(Ordering::Relaxed)
 }
 
 #[update]

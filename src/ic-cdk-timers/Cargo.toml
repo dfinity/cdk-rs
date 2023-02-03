@@ -1,28 +1,26 @@
 [package]
-name = "ic-cdk"
-version = "0.8.0-beta.0"
+name = "ic-cdk-timers"
+version = "0.1.0"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
-description = "Canister Developer Kit for the Internet Computer."
+description = "Timers library for the Rust CDK."
 homepage = "https://docs.rs/ic-cdk"
-documentation = "https://docs.rs/ic-cdk"
+documentation = "https://docs.rs/ic-cdk-timers"
 license = "Apache-2.0"
 readme = "README.md"
 categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
-keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.60.0"
 
 [dependencies]
-candid = "0.9.0-beta.2"
-ic0 = { path = "../ic0", version = "0.18.9" }
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
+ic-cdk = { path = "../../src/ic-cdk", version = "0.7" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
-
-[dev-dependencies]
-rstest = "0.12.0"
+ic0 = { path = "../ic0", version = "0.18.9" }
+slotmap = { version = "1.0.6" }
+futures = { version = "0.3.25" }
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-macros"
-version = "0.7.0-beta.0" # no need to sync with ic-cdk
+version = "0.8.0-beta.0" # no need to sync with ic-cdk
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit macros."
@@ -27,4 +27,4 @@ serde = "1.0.111"
 
 [dev-dependencies]
 trybuild = "1.0"
-ic-cdk = { path = "../ic-cdk", version = "0.7.0-beta.0" }
+ic-cdk = { path = "../ic-cdk", version = "0.8.0-beta.0" }
