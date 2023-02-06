@@ -273,6 +273,20 @@ pub enum Operation {
         amount: Tokens,
         fee: Tokens,
     },
+    Approve {
+        from: AccountIdentifier,
+        spender: AccountIdentifier,
+        // TODO: add the allowance_e8s field after the official ICRC-2 release.
+        expires_at: Option<Timestamp>,
+        fee: Tokens,
+    },
+    TransferFrom {
+        from: AccountIdentifier,
+        to: AccountIdentifier,
+        spender: AccountIdentifier,
+        amount: Tokens,
+        fee: Tokens,
+    },
 }
 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
