@@ -1,11 +1,20 @@
-//! Provides simple timer functionality for executing a function in the future.
+//! A library for Internet Computer canisters to schedule one-shot or repeating timers, to execute a function at some point in the future.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # use std::time::Duration;
+//! # fn main() {
+//! ic_cdk_timers::set_timer(Duration::from_secs(1), || ic_cdk::println!("Hello from the future!"));
+//! # }
+//! ```
 
 use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Duration};
 
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use crate::api::call::RejectionCode;
+use ic_cdk::api::call::RejectionCode;
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -65,13 +74,13 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
-    crate::setup();
-    crate::spawn(async {
+    ic_cdk::setup();
+    ic_cdk::spawn(async {
         // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
         // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
         // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
         let mut call_futures = FuturesUnordered::new();
-        let now = crate::api::time();
+        let now = ic_cdk::api::time();
         TIMERS.with(|timers| {
             // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
             loop {
@@ -88,8 +97,8 @@ extern "C" fn global_timer() {
                             call_futures.push(async move {
                                 (
                                     timer,
-                                    crate::call(
-                                        crate::api::id(),
+                                    ic_cdk::call(
+                                        ic_cdk::api::id(),
                                         "<ic-cdk internal> timer_executor",
                                         (task_id.0.as_ffi(),),
                                     )
@@ -109,7 +118,7 @@ extern "C" fn global_timer() {
             match res {
                 Ok(()) => {}
                 Err((code, msg)) => {
-                    crate::println!("in canister_global_timer: {code:?}: {msg}");
+                    ic_cdk::println!("in canister_global_timer: {code:?}: {msg}");
                     match code {
                         RejectionCode::SysTransient => {
                             // Try to execute the timer again later.
@@ -146,7 +155,7 @@ extern "C" fn global_timer() {
                                         time,
                                     })
                                 }),
-                                None => crate::println!(
+                                None => ic_cdk::println!(
                                     "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
                                     interval = interval.as_nanos(),
                                 ),
@@ -169,7 +178,7 @@ pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
     let delay_ns = u64::try_from(delay.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let scheduled_time = crate::api::time().checked_add(delay_ns).expect(
+    let scheduled_time = ic_cdk::api::time().checked_add(delay_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
     let key = TASKS.with(|tasks| tasks.borrow_mut().insert(Task::Once(Box::new(func))));
@@ -192,7 +201,7 @@ pub fn set_timer_interval(interval: Duration, func: impl FnMut() + 'static) -> T
     let interval_ns = u64::try_from(interval.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let scheduled_time = crate::api::time().checked_add(interval_ns).expect(
+    let scheduled_time = ic_cdk::api::time().checked_add(interval_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
     let key = TASKS.with(|tasks| {
@@ -228,10 +237,10 @@ fn update_ic0_timer() {
 
 #[export_name = "canister_update <ic-cdk internal> timer_executor"]
 extern "C" fn timer_executor() {
-    if crate::api::caller() != crate::api::id() {
-        crate::trap("This function is internal to ic-cdk and should not be called externally.");
+    if ic_cdk::api::caller() != ic_cdk::api::id() {
+        ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
     }
-    let (task_id,) = crate::api::call::arg_data();
+    let (task_id,) = ic_cdk::api::call::arg_data();
     let task_id = TimerId(KeyData::from_ffi(task_id));
     // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
     // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
@@ -251,5 +260,5 @@ extern "C" fn timer_executor() {
             }
         }
     }
-    crate::api::call::reply(());
+    ic_cdk::api::call::reply(());
 }

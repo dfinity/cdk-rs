@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-### Fixed
+## [0.7.0] - 2023-02-03
 
-- Retry timers execution after a transient system error.
+### Changed
+
+- The timers API is not a feature anymore, it moved into a separate library, `ic-cdk-timers`. (#368)
 
 ## [0.6.10] - 2023-01-20
 
