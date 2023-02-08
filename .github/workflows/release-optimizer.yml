@@ -18,8 +18,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: 0.3.4
-          release_name: 0.3.4
+          tag_name: 0.3.6
+          release_name: 0.3.6
 
   build-release:
     name: build-release
@@ -33,6 +33,9 @@ jobs:
             target: x86_64-apple-darwin
             tar: gtar
           - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            tar: tar
+          - os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             tar: tar
           - os: windows-latest
@@ -60,7 +63,7 @@ jobs:
       - name: Create archives
         shell: bash
         run: |
-          staging="ic-cdk-optimizer-0.3.4-${{ matrix.target }}"
+          staging="ic-cdk-optimizer-0.3.6-${{ matrix.os }}"
           mkdir -p "$staging"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
