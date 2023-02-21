@@ -9,7 +9,13 @@
 //! # }
 //! ```
 
-use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    cmp::Ordering,
+    collections::BinaryHeap,
+    mem,
+    time::Duration,
+};
 
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
@@ -23,6 +29,7 @@ use ic_cdk::api::call::RejectionCode;
 thread_local! {
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
+    static MOST_RECENT: Cell<u64> = Cell::new(u64::MAX);
 }
 
 enum Task {
@@ -165,7 +172,7 @@ extern "C" fn global_timer() {
                 }
             });
         }
-        update_ic0_timer();
+        update_ic0_timer(false);
     });
 }
 
@@ -188,7 +195,7 @@ pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
             time: scheduled_time,
         });
     });
-    update_ic0_timer();
+    update_ic0_timer(true);
     key
 }
 
@@ -216,7 +223,7 @@ pub fn set_timer_interval(interval: Duration, func: impl FnMut() + 'static) -> T
             time: scheduled_time,
         })
     });
-    update_ic0_timer();
+    update_ic0_timer(true);
     key
 }
 
@@ -226,12 +233,15 @@ pub fn clear_timer(id: TimerId) {
 }
 
 /// Calls `ic0.global_timer_set` with the soonest timer in [`TIMERS`]. This is needed after inserting a timer, and after executing one.
-fn update_ic0_timer() {
+fn update_ic0_timer(skip_later: bool) {
     TIMERS.with(|timers| {
         let timers = timers.borrow();
         let soonest_timer = timers.peek().map_or(0, |timer| timer.time);
-        // SAFETY: ic0::global_timer_set is always a safe call
-        unsafe { ic0::global_timer_set(soonest_timer as i64) };
+        if !(skip_later && soonest_timer >= MOST_RECENT.with(|recent| recent.get())) {
+            // SAFETY: ic0::global_timer_set is always a safe call
+            unsafe { ic0::global_timer_set(soonest_timer as i64) };
+            MOST_RECENT.with(|recent| recent.set(soonest_timer));
+        }
     });
 }
 
