@@ -22,9 +22,6 @@ pub mod api;
 mod futures;
 mod printer;
 pub mod storage;
-#[cfg(any(doc, feature = "timers"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "timers")))]
-pub mod timer;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 

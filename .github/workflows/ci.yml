@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  rust-version: 1.65.0
+  rust-version: 1.66.1
 
 jobs:
   build:

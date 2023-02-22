@@ -24,7 +24,7 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-/// Get current timestamp
+/// Get current timestamp, in nanoseconds since the epoch (1970-01-01)
 pub fn time() -> u64 {
     // SAFETY: ic0.time is always safe to call.
     unsafe { ic0::time() as u64 }
@@ -126,4 +126,10 @@ pub fn instruction_counter() -> u64 {
 pub fn performance_counter(counter_type: u32) -> u64 {
     // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
+}
+
+/// Get the value of canister version.
+pub fn canister_version() -> u64 {
+    // SAFETY: ic0.canister_version is always safe to call.
+    unsafe { ic0::canister_version() as u64 }
 }

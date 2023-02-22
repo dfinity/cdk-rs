@@ -123,6 +123,16 @@ impl fmt::Display for Tokens {
 )]
 pub struct Subaccount(pub [u8; 32]);
 
+impl From<Principal> for Subaccount {
+    fn from(principal: Principal) -> Self {
+        let mut subaccount = [0; 32];
+        let principal = principal.as_slice();
+        subaccount[0] = principal.len().try_into().unwrap();
+        subaccount[1..1 + principal.len()].copy_from_slice(principal);
+        Subaccount(subaccount)
+    }
+}
+
 /// AccountIdentifier is a 32-byte array.
 /// The first 4 bytes is big-endian encoding of a CRC32 checksum of the last 28 bytes.
 #[derive(
@@ -260,6 +270,20 @@ pub enum Operation {
     Transfer {
         from: AccountIdentifier,
         to: AccountIdentifier,
+        amount: Tokens,
+        fee: Tokens,
+    },
+    Approve {
+        from: AccountIdentifier,
+        spender: AccountIdentifier,
+        // TODO: add the allowance_e8s field after the official ICRC-2 release.
+        expires_at: Option<Timestamp>,
+        fee: Tokens,
+    },
+    TransferFrom {
+        from: AccountIdentifier,
+        to: AccountIdentifier,
+        spender: AccountIdentifier,
         amount: Tokens,
         fee: Tokens,
     },
@@ -555,5 +579,16 @@ mod tests {
             MAINNET_CYCLES_MINTING_CANISTER_ID,
             Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()
         );
+    }
+
+    #[test]
+    fn principal_to_subaccount() {
+        // The account generated is the account used to top up canister 4bkt6-4aaaa-aaaaf-aaaiq-cai
+        let principal = Principal::from_text("4bkt6-4aaaa-aaaaf-aaaiq-cai").unwrap();
+        let subaccount = Subaccount::from(principal);
+        assert_eq!(
+            AccountIdentifier::new(&MAINNET_CYCLES_MINTING_CANISTER_ID, &subaccount).to_string(),
+            "d8646d1cbe44002026fa3e0d86d51a560b1c31d669bc8b7f66421c1b2feaa59f"
+        )
     }
 }

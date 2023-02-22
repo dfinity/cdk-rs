@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.1] - 2023-02-22
+
+### Fixed
+
+- Update document for http_request. (#372)
+
+## [0.7.0] - 2023-02-03
+
+### Changed
+
+- The timers API is not a feature anymore, it moved into a separate library, `ic-cdk-timers`. (#368)
+
+## [0.6.10] - 2023-01-20
+
+### Added
+
+- Added `ic0.canister_version` as a public function. (#350)
+
+## [0.6.9] - 2023-01-18
+
+### Fixed
+
+- Allow timers to cancel themselves. (#360)
+
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)

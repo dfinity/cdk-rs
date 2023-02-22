@@ -23,11 +23,15 @@ fn invocation_count() -> u64 {
 #[update]
 #[allow(clippy::await_holding_lock)]
 async fn panic_after_async() {
-    let mut lock = RESOURCE
-        .write()
-        .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
-    *lock += 1;
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "inc", (*lock,))
+    let value = {
+        let mut lock = RESOURCE
+            .write()
+            .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
+        *lock += 1;
+        *lock
+        // Drop the lock before the await point.
+    };
+    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "inc", (value,))
         .await
         .expect("failed to call self");
     ic_cdk::api::trap("Goodbye, cruel world.")

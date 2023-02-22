@@ -1,10 +1,8 @@
-use ic_cdk::{
-    query,
-    timer::{clear_timer, set_timer, set_timer_interval, TimerId},
-    update,
-};
+use ic_cdk::{query, update};
+use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
 use std::{
     cell::{Cell, RefCell},
+    sync::atomic::{AtomicU32, Ordering},
     time::Duration,
 };
 
@@ -13,6 +11,8 @@ thread_local! {
     static LONG: Cell<TimerId> = Cell::default();
     static REPEATING: Cell<TimerId> = Cell::default();
 }
+
+static EXECUTED_TIMERS: AtomicU32 = AtomicU32::new(0);
 
 #[query]
 fn get_events() -> Vec<&'static str> {
@@ -35,8 +35,31 @@ fn schedule() {
 }
 
 #[update]
+fn schedule_n_timers(n: u32) {
+    for i in 0..n {
+        ic_cdk_timers::set_timer(Duration::from_nanos(i.into()), move || {
+            EXECUTED_TIMERS.fetch_add(1, Ordering::Relaxed);
+        });
+    }
+}
+
+#[query]
+fn executed_timers() -> u32 {
+    EXECUTED_TIMERS.load(Ordering::Relaxed)
+}
+
+#[update]
 fn schedule_long() {
     let id = set_timer(Duration::from_secs(9), || add_event("long"));
+    LONG.with(|long| long.set(id));
+}
+
+#[update]
+fn set_self_cancelling_timer() {
+    let id = set_timer(Duration::from_secs(0), || {
+        cancel_long();
+        add_event("timer cancelled self");
+    });
     LONG.with(|long| long.set(id));
 }
 
@@ -48,6 +71,15 @@ fn cancel_long() {
 #[update]
 fn start_repeating() {
     let id = set_timer_interval(Duration::from_secs(1), || add_event("repeat"));
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
+fn set_self_cancelling_periodic_timer() {
+    let id = set_timer_interval(Duration::from_secs(0), || {
+        stop_repeating();
+        add_event("periodic timer cancelled self")
+    });
     REPEATING.with(|repeating| repeating.set(id));
 }
 
