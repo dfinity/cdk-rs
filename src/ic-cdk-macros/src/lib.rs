@@ -198,7 +198,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// [`call::reply`]: ic_cdk::api::call::reply
+/// [`call::reply`]: https://docs.rs/ic-cdk/latest/ic_cdk/api/call/fn.reply.html
 #[proc_macro_attribute]
 pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_update, "ic_update", attr, item)

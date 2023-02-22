@@ -266,7 +266,7 @@ impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
 }
 
 /// Implements mutable left-leaning red-black trees as defined in
-/// https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf
+/// <https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf>
 #[derive(Default, Clone)]
 pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
