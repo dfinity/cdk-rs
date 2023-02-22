@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.1] - 2023-02-22
+
+### Fixed
+
+- Broken references to `ic_cdk::api::time`.
+
 ## [0.1.0] - 2023-02-03
 
 ### Added

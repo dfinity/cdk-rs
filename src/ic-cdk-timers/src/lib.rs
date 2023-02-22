@@ -169,7 +169,7 @@ extern "C" fn global_timer() {
     });
 }
 
-/// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][crate::api::time] is more than [`u64::MAX`] nanoseconds.
+/// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
 ///
 /// To cancel the timer before it executes, pass the returned `TimerId` to [`clear_timer`].
 ///
@@ -192,7 +192,7 @@ pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
     key
 }
 
-/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`][crate::api::time] is more than [`u64::MAX`] nanoseconds.
+/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
 ///
 /// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
 ///

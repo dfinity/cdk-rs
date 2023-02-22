@@ -10,7 +10,7 @@ use std::borrow::Cow;
 pub type Hash = [u8; 32];
 
 /// HashTree as defined in the interfaces spec.
-/// https://sdk.dfinity.org/docs/interface-spec/index.html#_certificate
+/// <https://internetcomputer.org/docs/current/references/ic-interface-spec#certificate>
 #[derive(Debug)]
 pub enum HashTree<'a> {
     Empty,
