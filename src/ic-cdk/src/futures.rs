@@ -18,7 +18,6 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
         future: RefCell::new(pinned_future),
         previous_trap: Cell::new(false),
     });
-    // SAFETY: waker is passed an Rc-allocated pointer to a WakerState.
     let waker = waker::waker(Rc::clone(&waker_state));
     let _ = waker_state
         .future
@@ -34,6 +33,8 @@ pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
 // heap management for us. Hence, it will be unallocated once we exit the scope and
 // we're not interested in the result, as it can only be a unit `()` if the
 // waker was used as intended.
+// Sizable unsafe code is mandatory here; Future::poll cannot be executed without implementing
+// RawWaker in terms of raw pointers.
 mod waker {
     use super::*;
     use std::{
@@ -92,9 +93,9 @@ mod waker {
             let waker = waker(Rc::clone(&state));
             let Ok(mut borrow) = state.future.try_borrow_mut() else {
                 // If this is already borrowed, then wake was called from inside poll. There's not a lot we can do about this - we are not
-                // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we cancel it.
+                // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we trap.
                 // Don't wake from poll. There's really no reason to do that at all. 
-                return;
+                crate::trap("ic-cdk scheduler: waker triggered from inside poll");
             };
             let pinned_future = borrow.as_mut();
             let _ = pinned_future.poll(&mut Context::from_waker(&waker));
@@ -126,10 +127,11 @@ mod waker {
 
     /// Creates a new Waker.
     pub(crate) fn waker(state: Rc<WakerState>) -> Waker {
+        let ptr = Rc::into_raw(Rc::clone(&state));
         // SAFETY:
         // The pointer is an owning, Rc-allocated pointer to a WakerState, and therefore can be passed to raw_waker
         // The functions in the vtable are passed said ptr
         // The functions in the vtable uphold RawWaker's contract
-        unsafe { Waker::from_raw(raw_waker(Rc::into_raw(Rc::clone(&state)) as *const ())) }
+        unsafe { Waker::from_raw(raw_waker(ptr as *const ())) }
     }
 }
