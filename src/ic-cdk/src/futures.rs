@@ -30,7 +30,7 @@ pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
 
 // This module contains the implementation of a waker we're using for waking
 // top-level futures (the ones returned by canister methods). Rc handles the
-// heap management for us. Hence, it will be unallocated once we exit the scope and
+// heap management for us. Hence, it will be deallocated once we exit the scope and
 // we're not interested in the result, as it can only be a unit `()` if the
 // waker was used as intended.
 // Sizable unsafe code is mandatory here; Future::poll cannot be executed without implementing
@@ -93,9 +93,10 @@ mod waker {
             let waker = waker(Rc::clone(&state));
             let Ok(mut borrow) = state.future.try_borrow_mut() else {
                 // If this is already borrowed, then wake was called from inside poll. There's not a lot we can do about this - we are not
-                // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we trap.
-                // Don't wake from poll. There's really no reason to do that at all. 
-                crate::trap("ic-cdk scheduler: waker triggered from inside poll");
+                // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we ignore it.
+                // This will be disappointing to types like FuturesUnordered that expected this to work, but since the only source of asynchrony
+                // and thus a guaranteed source of wakeup notifications is the ic0.call_new callback, this shouldn't cause any actual problems.
+                return;
             };
             let pinned_future = borrow.as_mut();
             let _ = pinned_future.poll(&mut Context::from_waker(&waker));
@@ -127,7 +128,7 @@ mod waker {
 
     /// Creates a new Waker.
     pub(crate) fn waker(state: Rc<WakerState>) -> Waker {
-        let ptr = Rc::into_raw(Rc::clone(&state));
+        let ptr = Rc::into_raw(state);
         // SAFETY:
         // The pointer is an owning, Rc-allocated pointer to a WakerState, and therefore can be passed to raw_waker
         // The functions in the vtable are passed said ptr
