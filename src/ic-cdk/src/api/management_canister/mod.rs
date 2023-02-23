@@ -1,6 +1,6 @@
 //! Functions and types for calling [the IC management canister][1].
 //!
-//! This module is a direct translation from the [interface decription][2].
+//! This module is a direct translation from the [interface description][2].
 //!
 //! The functions and types defined in this module serves these purposes:
 //! * Make it easy to construct correct request data.
