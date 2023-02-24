@@ -1,88 +1,28 @@
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
-// use ic_cdk::export::candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-// use ic_cdk::export::candid::Encode;
-use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid::Encode;
+use candid::{Encode, Principal};
 use ic_cdk_e2e_tests::cargo_build_canister;
-use ic_state_machine_tests::{CanisterId, ErrorCode, StateMachine, UserError, WasmResult};
+use ic_test_state_machine_client::{
+    call_candid, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
+};
 use serde_bytes::ByteBuf;
 
-#[derive(Debug)]
-enum CallError {
-    Reject(String),
-    UserError(UserError),
-}
-
-/// A helper function that we use to implement both [`call_candid`] and
-/// [`query_candid`].
-fn with_candid<Input, Output>(
-    input: Input,
-    f: impl FnOnce(Vec<u8>) -> Result<WasmResult, UserError>,
-) -> Result<Output, CallError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    let in_bytes = encode_args(input).expect("failed to encode args");
-    match f(in_bytes) {
-        Ok(WasmResult::Reply(out_bytes)) => Ok(decode_args(&out_bytes).unwrap_or_else(|e| {
-            panic!(
-                "Failed to decode bytes {:?} as candid type: {}",
-                std::any::type_name::<Output>(),
-                e
-            )
-        })),
-        Ok(WasmResult::Reject(message)) => Err(CallError::Reject(message)),
-        Err(user_error) => Err(CallError::UserError(user_error)),
-    }
-}
-
-/// Call a canister candid method.
-fn call_candid<Input, Output>(
-    env: &StateMachine,
-    canister_id: CanisterId,
-    method: &str,
-    input: Input,
-) -> Result<Output, CallError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    with_candid(input, |bytes| {
-        env.execute_ingress(canister_id, method, bytes)
-    })
-}
-
-/// Query a canister candid method.
-fn query_candid<Input, Output>(
-    env: &StateMachine,
-    canister_id: CanisterId,
-    method: &str,
-    input: Input,
-) -> Result<Output, CallError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    with_candid(input, |bytes| env.query(canister_id, method, bytes))
-}
+pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
 /// Checks that a canister that uses [`ic_cdk::storage::stable_store`]
 /// and [`ic_cdk::storage::stable_restore`] functions can keep its data
 /// across upgrades.
 #[test]
 fn test_storage_roundtrip() {
-    let env = StateMachine::new();
-    let kv_store_wasm = cargo_build_canister("simple-kv-store");
-    let canister_id = env
-        .install_canister(kv_store_wasm.clone(), vec![], None)
-        .unwrap();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let wasm = cargo_build_canister("simple-kv-store");
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm.clone(), vec![]);
 
     let () = call_candid(&env, canister_id, "insert", (&"candid", &b"did"))
         .expect("failed to insert 'candid'");
 
-    env.upgrade_canister(canister_id, kv_store_wasm, vec![])
+    env.upgrade_canister(canister_id, wasm, vec![])
         .expect("failed to upgrade the simple-kv-store canister");
 
     let (result,): (Option<ByteBuf>,) =
@@ -92,11 +32,10 @@ fn test_storage_roundtrip() {
 
 #[test]
 fn test_panic_after_async_frees_resources() {
-    let env = StateMachine::new();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("async");
-    let canister_id = env
-        .install_canister(wasm, vec![], None)
-        .expect("failed to install a canister");
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
 
     for i in 1..3 {
         match call_candid(&env, canister_id, "panic_after_async", ()) {
@@ -105,13 +44,13 @@ fn test_panic_after_async_frees_resources() {
             Err(CallError::UserError(e)) => {
                 println!("Got a user error as expected: {}", e);
 
-                assert_eq!(e.code(), ErrorCode::CanisterCalledTrap);
+                assert_eq!(e.code, ErrorCode::CanisterCalledTrap);
                 let expected_message = "Goodbye, cruel world.";
                 assert!(
-                    e.description().contains(expected_message),
+                    e.description.contains(expected_message),
                     "Expected the user error to contain '{}', got: {}",
                     expected_message,
-                    e.description()
+                    e.description
                 );
             }
         }
@@ -130,30 +69,40 @@ fn test_panic_after_async_frees_resources() {
 
 #[test]
 fn test_raw_api() {
-    let env = StateMachine::new();
-    let rev = cargo_build_canister("reverse");
-    let canister_id = env.install_canister(rev, vec![], None).unwrap();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let wasm = cargo_build_canister("reverse");
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
 
-    let result = env.query(canister_id, "reverse", vec![1, 2, 3, 4]).unwrap();
+    let result = env
+        .query_call(
+            canister_id,
+            Principal::anonymous(),
+            "reverse",
+            vec![1, 2, 3, 4],
+        )
+        .unwrap();
     assert_eq!(result, WasmResult::Reply(vec![4, 3, 2, 1]));
 
     let result = env
-        .execute_ingress(canister_id, "empty_call", Default::default())
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            "empty_call",
+            Default::default(),
+        )
         .unwrap();
     assert_eq!(result, WasmResult::Reply(Default::default()));
 }
 
 #[test]
 fn test_notify_calls() {
-    let env = StateMachine::new();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("async");
-    let sender_id = env
-        .install_canister(wasm.clone(), vec![], None)
-        .expect("failed to install a canister");
-
-    let receiver_id = env
-        .install_canister(wasm, vec![], None)
-        .expect("failed to install a canister");
+    let sender_id = env.create_canister();
+    env.install_canister(sender_id, wasm.clone(), vec![]);
+    let receiver_id = env.create_canister();
+    env.install_canister(receiver_id, wasm, vec![]);
 
     let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
         .expect("failed to query 'notifications_received'");
@@ -171,14 +120,13 @@ fn test_notify_calls() {
 #[test]
 #[ignore]
 fn test_composite_query() {
-    let env = StateMachine::new();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("async");
-    let sender_id = env
-        .install_canister(wasm.clone(), vec![], None)
-        .expect("failed to install sender");
-    let receiver_id = env
-        .install_canister(wasm, vec![], None)
-        .expect("failed to install sender");
+    let sender_id = env.create_canister();
+    env.install_canister(sender_id, wasm.clone(), vec![]);
+    let receiver_id = env.create_canister();
+    env.install_canister(receiver_id, wasm, vec![]);
+
     let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
         .expect("failed to query 'greet_self'");
     assert_eq!(greeting, "Hello, myself");
@@ -186,27 +134,32 @@ fn test_composite_query() {
 
 #[test]
 fn test_api_call() {
-    let env = StateMachine::new();
-    let rev = cargo_build_canister("api-call");
-    let canister_id = env.install_canister(rev, vec![], None).unwrap();
-
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let wasm = cargo_build_canister("api-call");
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
     let (result,): (u64,) = query_candid(&env, canister_id, "instruction_counter", ())
         .expect("failed to query instruction_counter");
     assert!(result > 0);
 
     let result = env
-        .query(canister_id, "manual_reject", Encode!().unwrap())
+        .query_call(
+            canister_id,
+            Principal::anonymous(),
+            "manual_reject",
+            Encode!().unwrap(),
+        )
         .unwrap();
     assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
 }
 
 #[test]
 fn test_timers() {
-    let env = StateMachine::new();
-    let time = SystemTime::now();
-    env.set_time(time);
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
+
     call_candid::<(), ()>(&env, canister_id, "schedule", ()).expect("Failed to call schedule");
     advance_seconds(&env, 5);
 
@@ -233,9 +186,10 @@ fn test_timers() {
 
 #[test]
 fn test_timers_can_cancel_themselves() {
-    let env = StateMachine::new();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
 
     call_candid::<_, ()>(&env, canister_id, "set_self_cancelling_timer", ())
         .expect("Failed to call set_self_cancelling_timer");
@@ -256,9 +210,10 @@ fn test_timers_can_cancel_themselves() {
 fn test_scheduling_many_timers() {
     // Must be more than the queue limit (500)
     let timers_to_schedule = 1_000;
-    let env = StateMachine::new();
+    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.install_canister(wasm, vec![], None).unwrap();
+    let canister_id = env.create_canister();
+    env.install_canister(canister_id, wasm, vec![]);
 
     let () = call_candid(
         &env,
