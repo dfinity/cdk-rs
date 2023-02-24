@@ -9,12 +9,24 @@ use serde_bytes::ByteBuf;
 
 pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
+pub fn env() -> StateMachine {
+    if !std::path::Path::new(STATE_MACHINE_BINARY).exists() {
+        eprintln!(
+            "
+ERROR: Could not find state machine binary to run e2e tests.
+  Please run `bash scripts/download_state_machine_binary.sh`."
+        );
+    }
+
+    StateMachine::new(&STATE_MACHINE_BINARY, false)
+}
+
 /// Checks that a canister that uses [`ic_cdk::storage::stable_store`]
 /// and [`ic_cdk::storage::stable_restore`] functions can keep its data
 /// across upgrades.
 #[test]
 fn test_storage_roundtrip() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("simple-kv-store");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm.clone(), vec![]);
@@ -32,7 +44,7 @@ fn test_storage_roundtrip() {
 
 #[test]
 fn test_panic_after_async_frees_resources() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("async");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
@@ -69,7 +81,7 @@ fn test_panic_after_async_frees_resources() {
 
 #[test]
 fn test_raw_api() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("reverse");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
@@ -97,7 +109,7 @@ fn test_raw_api() {
 
 #[test]
 fn test_notify_calls() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("async");
     let sender_id = env.create_canister();
     env.install_canister(sender_id, wasm.clone(), vec![]);
@@ -120,7 +132,7 @@ fn test_notify_calls() {
 #[test]
 #[ignore]
 fn test_composite_query() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("async");
     let sender_id = env.create_canister();
     env.install_canister(sender_id, wasm.clone(), vec![]);
@@ -134,7 +146,7 @@ fn test_composite_query() {
 
 #[test]
 fn test_api_call() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("api-call");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
@@ -155,7 +167,7 @@ fn test_api_call() {
 
 #[test]
 fn test_timers() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("timers");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
@@ -186,7 +198,7 @@ fn test_timers() {
 
 #[test]
 fn test_timers_can_cancel_themselves() {
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("timers");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
@@ -210,7 +222,7 @@ fn test_timers_can_cancel_themselves() {
 fn test_scheduling_many_timers() {
     // Must be more than the queue limit (500)
     let timers_to_schedule = 1_000;
-    let env = StateMachine::new(STATE_MACHINE_BINARY, false);
+    let env = env();
     let wasm = cargo_build_canister("timers");
     let canister_id = env.create_canister();
     env.install_canister(canister_id, wasm, vec![]);
