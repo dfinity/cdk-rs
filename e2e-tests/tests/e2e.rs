@@ -18,7 +18,7 @@ ERROR: Could not find state machine binary to run e2e tests.
         );
     }
 
-    StateMachine::new(&STATE_MACHINE_BINARY, false)
+    StateMachine::new(STATE_MACHINE_BINARY, false)
 }
 
 /// Checks that a canister that uses [`ic_cdk::storage::stable_store`]
