@@ -3,133 +3,13 @@ use crate::api::trap;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Principal};
 use serde::ser::Error;
+use std::cell::RefCell;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::task::{Context, Poll, Waker};
-
-#[cfg(all(
-    target_arch = "wasm32-unknown-unknown",
-    not(target_feature = "atomics")
-))]
-#[allow(dead_code)]
-mod rc {
-    use std::cell::{RefCell, RefMut};
-    use std::future::Future;
-    use std::pin::Pin;
-    use std::rc::Rc;
-    use std::task::{Context, Poll};
-
-    pub(crate) type InnerCell<T> = RefCell<T>;
-
-    /// A reference counted cell. This is a specific implementation that is
-    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
-    /// the actual implementation of Mutex can break in async flows.
-    pub(crate) struct WasmCell<T>(Rc<InnerCell<T>>);
-
-    /// In order to be able to have an async method that returns the
-    /// result of a call to another canister, we need that result to
-    /// be Send + Sync, but Rc and RefCell are not.
-    ///
-    /// Since inside a canister there isn't actual concurrent access to
-    /// the referenced cell or the reference counted container, it is
-    /// safe to force these to be Send/Sync.
-    unsafe impl<T> Send for WasmCell<T> {}
-    unsafe impl<T> Sync for WasmCell<T> {}
-
-    impl<T> WasmCell<T> {
-        pub fn new(val: T) -> Self {
-            WasmCell(Rc::new(InnerCell::new(val)))
-        }
-        pub fn into_raw(self) -> *const InnerCell<T> {
-            Rc::into_raw(self.0)
-        }
-        /// # Safety
-        /// The pointer must have been created with [`into_raw`].
-        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
-            Self(Rc::from_raw(ptr))
-        }
-        pub fn borrow_mut(&self) -> RefMut<'_, T> {
-            self.0.borrow_mut()
-        }
-        pub fn as_ptr(&self) -> *const InnerCell<T> {
-            self.0.as_ptr() as *const _
-        }
-    }
-
-    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
-        type Output = O;
-
-        #[allow(unused_mut)]
-        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-            unsafe { Pin::new_unchecked(&mut *self.0.borrow_mut()) }.poll(ctx)
-        }
-    }
-
-    impl<T> Clone for WasmCell<T> {
-        fn clone(&self) -> Self {
-            WasmCell(Rc::clone(&self.0))
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32-unknown-unknown"))]
-#[allow(dead_code)]
-mod rc {
-    use std::future::Future;
-    use std::pin::Pin;
-    use std::sync::{Arc, Mutex, MutexGuard};
-    use std::task::{Context, Poll};
-
-    pub(crate) type InnerCell<T> = Mutex<T>;
-
-    /// A reference counted cell. This is a specific implementation that is
-    /// both Send and Sync, but does not rely on Mutex and Arc in WASM as
-    /// the actual implementation of Mutex can break in async flows.
-    ///
-    /// The RefCell is for
-    pub(crate) struct WasmCell<T>(Arc<InnerCell<T>>);
-
-    impl<T> WasmCell<T> {
-        pub fn new(val: T) -> Self {
-            WasmCell(Arc::new(InnerCell::new(val)))
-        }
-        pub fn into_raw(self) -> *const InnerCell<T> {
-            Arc::into_raw(self.0)
-        }
-        /// # Safety
-        /// The pointer must have been created with [`into_raw`].
-        pub unsafe fn from_raw(ptr: *const InnerCell<T>) -> Self {
-            // SAFETY: If the pointer was created from into_raw, it internally was created from Arc::into_raw.
-            Self(unsafe { Arc::from_raw(ptr) })
-        }
-        pub fn borrow_mut(&self) -> MutexGuard<'_, T> {
-            self.0.lock().unwrap()
-        }
-        pub fn as_ptr(&self) -> *const InnerCell<T> {
-            Arc::<_>::as_ptr(&self.0)
-        }
-    }
-
-    impl<O, T: Future<Output = O>> Future for WasmCell<T> {
-        type Output = O;
-
-        #[allow(unused_mut)]
-        fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-            // SAFETY: this is a projection of self, which is pinned
-            unsafe { Pin::new_unchecked(&mut *self.0.lock().unwrap()) }.poll(ctx)
-        }
-    }
-
-    impl<T> Clone for WasmCell<T> {
-        fn clone(&self) -> Self {
-            WasmCell(Arc::clone(&self.0))
-        }
-    }
-}
-
-use rc::{InnerCell, WasmCell};
 
 /// Rejection code from calling another canister.
 ///
@@ -175,23 +55,20 @@ impl From<u32> for RejectionCode {
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
 // Internal state for the Future when sending a call.
-struct CallFutureState<R: serde::de::DeserializeOwned> {
-    result: Option<CallResult<R>>,
+struct CallFutureState {
+    result: Option<CallResult<Vec<u8>>>,
     waker: Option<Waker>,
 }
 
-struct CallFuture<R: serde::de::DeserializeOwned> {
-    // We basically use Rc instead of Arc (since we're single threaded), and use
-    // RefCell instead of Mutex (because we cannot lock in WASM).
-    state: rc::WasmCell<CallFutureState<R>>,
+struct CallFuture {
+    state: Rc<RefCell<CallFutureState>>,
 }
 
-impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
-    type Output = Result<R, (RejectionCode, String)>;
+impl Future for CallFuture {
+    type Output = CallResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        let self_ref = Pin::into_ref(self);
-
+        let self_ref = Pin::into_inner(self);
         let mut state = self_ref.state.borrow_mut();
 
         if let Some(result) = state.result.take() {
@@ -209,10 +86,10 @@ impl<R: serde::de::DeserializeOwned> Future for CallFuture<R> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from WasmCell::into_raw as userdata.
-unsafe fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a WasmCell as userdata.
-    let state = unsafe { WasmCell::from_raw(state_ptr) };
+/// This function must only be passed to the IC with a pointer from Rc::into_raw as userdata.
+unsafe fn callback(state_ptr: *const RefCell<CallFutureState>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Rc as userdata.
+    let state = unsafe { Rc::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
     {
         state.borrow_mut().result = Some(match reject_code() {
@@ -234,10 +111,10 @@ unsafe fn callback(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from WasmCell::into_raw as userdata.
-unsafe fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a WasmCell as userdata.
-    let state = unsafe { WasmCell::from_raw(state_ptr) };
+/// This function must only be passed to the IC with a pointer from Rc::into_raw as userdata.
+unsafe fn cleanup(state_ptr: *const RefCell<CallFutureState>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Rc as userdata.
+    let state = unsafe { Rc::from_raw(state_ptr) };
     // We set the call result, even though it won't be read on the
     // default executor, because we can't guarantee it was called on
     // our executor. However, we are not allowed to inspect
@@ -245,7 +122,7 @@ unsafe fn cleanup(state_ptr: *const InnerCell<CallFutureState<Vec<u8>>>) {
     // result to a reject.
     //
     // Borrowing does not trap - the rollback from the
-    // previous trap ensures that the WasmCell can be borrowed again.
+    // previous trap ensures that the RefCell can be borrowed again.
     state.borrow_mut().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
     let w = state.borrow_mut().waker.take();
     if let Some(waker) = w {
@@ -387,19 +264,19 @@ fn call_raw_internal(
     payment_func: impl FnOnce(),
 ) -> impl Future<Output = CallResult<Vec<u8>>> {
     let callee = id.as_slice();
-    let state = WasmCell::new(CallFutureState {
+    let state = Rc::new(RefCell::new(CallFutureState {
         result: None,
         waker: None,
-    });
-    let state_ptr = WasmCell::into_raw(state.clone());
+    }));
+    let state_ptr = Rc::into_raw(state.clone());
     // SAFETY:
     // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
     // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
     // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-    // `state_ptr` is a pointer created via WasmCell::into_raw, and can therefore be passed as the userdata for `callback`.
+    // `state_ptr` is a pointer created via Rc::into_raw, and can therefore be passed as the userdata for `callback`.
     // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
     // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-    // `state_ptr` is a pointer created via WasmCell::into_raw, and can therefore be passed as the userdata for `cleanup`.
+    // `state_ptr` is a pointer created via Rc::into_raw, and can therefore be passed as the userdata for `cleanup`.
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(

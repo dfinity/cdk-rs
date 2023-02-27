@@ -509,7 +509,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         ) -> HashTree<'a> {
             match n {
                 None => Empty,
-                Some(n) => match (n).key.as_ref().cmp(lo.as_ref()) {
+                Some(n) => match n.key.as_ref().cmp(lo.as_ref()) {
                     Equal => three_way_fork(
                         n.left_hash_tree(),
                         match lo {

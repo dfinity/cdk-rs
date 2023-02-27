@@ -21,6 +21,7 @@ fn invocation_count() -> u64 {
 }
 
 #[update]
+#[allow(clippy::await_holding_lock)]
 async fn panic_after_async() {
     let value = {
         let mut lock = RESOURCE
@@ -34,6 +35,22 @@ async fn panic_after_async() {
         .await
         .expect("failed to call self");
     ic_cdk::api::trap("Goodbye, cruel world.")
+}
+
+#[update]
+#[allow(clippy::await_holding_lock)]
+async fn panic_twice() {
+    let _lock = RESOURCE.write().unwrap();
+    let fut1 = async_then_panic();
+    let fut2 = async_then_panic();
+    futures::future::join_all([fut1, fut2]).await;
+}
+
+async fn async_then_panic() {
+    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "on_notify", ())
+        .await
+        .expect("Failed to call self");
+    panic!();
 }
 
 #[query]
