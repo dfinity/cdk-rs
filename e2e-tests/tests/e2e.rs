@@ -81,7 +81,7 @@ fn test_panic_after_async_frees_resources() {
     let err =
         call_candid::<_, ()>(&env, canister_id, "panic_twice", ()).expect_err("failed to panic");
     assert!(
-        matches!(err, CallError::UserError(u) if u.description().contains("Call already trapped"))
+        matches!(err, CallError::UserError(u) if u.description.contains("Call already trapped"))
     );
     let _: (u64,) = call_candid(&env, canister_id, "notifications_received", ())
         .expect("failed to call unrelated function afterwards");
