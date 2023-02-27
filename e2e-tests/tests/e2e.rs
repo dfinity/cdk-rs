@@ -77,6 +77,16 @@ fn test_panic_after_async_frees_resources() {
         call_candid(&env, canister_id, "invalid_reply_payload_does_not_trap", ())
             .expect("call failed");
     assert_eq!(&message, "handled decoding error gracefully with code 5");
+
+    let err =
+        call_candid::<_, ()>(&env, canister_id, "panic_twice", ()).expect_err("failed to panic");
+    assert!(
+        matches!(err, CallError::UserError(u) if u.description().contains("Call already trapped"))
+    );
+    let _: (u64,) = call_candid(&env, canister_id, "notifications_received", ())
+        .expect("failed to call unrelated function afterwards");
+    let _: (u64,) =
+        call_candid(&env, canister_id, "invocation_count", ()).expect("failed to recover lock");
 }
 
 #[test]
