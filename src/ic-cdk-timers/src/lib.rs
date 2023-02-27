@@ -29,7 +29,7 @@ use ic_cdk::api::call::RejectionCode;
 thread_local! {
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
-    static MOST_RECENT: Cell<u64> = Cell::new(u64::MAX);
+    static MOST_RECENT: Cell<Option<u64>> = Cell::new(None);
 }
 
 enum Task {
@@ -172,7 +172,8 @@ extern "C" fn global_timer() {
                 }
             });
         }
-        update_ic0_timer(false);
+        MOST_RECENT.with(|recent| recent.set(None));
+        update_ic0_timer();
     });
 }
 
@@ -195,7 +196,7 @@ pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
             time: scheduled_time,
         });
     });
-    update_ic0_timer(true);
+    update_ic0_timer();
     key
 }
 
@@ -223,7 +224,7 @@ pub fn set_timer_interval(interval: Duration, func: impl FnMut() + 'static) -> T
             time: scheduled_time,
         })
     });
-    update_ic0_timer(true);
+    update_ic0_timer();
     key
 }
 
@@ -233,13 +234,18 @@ pub fn clear_timer(id: TimerId) {
 }
 
 /// Calls `ic0.global_timer_set` with the soonest timer in [`TIMERS`]. This is needed after inserting a timer, and after executing one.
-fn update_ic0_timer(skip_later: bool) {
+fn update_ic0_timer() {
     TIMERS.with(|timers| {
         let timers = timers.borrow();
-        let soonest_timer = timers.peek().map_or(0, |timer| timer.time);
-        if !(skip_later && soonest_timer >= MOST_RECENT.with(|recent| recent.get())) {
+        let soonest_timer = timers.peek().map(|timer| timer.time);
+        let should_change = match (soonest_timer, MOST_RECENT.with(|recent| recent.get())) {
+            (Some(timer), Some(recent)) => timer < recent,
+            (Some(_), None) => true,
+            _ => false,
+        };
+        if should_change {
             // SAFETY: ic0::global_timer_set is always a safe call
-            unsafe { ic0::global_timer_set(soonest_timer as i64) };
+            unsafe { ic0::global_timer_set(soonest_timer.unwrap() as i64) };
             MOST_RECENT.with(|recent| recent.set(soonest_timer));
         }
     });
