@@ -9,6 +9,15 @@
 //! # }
 //! ```
 
+#![warn(
+    elided_lifetimes_in_paths,
+    missing_debug_implementations,
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
+
 use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Duration};
 
 use futures::{stream::FuturesUnordered, StreamExt};

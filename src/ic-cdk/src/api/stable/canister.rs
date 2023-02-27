@@ -3,7 +3,7 @@ use super::*;
 /// A standard implementation of [`StableMemory`].
 ///
 /// Useful for creating [`StableWriter`] and [`StableReader`].
-#[derive(Default)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct CanisterStableMemory {}
 
 impl StableMemory for CanisterStableMemory {

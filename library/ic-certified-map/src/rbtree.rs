@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Color {
     Red,
     Black,
@@ -25,6 +25,7 @@ impl Color {
     }
 }
 
+/// Types that can be converted into a [`HashTree`].
 pub trait AsHashTree {
     /// Returns the root hash of the tree without constructing it.
     /// Must be equivalent to `as_hash_tree().reconstruct()`.
@@ -88,7 +89,7 @@ type NodeRef<K, V> = Option<Box<Node<K, V>>>;
 // 2. Children of a red node are black.
 // 3. Every path from a node goes through the same number of black
 //    nodes.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Node<K, V> {
     key: K,
     value: V,
@@ -186,7 +187,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum Visit {
     Pre,
     In,
@@ -194,6 +195,7 @@ enum Visit {
 }
 
 /// Iterator over a RbTree.
+#[derive(Debug)]
 pub struct Iter<'a, K, V> {
     /// Invariants:
     /// 1. visit == Pre: none of the nodes in parents were visited yet.
@@ -358,6 +360,7 @@ impl<K, V> RbTree<K, V> {
 }
 
 impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
+    /// Looks up the key in the map and returns the associated value, if there is one.
     pub fn get(&self, key: &[u8]) -> Option<&V> {
         let mut root = self.root.as_ref();
         while let Some(n) = root {
@@ -476,6 +479,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         )
     }
 
+    /// Creates an iterator over the map's keys and values.
     pub fn iter(&self) -> Iter<'_, K, V> {
         match &self.root {
             None => Iter {
