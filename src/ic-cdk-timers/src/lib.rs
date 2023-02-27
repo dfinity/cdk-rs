@@ -9,7 +9,13 @@
 //! # }
 //! ```
 
-use std::{cell::RefCell, cmp::Ordering, collections::BinaryHeap, mem, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    cmp::Ordering,
+    collections::BinaryHeap,
+    mem,
+    time::Duration,
+};
 
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
@@ -23,6 +29,7 @@ use ic_cdk::api::call::RejectionCode;
 thread_local! {
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
+    static MOST_RECENT: Cell<Option<u64>> = Cell::new(None);
 }
 
 enum Task {
@@ -165,6 +172,7 @@ extern "C" fn global_timer() {
                 }
             });
         }
+        MOST_RECENT.with(|recent| recent.set(None));
         update_ic0_timer();
     });
 }
@@ -229,9 +237,17 @@ pub fn clear_timer(id: TimerId) {
 fn update_ic0_timer() {
     TIMERS.with(|timers| {
         let timers = timers.borrow();
-        let soonest_timer = timers.peek().map_or(0, |timer| timer.time);
-        // SAFETY: ic0::global_timer_set is always a safe call
-        unsafe { ic0::global_timer_set(soonest_timer as i64) };
+        let soonest_timer = timers.peek().map(|timer| timer.time);
+        let should_change = match (soonest_timer, MOST_RECENT.with(|recent| recent.get())) {
+            (Some(timer), Some(recent)) => timer < recent,
+            (Some(_), None) => true,
+            _ => false,
+        };
+        if should_change {
+            // SAFETY: ic0::global_timer_set is always a safe call
+            unsafe { ic0::global_timer_set(soonest_timer.unwrap() as i64) };
+            MOST_RECENT.with(|recent| recent.set(soonest_timer));
+        }
     });
 }
 
