@@ -70,6 +70,9 @@ jobs:
       - name: Install protoc
         run: |
           sudo apt-get install -y protobuf-compiler
+      - name: Download ic-test-state-machine
+        run: |
+          bash scripts/download_state_machine_binary.sh
       - name: Run tests
         run: |
           cargo test --all-targets
