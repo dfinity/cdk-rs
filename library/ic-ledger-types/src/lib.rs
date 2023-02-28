@@ -41,7 +41,7 @@ pub const MAINNET_CYCLES_MINTING_CANISTER_ID: Principal =
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
 )]
 pub struct Timestamp {
-    /// The nanosecond count.
+    /// Number of nanoseconds from the UNIX epoch in UTC timezone.
     pub timestamp_nanos: u64,
 }
 
