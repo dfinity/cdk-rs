@@ -233,7 +233,7 @@ pub struct TransferArgs {
     /// If the transfer is successful, the balance of this address increases by `amount`.
     pub to: AccountIdentifier,
     /// The point in time when the caller created this request.
-    /// If `None`, the ledger uses that current IC time as the timestamp.
+    /// If `None`, the ledger uses the current IC time as the timestamp.
     /// Transactions more than one day old will be rejected.
     pub created_at_time: Option<Timestamp>,
 }
