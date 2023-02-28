@@ -217,17 +217,24 @@ pub struct Memo(pub u64);
 /// Arguments for the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct TransferArgs {
-    /// The memo for the transaction.
+    /// Transaction memo.
+    /// See docs for the [`Memo`] type.
     pub memo: Memo,
-    /// The amount to be transferred.
+    /// The amount that the caller wants to transfer to the destination address.
     pub amount: Tokens,
-    /// The expected fee when transferring. Should be 0.0001 ICP.
+    /// The amount that the caller pays for the transaction.
+    /// Must be 10000 e8s.
     pub fee: Tokens,
-    /// The subaccount to make the transfer from.
+    /// The subaccount from which the caller wants to transfer funds.
+    /// If `None`, the ledger uses the default (all zeros) subaccount to compute the source address.
+    /// See docs for the [`Subaccount`] type.
     pub from_subaccount: Option<Subaccount>,
-    /// The account ID (principal + subaccount) to transfer to.
+    /// The destination account.
+    /// If the transfer is successful, the balance of this address increases by `amount`.
     pub to: AccountIdentifier,
-    /// The timestamp this transaction was signed at. Transactions more than one day old will be rejected.
+    /// The point in time when the caller created this request.
+    /// If `None`, the ledger uses current IC time as the timestamp.
+    /// Transactions more than one day old will be rejected.
     pub created_at_time: Option<Timestamp>,
 }
 
@@ -240,9 +247,10 @@ pub type TransferResult = Result<BlockIndex, TransferError>;
 /// Error of the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TransferError {
-    /// The fee the caller expected was not the fee the ledger expected.
+    /// The fee that the caller specified in the transfer request was not the one that ledger expects.
+    /// The caller can change the transfer fee to the `expected_fee` and retry the request.
     BadFee {
-        /// The ledger's expected fee.
+        /// The account specified by the caller doesn't have enough funds.
         expected_fee: Tokens,
     },
     /// The caller did not have enough ICP in the specified subaccount.
@@ -250,16 +258,20 @@ pub enum TransferError {
         /// The caller's balance.
         balance: Tokens,
     },
-    /// The transaction's recorded time has expired.
+    /// The request is too old.
+    /// The ledger only accepts requests created within a 24-hour window.
+    /// This is a non-recoverable error.
     TxTooOld {
-        /// The permitted duration between `created_at_time` and now. As of writing it is 24 hours.
+        /// The permitted duration between `created_at_time` and now.
         allowed_window_nanos: u64,
     },
-    /// The provided timestamp is in the future, suggesting clock desynchronization.
+    /// The caller specified a `created_at_time` that is too far in future.
+    /// The caller can retry the request later.
+    /// This may also be caused by clock desynchronization.
     TxCreatedInFuture,
-    /// The transaction is a duplicate of another one, even taking into account the timestamp and memo.
+    /// The ledger has already executed the request.
     TxDuplicate {
-        /// The block in which the duplicate transaction can be found.
+        /// The index of the block containing the original transaction.
         duplicate_of: BlockIndex,
     },
 }
@@ -383,51 +395,81 @@ pub struct GetBlocksArgs {
 /// Return type for the `query_blocks` function.
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct QueryBlocksResponse {
-    /// The total number of blocks in the ledger.
+    /// The total number of blocks in the chain.
+    /// If the chain length is positive, the index of the last block is `chain_length - 1`.
     pub chain_length: u64,
     /// The replica certificate for the last block hash (see [Encoding of Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding)).
-    /// Not available when querying blocks from a canister.
+    /// Only available when *querying* blocks from a canister.
     pub certificate: Option<ByteBuf>,
-    /// The blocks that were requested and immediately available..
+    /// List of blocks that were available in the ledger when it processed the call.
+    ///
+    /// The blocks form a contiguous range, with the first block having index
+    /// `first_block_index` (see below), and the last block having index
+    /// `first_block_index + blocks.len() - 1`.
+    ///
+    /// The block range can be an arbitrary sub-range of the originally requested range.
     pub blocks: Vec<Block>,
     /// The index of the first block in [QueryBlocksResponse::blocks].
+    /// If the `blocks` vector is empty, the exact value of this field is not specified.
     pub first_block_index: BlockIndex,
-    /// Functions for accessing requested blocks that were not immediately available.
+    /// Encoded functions for fetching archived blocks whose indices fall into the
+    /// requested range.
+    ///
+    /// For each entry `e` in `archived_blocks`, `e.start..e.start + e.length` is a sub-range
+    /// of the originally requested block range.
     pub archived_blocks: Vec<ArchivedBlockRange>,
 }
 
 /// A function that can be called to retrieve a range of archived blocks.
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct ArchivedBlockRange {
-    /// The block index to pass to `callback`.
+    /// The index of the first archived block that can be fetched using `callback`.
     pub start: BlockIndex,
-    /// The length to pass to `callback`.
+    /// The number of blocks that can be fetched using `callback`.
     pub length: u64,
-    /// A function pointer to call to retrieve the blocks. The provided range must be equal to, or a subset of, `start..start + length`.
+    /// The function that should be called to fetch the archived blocks.
+    /// The range of the blocks accessible using this function is given by the `start`
+    /// and `length` fields above.
     pub callback: QueryArchiveFn,
 }
 
-/// The successful return type of `get_blocks`.
+/// A prefix of the block range specified in the `get_blocks` and [`query_archived_blocks`] function.
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BlockRange {
-    /// The requested set of blocks.
+    /// A prefix of the requested block range.
+    /// The index of the first block is equal to [`GetBlocksArgs.start`](GetBlocksArgs).
+    ///
+    /// ## Note
+    ///
+    /// The number of blocks might be less than the requested
+    /// [`GetBlocksArgs.length`](GetBlocksArgs) for various reasons, for example:
+    ///
+    /// 1. The query might have hit the replica with an outdated state
+    ///    that doesn't have the full block range yet.
+    /// 2. The requested range is too large to fit into a single reply.
+    ///
+    /// The list of blocks can be empty if:
+    ///
+    /// 1. [`GetBlocksArgs.length`](GetBlocksArgs) was zero.
+    /// 2. [`GetBlocksArgs.start`](GetBlocksArgs) was larger than the last block known to the canister.
     pub blocks: Vec<Block>,
 }
 
 /// The return type of `get_blocks`.
 pub type GetBlocksResult = Result<BlockRange, GetBlocksError>;
 
-/// Possible errors that can occur when calling `get_blocks`.
+/// An error indicating that the arguments passed to `get_blocks` or [`query_archived_blocks`] were invalid.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, CandidType)]
 pub enum GetBlocksError {
-    /// The block index was too low for this particular call.
+    /// The [`GetBlocksArgs.start`](GetBlocksArgs) argument was smaller than the first block
+    /// served by the canister that received the request.
     BadFirstBlockIndex {
         /// The index that was requested.
         requested_index: BlockIndex,
         /// The minimum index that can be requested, for this particular call.
         first_valid_index: BlockIndex,
     },
-    /// An unknown error.
+    /// Reserved for future use.
     Other {
         /// A machine-readable error code.
         error_code: u64,
