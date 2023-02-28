@@ -233,7 +233,7 @@ pub struct TransferArgs {
     /// If the transfer is successful, the balance of this address increases by `amount`.
     pub to: AccountIdentifier,
     /// The point in time when the caller created this request.
-    /// If `None`, the ledger uses current IC time as the timestamp.
+    /// If `None`, the ledger uses that current IC time as the timestamp.
     /// Transactions more than one day old will be rejected.
     pub created_at_time: Option<Timestamp>,
 }
@@ -247,7 +247,7 @@ pub type TransferResult = Result<BlockIndex, TransferError>;
 /// Error of the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TransferError {
-    /// The fee that the caller specified in the transfer request was not the one that ledger expects.
+    /// The fee that the caller specified in the transfer request was not the one that the ledger expects.
     /// The caller can change the transfer fee to the `expected_fee` and retry the request.
     BadFee {
         /// The account specified by the caller doesn't have enough funds.
@@ -265,7 +265,7 @@ pub enum TransferError {
         /// The permitted duration between `created_at_time` and now.
         allowed_window_nanos: u64,
     },
-    /// The caller specified a `created_at_time` that is too far in future.
+    /// The caller specified a `created_at_time` that is too far in the future.
     /// The caller can retry the request later.
     /// This may also be caused by clock desynchronization.
     TxCreatedInFuture,
