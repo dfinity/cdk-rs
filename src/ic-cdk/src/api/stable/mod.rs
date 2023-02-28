@@ -69,7 +69,7 @@ pub enum StableMemoryError {
 }
 
 impl fmt::Display for StableMemoryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::OutOfMemory => f.write_str("Out of memory"),
             Self::OutOfBounds => f.write_str("Read exceeds allocated memory"),
@@ -141,7 +141,7 @@ pub fn stable_bytes() -> Vec<u8> {
 ///
 /// Will attempt to grow the memory as it writes,
 /// and keep offsets and total capacity.
-
+#[derive(Debug)]
 pub struct StableIO<M: StableMemory = CanisterStableMemory, A: private::AddressSize = u32> {
     /// The offset of the next write.
     offset: A,
@@ -292,6 +292,7 @@ impl_stable_io!(u64);
 ///
 /// Will attempt to grow the memory as it writes,
 /// and keep offsets and total capacity.
+#[derive(Debug)]
 pub struct StableWriter<M: StableMemory = CanisterStableMemory>(StableIO<M, u32>);
 
 #[allow(clippy::derivable_impls)]
@@ -364,6 +365,7 @@ impl<M: StableMemory> From<StableIO<M>> for StableWriter<M> {
 ///
 /// Note: Each call to grow or write to stable memory is a relatively expensive operation, so pick a
 /// buffer size large enough to avoid excessive calls to stable memory.
+#[derive(Debug)]
 pub struct BufferedStableWriter<M: StableMemory = CanisterStableMemory> {
     inner: io::BufWriter<StableWriter<M>>,
 }
@@ -409,6 +411,7 @@ impl<M: StableMemory> io::Seek for BufferedStableWriter<M> {
 // A reader to the stable memory.
 ///
 /// Keeps an offset and reads off stable memory consecutively.
+#[derive(Debug)]
 pub struct StableReader<M: StableMemory = CanisterStableMemory>(StableIO<M, u32>);
 
 #[allow(clippy::derivable_impls)]
@@ -466,6 +469,7 @@ impl<M: StableMemory> From<StableIO<M>> for StableReader<M> {
 }
 
 /// A reader to the stable memory which reads bytes a chunk at a time as each chunk is required.
+#[derive(Debug)]
 pub struct BufferedStableReader<M: StableMemory = CanisterStableMemory> {
     inner: io::BufReader<StableReader<M>>,
 }

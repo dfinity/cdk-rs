@@ -64,7 +64,7 @@ extern "C" {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
-#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::missing_safety_doc, missing_docs)]
 #[allow(clippy::too_many_arguments)]
 mod non_wasm {
     pub unsafe fn msg_arg_data_size() -> i32 {

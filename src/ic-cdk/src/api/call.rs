@@ -407,6 +407,7 @@ pub fn reject(message: &str) {
 }
 
 /// An io::Write for message replies.
+#[derive(Debug, Copy, Clone)]
 pub struct CallReplyWriter;
 
 impl std::io::Write for CallReplyWriter {
