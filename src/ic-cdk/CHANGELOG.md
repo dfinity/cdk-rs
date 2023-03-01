@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.2] - 2023-03-01
+
+### Fixed
+
 - Fix type name in error message when a deserialization error occurs after making a canister-to-canister call. (#355)
 
 ## [0.7.1] - 2023-02-22
