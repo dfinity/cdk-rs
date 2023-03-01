@@ -3,11 +3,9 @@ use crate::api::trap;
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Principal};
 use serde::ser::Error;
-use std::cell::RefCell;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
@@ -87,18 +85,18 @@ impl Future for CallFuture {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Rc::into_raw as userdata.
-unsafe fn callback(state_ptr: *const RefCell<CallFutureState>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Rc as userdata.
-    let state = unsafe { Rc::from_raw(state_ptr) };
+/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
+unsafe fn callback(state_ptr: *const RwLock<CallFutureState>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
     // Make sure to un-borrow_mut the state.
     {
-        state.borrow_mut().result = Some(match reject_code() {
+        state.write().unwrap().result = Some(match reject_code() {
             RejectionCode::NoError => Ok(arg_data_raw()),
             n => Err((n, reject_message())),
         });
     }
-    let w = state.borrow_mut().waker.take();
+    let w = state.write().unwrap().waker.take();
     if let Some(waker) = w {
         // This is all to protect this little guy here which will call the poll() which
         // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
@@ -112,10 +110,10 @@ unsafe fn callback(state_ptr: *const RefCell<CallFutureState>) {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Rc::into_raw as userdata.
-unsafe fn cleanup(state_ptr: *const RefCell<CallFutureState>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Rc as userdata.
-    let state = unsafe { Rc::from_raw(state_ptr) };
+/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
+unsafe fn cleanup(state_ptr: *const RwLock<CallFutureState>) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
     // We set the call result, even though it won't be read on the
     // default executor, because we can't guarantee it was called on
     // our executor. However, we are not allowed to inspect
@@ -123,9 +121,9 @@ unsafe fn cleanup(state_ptr: *const RefCell<CallFutureState>) {
     // result to a reject.
     //
     // Borrowing does not trap - the rollback from the
-    // previous trap ensures that the RefCell can be borrowed again.
-    state.borrow_mut().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
-    let w = state.borrow_mut().waker.take();
+    // previous trap ensures that the RwLock can be borrowed again.
+    state.write().unwrap().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
+    let w = state.write().unwrap().waker.take();
     if let Some(waker) = w {
         // Flag that we do not want to actually wake the task - we
         // want to drop it *without* executing it.
@@ -274,10 +272,10 @@ fn call_raw_internal(
     // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
     // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
     // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-    // `state_ptr` is a pointer created via Rc::into_raw, and can therefore be passed as the userdata for `callback`.
+    // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
     // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
     // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-    // `state_ptr` is a pointer created via Rc::into_raw, and can therefore be passed as the userdata for `cleanup`.
+    // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
