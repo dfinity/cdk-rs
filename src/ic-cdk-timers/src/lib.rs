@@ -1,4 +1,4 @@
-//! A library for Internet Computer canisters to schedule one-shot or repeating timers, to execute a function at some point in the future.
+//! The library implements multiple and periodic timers on the Internet Computer.
 //!
 //! # Example
 //!
