@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  rust-version: 1.60.0
+  rust-version: 1.66.1
   dfx-version: 0.12.0-beta.6
 
 jobs:

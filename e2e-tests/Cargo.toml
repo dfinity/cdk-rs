@@ -10,10 +10,12 @@ repository = "https://github.com/dfinity/cdk-rs"
 [dependencies]
 cargo_metadata = "0.14.2"
 escargot = { version = "0.5.7", features = ["print"] }
-ic-cdk = { path = "../src/ic-cdk", features = ["timers"] }
+ic-cdk = { path = "../src/ic-cdk" }
 ic-cdk-macros = { path = "../src/ic-cdk-macros" }
+ic-cdk-timers = { path = "../src/ic-cdk-timers" }
 lazy_static = "1.4.0"
 serde_bytes = "0.11"
+futures = "0.3"
 
 [[bin]]
 name = "simple-kv-store"
@@ -36,5 +38,5 @@ name = "timers"
 path = "canisters/timers.rs"
 
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "dcbf401f27d9b48354e68389c6d8293c4233b055" }
 candid = "0.8"
+ic-test-state-machine-client = "1"

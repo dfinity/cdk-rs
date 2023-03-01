@@ -30,6 +30,8 @@ This repo provides libraries and tools to facilitate developing canisters in Rus
 Bindings of the System API.
 - [`ic-cdk-macros`](src/ic-cdk-macros):
 Annotate functions with attribute macros to make them exposed public interfaces.
+- [`ic-cdk-timers`](src/ic-cdk-timers):
+The library implements multiple and periodic timers.
 - [`ic-certified-map`](library/ic-certified-map):
 An implementation of map which support *certified queries*.
 - [`ic-ledger-types`](library/ic-ledger-types):

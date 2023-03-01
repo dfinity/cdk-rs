@@ -8,4 +8,4 @@
 [![Downloads](https://img.shields.io/crates/d/ic-cdk-macros.svg)](https://crates.io/crates/ic-cdk-macros)
 [![CI](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml)
 
-This crate provide attribute macros, with which you can annotate regular rust functions to be public interfaces of a canister.
+This crate provides attribute macros, with which you can annotate regular rust functions to be public interfaces of a canister.

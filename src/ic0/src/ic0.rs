@@ -24,6 +24,7 @@ extern "C" {
     pub fn canister_cycle_balance() -> i64;
     pub fn canister_cycle_balance128(dst: i32);
     pub fn canister_status() -> i32;
+    pub fn canister_version() -> i64;
     pub fn msg_method_name_size() -> i32;
     pub fn msg_method_name_copy(dst: i32, offset: i32, size: i32);
     pub fn accept_message();
@@ -42,7 +43,6 @@ extern "C" {
     pub fn call_cycles_add(amount: i64);
     pub fn call_cycles_add128(amount_high: i64, amount_low: i64);
     pub fn call_perform() -> i32;
-    pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn stable_size() -> i32;
     pub fn stable_grow(new_pages: i32) -> i32;
     pub fn stable_write(offset: i32, src: i32, size: i32);
@@ -56,6 +56,7 @@ extern "C" {
     pub fn data_certificate_size() -> i32;
     pub fn data_certificate_copy(dst: i32, offset: i32, size: i32);
     pub fn time() -> i64;
+    pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn performance_counter(counter_type: i32) -> i64;
     pub fn debug_print(src: i32, size: i32);
     pub fn trap(src: i32, size: i32);
@@ -63,7 +64,7 @@ extern "C" {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
-#[allow(clippy::missing_safety_doc)]
+#[allow(clippy::missing_safety_doc, missing_docs)]
 #[allow(clippy::too_many_arguments)]
 mod non_wasm {
     pub unsafe fn msg_arg_data_size() -> i32 {
@@ -129,6 +130,9 @@ mod non_wasm {
     pub unsafe fn canister_status() -> i32 {
         panic!("canister_status should only be called inside canisters.");
     }
+    pub unsafe fn canister_version() -> i64 {
+        panic!("canister_version should only be called inside canisters.");
+    }
     pub unsafe fn msg_method_name_size() -> i32 {
         panic!("msg_method_name_size should only be called inside canisters.");
     }
@@ -164,9 +168,6 @@ mod non_wasm {
     }
     pub unsafe fn call_perform() -> i32 {
         panic!("call_perform should only be called inside canisters.");
-    }
-    pub unsafe fn global_timer_set(timestamp: i64) -> i64 {
-        panic!("global_timer_set should only be called inside canisters.");
     }
     pub unsafe fn stable_size() -> i32 {
         panic!("stable_size should only be called inside canisters.");
@@ -206,6 +207,9 @@ mod non_wasm {
     }
     pub unsafe fn time() -> i64 {
         panic!("time should only be called inside canisters.");
+    }
+    pub unsafe fn global_timer_set(timestamp: i64) -> i64 {
+        panic!("global_timer_set should only be called inside canisters.");
     }
     pub unsafe fn performance_counter(counter_type: i32) -> i64 {
         panic!("performance_counter should only be called inside canisters.");

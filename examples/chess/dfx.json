@@ -6,18 +6,6 @@
       "candid": "src/chess_rs/chess.did",
       "wasm": "target/wasm32-unknown-unknown/release/chess_rs-opt.wasm",
       "build": "sh ../build.sh chess chess_rs"
-    },
-    "chess_rs_assets": {
-      "dependencies": [
-        "chess_rs"
-      ],
-      "frontend": {
-        "entrypoint": "src/chess_rs_assets/index.tsx"
-      },
-      "source": [
-        "dist/"
-      ],
-      "type": "assets"
     }
   }
 }
