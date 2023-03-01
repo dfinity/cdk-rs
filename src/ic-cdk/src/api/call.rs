@@ -331,7 +331,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, 0);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
+        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
     }
 }
 
@@ -346,7 +346,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
+        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
     }
 }
 
@@ -361,7 +361,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     let fut = call_raw128(id, method, &args_raw, cycles);
     async {
         let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<T>)
+        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
     }
 }
 
