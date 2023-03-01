@@ -9,6 +9,7 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 
 /// Rejection code from calling another canister.
@@ -61,7 +62,7 @@ struct CallFutureState {
 }
 
 struct CallFuture {
-    state: Rc<RefCell<CallFutureState>>,
+    state: Arc<RwLock<CallFutureState>>,
 }
 
 impl Future for CallFuture {
@@ -69,7 +70,7 @@ impl Future for CallFuture {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
-        let mut state = self_ref.state.borrow_mut();
+        let mut state = self_ref.state.write().unwrap();
 
         if let Some(result) = state.result.take() {
             Poll::Ready(result)
@@ -233,7 +234,7 @@ pub fn call_raw(
     method: &str,
     args_raw: &[u8],
     payment: u64,
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     call_raw_internal(id, method, args_raw, move || {
         if payment > 0 {
             // SAFETY: ic0.call_cycles_add is always safe to call.
@@ -251,7 +252,7 @@ pub fn call_raw128(
     method: &str,
     args_raw: &[u8],
     payment: u128,
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     call_raw_internal(id, method, args_raw, move || {
         add_payment(payment);
     })
@@ -262,13 +263,13 @@ fn call_raw_internal(
     method: &str,
     args_raw: &[u8],
     payment_func: impl FnOnce(),
-) -> impl Future<Output = CallResult<Vec<u8>>> {
+) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     let callee = id.as_slice();
-    let state = Rc::new(RefCell::new(CallFutureState {
+    let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
     }));
-    let state_ptr = Rc::into_raw(state.clone());
+    let state_ptr = Arc::into_raw(state.clone());
     // SAFETY:
     // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
     // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -298,7 +299,7 @@ fn call_raw_internal(
 
     // 0 is a special error code meaning call_simple call succeeded.
     if err_code != 0 {
-        let mut state = state.borrow_mut();
+        let mut state = state.write().unwrap();
         state.result = Some(Err((
             RejectionCode::from(err_code),
             "Couldn't send message".to_string(),
@@ -326,7 +327,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
     args: T,
-) -> impl Future<Output = CallResult<R>> {
+) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let fut = call_raw(id, method, &args_raw, 0);
     async {
@@ -341,7 +342,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     method: &str,
     args: T,
     cycles: u64,
-) -> impl Future<Output = CallResult<R>> {
+) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let fut = call_raw(id, method, &args_raw, cycles);
     async {
@@ -356,7 +357,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     method: &str,
     args: T,
     cycles: u128,
-) -> impl Future<Output = CallResult<R>> {
+) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
     let fut = call_raw128(id, method, &args_raw, cycles);
     async {
