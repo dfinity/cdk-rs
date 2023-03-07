@@ -10,7 +10,7 @@ mod tests;
 pub use canister::CanisterStableMemory;
 use std::{error, fmt, io};
 
-const WASM_PAGE_SIZE_IN_BYTES: usize = 64 * 1024; // 64KB
+pub const WASM_PAGE_SIZE_IN_BYTES: usize = 64 * 1024; // 64KB
 
 static CANISTER_STABLE_MEMORY: CanisterStableMemory = CanisterStableMemory {};
 
