@@ -97,7 +97,19 @@ mod http_request {
             body: None,
             transform: Some(TransformContext::new(transform, vec![])),
         };
-        let response = http_request(arg).await.unwrap().0;
+        let response = http_request(arg.clone()).await.unwrap().0;
+        assert_eq!(response.status, 200);
+        assert_eq!(
+            response.headers.get(0),
+            Some(&HttpHeader {
+                name: "custom-header".to_string(),
+                value: "test".to_string(),
+            })
+        );
+        let response = http_request_with_cycles(arg, 718500000u128)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(response.status, 200);
         assert_eq!(
             response.headers.get(0),
