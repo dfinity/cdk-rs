@@ -106,6 +106,15 @@ mod http_request {
                 value: "test".to_string(),
             })
         );
+        let response = http_request_with_cycles(arg, 718500000u128).await.unwrap().0;
+        assert_eq!(response.status, 200);
+        assert_eq!(
+            response.headers.get(0),
+            Some(&HttpHeader {
+                name: "custom-header".to_string(),
+                value: "test".to_string(),
+            })
+        );
     }
 
     // transform function must be a *query* method of the canister
