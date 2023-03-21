@@ -6,12 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.4] - 2023-03-21
+
 ### Added
 
 - `WASM_PAGE_SIZE_IN_BYTES` made `pub`. (#380)
 - `http_request_with_cycles`. (#381)
 
-## [0.7.3] = 2023-03-01
+## [0.7.3] - 2023-03-01
 
 ### Fixed
 
