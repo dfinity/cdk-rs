@@ -138,5 +138,5 @@ pub fn canister_version() -> u64 {
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
     // SAFETY: ic0.is_controller is always safe to call.
-    unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) }
+    unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) != 0_i32 }
 }
