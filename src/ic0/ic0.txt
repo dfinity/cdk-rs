@@ -62,7 +62,7 @@ ic0.data_certificate_copy : (dst: i32, offset: i32, size: i32) -> ();       // *
 ic0.time : () -> (timestamp : i64);                                         // *
 ic0.global_timer_set : (timestamp : i64) -> i64;                            // I U Ry Rt C T
 ic0.performance_counter : (counter_type : i32) -> (counter : i64);          // * s
-ic0.is_controller: (src: i32, size: i32) -> ( result: i32);                 // * s
+ic0.is_controller: (src: i32, size: i32) -> (result: i32);                  // * s
 
 ic0.debug_print : (src : i32, size : i32) -> ();                            // * s
 ic0.trap : (src : i32, size : i32) -> ();                                   // * s

@@ -221,7 +221,7 @@ mod non_wasm {
     pub unsafe fn trap(src: i32, size: i32) {
         panic!("trap should only be called inside canisters.");
     }
-    pub unsafe fn is_controller(src: i32, size: i32) {
+    pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
         panic!("is_controller should only be called inside canisters.");
     }
 }
