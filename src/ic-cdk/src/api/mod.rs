@@ -139,5 +139,5 @@ pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
     // SAFETY: ic0.is_controller is always safe to call.
     let is_controller = unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) };
-    c != 0
+    is_controller != 0
 }
