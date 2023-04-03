@@ -137,6 +137,6 @@ pub fn canister_version() -> u64 {
 /// Determine if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
-    // SAFETY: ic0.is_controller is always safe to call.
+    // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
     unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) != 0 }
 }
