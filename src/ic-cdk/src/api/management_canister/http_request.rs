@@ -8,6 +8,10 @@ use candid::{
 };
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "http-request")]
+use slotmap::{DefaultKey, Key, SlotMap};
+#[cfg(feature = "http-request")]
+use std::cell::RefCell;
 
 /// "transform" function of type: `func (http_request) -> (http_response) query`
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -57,43 +61,33 @@ pub struct TransformContext {
     pub context: Vec<u8>,
 }
 
-impl TransformContext {
-    /// Construct `TransformContext` from a transform function.
-    ///
-    /// # example
-    ///
-    /// ```no_run
-    /// # use ic_cdk::api::management_canister::http_request::{TransformContext, TransformArgs, HttpResponse};
-    /// #[ic_cdk::query]
-    /// fn my_transform(arg: TransformArgs) -> HttpResponse {
-    ///     // ...
-    /// # unimplemented!()
-    /// }
-    /// # fn main() {
-    /// # let context = vec![];
-    /// let transform = TransformContext::new(my_transform, context);
-    /// # }
-    /// ```
-    pub fn new<T>(func: T, context: Vec<u8>) -> Self
-    where
-        T: Fn(TransformArgs) -> HttpResponse,
-    {
-        Self {
-            function: TransformFunc(candid::Func {
-                principal: crate::id(),
-                method: get_function_name(func).to_string(),
-            }),
-            context,
-        }
-    }
+#[cfg(feature = "http-request")]
+thread_local! {
+    #[allow(clippy::type_complexity)]
+    static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpResponse) -> HttpResponse>>> = RefCell::default();
 }
 
-fn get_function_name<F>(_: F) -> &'static str {
-    let full_name = std::any::type_name::<F>();
-    match full_name.rfind(':') {
-        Some(index) => &full_name[index + 1..],
-        None => full_name,
+#[cfg(feature = "http-request")]
+#[export_name = "canister_query <ic-cdk internal> http_transform"]
+extern "C" fn http_transform() {
+    use crate::api::{
+        call::{arg_data, reply},
+        caller,
+    };
+    use slotmap::KeyData;
+    if caller() != Principal::management_canister() {
+        crate::trap("This function is internal to ic-cdk and should not be called externally.");
     }
+    crate::setup();
+    let (args,): (TransformArgs,) = arg_data();
+    let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
+    let key = DefaultKey::from(KeyData::from_ffi(int));
+    let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
+    let Some(func) = func else {
+        crate::trap(&format!("Missing transform function for request {int}"));
+    };
+    let transformed = func(args.response);
+    reply((transformed,))
 }
 
 /// HTTP header.
@@ -111,11 +105,23 @@ pub struct HttpHeader {
 ///
 /// Currently support following methods.
 #[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
 )]
 pub enum HttpMethod {
     /// GET
     #[serde(rename = "get")]
+    #[default]
     GET,
     /// POST
     #[serde(rename = "post")]
@@ -126,7 +132,7 @@ pub enum HttpMethod {
 }
 
 /// Argument type of [http_request].
-#[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.
     pub url: String,
@@ -161,7 +167,7 @@ pub struct HttpResponse {
 ///
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
 /// This method handles the cycles cost calculation under the hood which assuming the canister is on a 13-node Application Subnet.
-/// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [http_request_with_cycles] instead.
+/// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [`http_request_with_cycles`] instead.
 ///
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
@@ -175,6 +181,27 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
     .await
 }
 
+/// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
+///
+/// Do not set the `transform` field of `arg`. To use a Candid function, call [`http_request`] instead.
+///
+/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+///
+/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// This method handles the cycles cost calculation under the hood which assuming the canister is on a 13-node Application Subnet.
+/// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [`http_request_with_cycles`] instead.
+///
+/// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
+#[cfg(any(docsrs, feature = "http-request"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "http-request")))]
+pub async fn http_request_with(
+    arg: CanisterHttpRequestArgument,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
+) -> CallResult<(HttpResponse,)> {
+    let cycles = http_request_required_cycles(&arg);
+    http_request_with_cycles_with(arg, cycles, transform_func).await
+}
+
 /// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
@@ -182,7 +209,7 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 ///
-/// If the canister is on a 13-node Application Subnet, you can call [http_request] instead which handles cycles cost calculation under the hood.
+/// If the canister is on a 13-node Application Subnet, you can call [`http_request`] instead which handles cycles cost calculation under the hood.
 pub async fn http_request_with_cycles(
     arg: CanisterHttpRequestArgument,
     cycles: u128,
@@ -194,6 +221,47 @@ pub async fn http_request_with_cycles(
         cycles,
     )
     .await
+}
+
+/// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
+///
+/// Do not set the `transform` field of `arg`. To use a Candid function, call [`http_request_with_cycles`] instead.
+///
+/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+///
+/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
+///
+/// If the canister is on a 13-node Application Subnet, you can call [`http_request`] instead which handles cycles cost calculation under the hood.
+#[cfg(any(docsrs, feature = "http-request"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "http-request")))]
+pub async fn http_request_with_cycles_with(
+    arg: CanisterHttpRequestArgument,
+    cycles: u128,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
+) -> CallResult<(HttpResponse,)> {
+    assert!(arg.transform.is_none());
+    let transform_func = Box::new(transform_func) as _;
+    let key = TRANSFORMS.with(|transforms| transforms.borrow_mut().insert(transform_func));
+    struct DropGuard(DefaultKey);
+    impl Drop for DropGuard {
+        fn drop(&mut self) {
+            TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(self.0));
+        }
+    }
+    let key = DropGuard(key);
+    let context = key.0.data().as_ffi().to_be_bytes().to_vec();
+    let arg = CanisterHttpRequestArgument {
+        transform: Some(TransformContext {
+            function: TransformFunc(candid::Func {
+                method: "<ic-cdk internal> http_transform".into(),
+                principal: crate::id(),
+            }),
+            context,
+        }),
+        ..arg
+    };
+    http_request_with_cycles(arg, cycles).await
 }
 
 fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
@@ -237,11 +305,5 @@ mod tests {
             transform: None,
         };
         assert_eq!(http_request_required_cycles(&arg), 210132900000u128);
-    }
-
-    #[test]
-    fn get_function_name_work() {
-        fn func() {}
-        assert_eq!(get_function_name(func), "func");
     }
 }

@@ -8,7 +8,12 @@ homepage = "https://docs.rs/ic-cdk"
 documentation = "https://docs.rs/ic-cdk"
 license = "Apache-2.0"
 readme = "README.md"
-categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
+categories = [
+    "api-bindings",
+    "data-structures",
+    "no-std",
+    "development-tools::ffi",
+]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
@@ -20,9 +25,13 @@ ic0 = { path = "../ic0", version = "0.18.9" }
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
+slotmap = { version = "1.0.6", optional = true }
 
 [dev-dependencies]
 rstest = "0.12.0"
+
+[features]
+http-request = ["dep:slotmap"]
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
