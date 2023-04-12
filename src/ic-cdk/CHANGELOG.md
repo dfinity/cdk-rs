@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ic0.is_controller` as a public function. (#383)
 
+### Changed
+
+- `TransformContext::new` has been replaced with dedicated functions that accept closures. (#385)
+
 ## [0.7.4] - 2023-03-21
 
 ### Added
