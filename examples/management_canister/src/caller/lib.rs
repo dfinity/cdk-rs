@@ -95,9 +95,9 @@ mod http_request {
             method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform: Some(TransformContext::new(transform, vec![])),
+            transform: None,
         };
-        let response = http_request(arg.clone()).await.unwrap().0;
+        let response = http_request_with(arg.clone(), transform).await.unwrap().0;
         assert_eq!(response.status, 200);
         assert_eq!(
             response.headers.get(0),
@@ -106,7 +106,7 @@ mod http_request {
                 value: "test".to_string(),
             })
         );
-        let response = http_request_with_cycles(arg, 718500000u128)
+        let response = http_request_with_cycles_with(arg, 718500000u128, transform)
             .await
             .unwrap()
             .0;
@@ -120,15 +120,13 @@ mod http_request {
         );
     }
 
-    // transform function must be a *query* method of the canister
-    #[query]
-    fn transform(arg: TransformArgs) -> HttpResponse {
+    fn transform(response: HttpResponse) -> HttpResponse {
         HttpResponse {
             headers: vec![HttpHeader {
                 name: "custom-header".to_string(),
                 value: "test".to_string(),
             }],
-            ..arg.response
+            ..response
         }
     }
 }

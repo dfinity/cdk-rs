@@ -10,6 +10,6 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../../src/ic-cdk" }
+ic-cdk = { path = "../../../../src/ic-cdk", features = ["http-request"] }
 ic-cdk-macros = { path = "../../../../src/ic-cdk-macros" }
 sha2 = "0.10"
