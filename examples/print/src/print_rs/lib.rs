@@ -4,4 +4,3 @@ fn print() {
 }
 
 ic_cdk::export_candid!(::ic_cdk::export::candid);
-

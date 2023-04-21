@@ -79,6 +79,11 @@ pub fn export_candid(input: TokenStream) -> TokenStream {
     }
     .into()
 }
+#[cfg(not(feature = "export_candid"))]
+#[proc_macro]
+pub fn export_candid(_: TokenStream) -> TokenStream {
+    quote::quote! {}.into()
+}
 
 /// Register a query call entry point.
 ///
