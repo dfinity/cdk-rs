@@ -131,6 +131,8 @@ pub struct CanisterHttpRequestArgument {
     /// The requested URL.
     pub url: String,
     /// The maximal size of the response in bytes. If None, 2MiB will be the limit.
+    /// This value affects the cost of the http request and it is highly recommended
+    /// to set it as low as possible to avoid unnecessary extra costs.
     pub max_response_bytes: Option<u64>,
     /// The method of HTTP request.
     pub method: HttpMethod,
