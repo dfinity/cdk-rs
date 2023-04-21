@@ -16,6 +16,9 @@ rust-version = "1.60.0"
 quote = { version = "1.0" }
 syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
 
+[features]
+wasi = []
+
 # This is not a real example but a utility for auto-generating ic0.rs
 [[example]]
 name = "ic0build"

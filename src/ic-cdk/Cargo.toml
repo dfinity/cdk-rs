@@ -15,7 +15,7 @@ repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.60.0"
 
 [dependencies]
-candid = "0.9.0-beta.2"
+candid = { path = "../../../candid/rust/candid" }
 ic0 = { path = "../ic0", version = "0.18.9" }
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.0-beta.0" }
 serde = "1.0.110"
@@ -23,6 +23,9 @@ serde_bytes = "0.11.7"
 
 [dev-dependencies]
 rstest = "0.12.0"
+
+[features]
+wasi = ["ic0/wasi"]
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

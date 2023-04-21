@@ -6,6 +6,14 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
+#[cfg(feature = "wasi")]
+#[allow(
+    missing_docs,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
+pub mod wasi;
+
 /// Prints the given message.
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
