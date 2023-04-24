@@ -78,12 +78,29 @@ impl TransformContext {
     where
         T: Fn(TransformArgs) -> HttpResponse,
     {
-        Self {
-            function: TransformFunc(candid::Func {
-                principal: crate::id(),
-                method: get_function_name(func).to_string(),
-            }),
-            context,
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self {
+                function: TransformFunc(candid::Func {
+                    principal: crate::id(),
+                    method: get_function_name(func).to_string(),
+                }),
+                context,
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let name = get_function_name(func).to_string();
+            // TODO: store transform functin.
+
+            Self {
+                function: TransformFunc(candid::Func {
+                    principal: Principal::management_canister(), // TODO: why management_canister?
+                    method: name,
+                }),
+                context,
+            }
         }
     }
 }
