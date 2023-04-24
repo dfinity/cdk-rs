@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- `ic0.is_controller` as a public function. (#383)
+
 ## [0.7.4] - 2023-03-21
 
 ### Added
