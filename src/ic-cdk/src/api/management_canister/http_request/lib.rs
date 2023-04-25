@@ -108,7 +108,7 @@ impl TransformContext {
     }
 }
 
-fn get_function_name<F>(_: &F) -> &'static str {
+pub(crate) fn get_function_name<F>(_: &F) -> &'static str {
     let full_name = std::any::type_name::<F>();
     match full_name.rfind(':') {
         Some(index) => &full_name[index + 1..],

@@ -28,8 +28,8 @@ impl CanisterHttpRequestArgumentBuilder {
     }
 
     /// Sets the URL of the HTTP request.
-    pub fn url(mut self, url: String) -> Self {
-        self.0.url = url;
+    pub fn url(mut self, url: &str) -> Self {
+        self.0.url = url.to_string();
         self
     }
 
