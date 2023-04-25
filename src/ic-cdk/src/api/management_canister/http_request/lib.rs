@@ -80,28 +80,26 @@ impl TransformContext {
     {
         #[cfg(target_arch = "wasm32")]
         {
+            let principal = crate::id();
+            let method = get_function_name(&func).to_string();
+
             Self {
-                function: TransformFunc(candid::Func {
-                    principal: crate::id(),
-                    method: get_function_name(&func).to_string(),
-                }),
+                function: TransformFunc(candid::Func { principal, method }),
                 context,
             }
         }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let name = get_function_name(&func).to_string();
+            // crate::id() can not be called outside of canister, that's why for testing
+            // it is replaced with Principal::management_canister().
+            let principal = Principal::management_canister();
+            let method = get_function_name(&func).to_string();
             #[cfg(test)]
-            super::storage::transform_function_insert(name.clone(), Box::new(func));
+            super::storage::transform_function_insert(method.clone(), Box::new(func));
 
             Self {
-                function: TransformFunc(candid::Func {
-                    // crate::id() can not be called outside of canister, that's why for testing
-                    // it is replaced with Principal::management_canister().
-                    principal: Principal::management_canister(),
-                    method: name,
-                }),
+                function: TransformFunc(candid::Func { principal, method }),
                 context,
             }
         }
