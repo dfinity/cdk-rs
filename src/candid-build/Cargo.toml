@@ -1,0 +1,8 @@
+[package]
+name = "candid-build"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+candid = { path = "../../../candid/rust/candid", features = ["parser"] }
+
