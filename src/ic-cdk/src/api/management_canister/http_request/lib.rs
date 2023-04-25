@@ -76,14 +76,14 @@ impl TransformContext {
     /// ```
     pub fn new<T>(func: T, context: Vec<u8>) -> Self
     where
-        T: Fn(TransformArgs) -> HttpResponse,
+        T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
         #[cfg(target_arch = "wasm32")]
         {
             Self {
                 function: TransformFunc(candid::Func {
                     principal: crate::id(),
-                    method: get_function_name(func).to_string(),
+                    method: get_function_name(&func).to_string(),
                 }),
                 context,
             }
@@ -91,8 +91,9 @@ impl TransformContext {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let name = get_function_name(func).to_string();
-            // TODO: store transform functin.
+            let name = get_function_name(&func).to_string();
+            #[cfg(test)]
+            super::storage::transform_function_insert(name.clone(), Box::new(func));
 
             Self {
                 function: TransformFunc(candid::Func {
@@ -105,7 +106,7 @@ impl TransformContext {
     }
 }
 
-fn get_function_name<F>(_: F) -> &'static str {
+fn get_function_name<F>(_: &F) -> &'static str {
     let full_name = std::any::type_name::<F>();
     match full_name.rfind(':') {
         Some(index) => &full_name[index + 1..],
@@ -267,6 +268,6 @@ mod tests {
     #[test]
     fn get_function_name_work() {
         fn func() {}
-        assert_eq!(get_function_name(func), "func");
+        assert_eq!(get_function_name(&func), "func");
     }
 }

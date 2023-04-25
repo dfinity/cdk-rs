@@ -74,6 +74,10 @@ pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
         .unwrap_or(0)
 }
 
+pub fn registered_transform_function_names() -> Vec<String> {
+    storage::transform_function_names()
+}
+
 pub(crate) async fn http_request(
     request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
