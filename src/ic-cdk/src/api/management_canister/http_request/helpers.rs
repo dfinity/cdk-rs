@@ -1,6 +1,6 @@
 //! Helper functions and builders for creating HTTP requests and responses.
 
-use super::http_request::{
+use super::{
     CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse, TransformArgs,
     TransformContext,
 };
@@ -28,21 +28,21 @@ impl CanisterHttpRequestArgumentBuilder {
         self
     }
 
-    pub fn get(mut self, url: String) -> Self {
+    pub fn get(mut self, url: &str) -> Self {
         self.0.method = HttpMethod::GET;
-        self.0.url = url;
+        self.0.url = url.to_string();
         self
     }
 
-    pub fn post(mut self, url: String) -> Self {
+    pub fn post(mut self, url: &str) -> Self {
         self.0.method = HttpMethod::POST;
-        self.0.url = url;
+        self.0.url = url.to_string();
         self
     }
 
-    pub fn head(mut self, url: String) -> Self {
+    pub fn head(mut self, url: &str) -> Self {
         self.0.method = HttpMethod::HEAD;
-        self.0.url = url;
+        self.0.url = url.to_string();
         self
     }
 

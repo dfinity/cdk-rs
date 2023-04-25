@@ -1,6 +1,6 @@
-use super::super::call::RejectionCode;
-use super::http_request::{CanisterHttpRequestArgument, HttpResponse, TransformArgs};
+use super::super::super::call::RejectionCode;
 use super::storage;
+use super::{CanisterHttpRequestArgument, HttpResponse, TransformArgs};
 use std::time::Duration;
 
 pub type MockError = (RejectionCode, String);

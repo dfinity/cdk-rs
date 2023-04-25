@@ -13,11 +13,5 @@
 pub mod bitcoin;
 pub mod ecdsa;
 pub mod http_request;
-pub mod http_request_helpers;
 pub mod main;
 pub mod provisional;
-
-#[cfg(test)]
-pub mod mock;
-#[cfg(test)]
-pub mod storage;

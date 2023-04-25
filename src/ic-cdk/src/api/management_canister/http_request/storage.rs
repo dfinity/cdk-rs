@@ -1,5 +1,5 @@
-use super::http_request::{CanisterHttpRequestArgument, HttpResponse, TransformArgs};
 use super::mock::{hash, Mock};
+use super::{CanisterHttpRequestArgument, HttpResponse, TransformArgs};
 use std::collections::HashMap;
 use std::sync::RwLock;
 

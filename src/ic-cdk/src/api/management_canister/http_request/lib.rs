@@ -182,14 +182,22 @@ pub struct HttpResponse {
 ///
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
-    let cycles = http_request_required_cycles(&arg);
-    call_with_payment128(
-        Principal::management_canister(),
-        "http_request",
-        (arg,),
-        cycles,
-    )
-    .await
+    #[cfg(not(test))]
+    {
+        let cycles = http_request_required_cycles(&arg);
+        call_with_payment128(
+            Principal::management_canister(),
+            "http_request",
+            (arg,),
+            cycles,
+        )
+        .await
+    }
+
+    #[cfg(test)]
+    {
+        super::mock::http_request(arg).await
+    }
 }
 
 /// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
