@@ -95,7 +95,6 @@ impl TransformContext {
             // it is replaced with Principal::management_canister().
             let principal = Principal::management_canister();
             let method = get_function_name(&func).to_string();
-            #[cfg(test)]
             super::storage::transform_function_insert(method.clone(), Box::new(func));
 
             Self {
@@ -183,7 +182,7 @@ pub struct HttpResponse {
 ///
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
-    #[cfg(not(test))]
+    #[cfg(target_arch = "wasm32")]
     {
         let cycles = http_request_required_cycles(&arg);
         call_with_payment128(
@@ -195,7 +194,7 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
         .await
     }
 
-    #[cfg(test)]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         super::mock::http_request(arg).await
     }

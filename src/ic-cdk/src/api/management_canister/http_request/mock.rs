@@ -1,9 +1,11 @@
+//! Mocks HTTP requests.
+
 use super::super::super::call::RejectionCode;
 use super::storage;
 use super::{CanisterHttpRequestArgument, HttpResponse, TransformArgs};
 use std::time::Duration;
 
-pub type MockError = (RejectionCode, String);
+type MockError = (RejectionCode, String);
 
 #[derive(Clone)]
 pub(crate) struct Mock {
