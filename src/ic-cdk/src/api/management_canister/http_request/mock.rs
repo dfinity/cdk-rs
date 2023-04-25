@@ -14,6 +14,7 @@ pub(crate) struct Mock {
 }
 
 impl Mock {
+    /// Creates a new mock.
     pub fn new(
         request: CanisterHttpRequestArgument,
         result: Result<HttpResponse, MockError>,
@@ -27,6 +28,7 @@ impl Mock {
         }
     }
 
+    /// Creates a new mock with a response.
     pub fn new_ok(
         request: CanisterHttpRequestArgument,
         response: HttpResponse,
@@ -35,6 +37,7 @@ impl Mock {
         Self::new(request, Ok(response), delay)
     }
 
+    /// Creates a new mock with an error.
     pub fn new_err(
         request: CanisterHttpRequestArgument,
         error: MockError,
@@ -44,10 +47,12 @@ impl Mock {
     }
 }
 
+/// Mocks a HTTP request.
 pub fn mock(request: CanisterHttpRequestArgument, response: HttpResponse) {
     mock_with_delay(request, response, Duration::from_secs(0));
 }
 
+/// Mocks a HTTP request with a delay.
 pub fn mock_with_delay(
     request: CanisterHttpRequestArgument,
     response: HttpResponse,
@@ -56,10 +61,12 @@ pub fn mock_with_delay(
     storage::mock_insert(Mock::new_ok(request, response, delay));
 }
 
+/// Mocks a HTTP request with an error.
 pub fn mock_error(request: CanisterHttpRequestArgument, error: (RejectionCode, String)) {
     mock_error_with_delay(request, error, Duration::from_secs(0));
 }
 
+/// Mocks a HTTP request with an error and a delay.
 pub fn mock_error_with_delay(
     request: CanisterHttpRequestArgument,
     error: (RejectionCode, String),
@@ -68,16 +75,22 @@ pub fn mock_error_with_delay(
     storage::mock_insert(Mock::new_err(request, error, delay));
 }
 
+/// Returns the number of times a HTTP request was called.
+/// Returns 0 if no mock has been found for the request.
 pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
     storage::mock_get(&request)
         .map(|mock| mock.times_called)
         .unwrap_or(0)
 }
 
+/// Returns a sorted list of registered transform function names.
 pub fn registered_transform_function_names() -> Vec<String> {
     storage::transform_function_names()
 }
 
+/// Handles incoming HTTP requests by retrieving a mock response based
+/// on the request, possibly delaying the response, transforming the response if necessary,
+/// and returning it. If there is no mock found, it returns an error.
 pub(crate) async fn http_request(
     request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
@@ -127,6 +140,7 @@ pub(crate) async fn http_request(
     Ok((transformed_response,))
 }
 
+/// Calls the transform function if one is specified in the request.
 fn call_transform_function(
     request: CanisterHttpRequestArgument,
     arg: TransformArgs,
@@ -136,6 +150,9 @@ fn call_transform_function(
         .and_then(|t| storage::transform_function_call(t.function.0.method, arg))
 }
 
+/// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
+/// method, headers, body, and optionally, its transform function name.
+/// This is because `CanisterHttpRequestArgument` does not have `Hash` implemented.
 pub(crate) fn hash(request: &CanisterHttpRequestArgument) -> String {
     let mut hash = String::new();
 
