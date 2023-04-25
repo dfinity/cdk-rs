@@ -1,3 +1,5 @@
+//! Helper functions and builders for creating HTTP requests and responses.
+
 use super::http_request::{
     CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse, TransformArgs,
     TransformContext,
