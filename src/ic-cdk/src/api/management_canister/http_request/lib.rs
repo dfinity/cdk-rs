@@ -97,7 +97,9 @@ impl TransformContext {
 
             Self {
                 function: TransformFunc(candid::Func {
-                    principal: Principal::management_canister(), // TODO: why management_canister?
+                    // crate::id() can not be called outside of canister, that's why for testing
+                    // it is replaced with Principal::management_canister().
+                    principal: Principal::management_canister(),
                     method: name,
                 }),
                 context,
