@@ -57,9 +57,11 @@ pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 struct CallFutureState {
     result: Option<CallResult<Vec<u8>>>,
     waker: Option<Waker>,
+    id: Principal,
     method: String,
     arg: Vec<u8>,
-    id: Principal,
+    payment: u64,
+    payment128: u128,
 }
 
 struct CallFuture {
@@ -71,6 +73,7 @@ impl Future for CallFuture {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
+        let state_ptr = Arc::into_raw(self_ref.state.clone());
         let mut state = self_ref.state.write().unwrap();
 
         if let Some(result) = state.result.take() {
@@ -87,8 +90,9 @@ impl Future for CallFuture {
             // ic0.call_perform is always safe to call.
             let callee = state.id.as_slice();
             let method = &state.method;
-            let args_raw = &state.arg;
-            let state_ptr = Arc::into_raw(Arc::new(&state));
+            let args = &state.arg;
+            let payment = state.payment;
+            let payment128 = state.payment128;
             let err_code = unsafe {
                 ic0::call_new(
                     callee.as_ptr() as i32,
@@ -101,8 +105,15 @@ impl Future for CallFuture {
                     state_ptr as i32,
                 );
 
-                ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-                //payment_func();
+                ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
+                {
+                    if payment > 0 {
+                        // SAFETY: ic0.call_cycles_add is always safe to call.
+                        // This is called as part of the call_new lifecycle, and so will not trap.
+                        ic0::call_cycles_add(payment as i64);
+                    }
+                }
+                add_payment(payment128);
                 ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
                 ic0::call_perform()
             };
@@ -274,15 +285,7 @@ pub fn call_raw(
     args_raw: &[u8],
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-    call_raw_internal(id, method, args_raw, move || {
-        if payment > 0 {
-            // SAFETY: ic0.call_cycles_add is always safe to call.
-            unsafe {
-                // This is called as part of the call_new lifecycle, and so will not trap.
-                ic0::call_cycles_add(payment as i64);
-            }
-        }
-    })
+    call_raw_internal(id, method, args_raw, payment, 0)
 }
 
 /// Similar to `call128`, but without serialization.
@@ -292,23 +295,24 @@ pub fn call_raw128(
     args_raw: &[u8],
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-    call_raw_internal(id, method, args_raw, move || {
-        add_payment(payment);
-    })
+    call_raw_internal(id, method, args_raw, 0, payment)
 }
 
 fn call_raw_internal(
     id: Principal,
     method: &str,
     args_raw: &[u8],
-    payment_func: impl FnOnce(),
+    payment: u64,
+    payment128: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
+        id,
         method: method.to_string(),
         arg: args_raw.to_vec(),
-        id: id,
+        payment,
+        payment128,
     }));
     CallFuture { state }
 }
