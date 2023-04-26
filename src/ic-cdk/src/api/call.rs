@@ -57,6 +57,9 @@ pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 struct CallFutureState {
     result: Option<CallResult<Vec<u8>>>,
     waker: Option<Waker>,
+    method: String,
+    arg: Vec<u8>,
+    id: Principal,
 }
 
 struct CallFuture {
@@ -73,6 +76,44 @@ impl Future for CallFuture {
         if let Some(result) = state.result.take() {
             Poll::Ready(result)
         } else {
+            // SAFETY:
+            // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+            // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+            // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
+            // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
+            // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+            // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
+            // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
+            // ic0.call_perform is always safe to call.
+            let callee = state.id.as_slice();
+            let method = &state.method;
+            let args_raw = &state.arg;
+            let state_ptr = Arc::into_raw(Arc::new(&state));
+            let err_code = unsafe {
+                ic0::call_new(
+                    callee.as_ptr() as i32,
+                    callee.len() as i32,
+                    method.as_ptr() as i32,
+                    method.len() as i32,
+                    callback as usize as i32,
+                    state_ptr as i32,
+                    callback as usize as i32,
+                    state_ptr as i32,
+                );
+
+                ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+                //payment_func();
+                ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
+                ic0::call_perform()
+            };
+
+            // 0 is a special error code meaning call_simple call succeeded.
+            if err_code != 0 {
+                state.result = Some(Err((
+                    RejectionCode::from(err_code),
+                    "Couldn't send message".to_string(),
+                )));
+            }
             state.waker = Some(context.waker().clone());
             Poll::Pending
         }
@@ -262,47 +303,13 @@ fn call_raw_internal(
     args_raw: &[u8],
     payment_func: impl FnOnce(),
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-    let callee = id.as_slice();
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
+        method: method.to_string(),
+        arg: args_raw.to_vec(),
+        id: id,
     }));
-    let state_ptr = Arc::into_raw(state.clone());
-    // SAFETY:
-    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-    // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
-    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-    // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-    // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
-    // ic0.call_perform is always safe to call.
-    let err_code = unsafe {
-        ic0::call_new(
-            callee.as_ptr() as i32,
-            callee.len() as i32,
-            method.as_ptr() as i32,
-            method.len() as i32,
-            callback as usize as i32,
-            state_ptr as i32,
-            callback as usize as i32,
-            state_ptr as i32,
-        );
-
-        ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
-        payment_func();
-        ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
-        ic0::call_perform()
-    };
-
-    // 0 is a special error code meaning call_simple call succeeded.
-    if err_code != 0 {
-        let mut state = state.write().unwrap();
-        state.result = Some(Err((
-            RejectionCode::from(err_code),
-            "Couldn't send message".to_string(),
-        )));
-    }
     CallFuture { state }
 }
 
