@@ -29,6 +29,7 @@ impl Config {
                 type_attributes: "".to_string(),
                 canister_id: Some(canister_id),
                 service_name: canister_name.to_string(),
+                target: rust::Target::CanisterCall,
             },
         }
     }
@@ -67,7 +68,9 @@ impl Builder {
         }
         let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
         module.write(b"#![allow(unused_imports)]\n").unwrap();
+        module.write(b"#![allow(non_upper_case_globals)]").unwrap();
         for conf in self.configs.iter() {
+            module.write(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
             let line = format!("pub mod {};\n", conf.canister_name);
             module.write(line.as_bytes()).unwrap();
         }
