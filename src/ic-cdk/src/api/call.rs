@@ -88,42 +88,44 @@ impl Future for CallFuture {
             // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
             // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
             // ic0.call_perform is always safe to call.
-            let callee = state.id.as_slice();
-            let method = &state.method;
-            let args = &state.arg;
-            let payment = state.payment;
-            let payment128 = state.payment128;
-            let err_code = unsafe {
-                ic0::call_new(
-                    callee.as_ptr() as i32,
-                    callee.len() as i32,
-                    method.as_ptr() as i32,
-                    method.len() as i32,
-                    callback as usize as i32,
-                    state_ptr as i32,
-                    callback as usize as i32,
-                    state_ptr as i32,
-                );
+            if state.waker.is_none() {
+                let callee = state.id.as_slice();
+                let method = &state.method;
+                let args = &state.arg;
+                let payment = state.payment;
+                let payment128 = state.payment128;
+                let err_code = unsafe {
+                    ic0::call_new(
+                        callee.as_ptr() as i32,
+                        callee.len() as i32,
+                        method.as_ptr() as i32,
+                        method.len() as i32,
+                        callback as usize as i32,
+                        state_ptr as i32,
+                        callback as usize as i32,
+                        state_ptr as i32,
+                    );
 
-                ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
-                {
-                    if payment > 0 {
-                        // SAFETY: ic0.call_cycles_add is always safe to call.
-                        // This is called as part of the call_new lifecycle, and so will not trap.
-                        ic0::call_cycles_add(payment as i64);
+                    ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
+                    {
+                        if payment > 0 {
+                            // SAFETY: ic0.call_cycles_add is always safe to call.
+                            // This is called as part of the call_new lifecycle, and so will not trap.
+                            ic0::call_cycles_add(payment as i64);
+                        }
                     }
-                }
-                add_payment(payment128);
-                ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
-                ic0::call_perform()
-            };
+                    add_payment(payment128);
+                    ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
+                    ic0::call_perform()
+                };
 
-            // 0 is a special error code meaning call_simple call succeeded.
-            if err_code != 0 {
-                state.result = Some(Err((
-                    RejectionCode::from(err_code),
-                    "Couldn't send message".to_string(),
-                )));
+                // 0 is a special error code meaning call_simple call succeeded.
+                if err_code != 0 {
+                    state.result = Some(Err((
+                        RejectionCode::from(err_code),
+                        "Couldn't send message".to_string(),
+                    )));
+                }
             }
             state.waker = Some(context.waker().clone());
             Poll::Pending
