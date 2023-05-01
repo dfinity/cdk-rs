@@ -1,10 +1,13 @@
 //! Canister HTTP request.
 
-use crate::api::call::{call_with_payment128, CallResult};
+use crate::{
+    api::call::{call_with_payment128, CallResult},
+    id,
+};
 use candid::{
     parser::types::FuncMode,
     types::{Function, Serializer, Type},
-    CandidType, Principal,
+    CandidType, Func, Principal,
 };
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
@@ -59,6 +62,19 @@ pub struct TransformContext {
     /// Context to be passed to `transform` function to transform HTTP response for consensus
     #[serde(with = "serde_bytes")]
     pub context: Vec<u8>,
+}
+
+impl TransformContext {
+    /// Constructs a TransformContext from a name and context. The principal is assumed to be the [current canister's](id).
+    pub fn from_name(candid_function_name: String, context: Vec<u8>) -> Self {
+        Self {
+            context,
+            function: TransformFunc(Func {
+                method: candid_function_name,
+                principal: id(),
+            }),
+        }
+    }
 }
 
 #[cfg(feature = "http-request")]
