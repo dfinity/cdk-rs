@@ -209,7 +209,7 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 ///
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
 /// This method handles the cycles cost calculation under the hood which assuming the canister is on a 13-node Application Subnet.
-/// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [`http_request_with_cycles`] instead.
+/// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [`http_request_with_cycles_with`] instead.
 ///
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 #[cfg(any(docsrs, feature = "transform-closure"))]
