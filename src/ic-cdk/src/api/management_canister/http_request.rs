@@ -11,9 +11,9 @@ use candid::{
 };
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "http-request")]
+#[cfg(feature = "transform-closure")]
 use slotmap::{DefaultKey, Key, SlotMap};
-#[cfg(feature = "http-request")]
+#[cfg(feature = "transform-closure")]
 use std::cell::RefCell;
 
 /// "transform" function of type: `func (http_request) -> (http_response) query`
@@ -77,13 +77,13 @@ impl TransformContext {
     }
 }
 
-#[cfg(feature = "http-request")]
+#[cfg(feature = "transform-closure")]
 thread_local! {
     #[allow(clippy::type_complexity)]
     static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpResponse) -> HttpResponse>>> = RefCell::default();
 }
 
-#[cfg(feature = "http-request")]
+#[cfg(feature = "transform-closure")]
 #[export_name = "canister_query <ic-cdk internal> http_transform"]
 extern "C" fn http_transform() {
     use crate::api::{
@@ -164,6 +164,7 @@ pub struct CanisterHttpRequestArgument {
     /// Optionally provide request body.
     pub body: Option<Vec<u8>>,
     /// Name of the transform function which is `func (transform_args) -> (http_response) query`.
+    /// Set to `None` if you are using `http_request_with` or `http_request_with_cycles_with`.
     pub transform: Option<TransformContext>,
 }
 
@@ -211,8 +212,8 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 /// If the canister is on a 34-node Application Subnets, you may have to compute the cost by yourself and call [`http_request_with_cycles`] instead.
 ///
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
-#[cfg(any(docsrs, feature = "http-request"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "http-request")))]
+#[cfg(any(docsrs, feature = "transform-closure"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
 pub async fn http_request_with(
     arg: CanisterHttpRequestArgument,
     transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
@@ -252,8 +253,8 @@ pub async fn http_request_with_cycles(
 /// Check [this page](https://internetcomputer.org/docs/current/developer-docs/production/computation-and-storage-costs) for more details.
 ///
 /// If the canister is on a 13-node Application Subnet, you can call [`http_request`] instead which handles cycles cost calculation under the hood.
-#[cfg(any(docsrs, feature = "http-request"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "http-request")))]
+#[cfg(any(docsrs, feature = "transform-closure"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
 pub async fn http_request_with_cycles_with(
     arg: CanisterHttpRequestArgument,
     cycles: u128,

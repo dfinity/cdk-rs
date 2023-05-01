@@ -31,7 +31,7 @@ slotmap = { version = "1.0.6", optional = true }
 rstest = "0.12.0"
 
 [features]
-http-request = ["dep:slotmap"]
+transform-closure = ["dep:slotmap"]
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
