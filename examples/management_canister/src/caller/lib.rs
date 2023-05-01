@@ -97,37 +97,34 @@ mod http_request {
             body: None,
             transform: None,
         };
-        let response = http_request_with(arg.clone(), transform).await.unwrap().0;
+        let header = HttpHeader {
+            name: "custom-header".to_string(),
+            value: "test".to_string(),
+        };
+        let response = http_request_with(arg.clone(), {
+            let header = header.clone();
+            move |mut response| {
+                response.headers = vec![header];
+                response
+            }
+        })
+        .await
+        .unwrap()
+        .0;
         assert_eq!(response.status, 200);
-        assert_eq!(
-            response.headers.get(0),
-            Some(&HttpHeader {
-                name: "custom-header".to_string(),
-                value: "test".to_string(),
-            })
-        );
-        let response = http_request_with_cycles_with(arg, 718500000u128, transform)
-            .await
-            .unwrap()
-            .0;
+        assert_eq!(response.headers.get(0), Some(&header));
+        let response = http_request_with_cycles_with(arg, 718500000u128, {
+            let header = header.clone();
+            move |mut response| {
+                response.headers = vec![header];
+                response
+            }
+        })
+        .await
+        .unwrap()
+        .0;
         assert_eq!(response.status, 200);
-        assert_eq!(
-            response.headers.get(0),
-            Some(&HttpHeader {
-                name: "custom-header".to_string(),
-                value: "test".to_string(),
-            })
-        );
-    }
-
-    fn transform(response: HttpResponse) -> HttpResponse {
-        HttpResponse {
-            headers: vec![HttpHeader {
-                name: "custom-header".to_string(),
-                value: "test".to_string(),
-            }],
-            ..response
-        }
+        assert_eq!(response.headers.get(0), Some(&header));
     }
 }
 
