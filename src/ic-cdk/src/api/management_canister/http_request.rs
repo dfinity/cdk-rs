@@ -260,7 +260,10 @@ pub async fn http_request_with_cycles_with(
     cycles: u128,
     transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
 ) -> CallResult<(HttpResponse,)> {
-    assert!(arg.transform.is_none());
+    assert!(
+        arg.transform.is_none(),
+        "`CanisterHttpRequestArgument`'s `transform` field must be `None` when using a closure"
+    );
     let transform_func = Box::new(transform_func) as _;
     let key = TRANSFORMS.with(|transforms| transforms.borrow_mut().insert(transform_func));
     struct DropGuard(DefaultKey);
