@@ -65,7 +65,7 @@ extern "C" {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
-#[allow(clippy::missing_safety_doc, missing_docs)]
+#[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
 mod non_wasm {
     pub unsafe fn msg_arg_data_size() -> i32 {
@@ -215,14 +215,14 @@ mod non_wasm {
     pub unsafe fn performance_counter(counter_type: i32) -> i64 {
         panic!("performance_counter should only be called inside canisters.");
     }
+    pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
+        panic!("is_controller should only be called inside canisters.");
+    }
     pub unsafe fn debug_print(src: i32, size: i32) {
         panic!("debug_print should only be called inside canisters.");
     }
     pub unsafe fn trap(src: i32, size: i32) {
         panic!("trap should only be called inside canisters.");
-    }
-    pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
-        panic!("is_controller should only be called inside canisters.");
     }
 }
 
