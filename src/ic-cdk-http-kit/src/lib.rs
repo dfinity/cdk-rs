@@ -3,7 +3,7 @@
 //! It streamlines unit testing of HTTP Outcalls and provides user-friendly utilities.
 //! The crate simulates the `http_request` function from `ic_cdk` by retrieving mock responses, checking the maximum allowed size, and applying a transformation function if specified, optionally with a delay to simulate latency.
 //!
-//! Note: To properly simulate the transformation function inside `ic_http_outcall_kit::http_request`, the request builder must be used.
+//! Note: To properly simulate the transformation function inside `ic_cdk_http_kit::http_request`, the request builder must be used.
 //!
 //! ## Features
 //!
@@ -23,7 +23,7 @@
 //!     arg.response
 //! }
 //!
-//! let request = ic_http_outcall_kit::create_request()
+//! let request = ic_cdk_http_kit::create_request()
 //!     .get("https://dummyjson.com/todos/1")
 //!     .max_response_bytes(1_024)
 //!     .transform(transform_function, vec![])
@@ -33,7 +33,7 @@
 //! ### Creating a Response
 //!
 //! ```ignore
-//! let mock_response = ic_http_outcall_kit::create_response()
+//! let mock_response = ic_cdk_http_kit::create_response()
 //!     .status(200)
 //!     .body("some text")
 //!     .build();
@@ -42,18 +42,18 @@
 //! ### Mocking
 //!
 //! ```ignore
-//! ic_http_outcall_kit::mock(request, Ok(mock_response));
-//! ic_http_outcall_kit::mock_with_delay(request, Ok(mock_response), Duration::from_sec(2));
+//! ic_cdk_http_kit::mock(request, Ok(mock_response));
+//! ic_cdk_http_kit::mock_with_delay(request, Ok(mock_response), Duration::from_sec(2));
 //!
 //! let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
-//! ic_http_outcall_kit::mock(request, Err(mock_error));
-//! ic_http_outcall_kit::mock_with_delay(request, Err(mock_error), Duration::from_sec(2));
+//! ic_cdk_http_kit::mock(request, Err(mock_error));
+//! ic_cdk_http_kit::mock_with_delay(request, Err(mock_error), Duration::from_sec(2));
 //! ```
 //!
 //! ### Making an HTTP Outcall
 //!
 //! ```ignore
-//! let (response,) = ic_http_outcall_kit::http_request(request).await.unwrap();
+//! let (response,) = ic_cdk_http_kit::http_request(request).await.unwrap();
 //! ```
 //!
 //! ### Asserts
@@ -61,7 +61,7 @@
 //! ```ignore
 //! assert_eq!(response.status, 200);
 //! assert_eq!(response.body, "transformed body".to_owned().into_bytes());
-//! assert_eq!(ic_http_outcall_kit::times_called(request), 1);
+//! assert_eq!(ic_cdk_http_kit::times_called(request), 1);
 //! ```
 //!
 //! ### More Examples
