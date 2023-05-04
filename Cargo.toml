@@ -4,6 +4,7 @@ members = [
     "src/ic-cdk",
     "src/ic-cdk-macros",
     "src/ic-cdk-timers",
+    "src/ic-cdk-http-kit",
     "library/ic-certified-map",
     "library/ic-ledger-types",
     "e2e-tests",
