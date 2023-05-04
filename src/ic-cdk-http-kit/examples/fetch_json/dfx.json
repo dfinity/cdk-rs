@@ -1,0 +1,18 @@
+{
+    "dfx": "0.13.1",
+    "version": 1,
+    "canisters": {
+        "fetch_json": {
+            "type": "rust",
+            "package": "fetch_json",
+            "candid": "candid.did"
+        }
+    },
+    "defaults": {
+        "build": {
+            "packtool": "",
+            "args": ""
+        }
+    },
+    "output_env_file": ".env"
+}
