@@ -133,7 +133,6 @@ async fn test_http_request_transform_context() {
         )
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
-        .status(STATUS_CODE_OK)
         .body_str("some context")
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
