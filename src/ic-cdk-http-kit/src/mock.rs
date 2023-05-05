@@ -117,11 +117,12 @@ async fn mock_http_request(
     }
 
     // Apply the transform function if one is specified.
+    let context = mock.request.clone().transform.map_or(vec![], |f| f.context);
     let transformed_response = call_transform_function(
         mock.request,
         TransformArgs {
             response: mock_response.clone(),
-            context: vec![],
+            context,
         },
     )
     .unwrap_or(mock_response);

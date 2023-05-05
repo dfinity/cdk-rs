@@ -34,7 +34,13 @@ impl HttpResponseBuilder {
     }
 
     /// Sets the HTTP response body.
-    pub fn body(mut self, body: &str) -> Self {
+    pub fn body(mut self, body: Vec<u8>) -> Self {
+        self.0.body = body;
+        self
+    }
+
+    /// Sets the HTTP response body text.
+    pub fn body_str(mut self, body: &str) -> Self {
         self.0.body = body.as_bytes().to_vec();
         self
     }

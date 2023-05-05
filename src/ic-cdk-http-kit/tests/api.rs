@@ -16,7 +16,7 @@ async fn test_http_request_no_transform() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(body)
+        .body_str(body)
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 
@@ -41,7 +41,7 @@ async fn test_http_request_called_several_times() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(body)
+        .body_str(body)
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 
@@ -72,7 +72,7 @@ async fn test_http_request_transform_status() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body("some text")
+        .body_str("some text")
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 
@@ -93,7 +93,7 @@ async fn test_http_request_transform_body() {
     const TRANSFORMED_BODY: &str = "transformed body";
     fn transform(_arg: TransformArgs) -> HttpResponse {
         ic_cdk_http_kit::create_response()
-            .body(TRANSFORMED_BODY)
+            .body_str(TRANSFORMED_BODY)
             .build()
     }
     let request = ic_cdk_http_kit::create_request()
@@ -102,7 +102,7 @@ async fn test_http_request_transform_body() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(ORIGINAL_BODY)
+        .body_str(ORIGINAL_BODY)
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 
@@ -113,6 +113,38 @@ async fn test_http_request_transform_body() {
 
     // Assert
     assert_eq!(response.body, TRANSFORMED_BODY.as_bytes().to_vec());
+    assert_eq!(ic_cdk_http_kit::times_called(request), 1);
+}
+
+#[tokio::test]
+async fn test_http_request_transform_context() {
+    // Arrange
+    fn transform_context_to_body_text(arg: TransformArgs) -> HttpResponse {
+        HttpResponse {
+            body: arg.context,
+            ..arg.response
+        }
+    }
+    let request = ic_cdk_http_kit::create_request()
+        .get("https://dummyjson.com/todos/1")
+        .transform(
+            transform_context_to_body_text,
+            "some context".as_bytes().to_vec(),
+        )
+        .build();
+    let mock_response = ic_cdk_http_kit::create_response()
+        .status(STATUS_CODE_OK)
+        .body_str("some context")
+        .build();
+    ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
+
+    // Act
+    let (response,) = ic_cdk_http_kit::http_request(request.clone())
+        .await
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.body, "some context".as_bytes().to_vec());
     assert_eq!(ic_cdk_http_kit::times_called(request), 1);
 }
 
@@ -140,7 +172,7 @@ async fn test_http_request_transform_both_status_and_body() {
         .build();
     let mock_response_1 = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_NOT_FOUND)
-        .body(ORIGINAL_BODY)
+        .body_str(ORIGINAL_BODY)
         .build();
     ic_cdk_http_kit::mock(request_1.clone(), Ok(mock_response_1));
 
@@ -150,7 +182,7 @@ async fn test_http_request_transform_both_status_and_body() {
         .build();
     let mock_response_2 = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(TRANSFORMED_BODY)
+        .body_str(TRANSFORMED_BODY)
         .build();
     ic_cdk_http_kit::mock(request_2.clone(), Ok(mock_response_2));
 
@@ -191,7 +223,7 @@ async fn test_http_request_max_response_bytes_ok() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(body_small_enough)
+        .body_str(body_small_enough)
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 
@@ -214,7 +246,7 @@ async fn test_http_request_max_response_bytes_error() {
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
-        .body(body_too_big)
+        .body_str(body_too_big)
         .build();
     ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 

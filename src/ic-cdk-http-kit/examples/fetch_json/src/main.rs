@@ -83,7 +83,9 @@ mod test {
         let request = build_quote_request("https://dummyjson.com/quotes/1");
         let mock_response = ic_cdk_http_kit::create_response()
             .status(200)
-            .body(r#"{"quote": "Be yourself; everyone else is taken.", "author": "Oscar Wilde"}"#)
+            .body_str(
+                r#"{"quote": "Be yourself; everyone else is taken.", "author": "Oscar Wilde"}"#,
+            )
             .build();
         ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
 

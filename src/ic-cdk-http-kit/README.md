@@ -37,7 +37,7 @@ let request = ic_cdk_http_kit::create_request()
 ```rust
 let mock_response = ic_cdk_http_kit::create_response()
     .status(200)
-    .body("some text")
+    .body_str("some text")
     .build();
 ```
 
