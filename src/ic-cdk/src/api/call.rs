@@ -60,8 +60,7 @@ struct CallFutureState {
     id: Principal,
     method: String,
     arg: Vec<u8>,
-    payment: u64,
-    payment128: u128,
+    payment: u128,
 }
 
 struct CallFuture {
@@ -79,21 +78,11 @@ impl Future for CallFuture {
         if let Some(result) = state.result.take() {
             Poll::Ready(result)
         } else {
-            // SAFETY:
-            // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-            // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-            // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-            // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
-            // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-            // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-            // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
-            // ic0.call_perform is always safe to call.
             if state.waker.is_none() {
                 let callee = state.id.as_slice();
                 let method = &state.method;
                 let args = &state.arg;
                 let payment = state.payment;
-                let payment128 = state.payment128;
                 let err_code = unsafe {
                     ic0::call_new(
                         callee.as_ptr() as i32,
@@ -107,24 +96,19 @@ impl Future for CallFuture {
                     );
 
                     ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
-                    {
-                        if payment > 0 {
-                            // SAFETY: ic0.call_cycles_add is always safe to call.
-                            // This is called as part of the call_new lifecycle, and so will not trap.
-                            ic0::call_cycles_add(payment as i64);
-                        }
-                    }
-                    add_payment(payment128);
+                    add_payment(payment);
                     ic0::call_on_cleanup(cleanup as usize as i32, state_ptr as i32);
                     ic0::call_perform()
                 };
 
-                // 0 is a special error code meaning call_simple call succeeded.
+                // 0 is a special error code meaning call succeeded.
                 if err_code != 0 {
-                    state.result = Some(Err((
+                    let result = Err((
                         RejectionCode::from(err_code),
                         "Couldn't send message".to_string(),
-                    )));
+                    ));
+                    state.result = Some(result.clone());
+                    return Poll::Ready(result);
                 }
             }
             state.waker = Some(context.waker().clone());
@@ -287,7 +271,7 @@ pub fn call_raw(
     args_raw: &[u8],
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-    call_raw_internal(id, method, args_raw, payment, 0)
+    call_raw_internal(id, method, args_raw, payment.into())
 }
 
 /// Similar to `call128`, but without serialization.
@@ -297,15 +281,14 @@ pub fn call_raw128(
     args_raw: &[u8],
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-    call_raw_internal(id, method, args_raw, 0, payment)
+    call_raw_internal(id, method, args_raw, payment)
 }
 
 fn call_raw_internal(
     id: Principal,
     method: &str,
     args_raw: &[u8],
-    payment: u64,
-    payment128: u128,
+    payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
@@ -314,7 +297,6 @@ fn call_raw_internal(
         method: method.to_string(),
         arg: args_raw.to_vec(),
         payment,
-        payment128,
     }));
     CallFuture { state }
 }
