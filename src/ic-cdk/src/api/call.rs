@@ -268,7 +268,7 @@ pub fn notify_raw(
 pub fn call_raw(
     id: Principal,
     method: &str,
-    args_raw: &[u8],
+    args_raw: Vec<u8>,
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     call_raw_internal(id, method, args_raw, payment.into())
@@ -278,7 +278,7 @@ pub fn call_raw(
 pub fn call_raw128(
     id: Principal,
     method: &str,
-    args_raw: &[u8],
+    args_raw: Vec<u8>,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     call_raw_internal(id, method, args_raw, payment)
@@ -287,7 +287,7 @@ pub fn call_raw128(
 fn call_raw_internal(
     id: Principal,
     method: &str,
-    args_raw: &[u8],
+    args_raw: Vec<u8>,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
     let state = Arc::new(RwLock::new(CallFutureState {
@@ -295,7 +295,7 @@ fn call_raw_internal(
         waker: None,
         id,
         method: method.to_string(),
-        arg: args_raw.to_vec(),
+        arg: args_raw,
         payment,
     }));
     CallFuture { state }
@@ -322,7 +322,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     args: T,
 ) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw(id, method, &args_raw, 0);
+    let fut = call_raw(id, method, args_raw, 0);
     async {
         let bytes = fut.await?;
         decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
@@ -337,7 +337,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     cycles: u64,
 ) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw(id, method, &args_raw, cycles);
+    let fut = call_raw(id, method, args_raw, cycles);
     async {
         let bytes = fut.await?;
         decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
@@ -352,7 +352,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     cycles: u128,
 ) -> impl Future<Output = CallResult<R>> + Send + Sync {
     let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw128(id, method, &args_raw, cycles);
+    let fut = call_raw128(id, method, args_raw, cycles);
     async {
         let bytes = fut.await?;
         decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
