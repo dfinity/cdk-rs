@@ -83,6 +83,15 @@ impl Future for CallFuture {
                 let method = &state.method;
                 let args = &state.arg;
                 let payment = state.payment;
+                // SAFETY:
+                // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+                // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+                // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
+                // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
+                // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+                // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
+                // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
+                // ic0.call_perform is always safe to call.
                 let err_code = unsafe {
                     ic0::call_new(
                         callee.as_ptr() as i32,
