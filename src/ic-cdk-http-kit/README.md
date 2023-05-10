@@ -44,12 +44,12 @@ let mock_response = ic_cdk_http_kit::create_response()
 #### Mocking
 
 ```rust
-ic_cdk_http_kit::mock(request, Ok(mock_response));
-ic_cdk_http_kit::mock_with_delay(request, Ok(mock_response), Duration::from_sec(2));
+ic_cdk_http_kit::mock(request.clone(), Ok(mock_response.clone()));
+ic_cdk_http_kit::mock_with_delay(request.clone(), Ok(mock_response.clone()), Duration::from_secs(2));
 
 let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
-ic_cdk_http_kit::mock(request, Err(mock_error));
-ic_cdk_http_kit::mock_with_delay(request, Err(mock_error), Duration::from_sec(2));
+ic_cdk_http_kit::mock(request.clone(), Err(mock_error.clone()));
+ic_cdk_http_kit::mock_with_delay(request.clone(), Err(mock_error.clone()), Duration::from_secs(2));
 ```
 
 #### Making an HTTP Outcall
@@ -69,10 +69,6 @@ assert_eq!(ic_cdk_http_kit::times_called(request), 1);
 #### More Examples
 
 Please refer to the provided usage examples in the [tests](./tests) or [examples](./examples) directories.
-
-### Contributing
-
-Please follow the guidelines in the [CONTRIBUTING.md](.github/CONTRIBUTING.md) document.
 
 ### References
 

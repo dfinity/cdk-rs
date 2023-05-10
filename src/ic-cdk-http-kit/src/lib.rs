@@ -17,7 +17,8 @@
 //!
 //! ### Creating a Request
 //!
-//! ```ignore
+//! ```rust
+//! # use ic_cdk::api::management_canister::http_request::{TransformArgs, HttpResponse};
 //! fn transform_function(arg: TransformArgs) -> HttpResponse {
 //!     // Modify arg.response here
 //!     arg.response
@@ -32,7 +33,7 @@
 //!
 //! ### Creating a Response
 //!
-//! ```ignore
+//! ```rust
 //! let mock_response = ic_cdk_http_kit::create_response()
 //!     .status(200)
 //!     .body_str("some text")
@@ -41,24 +42,33 @@
 //!
 //! ### Mocking
 //!
-//! ```ignore
-//! ic_cdk_http_kit::mock(request, Ok(mock_response));
-//! ic_cdk_http_kit::mock_with_delay(request, Ok(mock_response), Duration::from_sec(2));
+//! ```rust
+//! # use std::time::Duration;
+//! # use ic_cdk::api::call::RejectionCode;
+//! # let request = ic_cdk_http_kit::create_request().build();
+//! # let mock_response = ic_cdk_http_kit::create_response().build();
+//! ic_cdk_http_kit::mock(request.clone(), Ok(mock_response.clone()));
+//! ic_cdk_http_kit::mock_with_delay(request.clone(), Ok(mock_response.clone()), Duration::from_secs(2));
 //!
 //! let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
-//! ic_cdk_http_kit::mock(request, Err(mock_error));
-//! ic_cdk_http_kit::mock_with_delay(request, Err(mock_error), Duration::from_sec(2));
+//! ic_cdk_http_kit::mock(request.clone(), Err(mock_error.clone()));
+//! ic_cdk_http_kit::mock_with_delay(request.clone(), Err(mock_error.clone()), Duration::from_secs(2));
 //! ```
 //!
 //! ### Making an HTTP Outcall
 //!
 //! ```ignore
+//! # // Ignored since this is an async function.
 //! let (response,) = ic_cdk_http_kit::http_request(request).await.unwrap();
 //! ```
 //!
 //! ### Asserts
 //!
-//! ```ignore
+//! ```no_run
+//! # // `no_run` since it would require to call an async function to count the number of calls.
+//! # use ic_cdk::api::management_canister::http_request::HttpResponse;
+//! # let request = ic_cdk_http_kit::create_request().build();
+//! # let response = ic_cdk_http_kit::create_response().build();
 //! assert_eq!(response.status, 200);
 //! assert_eq!(response.body, "transformed body".to_owned().into_bytes());
 //! assert_eq!(ic_cdk_http_kit::times_called(request), 1);
@@ -67,10 +77,6 @@
 //! ### More Examples
 //!
 //! Please refer to the provided usage examples in the [tests](./tests) or [examples](./examples) directories.
-//!
-//! ## Contributing
-//!
-//! Please follow the guidelines in the [CONTRIBUTING.md](.github/CONTRIBUTING.md) document.
 //!
 //! ## References
 //!

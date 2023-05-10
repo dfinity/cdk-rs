@@ -11,7 +11,6 @@ readme = "README.md"
 categories = [
     "development-tools::testing",
     "web-programming",
-    "internet-computer",
 ]
 keywords = [
     "http", 
