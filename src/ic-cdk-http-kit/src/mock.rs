@@ -77,6 +77,28 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
     }
 }
 
+/// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+///
+/// This is a helper function that compiles differently depending on the target architecture.
+/// For wasm32 (assuming a canister in prod), it calls the IC method `http_request_with_cycles`.
+/// For other architectures, it calls a mock function.
+pub async fn http_request_with_cycles(
+    arg: CanisterHttpRequestArgument,
+    cycles: u128,
+) -> CallResult<(HttpResponse,)> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        ic_cdk::api::management_canister::http_request::http_request_with_cycles(arg, cycles).await
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Mocking cycles is not implemented at the moment.
+        let _unused = cycles;
+        mock_http_request(arg).await
+    }
+}
+
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.

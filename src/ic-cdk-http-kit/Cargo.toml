@@ -28,8 +28,8 @@ rust-version = "1.65.0"
 
 [dependencies]
 candid = "0.8.2"
-ic-cdk = "0.6.0"
-ic-cdk-macros = "0.6.0"
+ic-cdk = "0.7.4"
+ic-cdk-macros = "0.6.10"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.15.0", features = [ "full" ] }
