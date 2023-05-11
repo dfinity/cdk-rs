@@ -119,8 +119,9 @@ impl Future for CallFuture {
                     state.result = Some(result.clone());
                     return Poll::Ready(result);
                 }
+
+                state.waker = Some(context.waker().clone());
             }
-            state.waker = Some(context.waker().clone());
             Poll::Pending
         }
     }
