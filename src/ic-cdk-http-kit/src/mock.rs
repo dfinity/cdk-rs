@@ -72,6 +72,11 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
     }
 }
 
+/// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+///
+/// This is a helper function that compiles differently depending on the target architecture.
+/// For wasm32 (assuming a canister in prod), it calls the IC method `http_request`.
+/// For other architectures, it calls a mock function.
 #[cfg(any(docsrs, feature = "transform-closure"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
 pub async fn http_request_with(
@@ -111,6 +116,11 @@ pub async fn http_request_with_cycles(
     }
 }
 
+/// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+///
+/// This is a helper function that compiles differently depending on the target architecture.
+/// For wasm32 (assuming a canister in prod), it calls the IC method `http_request`.
+/// For other architectures, it calls a mock function.
 #[cfg(any(docsrs, feature = "transform-closure"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
 pub async fn http_request_with_cycles_with(
@@ -135,6 +145,11 @@ pub async fn http_request_with_cycles_with(
     }
 }
 
+/// Handles incoming HTTP requests by retrieving a mock response based
+/// on the request, possibly delaying the response, transforming the response,,
+/// and returning it. If there is no mock found, it returns an error.
+#[cfg(any(docsrs, feature = "transform-closure"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
 async fn mock_http_request_with(
     arg: CanisterHttpRequestArgument,
     transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
