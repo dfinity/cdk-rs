@@ -325,6 +325,10 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 ///
 /// If the reply payload is not a valid encoding of the expected type `T`,
 /// the call results in [RejectionCode::CanisterError] error.
+///
+/// Note that the asynchronous call must be awaited
+/// in order for the inter-canister call to be made
+/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -339,6 +343,10 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 }
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
+///
+/// Note that the asynchronous call must be awaited
+/// in order for the inter-canister call to be made
+/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
 pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -354,6 +362,10 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 }
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
+///
+/// Note that the asynchronous call must be awaited
+/// in order for the inter-canister call to be made
+/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
 pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
