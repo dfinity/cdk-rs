@@ -68,7 +68,7 @@ async fn test_http_request_transform_status() {
     }
     let request = ic_cdk_http_kit::create_request()
         .get("https://example.com")
-        .transform(transform, vec![])
+        .transform("transform", transform, vec![])
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
@@ -98,7 +98,7 @@ async fn test_http_request_transform_body() {
     }
     let request = ic_cdk_http_kit::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform(transform, vec![])
+        .transform("transform", transform, vec![])
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
@@ -128,6 +128,7 @@ async fn test_http_request_transform_context() {
     let request = ic_cdk_http_kit::create_request()
         .get("https://dummyjson.com/todos/1")
         .transform(
+            "transform_context_to_body_text",
             transform_context_to_body_text,
             "some context".as_bytes().to_vec(),
         )
@@ -167,7 +168,7 @@ async fn test_http_request_transform_both_status_and_body() {
 
     let request_1 = ic_cdk_http_kit::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform(transform_status, vec![])
+        .transform("transform_status", transform_status, vec![])
         .build();
     let mock_response_1 = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_NOT_FOUND)
@@ -177,7 +178,7 @@ async fn test_http_request_transform_both_status_and_body() {
 
     let request_2 = ic_cdk_http_kit::create_request()
         .get("https://dummyjson.com/todos/2")
-        .transform(transform_body, vec![])
+        .transform("transform_body", transform_body, vec![])
         .build();
     let mock_response_2 = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
@@ -198,10 +199,6 @@ async fn test_http_request_transform_both_status_and_body() {
         .collect();
 
     // Assert
-    assert_eq!(
-        ic_cdk_http_kit::registered_transform_function_names(),
-        vec!["transform_body", "transform_status"]
-    );
     assert_eq!(responses.len(), 2);
     assert_eq!(responses[0].status, STATUS_CODE_NOT_FOUND);
     assert_eq!(responses[0].body, ORIGINAL_BODY.as_bytes().to_vec());
@@ -391,7 +388,11 @@ fn transform_function_with_overwrite(arg: TransformArgs) -> HttpResponse {
 fn create_request_with_transform() -> CanisterHttpRequestArgument {
     ic_cdk_http_kit::create_request()
         .url("https://www.example.com")
-        .transform(transform_function_with_overwrite, vec![])
+        .transform(
+            "transform_function_with_overwrite",
+            transform_function_with_overwrite,
+            vec![],
+        )
         .build()
 }
 
@@ -417,8 +418,4 @@ async fn test_transform_function_call_without_a_hang() {
     // Assert
     assert_eq!(response.status, 200);
     assert_eq!(ic_cdk_http_kit::times_called(request), 1);
-    assert_eq!(
-        ic_cdk_http_kit::registered_transform_function_names(),
-        vec!["transform_function_with_overwrite"]
-    );
 }

@@ -27,7 +27,7 @@ fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
             "User-Agent".to_string(),
             "ic-http-outcall-kit-example".to_string(),
         )
-        .transform(transform_quote, vec![])
+        .transform("transform_quote", transform_quote, vec![])
         .build()
 }
 

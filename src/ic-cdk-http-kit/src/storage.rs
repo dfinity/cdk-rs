@@ -41,12 +41,3 @@ pub(crate) fn transform_function_insert(name: String, func: Box<TransformFn>) {
 pub(crate) fn transform_function_call(name: String, arg: TransformArgs) -> Option<HttpResponse> {
     TRANSFORM_FUNCTIONS.with(|cell| cell.borrow().get(&name).map(|f| f(arg)))
 }
-
-/// Returns a sorted list of transform function names.
-pub(crate) fn transform_function_names() -> Vec<String> {
-    TRANSFORM_FUNCTIONS.with(|cell| {
-        let mut names: Vec<String> = cell.borrow().keys().cloned().collect();
-        names.sort();
-        names
-    })
-}

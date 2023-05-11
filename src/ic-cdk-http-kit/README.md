@@ -28,7 +28,7 @@ fn transform_function(arg: TransformArgs) -> HttpResponse {
 let request = ic_cdk_http_kit::create_request()
     .get("https://dummyjson.com/todos/1")
     .max_response_bytes(1_024)
-    .transform(transform_function, vec![])
+    .transform("transform_function", transform_function, vec![])
     .build();
 ```
 

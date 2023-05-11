@@ -80,11 +80,15 @@ impl CanisterHttpRequestArgumentBuilder {
     }
 
     /// Sets the transform function.
-    pub fn transform<T>(mut self, func: T, context: Vec<u8>) -> Self
+    pub fn transform<T>(mut self, candid_function_name: &str, func: T, context: Vec<u8>) -> Self
     where
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
-        self.0.transform = Some(create_transform_context(func, context));
+        self.0.transform = Some(create_transform_context(
+            candid_function_name.to_string(),
+            func,
+            context,
+        ));
         self
     }
 
@@ -100,13 +104,17 @@ impl Default for CanisterHttpRequestArgumentBuilder {
     }
 }
 
-fn create_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
+fn create_transform_context<T>(
+    candid_function_name: String,
+    func: T,
+    context: Vec<u8>,
+) -> TransformContext
 where
     T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
     #[cfg(target_arch = "wasm32")]
     {
-        TransformContext::new(func, context)
+        TransformContext::from_name(candid_function_name, context)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -114,64 +122,23 @@ where
         // crate::id() can not be called outside of canister, that's why for testing
         // it is replaced with Principal::management_canister().
         let principal = Principal::management_canister();
-        let method = get_function_name(&func).to_string();
-        super::storage::transform_function_insert(method.clone(), Box::new(func));
+        super::storage::transform_function_insert(candid_function_name.clone(), Box::new(func));
 
         TransformContext {
-            function: TransformFunc(candid::Func { principal, method }),
+            function: TransformFunc(candid::Func {
+                principal,
+                method: candid_function_name,
+            }),
             context,
         }
     }
 }
 
-fn get_function_name<F>(_: &F) -> &'static str {
-    let full_name = std::any::type_name::<F>();
-    match full_name.rfind(':') {
-        Some(index) => &full_name[index + 1..],
-        None => full_name,
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::*;
     use ic_cdk::api::management_canister::http_request::{
         CanisterHttpRequestArgument, HttpResponse, TransformArgs,
     };
-
-    /// A test transform function.
-    fn transform_function_1(arg: TransformArgs) -> HttpResponse {
-        arg.response
-    }
-
-    /// A test transform function.
-    fn transform_function_2(arg: TransformArgs) -> HttpResponse {
-        arg.response
-    }
-
-    /// Inserts the provided transform function into a thread-local hashmap.
-    fn insert<T>(f: T)
-    where
-        T: Fn(TransformArgs) -> HttpResponse + 'static,
-    {
-        let name = get_function_name(&f).to_string();
-        crate::storage::transform_function_insert(name, Box::new(f));
-    }
-
-    /// This test makes sure that transform function names are preserved
-    /// when passing to the function.
-    #[test]
-    fn test_transform_function_names() {
-        // Arrange.
-        insert(transform_function_1);
-        insert(transform_function_2);
-
-        // Act.
-        let names = crate::mock::registered_transform_function_names();
-
-        // Assert.
-        assert_eq!(names, vec!["transform_function_1", "transform_function_2"]);
-    }
 
     /// Transform function which intentionally creates a new request passing
     /// itself as the target transform function.
@@ -184,7 +151,11 @@ mod test {
     fn create_request_with_transform() -> CanisterHttpRequestArgument {
         crate::create_request()
             .url("https://www.example.com")
-            .transform(transform_function_with_overwrite, vec![])
+            .transform(
+                "transform_function_with_overwrite",
+                transform_function_with_overwrite,
+                vec![],
+            )
             .build()
     }
 
@@ -208,9 +179,5 @@ mod test {
         // Assert
         assert_eq!(response.status, 200);
         assert_eq!(crate::mock::times_called(request), 1);
-        assert_eq!(
-            crate::mock::registered_transform_function_names(),
-            vec!["transform_function_with_overwrite"]
-        );
     }
 }

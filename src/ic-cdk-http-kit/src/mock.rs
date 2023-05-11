@@ -55,11 +55,6 @@ pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
         .unwrap_or(0)
 }
 
-/// Returns a sorted list of registered transform function names.
-pub fn registered_transform_function_names() -> Vec<String> {
-    storage::transform_function_names()
-}
-
 /// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
 ///
 /// This is a helper function that compiles differently depending on the target architecture.
