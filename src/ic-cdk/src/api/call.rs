@@ -137,7 +137,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 /// # Safety
 ///
 /// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
@@ -164,7 +164,7 @@ unsafe fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>)
 /// # Safety
 ///
 /// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
