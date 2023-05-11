@@ -14,7 +14,7 @@ thread_local! {
 /// Inserts the provided mock into a thread-local hashmap.
 pub(crate) fn mock_insert(mock: Mock) {
     MOCKS.with(|cell| {
-        cell.borrow_mut().insert(hash(&mock.request), mock);
+        cell.borrow_mut().insert(hash(&mock.arg), mock);
     });
 }
 

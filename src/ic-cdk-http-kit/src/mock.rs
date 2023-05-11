@@ -11,7 +11,7 @@ type MockError = (RejectionCode, String);
 
 #[derive(Clone)]
 pub(crate) struct Mock {
-    pub(crate) request: CanisterHttpRequestArgument,
+    pub(crate) arg: CanisterHttpRequestArgument,
     result: Option<Result<HttpResponse, MockError>>,
     delay: Duration,
     times_called: u64,
@@ -20,12 +20,12 @@ pub(crate) struct Mock {
 impl Mock {
     /// Creates a new mock.
     pub fn new(
-        request: CanisterHttpRequestArgument,
+        arg: CanisterHttpRequestArgument,
         result: Result<HttpResponse, MockError>,
         delay: Duration,
     ) -> Self {
         Self {
-            request,
+            arg,
             result: Some(result),
             delay,
             times_called: 0,
@@ -34,23 +34,23 @@ impl Mock {
 }
 
 /// Mocks a HTTP request.
-pub fn mock(request: CanisterHttpRequestArgument, result: Result<HttpResponse, MockError>) {
-    mock_with_delay(request, result, Duration::from_secs(0));
+pub fn mock(arg: CanisterHttpRequestArgument, result: Result<HttpResponse, MockError>) {
+    mock_with_delay(arg, result, Duration::from_secs(0));
 }
 
 /// Mocks a HTTP request with a delay.
 pub fn mock_with_delay(
-    request: CanisterHttpRequestArgument,
+    arg: CanisterHttpRequestArgument,
     result: Result<HttpResponse, MockError>,
     delay: Duration,
 ) {
-    storage::mock_insert(Mock::new(request, result, delay));
+    storage::mock_insert(Mock::new(arg, result, delay));
 }
 
 /// Returns the number of times a HTTP request was called.
 /// Returns 0 if no mock has been found for the request.
-pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
-    storage::mock_get(&request)
+pub fn times_called(arg: CanisterHttpRequestArgument) -> u64 {
+    storage::mock_get(&arg)
         .map(|mock| mock.times_called)
         .unwrap_or(0)
 }
@@ -68,7 +68,24 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        mock_http_request(arg).await
+        mock_http_request(arg, |response| response).await
+    }
+}
+
+#[cfg(any(docsrs, feature = "transform-closure"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
+pub async fn http_request_with(
+    arg: CanisterHttpRequestArgument,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
+) -> CallResult<(HttpResponse,)> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        ic_cdk::api::management_canister::http_request::http_request_with(arg, transform_func).await
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        mock_http_request_with(arg, transform_func).await
     }
 }
 
@@ -90,17 +107,54 @@ pub async fn http_request_with_cycles(
     {
         // Mocking cycles is not implemented at the moment.
         let _unused = cycles;
-        mock_http_request(arg).await
+        mock_http_request(arg, |response| response).await
     }
+}
+
+#[cfg(any(docsrs, feature = "transform-closure"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
+pub async fn http_request_with_cycles_with(
+    arg: CanisterHttpRequestArgument,
+    cycles: u128,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
+) -> CallResult<(HttpResponse,)> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        ic_cdk::api::management_canister::http_request::http_request_with_cycles_with(
+            arg,
+            transform_func,
+        )
+        .await
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Mocking cycles is not implemented at the moment.
+        let _unused = cycles;
+        mock_http_request_with(arg, transform_func).await
+    }
+}
+
+async fn mock_http_request_with(
+    arg: CanisterHttpRequestArgument,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
+) -> Result<(HttpResponse,), (RejectionCode, String)> {
+    assert!(
+        arg.transform.is_none(),
+        "`CanisterHttpRequestArgument`'s `transform` field must be `None` when using a closure"
+    );
+
+    mock_http_request(arg, transform_func).await
 }
 
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
 async fn mock_http_request(
-    request: CanisterHttpRequestArgument,
+    arg: CanisterHttpRequestArgument,
+    transform_func: impl FnOnce(HttpResponse) -> HttpResponse + 'static,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
-    let mut mock = storage::mock_get(&request)
+    let mut mock = storage::mock_get(&arg)
         .ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
     mock.times_called += 1;
     storage::mock_insert(mock.clone());
@@ -120,7 +174,7 @@ async fn mock_http_request(
     };
 
     // Check if the response body exceeds the maximum allowed size.
-    if let Some(max_response_bytes) = mock.request.max_response_bytes {
+    if let Some(max_response_bytes) = mock.arg.max_response_bytes {
         if mock_response.body.len() as u64 > max_response_bytes {
             return Err((
                 RejectionCode::SysFatal,
@@ -134,27 +188,28 @@ async fn mock_http_request(
     }
 
     // Apply the transform function if one is specified.
-    let context = mock.request.clone().transform.map_or(vec![], |f| f.context);
-    let transformed_response = call_transform_function(
-        mock.request,
-        TransformArgs {
-            response: mock_response.clone(),
-            context,
-        },
-    )
-    .unwrap_or(mock_response);
+    let transformed_response = match arg.transform.clone() {
+        None => transform_func(mock_response),
+        Some(transform_context) => call_transform_function(
+            arg,
+            TransformArgs {
+                response: mock_response.clone(),
+                context: transform_context.context,
+            },
+        )
+        .unwrap_or(mock_response),
+    };
 
     Ok((transformed_response,))
 }
 
 /// Calls the transform function if one is specified in the request.
 fn call_transform_function(
-    request: CanisterHttpRequestArgument,
-    arg: TransformArgs,
+    arg: CanisterHttpRequestArgument,
+    transform_args: TransformArgs,
 ) -> Option<HttpResponse> {
-    request
-        .transform
-        .and_then(|t| storage::transform_function_call(t.function.0.method, arg))
+    arg.transform
+        .and_then(|t| storage::transform_function_call(t.function.0.method, transform_args))
 }
 
 /// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
