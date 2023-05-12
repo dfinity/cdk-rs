@@ -9,7 +9,7 @@ echo "README.md is up-to-date."
 
 # Run cargo tests for the crate.
 echo "Running cargo tests for the crate..."
-cargo test
+cargo test --features transform-closure
 echo "Cargo tests for the crate passed."
 
 # Run cargo tests for example projects.

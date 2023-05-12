@@ -61,14 +61,14 @@ async fn test_http_request_called_several_times() {
 #[tokio::test]
 async fn test_http_request_transform_status() {
     // Arrange
-    fn transform(_arg: TransformArgs) -> HttpResponse {
+    fn transform_fn(_arg: TransformArgs) -> HttpResponse {
         ic_cdk_http_kit::create_response()
             .status(STATUS_CODE_NOT_FOUND)
             .build()
     }
     let request = ic_cdk_http_kit::create_request()
         .get("https://example.com")
-        .transform("transform", transform, vec![])
+        .transform("transform_fn", transform_fn, vec![])
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
@@ -86,19 +86,45 @@ async fn test_http_request_transform_status() {
     assert_eq!(ic_cdk_http_kit::times_called(request), 1);
 }
 
+#[cfg(feature = "transform-closure")]
+#[tokio::test]
+async fn test_http_request_with_transform_closure_status() {
+    // Arrange
+    let request = ic_cdk_http_kit::create_request()
+        .get("https://example.com")
+        .build();
+    let mock_response = ic_cdk_http_kit::create_response()
+        .status(STATUS_CODE_OK)
+        .build();
+    ic_cdk_http_kit::mock(request.clone(), Ok(mock_response));
+
+    // Act
+    let (response,) = ic_cdk_http_kit::http_request_with(request.clone(), move |mut response| {
+        // Modify the response status.
+        response.status = STATUS_CODE_NOT_FOUND.into();
+        response
+    })
+    .await
+    .unwrap();
+
+    // Assert
+    assert_eq!(response.status, STATUS_CODE_NOT_FOUND);
+    assert_eq!(ic_cdk_http_kit::times_called(request), 1);
+}
+
 #[tokio::test]
 async fn test_http_request_transform_body() {
     // Arrange
     const ORIGINAL_BODY: &str = "original body";
     const TRANSFORMED_BODY: &str = "transformed body";
-    fn transform(_arg: TransformArgs) -> HttpResponse {
+    fn transform_fn(_arg: TransformArgs) -> HttpResponse {
         ic_cdk_http_kit::create_response()
             .body_str(TRANSFORMED_BODY)
             .build()
     }
     let request = ic_cdk_http_kit::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform("transform", transform, vec![])
+        .transform("transform_fn", transform_fn, vec![])
         .build();
     let mock_response = ic_cdk_http_kit::create_response()
         .status(STATUS_CODE_OK)
