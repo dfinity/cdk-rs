@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `ic0.is_controller` as a public function. (#383)
+- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
 
 ### Changed
 
