@@ -19,7 +19,7 @@
 //!
 //! ```rust
 //! # use ic_cdk::api::management_canister::http_request::{TransformArgs, HttpResponse};
-//! fn transform_function(arg: TransformArgs) -> HttpResponse {
+//! fn transform_fn(arg: TransformArgs) -> HttpResponse {
 //!     // Modify arg.response here
 //!     arg.response
 //! }
@@ -27,7 +27,7 @@
 //! let request = ic_cdk_http_kit::create_request()
 //!     .get("https://dummyjson.com/todos/1")
 //!     .max_response_bytes(1_024)
-//!     .transform("transform_function", transform_function, vec![])
+//!     .transform("transform_fn", transform_fn, vec![])
 //!     .build();
 //! ```
 //!
