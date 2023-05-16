@@ -58,7 +58,7 @@ jobs:
       - name: Check README.md is in sync with crate doc
         working-directory: ./src/ic-cdk-http-kit
         run: |
-          cargo install cargo-readme
+          command -v cargo-readme || cargo install cargo-readme
           ./scripts/test_readme.sh
 
       - name: Run crate Cargo tests
