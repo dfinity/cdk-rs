@@ -1,0 +1,56 @@
+name: ic-cdk-http-kit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  rust-version: 1.66.1
+  dfx-version: 0.13.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            examples/${{ matrix.project-name }}/target/
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.project-name }}-
+            ${{ runner.os }}-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+          target: wasm32-unknown-unknown
+          components: rustfmt
+
+      - name: Install DFX
+        run: |
+          export DFX_VERSION=${{env.dfx-version }}
+          echo Install DFX v$DFX_VERSION
+          yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
+      - name: Check README.md is in sync with crate doc
+        run: |
+          ./scripts/test_readme.sh
