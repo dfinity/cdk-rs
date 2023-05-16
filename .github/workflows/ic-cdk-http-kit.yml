@@ -55,6 +55,7 @@ jobs:
         run: |
           CWD=$(pwd)
           cd ./src/ic-cdk-http-kit
+          cargo install cargo-readme
           ./scripts/test_readme.sh
           cd "$CWD"
 
