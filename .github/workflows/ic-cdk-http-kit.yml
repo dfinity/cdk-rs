@@ -45,6 +45,10 @@ jobs:
           target: wasm32-unknown-unknown
           components: rustfmt
 
+      - name: Download ic-test-state-machine
+        run: |
+          bash scripts/download_state_machine_binary.sh
+
       - name: Install DFX
         run: |
           export DFX_VERSION=${{env.dfx-version }}
@@ -61,7 +65,7 @@ jobs:
 
       - name: Run crate Cargo tests
         run: |
-          cargo test --features transform-closure
+          cargo test --features transform-closure --package ic-cdk-http-kit
 
       - name: Run examples Cargo tests
         run: |
