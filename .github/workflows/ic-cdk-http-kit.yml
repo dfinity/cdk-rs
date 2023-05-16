@@ -53,4 +53,25 @@ jobs:
 
       - name: Check README.md is in sync with crate doc
         run: |
+          CWD=$(pwd)
+          cd ./src/ic-cdk-http-kit
           ./scripts/test_readme.sh
+          cd "$CWD"
+
+      - name: Run crate Cargo tests
+        run: |
+          cargo test --features transform-closure
+
+      - name: Run examples Cargo tests
+        run: |
+          CWD=$(pwd)
+          cd ./src/ic-cdk-http-kit/examples
+          cargo test
+          cd "$CWD"
+
+      - name: Run end-to-end examples/fetch_json tests
+        run: |
+          CWD=$(pwd)
+          cd ./src/ic-cdk-http-kit/examples/fetch_json
+          ./e2e-tests/fetch_quote.sh
+          cd "$CWD"
