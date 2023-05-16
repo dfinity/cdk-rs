@@ -56,27 +56,22 @@ jobs:
           yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 
       - name: Check README.md is in sync with crate doc
+        working-directory: ./src/ic-cdk-http-kit
         run: |
-          CWD=$(pwd)
-          cd ./src/ic-cdk-http-kit
           cargo install cargo-readme
           ./scripts/test_readme.sh
-          cd "$CWD"
 
       - name: Run crate Cargo tests
+        working-directory: ./src/ic-cdk-http-kit
         run: |
-          cargo test --features transform-closure --package ic-cdk-http-kit
+          cargo test --all-features
 
       - name: Run examples Cargo tests
+        working-directory: ./src/ic-cdk-http-kit/examples
         run: |
-          CWD=$(pwd)
-          cd ./src/ic-cdk-http-kit/examples
           cargo test
-          cd "$CWD"
 
       - name: Run end-to-end examples/fetch_json tests
+        working-directory: ./src/ic-cdk-http-kit/examples/fetch_json
         run: |
-          CWD=$(pwd)
-          cd ./src/ic-cdk-http-kit/examples/fetch_json
           ./e2e-tests/fetch_quote.sh
-          cd "$CWD"
