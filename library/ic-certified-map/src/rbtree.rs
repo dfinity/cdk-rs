@@ -6,7 +6,9 @@ use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum Color {
     Red,
     Black,
@@ -89,7 +91,7 @@ type NodeRef<K, V> = Option<Box<Node<K, V>>>;
 // 2. Children of a red node are black.
 // 3. Every path from a node goes through the same number of black
 //    nodes.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Node<K, V> {
     key: K,
     value: V,
@@ -269,7 +271,7 @@ impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
 
 /// Implements mutable left-leaning red-black trees as defined in
 /// <https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf>
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
 }
