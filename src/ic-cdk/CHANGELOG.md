@@ -6,14 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.0] - 2023-05-26
+
 ### Added
 
 - `ic0.is_controller` as a public function. (#383)
-- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
 
 ### Changed
 
 - `TransformContext::new` has been replaced with dedicated functions that accept closures. (#385)
+- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
 
 ## [0.7.4] - 2023-03-21
 
