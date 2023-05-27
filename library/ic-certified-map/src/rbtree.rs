@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum Color {
