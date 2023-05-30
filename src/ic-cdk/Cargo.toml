@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit for the Internet Computer."
@@ -34,5 +34,6 @@ rstest = "0.12.0"
 transform-closure = ["dep:slotmap"]
 
 [package.metadata.docs.rs]
+all-features = true
 default-target = "wasm32-unknown-unknown"
 rustdoc-args = ["--cfg=docsrs"]
