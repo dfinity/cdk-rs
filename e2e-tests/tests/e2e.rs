@@ -1,11 +1,20 @@
 use std::time::Duration;
 
 use candid::{Encode, Principal};
+use ic_cdk::api::management_canister::main::{
+    CanisterChange, CanisterChangeDetails, CanisterChangeFromCanisterRecord,
+    CanisterChangeFromUserRecord, CanisterChangeOrigin, CanisterCodeDeploymentRecord,
+    CanisterControllersChangeRecord, CanisterCreationRecord, CanisterIdRecord,
+    CanisterInfoResponse,
+    CanisterInstallMode::{Install, Reinstall, Upgrade},
+    InstallCodeArgument,
+};
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_test_state_machine_client::{
-    call_candid, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
+    call_candid, call_candid_as, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
 };
 use serde_bytes::ByteBuf;
+use std::time::SystemTime;
 
 pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
@@ -259,4 +268,205 @@ fn advance_seconds(env: &StateMachine, seconds: u32) {
         env.advance_time(Duration::from_secs(1));
         env.tick();
     }
+}
+
+#[test]
+fn test_canister_info() {
+    let env = env();
+    let wasm = cargo_build_canister("canister_info");
+    let canister_id = env.create_canister();
+    env.add_cycles(canister_id, 1_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![]);
+
+    let new_canister: (Principal,) = call_candid(&env, canister_id, "canister_lifecycle", ())
+        .expect("Error calling canister_lifecycle");
+
+    let () = call_candid_as(
+        &env,
+        Principal::management_canister(),
+        Principal::anonymous(),
+        "uninstall_code",
+        (CanisterIdRecord {
+            canister_id: new_canister.0,
+        },),
+    )
+    .expect("Error calling uninstall_code");
+    let () = call_candid_as(
+        &env,
+        Principal::management_canister(),
+        Principal::anonymous(),
+        "install_code",
+        (InstallCodeArgument {
+            mode: Install,
+            arg: vec![],
+            wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
+            canister_id: new_canister.0,
+        },),
+    )
+    .expect("Error calling install_code");
+
+    let info: (CanisterInfoResponse,) = call_candid(&env, canister_id, "info", (new_canister.0,))
+        .expect("Error calling canister_info");
+
+    let timestamp_nanos = env
+        .time()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
+    assert_eq!(
+        info.0,
+        CanisterInfoResponse {
+            total_num_changes: 9,
+            recent_changes: vec![
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 0,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(1)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCreation(CanisterCreationRecord {
+                        controllers: vec![canister_id]
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 1,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(2)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeDeployment(
+                        CanisterCodeDeploymentRecord {
+                            mode: Install,
+                            module_hash: hex::decode(
+                                "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                            )
+                            .unwrap(),
+                        }
+                    ),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 2,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(3)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeUninstall,
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 3,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(4)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeDeployment(
+                        CanisterCodeDeploymentRecord {
+                            mode: Install,
+                            module_hash: hex::decode(
+                                "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                            )
+                            .unwrap(),
+                        }
+                    ),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 4,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(5)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeDeployment(
+                        CanisterCodeDeploymentRecord {
+                            mode: Reinstall,
+                            module_hash: hex::decode(
+                                "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                            )
+                            .unwrap(),
+                        }
+                    ),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 5,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(6)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeDeployment(
+                        CanisterCodeDeploymentRecord {
+                            mode: Upgrade,
+                            module_hash: hex::decode(
+                                "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                            )
+                            .unwrap(),
+                        }
+                    ),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 6,
+                    origin: CanisterChangeOrigin::CanisterChangeFromCanister(
+                        CanisterChangeFromCanisterRecord {
+                            canister_id,
+                            canister_version: Some(7)
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterControllersChange(
+                        CanisterControllersChangeRecord {
+                            controllers: vec![Principal::anonymous(), canister_id, new_canister.0]
+                        }
+                    ),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 7,
+                    origin: CanisterChangeOrigin::CanisterChangeFromUser(
+                        CanisterChangeFromUserRecord {
+                            user_id: Principal::anonymous(),
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeUninstall,
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 8,
+                    origin: CanisterChangeOrigin::CanisterChangeFromUser(
+                        CanisterChangeFromUserRecord {
+                            user_id: Principal::anonymous(),
+                        }
+                    ),
+                    details: CanisterChangeDetails::CanisterCodeDeployment(
+                        CanisterCodeDeploymentRecord {
+                            mode: Install,
+                            module_hash: hex::decode(
+                                "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                            )
+                            .unwrap(),
+                        }
+                    ),
+                },
+            ],
+            module_hash: Some(
+                hex::decode("93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476")
+                    .unwrap()
+            ),
+            controllers: vec![Principal::anonymous(), canister_id, new_canister.0],
+        }
+    );
 }
