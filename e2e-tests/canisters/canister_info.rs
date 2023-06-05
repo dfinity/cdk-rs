@@ -1,7 +1,8 @@
 use ic_cdk::api::management_canister::main::{
-    create_canister, install_code, uninstall_code, update_settings, CanisterIdRecord,
-    CanisterInfoRequest, CanisterInfoResponse, CanisterInstallMode::*, CanisterSettings,
-    CreateCanisterArgument, InstallCodeArgument, UpdateSettingsArgument,
+    canister_info, create_canister, install_code, uninstall_code, update_settings,
+    CanisterIdRecord, CanisterInfoRequest, CanisterInfoResponse,
+    CanisterInstallMode::{Install, Reinstall, Upgrade},
+    CanisterSettings, CreateCanisterArgument, InstallCodeArgument, UpdateSettingsArgument,
 };
 use ic_cdk::export::Principal;
 
@@ -11,14 +12,7 @@ async fn info(canister_id: Principal) -> CanisterInfoResponse {
         canister_id,
         num_requested_changes: Some(20),
     };
-    ic_cdk::api::call::call::<(CanisterInfoRequest,), (CanisterInfoResponse,)>(
-        Principal::management_canister(),
-        "canister_info",
-        (request,),
-    )
-    .await
-    .unwrap()
-    .0
+    canister_info(request).await.unwrap().0
 }
 
 #[ic_cdk_macros::update]
