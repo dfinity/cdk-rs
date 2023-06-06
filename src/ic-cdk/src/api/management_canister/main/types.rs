@@ -188,7 +188,7 @@ pub struct CanisterStatusResponse {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct CanisterChangeFromUserRecord {
+pub struct FromUserRecord {
     /// Principle of the user.
     pub user_id: Principal,
 }
@@ -197,7 +197,7 @@ pub struct CanisterChangeFromUserRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct CanisterChangeFromCanisterRecord {
+pub struct FromCanisterRecord {
     /// Principle of the originator.
     pub canister_id: Principal,
     /// Canister version of the originator when the originator initiated the change.
@@ -211,19 +211,19 @@ pub struct CanisterChangeFromCanisterRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub enum CanisterChangeOrigin {
-    /// See [CanisterChangeFromUserRecord].
+    /// See [FromUserRecord].
     #[serde(rename = "from_user")]
-    CanisterChangeFromUser(CanisterChangeFromUserRecord),
-    /// See [CanisterChangeFromCanisterRecord].
+    FromUser(FromUserRecord),
+    /// See [FromCanisterRecord].
     #[serde(rename = "from_canister")]
-    CanisterChangeFromCanister(CanisterChangeFromCanisterRecord),
+    FromCanister(FromCanisterRecord),
 }
 
 /// Details about a canister creation.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct CanisterCreationRecord {
+pub struct CreationRecord {
     /// Initial set of canister controllers.
     pub controllers: Vec<Principal>,
 }
@@ -232,7 +232,7 @@ pub struct CanisterCreationRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct CanisterCodeDeploymentRecord {
+pub struct CodeDeploymentRecord {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// A SHA256 hash of the new module installed on the canister.
@@ -243,7 +243,7 @@ pub struct CanisterCodeDeploymentRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct CanisterControllersChangeRecord {
+pub struct ControllersChangeRecord {
     /// The full new set of canister controllers.
     pub controllers: Vec<Principal>,
 }
@@ -253,18 +253,18 @@ pub struct CanisterControllersChangeRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub enum CanisterChangeDetails {
-    /// See [CanisterCreationRecord].
+    /// See [CreationRecord].
     #[serde(rename = "creation")]
-    CanisterCreation(CanisterCreationRecord),
+    Creation(CreationRecord),
     /// Uninstalling canister's module.
     #[serde(rename = "code_uninstall")]
-    CanisterCodeUninstall,
-    /// See [CanisterCodeDeploymentRecord].
+    CodeUninstall,
+    /// See [CodeDeploymentRecord].
     #[serde(rename = "code_deployment")]
-    CanisterCodeDeployment(CanisterCodeDeploymentRecord),
-    /// See [CanisterControllersChangeRecord].
+    CodeDeployment(CodeDeploymentRecord),
+    /// See [ControllersChangeRecord].
     #[serde(rename = "controllers_change")]
-    CanisterControllersChange(CanisterControllersChangeRecord),
+    ControllersChange(ControllersChangeRecord),
 }
 
 /// Represents a canister change as stored in the canister history.
