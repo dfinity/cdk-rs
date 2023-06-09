@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Set caller's canister version in the field `sender_canister_version` of management canister call payloads.
+- Add management canister types for `canister_info` management canister call (`CanisterInfoRequest` and `CanisterInfoResponse`).
+
 ## [0.8.0] - 2023-05-26
 
 ### Added
