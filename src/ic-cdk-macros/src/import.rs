@@ -147,8 +147,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
         // It is necessary when use re-exported serde
         Ok(format!(
             r#"
-                #[derive(Clone, Debug, Default, candid::CandidType, ic_cdk::export::serde::Deserialize)]
-                #[serde(crate = "ic_cdk::export::serde")]
+                #[derive(Clone, Debug, Default, CandidType, ic_cdk::export::serde::Deserialize)]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields
