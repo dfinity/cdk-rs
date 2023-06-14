@@ -148,6 +148,7 @@ impl candid::codegen::rust::RustBindings for RustLanguageBinding {
         Ok(format!(
             r#"
                 #[derive(Clone, Debug, Default, candid::CandidType, ic_cdk::export::serde::Deserialize)]
+                #[serde(crate = "ic_cdk::export::serde")]
                 pub struct {} {{ {} }}
             "#,
             id, all_fields
