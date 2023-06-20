@@ -9,8 +9,6 @@ pub use types::*;
 /// Return a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///
 /// See [IC method `ecdsa_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-ecdsa_public_key).
-///
-/// This API charges cycles. Please check [`Gas and cycles cost`](https://internetcomputer.org/docs/current/developer-docs/gas-cost).
 pub async fn ecdsa_public_key(
     arg: EcdsaPublicKeyArgument,
 ) -> CallResult<(EcdsaPublicKeyResponse,)> {
