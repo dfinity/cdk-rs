@@ -13,16 +13,11 @@ mod main {
                 freezing_threshold: Some(10000.into()),
             }),
         };
-        create_canister(arg).await.unwrap();
-
-        let canister_id = create_canister_with_extra_cycles(
-            CreateCanisterArgument::default(),
-            1_000_000_000_000u128,
-        )
-        .await
-        .unwrap()
-        .0
-        .canister_id;
+        let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
+            .await
+            .unwrap()
+            .0
+            .canister_id;
 
         let arg = UpdateSettingsArgument {
             canister_id,
@@ -86,6 +81,18 @@ mod http_request {
     use super::*;
     use ic_cdk::api::management_canister::http_request::*;
 
+    fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
+        let max_response_bytes = match arg.max_response_bytes {
+            Some(ref n) => *n as u128,
+            None => 2 * 1024 * 1024u128, // default 2MiB
+        };
+        let arg_raw = ic_cdk::export::candid::utils::encode_args((arg,))
+            .expect("Failed to encode arguments.");
+        400_000_000u128 / 13
+            + 100_000u128 / 13
+                * (arg_raw.len() as u128 + "http_request".len() as u128 + max_response_bytes)
+    }
+
     #[update]
     async fn http_request_example() {
         let url = "https://example.com".to_string();
@@ -101,19 +108,8 @@ mod http_request {
             name: "custom-header".to_string(),
             value: "test".to_string(),
         };
-        let response = http_request_with(arg.clone(), {
-            let header = header.clone();
-            move |mut response| {
-                response.headers = vec![header];
-                response
-            }
-        })
-        .await
-        .unwrap()
-        .0;
-        assert_eq!(response.status, 200);
-        assert_eq!(response.headers.get(0), Some(&header));
-        let response = http_request_with_cycles_with(arg, 718500000u128, {
+        let cycles = http_request_required_cycles(&arg);
+        let response = http_request_with_closure(arg.clone(), cycles, {
             let header = header.clone();
             move |mut response| {
                 response.headers = vec![header];
@@ -159,7 +155,10 @@ mod ecdsa {
             derivation_path,
             key_id,
         };
-        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg).await.unwrap().0;
+        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg, 10_000_000_000u128 / 13)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(signature.len(), 64);
     }
 }
@@ -178,14 +177,14 @@ mod bitcoin {
             network,
             min_confirmations: Some(1),
         };
-        let _balance = bitcoin_get_balance(arg).await.unwrap().0;
+        let _balance = bitcoin_get_balance(arg, 40_000_000u128).await.unwrap().0;
 
         let arg = GetUtxosRequest {
             address: address.clone(),
             network,
             filter: Some(UtxoFilter::MinConfirmations(1)),
         };
-        let mut response = bitcoin_get_utxos(arg).await.unwrap().0;
+        let mut response = bitcoin_get_utxos(arg, 4_000_000_000u128).await.unwrap().0;
 
         while let Some(page) = response.next_page {
             ic_cdk::println!("bitcoin_get_utxos next page");
@@ -194,17 +193,20 @@ mod bitcoin {
                 network,
                 filter: Some(UtxoFilter::Page(page)),
             };
-            response = bitcoin_get_utxos(arg).await.unwrap().0;
+            response = bitcoin_get_utxos(arg, 4_000_000_000u128).await.unwrap().0;
         }
 
         let arg = GetCurrentFeePercentilesRequest { network };
-        let _percentiles = bitcoin_get_current_fee_percentiles(arg).await.unwrap().0;
+        let _percentiles = bitcoin_get_current_fee_percentiles(arg, 4_000_000u128)
+            .await
+            .unwrap()
+            .0;
 
         let arg = SendTransactionRequest {
             transaction: vec![],
             network,
         };
-        let response = bitcoin_send_transaction(arg).await;
+        let response = bitcoin_send_transaction(arg, 2_000_000_000u128).await;
         assert!(response.is_err());
         if let Err((rejection_code, rejection_reason)) = response {
             assert_eq!(rejection_code, RejectionCode::CanisterReject);
