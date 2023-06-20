@@ -16,7 +16,8 @@ pub use types::*;
 ///
 /// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
 ///
-/// This API charges cycles. Please check [`Gas and cycles cost`](https://internetcomputer.org/docs/current/developer-docs/gas-cost).
+/// This call requires cycles payment. The required cycles varies according to the subnet size (number of nodes).
+/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn create_canister(
     arg: CreateCanisterArgument,
     cycles: u128,
@@ -72,7 +73,7 @@ pub async fn install_code(arg: InstallCodeArgument) -> CallResult<()> {
 
 /// Remove a canister's code and state, making the canister empty again.
 ///
-/// See [IC method `uninstall_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-uninstall_code)
+/// See [IC method `uninstall_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-uninstall_code).
 pub async fn uninstall_code(arg: CanisterIdRecord) -> CallResult<()> {
     let extended_arg = CanisterIdRecordExtended {
         canister_id: arg.canister_id,
@@ -88,28 +89,28 @@ pub async fn uninstall_code(arg: CanisterIdRecord) -> CallResult<()> {
 
 /// Start a canister if the canister status was `stopped` or `stopping`.
 ///
-/// See [IC method `start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister)
+/// See [IC method `start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
 pub async fn start_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "start_canister", (arg,)).await
 }
 
 /// Stop a canister.
 ///
-/// See [IC method `stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister)
+/// See [IC method `stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
 pub async fn stop_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "stop_canister", (arg,)).await
 }
 
 /// Get status information about the canister.
 ///
-/// See [IC method `canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status)
+/// See [IC method `canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
 pub async fn canister_status(arg: CanisterIdRecord) -> CallResult<(CanisterStatusResponse,)> {
     call(Principal::management_canister(), "canister_status", (arg,)).await
 }
 
 /// Delete a canister from the IC.
 ///
-/// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister)
+/// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
 pub async fn delete_canister(arg: CanisterIdRecord) -> CallResult<()> {
     call(Principal::management_canister(), "delete_canister", (arg,)).await
 }
@@ -119,7 +120,7 @@ pub async fn delete_canister(arg: CanisterIdRecord) -> CallResult<()> {
 /// Note that, beyond the argument as specified in the interface description,
 /// there is a second parameter `cycles` which is the amount of cycles to be deposited.
 ///
-/// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles)
+/// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
 pub async fn deposit_cycles(arg: CanisterIdRecord, cycles: u128) -> CallResult<()> {
     call_with_payment128(
         Principal::management_canister(),
@@ -132,14 +133,14 @@ pub async fn deposit_cycles(arg: CanisterIdRecord, cycles: u128) -> CallResult<(
 
 /// Get 32 pseudo-random bytes.
 ///
-/// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand)
+/// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
 pub async fn raw_rand() -> CallResult<(Vec<u8>,)> {
     call(Principal::management_canister(), "raw_rand", ()).await
 }
 
 /// Get public information about the canister.
 ///
-/// See [IC method `canister_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_info)
+/// See [IC method `canister_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_info).
 pub async fn canister_info(arg: CanisterInfoRequest) -> CallResult<(CanisterInfoResponse,)> {
     call(Principal::management_canister(), "canister_info", (arg,)).await
 }
