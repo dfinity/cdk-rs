@@ -12,36 +12,12 @@ use candid::Principal;
 mod types;
 pub use types::*;
 
-/// Cycles cost to create a canister.
-///
-/// See [Computation and Storage Costs](https://internetcomputer.org/docs/current/developer-docs/deploy/computation-and-storage-costs)
-pub const CREATE_CANISTER_CYCLES: u128 = 100_000_000_000u128;
-
 /// Register a new canister and get its canister id.
 ///
-/// Note: This call charges [CREATE_CANISTER_CYCLES] from the caller canister.
-///
 /// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
-pub async fn create_canister(arg: CreateCanisterArgument) -> CallResult<(CanisterIdRecord,)> {
-    let extended_arg = CreateCanisterArgumentExtended {
-        settings: arg.settings,
-        sender_canister_version: Some(canister_version()),
-    };
-    call_with_payment128(
-        Principal::management_canister(),
-        "create_canister",
-        (extended_arg,),
-        CREATE_CANISTER_CYCLES,
-    )
-    .await
-}
-
-/// [create_canister] and specify extra cycles to the new canister.
 ///
-/// Note: This call charges [CREATE_CANISTER_CYCLES] and the specified extra cycles from the caller canister.
-///
-/// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
-pub async fn create_canister_with_extra_cycles(
+/// This API charges cycles. Please check [`Gas and cycles cost`](https://internetcomputer.org/docs/current/developer-docs/gas-cost).
+pub async fn create_canister(
     arg: CreateCanisterArgument,
     cycles: u128,
 ) -> CallResult<(CanisterIdRecord,)> {
@@ -53,7 +29,7 @@ pub async fn create_canister_with_extra_cycles(
         Principal::management_canister(),
         "create_canister",
         (extended_arg,),
-        CREATE_CANISTER_CYCLES + cycles,
+        cycles,
     )
     .await
 }
