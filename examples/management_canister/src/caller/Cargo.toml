@@ -11,5 +11,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ic-cdk = { path = "../../../../src/ic-cdk", features = ["transform-closure"] }
-ic-cdk-macros = { path = "../../../../src/ic-cdk-macros" }
 sha2 = "0.10"
