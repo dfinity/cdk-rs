@@ -6,7 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.9.0] - 2023-06-20
+## [0.9.1] - 2023-06-21
+
+### Changed
+
+- Bitcoin API handles cycles cost under the hood. (#406)
+
+## [0.9.0] - 2023-06-20 (yanked)
 
 ### Added
 
