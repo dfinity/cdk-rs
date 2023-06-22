@@ -28,7 +28,7 @@ const SEND_TRANSACTION_PAYLOAD_TESTNET: u128 = 8_000_000;
 /// This call requires cycles payment.
 /// This method handles the cycles cost under the hood.
 /// Check [API fees & Pricing](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api-fees--pricing) for more details.
-pub async fn get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,)> {
+pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,)> {
     let cycles = match arg.network {
         BitcoinNetwork::Mainnet => GET_BALANCE_MAINNET,
         BitcoinNetwork::Testnet => GET_BALANCE_TESTNET,
@@ -48,7 +48,7 @@ pub async fn get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,)> {
 /// This call requires cycles payment.
 /// This method handles the cycles cost under the hood.
 /// Check [API fees & Pricing](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api-fees--pricing) for more details.
-pub async fn get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResponse,)> {
+pub async fn bitcoin_get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResponse,)> {
     let cycles = match arg.network {
         BitcoinNetwork::Mainnet => GET_UTXO_MAINNET,
         BitcoinNetwork::Testnet => GET_UTXO_TESTNET,
@@ -83,7 +83,7 @@ fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
 /// This call requires cycles payment.
 /// This method handles the cycles cost under the hood.
 /// Check [API fees & Pricing](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api-fees--pricing) for more details.
-pub async fn send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
+pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
     let cycles = send_transaction_fee(&arg);
     call_with_payment128(
         Principal::management_canister(),
@@ -99,7 +99,7 @@ pub async fn send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
 /// This call requires cycles payment.
 /// This method handles the cycles cost under the hood.
 /// Check [API fees & Pricing](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api-fees--pricing) for more details.
-pub async fn get_current_fee_percentiles(
+pub async fn bitcoin_get_current_fee_percentiles(
     arg: GetCurrentFeePercentilesRequest,
 ) -> CallResult<(Vec<MillisatoshiPerByte>,)> {
     let cycles = match arg.network {
