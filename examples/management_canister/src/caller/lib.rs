@@ -155,10 +155,7 @@ mod ecdsa {
             derivation_path,
             key_id,
         };
-        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg, 10_000_000_000u128 / 13)
-            .await
-            .unwrap()
-            .0;
+        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg).await.unwrap().0;
         assert_eq!(signature.len(), 64);
     }
 }
