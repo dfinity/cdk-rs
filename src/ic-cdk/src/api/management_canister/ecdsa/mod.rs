@@ -23,9 +23,7 @@ pub async fn ecdsa_public_key(
 ///
 /// This call requires cycles payment. The required cycles varies according to the subnet size (number of nodes).
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
-pub async fn sign_with_ecdsa(
-    arg: SignWithEcdsaArgument,
-) -> CallResult<(SignWithEcdsaResponse,)> {
+pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgument) -> CallResult<(SignWithEcdsaResponse,)> {
     call_with_payment128(
         Principal::management_canister(),
         "sign_with_ecdsa",
