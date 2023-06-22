@@ -21,7 +21,8 @@ pub async fn ecdsa_public_key(
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
 ///
-/// This call requires cycles payment. The required cycles varies according to the subnet size (number of nodes).
+/// This call requires cycles payment. 
+/// This method handles the cycles cost under the hood.
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgument) -> CallResult<(SignWithEcdsaResponse,)> {
     call_with_payment128(

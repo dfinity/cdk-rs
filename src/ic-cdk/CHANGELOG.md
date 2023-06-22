@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ECDSA API handles cycles cost under the hood. (#407)
+- Hardcodes the fee for `sign_with_ecdsa`. (#407)
 
 ## [0.9.1] - 2023-06-21 (yanked)
 
