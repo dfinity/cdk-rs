@@ -3,6 +3,7 @@ members = [
     "src/ic0",
     "src/ic-cdk",
     "src/ic-cdk-macros",
+    "src/ic-cdk-timers",
     "library/ic-certified-map",
     "library/ic-ledger-types",
     "e2e-tests",

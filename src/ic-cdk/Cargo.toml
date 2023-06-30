@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.6.10"
+version = "0.9.2"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit for the Internet Computer."
@@ -8,29 +8,32 @@ homepage = "https://docs.rs/ic-cdk"
 documentation = "https://docs.rs/ic-cdk"
 license = "Apache-2.0"
 readme = "README.md"
-categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
+categories = [
+    "api-bindings",
+    "data-structures",
+    "no-std",
+    "development-tools::ffi",
+]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
-rust-version = "1.60.0"
+rust-version = "1.65.0"
 
 [dependencies]
 candid = "0.8"
-cfg-if = "1.0.0"
+ic0 = { path = "../ic0", version = "0.18.10" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
-ic0 = { path = "../ic0", version = "0.18.9" }
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
 slotmap = { version = "1.0.6", optional = true }
-futures = { version = "0.3.25", optional = true }
-
-[features]
-timers = ["dep:slotmap", "dep:futures"]
 
 [dev-dependencies]
 rstest = "0.12.0"
 
+[features]
+transform-closure = ["dep:slotmap"]
+
 [package.metadata.docs.rs]
 all-features = true
 default-target = "wasm32-unknown-unknown"
-rustc-args = ["--cfg=docsrs"]
+rustdoc-args = ["--cfg=docsrs"]

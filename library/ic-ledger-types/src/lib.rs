@@ -1,3 +1,14 @@
+//! A library of types to communicate with the ICP ledger canister.
+
+#![warn(
+    elided_lifetimes_in_paths,
+    missing_debug_implementations,
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
+
 use candid::{types::reference::Func, CandidType, Principal};
 use ic_cdk::api::call::CallResult;
 use serde::{Deserialize, Serialize};
@@ -30,6 +41,7 @@ pub const MAINNET_CYCLES_MINTING_CANISTER_ID: Principal =
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
 )]
 pub struct Timestamp {
+    /// Number of nanoseconds from the UNIX epoch in UTC timezone.
     pub timestamp_nanos: u64,
 }
 
@@ -134,13 +146,14 @@ impl From<Principal> for Subaccount {
 }
 
 /// AccountIdentifier is a 32-byte array.
-/// The first 4 bytes is big-endian encoding of a CRC32 checksum of the last 28 bytes.
+/// The first 4 bytes is a big-endian encoding of a CRC32 checksum of the last 28 bytes.
 #[derive(
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
 )]
 pub struct AccountIdentifier([u8; 32]);
 
 impl AccountIdentifier {
+    /// Creates a new account identifier from a principal and subaccount.
     pub fn new(owner: &Principal, subaccount: &Subaccount) -> Self {
         let mut hasher = sha2::Sha224::new();
         hasher.update(b"\x0Aaccount-id");
@@ -298,6 +311,7 @@ impl Display for AccountIdParseError {
 /// Arguments for the `account_balance` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct AccountBalanceArgs {
+    /// The account identifier to query the balance of.
     pub account: AccountIdentifier,
 }
 
@@ -311,11 +325,24 @@ pub struct Memo(pub u64);
 /// Arguments for the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct TransferArgs {
+    /// Transaction memo.
+    /// See docs for the [`Memo`] type.
     pub memo: Memo,
+    /// The amount that the caller wants to transfer to the destination address.
     pub amount: Tokens,
+    /// The amount that the caller pays for the transaction.
+    /// Must be 10000 e8s.
     pub fee: Tokens,
+    /// The subaccount from which the caller wants to transfer funds.
+    /// If `None`, the ledger uses the default (all zeros) subaccount to compute the source address.
+    /// See docs for the [`Subaccount`] type.
     pub from_subaccount: Option<Subaccount>,
+    /// The destination account.
+    /// If the transfer is successful, the balance of this address increases by `amount`.
     pub to: AccountIdentifier,
+    /// The point in time when the caller created this request.
+    /// If `None`, the ledger uses the current IC time as the timestamp.
+    /// Transactions more than one day old will be rejected.
     pub created_at_time: Option<Timestamp>,
 }
 
@@ -328,11 +355,33 @@ pub type TransferResult = Result<BlockIndex, TransferError>;
 /// Error of the `transfer` call.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TransferError {
-    BadFee { expected_fee: Tokens },
-    InsufficientFunds { balance: Tokens },
-    TxTooOld { allowed_window_nanos: u64 },
+    /// The fee that the caller specified in the transfer request was not the one that the ledger expects.
+    /// The caller can change the transfer fee to the `expected_fee` and retry the request.
+    BadFee {
+        /// The account specified by the caller doesn't have enough funds.
+        expected_fee: Tokens,
+    },
+    /// The caller did not have enough ICP in the specified subaccount.
+    InsufficientFunds {
+        /// The caller's balance.
+        balance: Tokens,
+    },
+    /// The request is too old.
+    /// The ledger only accepts requests created within a 24-hour window.
+    /// This is a non-recoverable error.
+    TxTooOld {
+        /// The permitted duration between `created_at_time` and now.
+        allowed_window_nanos: u64,
+    },
+    /// The caller specified a `created_at_time` that is too far in the future.
+    /// The caller can retry the request later.
+    /// This may also be caused by clock desynchronization.
     TxCreatedInFuture,
-    TxDuplicate { duplicate_of: BlockIndex },
+    /// The ledger has already executed the request.
+    TxDuplicate {
+        /// The index of the block containing the original transaction.
+        duplicate_of: BlockIndex,
+    },
 }
 
 impl fmt::Display for TransferError {
@@ -365,41 +414,84 @@ impl fmt::Display for TransferError {
     }
 }
 
+/// The content of a ledger transaction.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
+    /// Tokens were minted, usually via spawning/disbursing neuron maturity or as node operator rewards.
     Mint {
+        /// The account that the tokens were transferred to.
         to: AccountIdentifier,
+        /// The amount that was transferred.
         amount: Tokens,
     },
+    /// Tokens were burned, usually to create cycles for a canister.
     Burn {
+        /// The account that sent the tokens to be burned.
         from: AccountIdentifier,
+        /// The amount that was burned.
         amount: Tokens,
     },
+    /// Tokens were transferred from one account to another.
     Transfer {
+        /// The account the tokens were transferred from.
         from: AccountIdentifier,
+        /// The account the tokens were transferred to.
         to: AccountIdentifier,
+        /// The amount of tokens that were transferred.
         amount: Tokens,
+        /// The fee that was charged for the transfer.
+        fee: Tokens,
+    },
+    /// An account approved another account to transfer tokens on its behalf.
+    Approve {
+        /// The account that owns the tokens.
+        from: AccountIdentifier,
+        /// The account that was enabled to spend them.
+        spender: AccountIdentifier,
+        // TODO: add the allowance_e8s field after the official ICRC-2 release.
+        /// The expiration date for this approval.
+        expires_at: Option<Timestamp>,
+        /// The fee that was charged for the approval.
+        fee: Tokens,
+    },
+    /// An account transferred tokens from another account on its behalf, following an approval.
+    TransferFrom {
+        /// The account that the tokens were transferred from.
+        from: AccountIdentifier,
+        /// The account that the tokens were transferred to.
+        to: AccountIdentifier,
+        /// The account that performed the transfer.
+        spender: AccountIdentifier,
+        /// The amount that was transferred.
+        amount: Tokens,
+        /// The fee that was charged for the transfer.
         fee: Tokens,
     },
 }
 
+/// A recorded ledger transaction.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Transaction {
+    /// The memo that was provided for the transaction.
     pub memo: Memo,
+    /// The content of the transaction.
     pub operation: Option<Operation>,
     /// The time at which the client of the ledger constructed the transaction.
     pub created_at_time: Timestamp,
 }
 
+/// A single record in the ledger.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     /// The hash of the parent block.
     pub parent_hash: Option<[u8; 32]>,
+    /// The transaction that occurred in this block.
     pub transaction: Transaction,
     /// The time at which the ledger constructed the block.
     pub timestamp: Timestamp,
 }
 
+/// Arguments for the `get_blocks` function.
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GetBlocksArgs {
     /// The index of the first block to fetch.
@@ -408,40 +500,88 @@ pub struct GetBlocksArgs {
     pub length: u64,
 }
 
+/// Return type for the `query_blocks` function.
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct QueryBlocksResponse {
+    /// The total number of blocks in the chain.
+    /// If the chain length is positive, the index of the last block is `chain_length - 1`.
     pub chain_length: u64,
-    /// The replica certificate for the last block hash (see https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding).
-    /// Not available when querying blocks from a canister.
+    /// The replica certificate for the last block hash (see [Encoding of Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification-encoding)).
+    /// Only available when *querying* blocks from a canister.
     pub certificate: Option<ByteBuf>,
+    /// List of blocks that were available in the ledger when it processed the call.
+    ///
+    /// The blocks form a contiguous range, with the first block having index
+    /// `first_block_index` (see below), and the last block having index
+    /// `first_block_index + blocks.len() - 1`.
+    ///
+    /// The block range can be an arbitrary sub-range of the originally requested range.
     pub blocks: Vec<Block>,
     /// The index of the first block in [QueryBlocksResponse::blocks].
+    /// If the `blocks` vector is empty, the exact value of this field is not specified.
     pub first_block_index: BlockIndex,
+    /// Encoded functions for fetching archived blocks whose indices fall into the
+    /// requested range.
+    ///
+    /// For each entry `e` in `archived_blocks`, `e.start..e.start + e.length` is a sub-range
+    /// of the originally requested block range.
     pub archived_blocks: Vec<ArchivedBlockRange>,
 }
 
+/// A function that can be called to retrieve a range of archived blocks.
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct ArchivedBlockRange {
+    /// The index of the first archived block that can be fetched using `callback`.
     pub start: BlockIndex,
+    /// The number of blocks that can be fetched using `callback`.
     pub length: u64,
+    /// The function that should be called to fetch the archived blocks.
+    /// The range of the blocks accessible using this function is given by the `start`
+    /// and `length` fields above.
     pub callback: QueryArchiveFn,
 }
 
+/// A prefix of the block range specified in the `get_blocks` and [`query_archived_blocks`] function.
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BlockRange {
+    /// A prefix of the requested block range.
+    /// The index of the first block is equal to [`GetBlocksArgs.start`](GetBlocksArgs).
+    ///
+    /// ## Note
+    ///
+    /// The number of blocks might be less than the requested
+    /// [`GetBlocksArgs.length`](GetBlocksArgs) for various reasons, for example:
+    ///
+    /// 1. The query might have hit the replica with an outdated state
+    ///    that doesn't have the full block range yet.
+    /// 2. The requested range is too large to fit into a single reply.
+    ///
+    /// The list of blocks can be empty if:
+    ///
+    /// 1. [`GetBlocksArgs.length`](GetBlocksArgs) was zero.
+    /// 2. [`GetBlocksArgs.start`](GetBlocksArgs) was larger than the last block known to the canister.
     pub blocks: Vec<Block>,
 }
 
+/// The return type of `get_blocks`.
 pub type GetBlocksResult = Result<BlockRange, GetBlocksError>;
 
+/// An error indicating that the arguments passed to `get_blocks` or [`query_archived_blocks`] were invalid.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, CandidType)]
 pub enum GetBlocksError {
+    /// The [`GetBlocksArgs.start`](GetBlocksArgs) argument was smaller than the first block
+    /// served by the canister that received the request.
     BadFirstBlockIndex {
+        /// The index that was requested.
         requested_index: BlockIndex,
+        /// The minimum index that can be requested, for this particular call.
         first_valid_index: BlockIndex,
     },
+    /// Reserved for future use.
     Other {
+        /// A machine-readable error code.
         error_code: u64,
+        /// A human-readable error message.
         error_message: String,
     },
 }
@@ -469,6 +609,8 @@ impl fmt::Display for GetBlocksError {
     }
 }
 
+/// Function type used by `query_blocks` for fetching blocks from the archive.
+/// Has the signature `(`[`GetBlocksArgs`]`) -> (`[`GetBlocksResult`]`)`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(transparent)]
 pub struct QueryArchiveFn(Func);
@@ -554,8 +696,10 @@ pub async fn transfer(
     Ok(result)
 }
 
+/// Return type of the `token_symbol` function.
 #[derive(Serialize, Deserialize, CandidType, Clone, Hash, Debug, PartialEq, Eq)]
 pub struct Symbol {
+    /// A token's trade symbol, e.g. 'ICP'.
     pub symbol: String,
 }
 
@@ -611,6 +755,36 @@ pub async fn query_blocks(
     Ok(result)
 }
 
+/// Continues a query started in [`query_blocks`] by calling its returned archive function.
+///
+/// # Example
+///
+/// ```no_run
+/// use candid::Principal;
+/// use ic_cdk::api::call::CallResult;
+/// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
+///
+/// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
+///   let args = GetBlocksArgs { start: block_index, length: 1 };
+///
+///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///
+///   if blocks_result.blocks.len() >= 1 {
+///       debug_assert_eq!(blocks_result.first_block_index, block_index);
+///       return Ok(blocks_result.blocks.into_iter().next());
+///   }
+///
+///   if let Some(func) = blocks_result
+///       .archived_blocks
+///       .into_iter()
+///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
+///       match query_archived_blocks(&func, args).await? {
+///           Ok(range) => return Ok(range.blocks.into_iter().next()),
+///           _ => (),
+///       }
+///   }
+///   Ok(None)
+/// }
 pub async fn query_archived_blocks(
     func: &QueryArchiveFn,
     args: GetBlocksArgs,

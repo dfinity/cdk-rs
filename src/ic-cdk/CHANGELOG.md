@@ -6,6 +6,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.9.2] - 2023-06-22
+
+### Changed
+
+- Hardcodes the fee for `sign_with_ecdsa`. (#407)
+
+## [0.9.1] - 2023-06-21 (yanked)
+
+### Changed
+
+- Bitcoin API handles cycles cost under the hood. (#406)
+
+## [0.9.0] - 2023-06-20 (yanked)
+
+### Added
+
+- Set caller's canister version in the field `sender_canister_version` of management canister call payloads. (#401)
+- Add management canister types for `canister_info` management canister call (`CanisterInfoRequest` and `CanisterInfoResponse`). (#401)
+
+### Changed
+
+- No hard-coded fees for management canister calls. (#404)
+
+## [0.8.0] - 2023-05-26
+
+### Added
+
+- `ic0.is_controller` as a public function. (#383)
+
+### Changed
+
+- `TransformContext::new` has been replaced with dedicated functions that accept closures. (#385)
+- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
+
+## [0.7.4] - 2023-03-21
+
+### Added
+
+- `WASM_PAGE_SIZE_IN_BYTES` made `pub`. (#380)
+- `http_request_with_cycles`. (#381)
+
+## [0.7.3] - 2023-03-01
+
+### Fixed
+
+- Addressed a compatibility error in the signature of the `call` family of functions. (#379)
+
+## [0.7.2] - 2023-03-01
+
+### Fixed
+
+- Fix type name in error message when a deserialization error occurs after making a canister-to-canister call. (#355)
+
+## [0.7.1] - 2023-02-22
+
+### Fixed
+
+- Update document for http_request. (#372)
+
+## [0.7.0] - 2023-02-03
+
+### Changed
+
+- The timers API is not a feature anymore, it moved into a separate library, `ic-cdk-timers`. (#368)
+
 ## [0.6.10] - 2023-01-20
 
 ### Added
@@ -21,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)
+- Refactor the executor to prevent a double-free on `join_all`. (#357)
 
 ## [0.6.8] - 2022-11-28
 

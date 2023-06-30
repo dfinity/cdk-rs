@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  rust-version: 1.60.0
+  rust-version: 1.66.1
 
 jobs:
   build:
@@ -70,6 +70,9 @@ jobs:
       - name: Install protoc
         run: |
           sudo apt-get install -y protobuf-compiler
+      - name: Download ic-test-state-machine
+        run: |
+          bash scripts/download_state_machine_binary.sh
       - name: Run tests
         run: |
           cargo test --all-targets
@@ -131,7 +134,7 @@ jobs:
           sudo apt-get install -y protobuf-compiler
       - name: Run clippy
         run: |
-          cargo clippy --tests --benches -- -D clippy::all
+          cargo clippy --tests --benches -- -D warnings
 
   aggregate:
     name: ci:required
