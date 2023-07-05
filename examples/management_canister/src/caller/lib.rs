@@ -88,7 +88,8 @@ mod http_request {
         };
         let arg_raw = ic_cdk::export::candid::utils::encode_args((arg,))
             .expect("Failed to encode arguments.");
-        (3_000_000u128 + 60_000u128 * 13
+        (3_000_000u128
+            + 60_000u128 * 13
             + (arg_raw.len() as u128 + "http_request".len() as u128) * 400
             + max_response_bytes * 800)
             * 13
