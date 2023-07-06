@@ -13,7 +13,6 @@ concurrency:
 env:
   rust-version: 1.66.1
   dfx-version: 0.14.1
-  wasmtime-version: 10.0.1
 
 jobs:
   test:
@@ -56,12 +55,6 @@ jobs:
           if ! [ -x "$(command -v ic-wasm)" ]; then
             cargo install ic-wasm
           fi
-
-      - name: Install wasmtime
-        run: |
-          apt install xz-utils
-          curl https://github.com/bytecodealliance/wasmtime/releases/download/v${{wasmtime-version}}/wasmtime-v${{wasmtime-version}}-x86_64-linux.tar.xz | tar -xf
-          mv wasmtime /usr/local/bin
 
       - name: Install DFX
         run: |
