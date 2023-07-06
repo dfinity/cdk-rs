@@ -59,9 +59,9 @@ jobs:
 
       - name: Install wasmtime
         run: |
-          sudo apt-get install xz-utils
-          curl https://github.com/bytecodealliance/wasmtime/releases/download/v${{env.wasmtime-version}}/wasmtime-v${{env.wasmtime-version}}-x86_64-linux.tar.xz | tar -xf
-          mv wasmtime /usr/local/bin
+          wget https://github.com/bytecodealliance/wasmtime/releases/download/v${{env.wasmtime-version}}/wasmtime-v${{env.wasmtime-version}}-x86_64-linux.tar.xz
+          tar xf wasmtime-v${{env.wasmtime-version}}-x86_64-linux.tar.xz
+          mv wasmtime-v${{env.wasmtime-version}}-x86_64-linux/wasmtime /usr/local/bin/
 
       - name: Install DFX
         run: |
