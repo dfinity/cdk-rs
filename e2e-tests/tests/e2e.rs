@@ -36,13 +36,13 @@ ERROR: Could not find state machine binary to run e2e tests.
 fn test_storage_roundtrip() {
     let env = env();
     let wasm = cargo_build_canister("simple-kv-store");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm.clone(), vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm.clone(), vec![], None);
 
     let () = call_candid(&env, canister_id, "insert", (&"candid", &b"did"))
         .expect("failed to insert 'candid'");
 
-    env.upgrade_canister(canister_id, wasm, vec![])
+    env.upgrade_canister(canister_id, wasm, vec![], None)
         .expect("failed to upgrade the simple-kv-store canister");
 
     let (result,): (Option<ByteBuf>,) =
@@ -54,8 +54,8 @@ fn test_storage_roundtrip() {
 fn test_panic_after_async_frees_resources() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     for i in 1..3 {
         match call_candid(&env, canister_id, "panic_after_async", ()) {
@@ -101,8 +101,8 @@ fn test_panic_after_async_frees_resources() {
 fn test_raw_api() {
     let env = env();
     let wasm = cargo_build_canister("reverse");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     let result = env
         .query_call(
@@ -129,10 +129,10 @@ fn test_raw_api() {
 fn test_notify_calls() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let sender_id = env.create_canister();
-    env.install_canister(sender_id, wasm.clone(), vec![]);
-    let receiver_id = env.create_canister();
-    env.install_canister(receiver_id, wasm, vec![]);
+    let sender_id = env.create_canister(None);
+    env.install_canister(sender_id, wasm.clone(), vec![], None);
+    let receiver_id = env.create_canister(None);
+    env.install_canister(receiver_id, wasm, vec![], None);
 
     let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
         .expect("failed to query 'notifications_received'");
@@ -152,10 +152,10 @@ fn test_notify_calls() {
 fn test_composite_query() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let sender_id = env.create_canister();
-    env.install_canister(sender_id, wasm.clone(), vec![]);
-    let receiver_id = env.create_canister();
-    env.install_canister(receiver_id, wasm, vec![]);
+    let sender_id = env.create_canister(None);
+    env.install_canister(sender_id, wasm.clone(), vec![], None);
+    let receiver_id = env.create_canister(None);
+    env.install_canister(receiver_id, wasm, vec![], None);
 
     let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
         .expect("failed to query 'greet_self'");
@@ -166,8 +166,8 @@ fn test_composite_query() {
 fn test_api_call() {
     let env = env();
     let wasm = cargo_build_canister("api-call");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
     let (result,): (u64,) = query_candid(&env, canister_id, "instruction_counter", ())
         .expect("failed to query instruction_counter");
     assert!(result > 0);
@@ -187,8 +187,8 @@ fn test_api_call() {
 fn test_timers() {
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     call_candid::<(), ()>(&env, canister_id, "schedule", ()).expect("Failed to call schedule");
     advance_seconds(&env, 5);
@@ -218,8 +218,8 @@ fn test_timers() {
 fn test_timers_can_cancel_themselves() {
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     call_candid::<_, ()>(&env, canister_id, "set_self_cancelling_timer", ())
         .expect("Failed to call set_self_cancelling_timer");
@@ -242,8 +242,8 @@ fn test_scheduling_many_timers() {
     let timers_to_schedule = 1_000;
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     let () = call_candid(
         &env,
@@ -273,9 +273,9 @@ fn advance_seconds(env: &StateMachine, seconds: u32) {
 fn test_canister_info() {
     let env = env();
     let wasm = cargo_build_canister("canister_info");
-    let canister_id = env.create_canister();
+    let canister_id = env.create_canister(None);
     env.add_cycles(canister_id, 1_000_000_000_000);
-    env.install_canister(canister_id, wasm, vec![]);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     let new_canister: (Principal,) = call_candid(&env, canister_id, "canister_lifecycle", ())
         .expect("Error calling canister_lifecycle");
