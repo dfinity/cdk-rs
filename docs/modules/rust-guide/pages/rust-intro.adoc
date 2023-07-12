@@ -25,6 +25,8 @@ Collectively, these tools are referred to as the {cdk-long-name} and consist of 
 
 |`+ic-cdk-macros+` |The `+ic-cdk-macros+` library defines the procedural macros that facilitate building operation endpoints and APIs. This library includes macros for `+update+`, `+query+`, `+import+` and other important operations.
 
+|`+ic-cdk-timers+` |The `+ic-cdk-timers+` library implements multiple and periodic timers.
+
 |`+ic-cdk-optimizer+` |The `+ic-cdk-optimizer+` is a helper library used to reduce the size of WebAssembly modules.
 
 |===

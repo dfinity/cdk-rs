@@ -1,6 +1,6 @@
 [package]
 name = "ic-certified-map"
-version = "0.3.2"
+version = "0.3.4"
 edition = "2021"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 description = "Merkleized map data structure."
@@ -22,3 +22,6 @@ sha2 = "0.10"
 [dev-dependencies]
 hex = "0.4"
 serde_cbor = "0.11"
+ic-cdk = { path = "../../src/ic-cdk", version = "0.10" }
+candid = "0.9"
+serde = "1"

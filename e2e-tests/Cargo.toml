@@ -15,6 +15,7 @@ ic-cdk-macros = { path = "../src/ic-cdk-macros" }
 ic-cdk-timers = { path = "../src/ic-cdk-timers" }
 lazy_static = "1.4.0"
 serde_bytes = "0.11"
+futures = "0.3"
 
 [[bin]]
 name = "simple-kv-store"
@@ -36,6 +37,11 @@ path = "canisters/api_call.rs"
 name = "timers"
 path = "canisters/timers.rs"
 
+[[bin]]
+name = "canister_info"
+path = "canisters/canister_info.rs"
+
 [dev-dependencies]
-ic-state-machine-tests = { git = "https://github.com/dfinity/ic", rev = "467663a9d0dc6eac152bcd92df18850e2aed1632" }
-candid = "0.8"
+candid = "0.9"
+hex = "0.4.3"
+ic-test-state-machine-client = { git = "https://github.com/lwshang/test-state-machine-client", branch = "lwshang/candid_0.9" }

@@ -20,6 +20,15 @@
 //!
 //! * [`import`](attr.import.html)
 
+#![warn(
+    elided_lifetimes_in_paths,
+    missing_debug_implementations,
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
+
 use proc_macro::TokenStream;
 use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
@@ -198,7 +207,7 @@ pub fn query(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// [`call::reply`]: ic_cdk::api::call::reply
+/// [`call::reply`]: https://docs.rs/ic-cdk/latest/ic_cdk/api/call/fn.reply.html
 #[proc_macro_attribute]
 pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_update, "ic_update", attr, item)

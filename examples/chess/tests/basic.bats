@@ -1,8 +1,6 @@
 # Executed before each test.
 setup() {
   cd examples/chess
-  # Make sure the directory is clean.
-  npm install
 
   dfx start --clean --background
 }

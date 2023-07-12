@@ -1,10 +1,12 @@
 //! The ECDSA API.
 
-use crate::api::call::{call, CallResult};
+use crate::api::call::{call, call_with_payment128, CallResult};
 use candid::Principal;
 
 mod types;
 pub use types::*;
+
+const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
 
 /// Return a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///
@@ -18,6 +20,16 @@ pub async fn ecdsa_public_key(
 /// Return a new ECDSA signature of the given message_hash that can be separately verified against a derived ECDSA public key.
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
+///
+/// This call requires cycles payment.
+/// This method handles the cycles cost under the hood.
+/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgument) -> CallResult<(SignWithEcdsaResponse,)> {
-    call(Principal::management_canister(), "sign_with_ecdsa", (arg,)).await
+    call_with_payment128(
+        Principal::management_canister(),
+        "sign_with_ecdsa",
+        (arg,),
+        SIGN_WITH_ECDSA_FEE,
+    )
+    .await
 }
