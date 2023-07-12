@@ -86,8 +86,7 @@ mod http_request {
             Some(ref n) => *n as u128,
             None => 2 * 1024 * 1024u128, // default 2MiB
         };
-        let arg_raw = candid::utils::encode_args((arg,))
-            .expect("Failed to encode arguments.");
+        let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
         // The fee is for a 13-node subnet to demonstrate a typical usage.
         (3_000_000u128
             + 60_000u128 * 13
