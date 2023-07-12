@@ -2,6 +2,7 @@
 members = [
     "src/ic0",
     "src/ic-cdk",
+    "src/ic-cdk-bindgen",
     "src/ic-cdk-macros",
     "src/ic-cdk-timers",
     "src/candid-build",

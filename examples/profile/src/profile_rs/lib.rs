@@ -1,11 +1,5 @@
-use ic_cdk::{
-    api::call::ManualReply,
-    export::{
-        candid::{CandidType, Deserialize},
-        Principal,
-    },
-    query, update,
-};
+use candid::{CandidType, Deserialize, Principal};
+use ic_cdk::{api::call::ManualReply, query, update};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 

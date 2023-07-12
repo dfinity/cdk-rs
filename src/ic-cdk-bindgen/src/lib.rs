@@ -25,7 +25,8 @@ impl Config {
             candid_path,
             skip_existing_files: false,
             binding: rust::Config {
-                candid_crate: "ic_cdk::export::candid".to_string(),
+                // User will depend on candid crate directly
+                candid_crate: "candid".to_string(),
                 type_attributes: "".to_string(),
                 canister_id: Some(canister_id),
                 service_name: canister_name.to_string(),
@@ -68,7 +69,8 @@ impl Builder {
         }
         let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
         module.write(b"#![allow(unused_imports)]\n").unwrap();
-        module.write(b"#![allow(non_upper_case_globals)]").unwrap();
+        module.write(b"#![allow(non_upper_case_globals)]\n").unwrap();
+        module.write(b"#![allow(non_snake_case)]\n").unwrap();
         for conf in self.configs.iter() {
             module.write(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
             let line = format!("pub mod {};\n", conf.canister_name);
