@@ -2,6 +2,7 @@
 members = [
     "src/ic0",
     "src/ic-cdk",
+    "src/ic-cdk-bindgen",
     "src/ic-cdk-macros",
     "src/ic-cdk-timers",
     "library/ic-certified-map",
@@ -15,3 +16,6 @@ debug = false
 panic = "abort"
 lto = true
 opt-level = 'z'
+
+[workspace.dependencies]
+candid = "0.9"

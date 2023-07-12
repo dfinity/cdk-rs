@@ -21,8 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         project-name:
-          # [asset_storage, chess, counter, management_canister, print, profile]
-          [asset_storage, chess, management_canister, print]
+          [asset_storage, chess, counter, management_canister, print, profile]
 
     steps:
       - name: Checkout repository
