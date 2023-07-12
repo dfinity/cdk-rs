@@ -20,7 +20,7 @@
 //! # use std::cell::*;
 //! # use ic_cdk::*;
 //! # use ic_certified_map::*;
-//! # use ic_cdk::export::candid::CandidType;
+//! # use candid::CandidType;
 //! # use serde::Serialize;
 //!
 //! thread_local! {

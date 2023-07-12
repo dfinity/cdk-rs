@@ -34,7 +34,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
 
 mod export;
-//mod import;
 
 // To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -143,7 +142,7 @@ pub fn export_candid(_: TokenStream) -> TokenStream {
 ///
 /// ```rust
 /// # use ic_cdk::query;
-/// # fn wallet_canister_principal() -> ic_cdk::export::Principal { unimplemented!() }
+/// # fn wallet_canister_principal() -> candid::Principal { unimplemented!() }
 /// #[query(composite = true)]
 /// async fn composite_query_function() {
 ///    let (wallet_name,): (Option<String>,) = ic_cdk::call(wallet_canister_principal(), "name", ()).await.unwrap();
