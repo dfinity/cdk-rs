@@ -36,16 +36,18 @@ impl Config {
     }
 }
 
+#[derive(Default)]
 pub struct Builder {
     configs: Vec<Config>,
 }
+
 impl Builder {
     pub fn new() -> Self {
         Builder {
             configs: Vec::new(),
         }
     }
-    pub fn add<'a>(&'a mut self, config: Config) -> &'a mut Self {
+    pub fn add(&mut self, config: Config) -> &mut Self {
         self.configs.push(config);
         self
     }
@@ -54,30 +56,29 @@ impl Builder {
             let manifest_dir =
                 PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("Cannot find manifest dir"));
             // TODO dfx provide out_path
-            let out_path = manifest_dir.join("src").join("declarations");
-            out_path
+
+            manifest_dir.join("src").join("declarations")
         });
         fs::create_dir_all(&out_path).unwrap();
         for conf in self.configs.iter() {
             let (env, actor) =
                 pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
             let content = rust::compile(&conf.binding, &env, &actor);
-            let generated_path = out_path.join(&format!("{}.rs", conf.canister_name));
+            let generated_path = out_path.join(format!("{}.rs", conf.canister_name));
             if !(conf.skip_existing_files && generated_path.exists()) {
                 fs::write(generated_path, content).expect("Cannot store generated binding");
             }
         }
         let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
-        module.write(b"#![allow(unused_imports)]\n").unwrap();
+        module.write_all(b"#![allow(unused_imports)]\n").unwrap();
         module
-            .write(b"#![allow(non_upper_case_globals)]\n")
+            .write_all(b"#![allow(non_upper_case_globals)]\n")
             .unwrap();
-        module.write(b"#![allow(non_snake_case)]\n").unwrap();
+        module.write_all(b"#![allow(non_snake_case)]\n").unwrap();
         for conf in self.configs.iter() {
-            module.write(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
+            module.write_all(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
             let line = format!("pub mod {};\n", conf.canister_name);
-            module.write(line.as_bytes()).unwrap();
+            module.write_all(line.as_bytes()).unwrap();
         }
-        module.flush().unwrap();
     }
 }
