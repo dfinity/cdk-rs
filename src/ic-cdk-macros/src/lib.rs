@@ -77,13 +77,13 @@ where
 pub fn export_candid(input: TokenStream) -> TokenStream {
     let input: proc_macro2::TokenStream = input.into();
     quote::quote! {
-        ::ic_cdk::export::candid::export_service!(#input);
+        ::candid::export_service!(#input);
 
         #[no_mangle]
         pub unsafe extern "C" fn _start() {
             let result = __export_service();
             let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
-            ic_cdk::api::wasi::proc_exit(ret as u32);
+            ::ic_cdk::api::wasi::proc_exit(ret as u32);
         }
     }
     .into()

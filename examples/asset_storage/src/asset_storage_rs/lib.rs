@@ -53,5 +53,5 @@ fn post_upgrade() {
     USERS.with(|users| *users.borrow_mut() = old_users);
 }
 
-ic_cdk::export_candid!(::ic_cdk::export::candid);
+ic_cdk::export_candid!();
 

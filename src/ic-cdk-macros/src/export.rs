@@ -194,12 +194,12 @@ fn dfn_macro(
     #[cfg(feature = "export_candid")]
     let candid_method_attr = match method {
         MethodType::Query => {
-            quote! { #[::ic_cdk::export::candid::candid_method(query, rename = #function_name)] }
+            quote! { #[::candid::candid_method(query, rename = #function_name)] }
         }
         MethodType::Update => {
-            quote! { #[::ic_cdk::export::candid::candid_method(update, rename = #function_name)] }
+            quote! { #[::candid::candid_method(update, rename = #function_name)] }
         }
-        MethodType::Init => quote! { #[::ic_cdk::export::candid::candid_method(init)] },
+        MethodType::Init => quote! { #[::candid::candid_method(init)] },
         _ => quote! {},
     };
 
