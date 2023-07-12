@@ -54,3 +54,6 @@ fn post_upgrade() {
     let (old_users,): (BTreeSet<Principal>,) = storage::stable_restore().unwrap();
     USERS.with(|users| *users.borrow_mut() = old_users);
 }
+
+ic_cdk::export_candid!(::ic_cdk::export::candid);
+

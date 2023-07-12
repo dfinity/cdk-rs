@@ -1,5 +1,4 @@
 use ic_cdk::{
-    actor,
     api::call::ManualReply,
     export::{candid, Principal},
     init, query, update,
@@ -10,8 +9,6 @@ thread_local! {
     static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0));
     static OWNER: Cell<Principal> = Cell::new(Principal::from_slice(&[]));
 }
-
-actor! {
 
 #[init]
 fn init() {
@@ -34,4 +31,5 @@ fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
 
-}
+ic_cdk::export_candid!();
+

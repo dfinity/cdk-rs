@@ -96,19 +96,6 @@ pub fn export_candid(_: TokenStream) -> TokenStream {
     quote::quote! {}.into()
 }
 
-#[allow(missing_docs)]
-#[proc_macro]
-// TODO: make sure macros are only available inside actor! {...}, and actor! can be used only once.
-pub fn actor(input: TokenStream) -> TokenStream {
-    let input: proc_macro2::TokenStream = input.into();
-    quote::quote! {
-        #input
-
-        ::ic_cdk::export_candid!(::ic_cdk::export::candid);
-    }
-    .into()
-}
-
 /// Register a query call entry point.
 ///
 /// This attribute macro will export a function with name `canister_query <name>`
