@@ -1,10 +1,10 @@
+use candid::Principal;
 use ic_cdk::api::management_canister::main::{
     canister_info, create_canister, install_code, uninstall_code, update_settings,
     CanisterIdRecord, CanisterInfoRequest, CanisterInfoResponse,
     CanisterInstallMode::{Install, Reinstall, Upgrade},
     CanisterSettings, CreateCanisterArgument, InstallCodeArgument, UpdateSettingsArgument,
 };
-use ic_cdk::export::Principal;
 
 #[ic_cdk::update]
 async fn info(canister_id: Principal) -> CanisterInfoResponse {
@@ -15,7 +15,7 @@ async fn info(canister_id: Principal) -> CanisterInfoResponse {
     canister_info(request).await.unwrap().0
 }
 
-#[ic_cdk_macros::update]
+#[ic_cdk::update]
 async fn canister_lifecycle() -> Principal {
     let canister_id = create_canister(
         CreateCanisterArgument { settings: None },
