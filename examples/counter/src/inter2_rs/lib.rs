@@ -1,4 +1,4 @@
-use ic_cdk::{export::candid, update};
+use ic_cdk::update;
 
 mod declarations;
 use declarations::inter_mo::inter_mo;

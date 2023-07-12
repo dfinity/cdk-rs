@@ -5,7 +5,6 @@ members = [
     "src/ic-cdk-bindgen",
     "src/ic-cdk-macros",
     "src/ic-cdk-timers",
-    "src/candid-build",
     "library/ic-certified-map",
     "library/ic-ledger-types",
     "e2e-tests",

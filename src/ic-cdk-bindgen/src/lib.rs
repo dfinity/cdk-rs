@@ -69,7 +69,9 @@ impl Builder {
         }
         let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
         module.write(b"#![allow(unused_imports)]\n").unwrap();
-        module.write(b"#![allow(non_upper_case_globals)]\n").unwrap();
+        module
+            .write(b"#![allow(non_upper_case_globals)]\n")
+            .unwrap();
         module.write(b"#![allow(non_snake_case)]\n").unwrap();
         for conf in self.configs.iter() {
             module.write(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff

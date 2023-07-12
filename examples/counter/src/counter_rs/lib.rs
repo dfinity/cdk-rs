@@ -1,8 +1,5 @@
-use ic_cdk::{
-    api::call::ManualReply,
-    export::{candid, Principal},
-    init, query, update,
-};
+use candid::Principal;
+use ic_cdk::{api::call::ManualReply, init, query, update};
 use std::cell::{Cell, RefCell};
 
 thread_local! {

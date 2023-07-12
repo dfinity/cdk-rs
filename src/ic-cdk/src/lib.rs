@@ -33,13 +33,6 @@ pub use api::{caller, id, print, trap};
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
-/// Re-exports crates those are necessary for using ic-cdk
-// pub mod export {
-//     pub use candid;
-//     pub use candid::Principal;
-//     pub use serde;
-// }
-
 /// Setup the stdlib hooks.
 pub fn setup() {
     if !DONE.swap(true, Ordering::SeqCst) {
