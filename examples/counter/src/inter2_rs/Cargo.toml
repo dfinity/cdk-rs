@@ -13,3 +13,6 @@ crate-type = ["cdylib"]
 candid = "0.8.0"
 ic-cdk = { path = "../../../../src/ic-cdk" }
 ic-cdk-macros = { path = "../../../../src/ic-cdk-macros" }
+
+[build-dependencies]
+candid-build = { path = "../../../../src/candid-build" }

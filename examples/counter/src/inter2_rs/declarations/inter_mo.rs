@@ -15,4 +15,4 @@ impl SERVICE {
     ic_cdk::call(self.0, "write", (arg0,)).await
   }
 }
-pub const counter_mo: SERVICE = SERVICE(Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 1, 1, 1])); // bkyz2-fmaaa-aaaaa-qaaaq-cai
+pub const inter_mo: SERVICE = SERVICE(Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 5, 1, 1])); // bw4dl-smaaa-aaaaa-qaacq-cai
