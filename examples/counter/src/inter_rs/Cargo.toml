@@ -10,8 +10,8 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../../src/ic-cdk" }
-ic-cdk-macros = { path = "../../../../src/ic-cdk-macros" }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
 
 [build-dependencies]
-candid-build = { path = "../../../../src/candid-build" }
+ic-cdk-bindgen = { workspace = true }

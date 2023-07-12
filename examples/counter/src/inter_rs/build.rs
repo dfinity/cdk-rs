@@ -1,4 +1,4 @@
-use candid_build::{Builder, Config};
+use ic_cdk_bindgen::{Builder, Config};
 use std::path::PathBuf;
 
 fn main() {
