@@ -7,12 +7,14 @@ mod transform {
 
     // The struct `TransformFunc` is defined by a macro.
     // Adding doc comment directly above the macro doesn't work.
+    // The workaround is to re-export it and document there.
+    // TODO: upgrade Rust toolchain (https://dfinity.atlassian.net/browse/SDK-1183)
     use super::*;
 
-    // "transform" function of type: `func (http_response) -> (http_response) query`
     candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpResponse) query);
 }
 
+/// "transform" function of type: `func (http_response) -> (http_response) query`
 pub use transform::TransformFunc;
 
 /// Type used for encoding/decoding:
