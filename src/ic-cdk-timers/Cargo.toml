@@ -19,14 +19,13 @@ categories = [
 keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
-
 [dependencies]
-ic-cdk = { path = "../../src/ic-cdk", version = "0.10" }
-serde = "1.0.110"
-serde_bytes = "0.11.7"
-ic0 = { path = "../ic0", version = "0.18.9" }
-slotmap = { version = "1.0.6" }
-futures = { version = "0.3.25" }
+ic0.workspace = true
+ic-cdk.workspace = true
+serde.workspace = true
+serde_bytes.workspace = true
+slotmap.workspace = true
+futures.workspace = true
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

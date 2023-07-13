@@ -13,8 +13,8 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dev-dependencies]
-quote = { version = "1.0" }
-syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
+quote.workspace = true
+syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
 
 [features]
 # This feature is not additive as normal crate features.

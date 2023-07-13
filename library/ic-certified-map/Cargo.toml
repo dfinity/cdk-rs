@@ -19,13 +19,12 @@ keywords = ["internet-computer", "types", "dfinity", "map"]
 include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [dependencies]
-serde = "1"
-serde_bytes = "0.11"
-sha2 = "0.10"
+serde.workspace = true
+serde_bytes.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
-hex = "0.4"
+hex.workspace = true
 serde_cbor = "0.11"
-ic-cdk = { path = "../../src/ic-cdk", version = "0.10" }
-candid = "0.9"
-serde = "1"
+ic-cdk.workspace = true
+candid.workspace = true

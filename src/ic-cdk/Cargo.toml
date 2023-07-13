@@ -20,12 +20,12 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-candid = "0.9"
-ic0 = { path = "../ic0", version = "0.18.11" }
+candid.workspace = true
+ic0.workspace = true
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.7.0" }
-serde = "1.0.110"
-serde_bytes = "0.11.7"
-slotmap = { version = "1.0.6", optional = true }
+serde.workspace = true
+serde_bytes.workspace = true
+slotmap = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest = "0.12.0"
