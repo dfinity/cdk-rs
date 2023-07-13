@@ -71,6 +71,30 @@ where
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
 }
 
+#[allow(missing_docs)]
+#[cfg(feature = "export_candid")]
+#[proc_macro]
+pub fn export_candid(input: TokenStream) -> TokenStream {
+    let input: proc_macro2::TokenStream = input.into();
+    quote::quote! {
+        ::candid::export_service!(#input);
+
+        #[no_mangle]
+        pub unsafe extern "C" fn _start() {
+            let result = __export_service();
+            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
+            ::ic_cdk::api::wasi::proc_exit(ret as u32);
+        }
+    }
+    .into()
+}
+#[allow(missing_docs)]
+#[cfg(not(feature = "export_candid"))]
+#[proc_macro]
+pub fn export_candid(_: TokenStream) -> TokenStream {
+    quote::quote! {}.into()
+}
+
 /// Register a query call entry point.
 ///
 /// This attribute macro will export a function with name `canister_query <name>`

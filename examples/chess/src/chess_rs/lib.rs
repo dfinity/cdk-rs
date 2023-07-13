@@ -75,3 +75,5 @@ fn ai_move(name: String) {
 fn get_fen(name: String) -> Option<String> {
     STORE.with(|game_store| game_store.borrow().get(&name).map(|game| game.board.fen()))
 }
+
+ic_cdk::export_candid!();

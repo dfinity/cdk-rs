@@ -21,7 +21,7 @@ rust-version = "1.65.0"
 
 [dependencies]
 candid = "0.9"
-ic0 = { path = "../ic0", version = "0.18.10" }
+ic0 = { path = "../ic0", version = "0.18.11" }
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.7.0" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
@@ -32,8 +32,12 @@ rstest = "0.12.0"
 
 [features]
 transform-closure = ["dep:slotmap"]
+# The feature below is not additive as normal crate features.
+# Enable it may cause other dependent projects malfunctioning.
+# It is only to be used by canister IDL generation.
+wasi = ["ic0/wasi", "ic-cdk-macros/export_candid"]
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["transform-closure"]
 default-target = "wasm32-unknown-unknown"
 rustdoc-args = ["--cfg=docsrs"]

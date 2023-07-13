@@ -27,3 +27,5 @@ fn read() -> ManualReply<candid::Nat> {
 fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
+
+ic_cdk::export_candid!();

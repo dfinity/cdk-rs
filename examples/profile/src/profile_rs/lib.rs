@@ -80,3 +80,5 @@ fn search(text: String) -> ManualReply<Option<Profile>> {
         ManualReply::one(None::<Profile>)
     })
 }
+
+ic_cdk::export_candid!();

@@ -210,3 +210,5 @@ mod bitcoin {
         };
     }
 }
+
+ic_cdk::export_candid!();
