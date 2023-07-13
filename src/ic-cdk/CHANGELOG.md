@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Upgrade `candid` to `0.9`. (#411)
+- Remove `export` module.
+
 ## [0.9.2] - 2023-06-22
 
 ### Changed

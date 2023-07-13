@@ -1,7 +1,16 @@
 [package]
 name = "ic-cdk-bindgen"
 version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
+description = "Internet Computer Binding Generator."
+license = "Apache-2.0"
+readme = "README.md"
+categories = ["api-bindings", "development-tools::ffi"]
+keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.66.1"
 
 [dependencies]
 candid = { workspace = true, features = ["parser"] }
