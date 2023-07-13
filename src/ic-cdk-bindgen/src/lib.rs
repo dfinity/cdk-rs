@@ -55,8 +55,6 @@ impl Builder {
         let out_path = out_path.unwrap_or_else(|| {
             let manifest_dir =
                 PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("Cannot find manifest dir"));
-            // TODO dfx provide out_path
-
             manifest_dir.join("src").join("declarations")
         });
         fs::create_dir_all(&out_path).unwrap();
