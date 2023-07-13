@@ -9,7 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Upgrade `candid` to `0.9`. (#411)
-- Remove `export` module.
+- Remove `export` module. Please use candid directly in your project instead of using `ic_cdk::export::candid`.
+- Remove `ic_cdk_macro::import` module. See below for a new way to import canisters.
+
+### Added
+
+- Export Candid: (#386)
+  * A wasi feature that builds the canister as a standalone WASI binary. Running the binary in wasmtime outputs the canister interface
+  * Build step:
+```
+cargo build --target wasm32-unknown-unknown \
+    --release \
+    --package "$package" --features "ic-cdk/wasi"
+
+wasmtime "target/wasm32-unknown-unknown/release/$package.wasm" > $did_file
+
+cargo build --target wasm32-unknown-unknown \
+    --release \
+    --package "$package"
+
+ic-wasm "target/wasm32-unknown-unknown/release/$package.wasm" \
+    -o "target/wasm32-unknown-unknown/release/$package.wasm" \
+    metadata candid:service -v public -f $did_file
+```
+  * In the canister code, users have to add `ic_cdk::export_candid!()` at the end of `lib.rs`. In the future we may lift this requirement to provide a better DX.
+
+- Import Candid: (#390)
+  * Canister project adds `ic_cdk_bindgen` as a build dependency to generate canister bindings (#390)
+  
+  * build.rs
+```
+use ic_cdk_bindgen::{Builder, Config};
+fn main() {
+    let counter = Config::new("counter");
+    let mut builder = Builder::new();
+    builder.add(counter);
+    builder.build(None);  // default write to src/declarations
+}
+```
+  * In the canister code,
+```
+mod declarations;
+use declarations::counter::counter;
+
+counter.inc().await?
+```
 
 ## [0.9.2] - 2023-06-22
 

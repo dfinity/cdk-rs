@@ -1,3 +1,6 @@
+//! A simple WASI binding. It's only enabled by the "wasi" feature to allow building
+//! the canister as a standalone WASI binary that can output its Candid interface in wasmtime.
+
 type Fd = u32;
 type Size = usize;
 pub type Errno = i32;
