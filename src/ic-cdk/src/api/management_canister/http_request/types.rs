@@ -1,11 +1,19 @@
-#![allow(missing_docs)]
-
 use crate::id;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-// "transform" function of type: `func (http_response) -> (http_response) query`
-candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpResponse) query);
+mod transform {
+    #![allow(missing_docs)]
+
+    // The struct `TransformFunc` is defined by a macro.
+    // Adding doc comment directly above the macro doesn't work.
+    use super::*;
+
+    // "transform" function of type: `func (http_response) -> (http_response) query`
+    candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpResponse) query);
+}
+
+pub use transform::TransformFunc;
 
 /// Type used for encoding/decoding:
 /// `record {
@@ -91,7 +99,7 @@ pub enum HttpMethod {
     HEAD,
 }
 
-/// Argument type of [http_request].
+/// Argument type of [super::http_request].
 #[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.
