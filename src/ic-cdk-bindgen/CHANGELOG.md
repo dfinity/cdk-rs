@@ -6,18 +6,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.7.0] - 2023-07-13
+## [0.1.0] - 2023-07-13
 
-### Added
-
-- `export_candid` macro. (#386)
-
-### Changed
-
-- Remove `import` macro. (#390)
-
-## [0.6.10] - 2023-03-01
-
-### Changed
-
-- Update lint settings.
+- First release.
