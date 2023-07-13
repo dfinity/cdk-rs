@@ -7,11 +7,7 @@ pub mod management_canister;
 pub mod stable;
 
 #[cfg(feature = "wasi")]
-#[allow(
-    missing_docs,
-    clippy::undocumented_unsafe_blocks,
-    clippy::missing_safety_doc
-)]
+#[doc(hidden)]
 pub mod wasi;
 
 /// Prints the given message.

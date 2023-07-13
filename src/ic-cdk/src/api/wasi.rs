@@ -1,5 +1,9 @@
+//! This module is only for internal usage of [crate::export_candid] macro.
+//!
 //! A simple WASI binding. It's only enabled by the "wasi" feature to allow building
 //! the canister as a standalone WASI binary that can output its Candid interface in wasmtime.
+//!
+//! NEVER use them in Canister code.
 
 type Fd = u32;
 type Size = usize;
