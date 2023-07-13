@@ -43,4 +43,5 @@ path = "canisters/canister_info.rs"
 
 [dev-dependencies]
 hex = "0.4.3"
+# TODO: Use the public crate when this [PR](https://github.com/dfinity/test-state-machine-client/pull/19) merge.
 ic-test-state-machine-client = { git = "https://github.com/lwshang/test-state-machine-client", branch = "lwshang/candid_0.9" }
