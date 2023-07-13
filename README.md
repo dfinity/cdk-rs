@@ -26,8 +26,12 @@ To be a `canister`, a wasm module should communicate with the execution environm
 
 This repo provides libraries and tools to facilitate developing canisters in Rust.
 
+- [`ic0`](src/ic0):
+Internet Computer System API binding.
 - [`ic-cdk`](src/ic-cdk):
-Bindings of the System API.
+Internet Computer Canister Development Kit
+- [`ic-cdk-bindgen`](src/ic-cdk-bindgen):
+Generate Rust bindings from Candid to make inter-canister calls.
 - [`ic-cdk-macros`](src/ic-cdk-macros):
 Annotate functions with attribute macros to make them exposed public interfaces.
 - [`ic-cdk-timers`](src/ic-cdk-timers):
@@ -46,8 +50,8 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.8.0" # this is required if you want to use the `#[import]` macro
-ic-cdk = "0.6"
+candid = "0.9" # this version is required if you want to define Candid data types
+ic-cdk = "0.10"
 ```
 
 Then in your rust source code:
