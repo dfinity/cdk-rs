@@ -31,7 +31,7 @@ slotmap = { version = "1.0.6", optional = true }
 rstest = "0.12.0"
 
 [features]
-wasi = ["ic0/wasi"]
+wasi = ["ic0/wasi", "ic-cdk-macros/export_candid"]
 transform-closure = ["dep:slotmap"]
 
 [package.metadata.docs.rs]

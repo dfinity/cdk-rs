@@ -11,7 +11,7 @@ did_file="/tmp/a.did"
 cargo build --manifest-path="$example_root/Cargo.toml" \
     --target wasm32-unknown-unknown \
     --release \
-    --package "$package" --features "ic-cdk/wasi ic-cdk-macros/export_candid"
+    --package "$package" --features "ic-cdk/wasi"
 
 wasmtime "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" > $did_file
 

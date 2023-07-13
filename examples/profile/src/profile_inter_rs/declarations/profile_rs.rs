@@ -21,4 +21,4 @@ impl SERVICE {
     ic_cdk::call(self.0, "update", (arg0,)).await
   }
 }
-pub const profile_rs: SERVICE = SERVICE(Principal::from_slice(&[95, 197, 249, 201, 198, 242, 95, 248])); // zk5gd-bk7yx-44trx-sl74a
+pub const profile_rs: SERVICE = SERVICE(Principal::from_slice(&[128, 0, 0, 0, 0, 16, 0, 2, 1, 1])); // bd3sg-teaaa-aaaaa-qaaba-cai

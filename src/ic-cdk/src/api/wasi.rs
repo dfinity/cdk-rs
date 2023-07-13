@@ -3,6 +3,7 @@ type Size = usize;
 pub type Errno = i32;
 pub type Rval = u32;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Ciovec {
     buf: *const u8,
