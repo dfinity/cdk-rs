@@ -17,6 +17,9 @@ quote = { version = "1.0" }
 syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
 
 [features]
+# This feature is not additive as normal crate features.
+# Enable it may cause other dependent projects malfunctioning.
+# It is only to be used by `ic-cdk`.
 wasi = []
 
 # This is not a real example but a utility for auto-generating ic0.rs
