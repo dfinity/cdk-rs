@@ -29,4 +29,3 @@ fn write(input: candid::Nat) {
 }
 
 ic_cdk::export_candid!();
-

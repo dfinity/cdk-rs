@@ -82,4 +82,3 @@ fn search(text: String) -> ManualReply<Option<Profile>> {
 }
 
 ic_cdk::export_candid!();
-
