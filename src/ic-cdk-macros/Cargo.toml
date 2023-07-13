@@ -1,12 +1,14 @@
 [package]
 name = "ic-cdk-macros"
 version = "0.7.0" # no need to sync with ic-cdk
-authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
 description = "Canister Developer Kit macros."
 homepage = "https://docs.rs/ic-cdk-macros"
 documentation = "https://docs.rs/ic-cdk-macros"
-license = "Apache-2.0"
 readme = "README.md"
 categories = [
     "api-bindings",
@@ -16,8 +18,6 @@ categories = [
 ]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
-repository = "https://github.com/dfinity/cdk-rs"
-rust-version = "1.65.0"
 
 [lib]
 proc-macro = true

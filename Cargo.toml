@@ -10,6 +10,13 @@ members = [
     "e2e-tests",
 ]
 
+[workspace.package]
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2021"
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.70.0"
+license = "Apache-2.0"
+
 [profile.canister-release]
 inherits = "release"
 debug = false

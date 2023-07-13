@@ -1,18 +1,24 @@
 [package]
 name = "ic-cdk-timers"
 version = "0.4.0"
-authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
 description = "Timers library for the Rust CDK."
 homepage = "https://docs.rs/ic-cdk"
 documentation = "https://docs.rs/ic-cdk-timers"
-license = "Apache-2.0"
 readme = "README.md"
-categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
+categories = [
+    "api-bindings",
+    "data-structures",
+    "no-std",
+    "development-tools::ffi",
+]
 keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
-repository = "https://github.com/dfinity/cdk-rs"
-rust-version = "1.60.0"
+
 
 [dependencies]
 ic-cdk = { path = "../../src/ic-cdk", version = "0.10" }
