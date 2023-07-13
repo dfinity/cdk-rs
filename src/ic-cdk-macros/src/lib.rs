@@ -34,7 +34,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
 
 mod export;
-mod import;
 
 // To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -70,6 +69,36 @@ where
     }
 
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
+}
+
+/// Create a WASI start function which print the Candid interface of the canister.
+///
+/// Requiring "wasi" feature enabled. Or the function will have empty body.
+///
+/// Call this macro only if you want the Candid export behavior.
+/// Only call it once at the end of canister code outside query/update definition.
+#[cfg(feature = "export_candid")]
+#[proc_macro]
+pub fn export_candid(input: TokenStream) -> TokenStream {
+    let input: proc_macro2::TokenStream = input.into();
+    quote::quote! {
+        ::candid::export_service!(#input);
+
+        #[no_mangle]
+        pub unsafe extern "C" fn _start() {
+            let result = __export_service();
+            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
+            ::ic_cdk::api::wasi::proc_exit(ret as u32);
+        }
+    }
+    .into()
+}
+
+#[doc(hidden)]
+#[cfg(not(feature = "export_candid"))]
+#[proc_macro]
+pub fn export_candid(_: TokenStream) -> TokenStream {
+    quote::quote! {}.into()
 }
 
 /// Register a query call entry point.
@@ -119,7 +148,7 @@ where
 ///
 /// ```rust
 /// # use ic_cdk::query;
-/// # fn wallet_canister_principal() -> ic_cdk::export::Principal { unimplemented!() }
+/// # fn wallet_canister_principal() -> candid::Principal { unimplemented!() }
 /// #[query(composite = true)]
 /// async fn composite_query_function() {
 ///    let (wallet_name,): (Option<String>,) = ic_cdk::call(wallet_canister_principal(), "name", ()).await.unwrap();
@@ -433,34 +462,4 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
-}
-
-/// Import another canister as a rust struct.
-///
-/// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
-///
-/// # Example
-///
-/// You can specify the canister with it's name.
-///
-/// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
-///
-/// During `dfx build`, the imported canister will be correctly resolved.
-///
-/// ```rust,ignore
-/// # use ic_cdk::import;
-/// #[import(canister = "some_canister")]
-/// struct SomeCanister;
-/// ```
-///
-/// Or you can specify both the `canister_id` and the `candid_path`.
-///
-/// ```rust,ignore
-/// # use ic_cdk::import;
-/// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
-/// struct SomeCanister;
-/// ```
-#[proc_macro_attribute]
-pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
-    handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }

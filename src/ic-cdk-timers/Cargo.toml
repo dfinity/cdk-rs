@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-timers"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Timers library for the Rust CDK."
@@ -15,7 +15,7 @@ repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.60.0"
 
 [dependencies]
-ic-cdk = { path = "../../src/ic-cdk", version = "0.9" }
+ic-cdk = { path = "../../src/ic-cdk", version = "0.10" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
 ic0 = { path = "../ic0", version = "0.18.9" }
