@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.1] - 2023-07-27
+
+### Fixed
+
+- Only update/query macros can take guard function. (#417)
+
 ## [0.7.0] - 2023-07-13
 
 ### Added
