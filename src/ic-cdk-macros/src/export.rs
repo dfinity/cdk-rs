@@ -178,6 +178,13 @@ fn dfn_macro(
     };
 
     let guard = if let Some(guard_name) = attrs.guard {
+        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+        if method.is_lifecycle() {
+            return Err(Error::new(
+                attr.span(),
+                format!("#[{}] cannot have a guard function.", method),
+            ));
+        }
         let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
 
         quote! {
