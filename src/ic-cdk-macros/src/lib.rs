@@ -1,4 +1,4 @@
-//! This crate provide a set of attribute macros to faciliate canister development.
+//! This crate provide a set of attribute macros to facilitate canister development.
 //!
 //! The macros fall into two categories:
 //! * To register functions as canister entry points
@@ -15,10 +15,6 @@
 //! * [`heartbeat`](attr.heartbeat.html)
 //! * [`update`](attr.update.html)
 //! * [`query`](attr.query.html)
-//!
-//! ## Import another canister as a rust struct
-//!
-//! * [`import`](attr.import.html)
 
 #![warn(
     elided_lifetimes_in_paths,
