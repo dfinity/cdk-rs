@@ -2,7 +2,7 @@
 //!
 //! The macros fall into two categories:
 //! * To register functions as canister entry points
-//! * To import another canister as a rust struct for inter-canister operation.
+//! * To export candid definitions
 //!
 //! ## Register functions as canister entry points
 //!
@@ -15,6 +15,10 @@
 //! * [`heartbeat`](attr.heartbeat.html)
 //! * [`update`](attr.update.html)
 //! * [`query`](attr.query.html)
+//!
+//! ## Export candid definitions
+//!
+//! * [`export_candid`](attr.export_candid.html)
 
 #![warn(
     elided_lifetimes_in_paths,
