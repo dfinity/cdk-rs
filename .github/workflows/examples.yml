@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  rust-version: 1.71.1
+  rust-version: 1.65.0
   dfx-version: 0.14.1
   wasmtime-version: 10.0.1
 

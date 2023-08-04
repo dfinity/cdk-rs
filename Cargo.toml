@@ -14,7 +14,12 @@ members = [
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 repository = "https://github.com/dfinity/cdk-rs"
-rust-version = "1.71.1"
+# MSRV
+# Avoid updating this field unless we use new Rust features
+# Sync rust-version in following CI files:
+# .github/workflows/ci.yml
+# .github/workflows/examples.yml
+rust-version = "1.65.0"
 license = "Apache-2.0"
 
 [profile.canister-release]
