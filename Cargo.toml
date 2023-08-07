@@ -36,6 +36,7 @@ ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.4.0" }
 
 candid = "0.9"
 futures = "0.3"
+futures-util = "0.3"
 hex = "0.4"
 quote = "1"
 serde = "1"

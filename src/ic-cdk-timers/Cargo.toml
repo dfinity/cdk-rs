@@ -25,7 +25,7 @@ ic-cdk.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap.workspace = true
-futures.workspace = true
+futures-util.workspace = true
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

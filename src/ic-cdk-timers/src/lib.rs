@@ -26,7 +26,7 @@ use std::{
     time::Duration,
 };
 
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures_util::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
 use ic_cdk::api::call::RejectionCode;
