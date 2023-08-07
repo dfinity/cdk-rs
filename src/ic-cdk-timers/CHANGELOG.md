@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Implemented a drop-in replacement for `futures_timer::Delay`.
+
 ## [0.4.0] - 2023-07-13
 
 ### Changed
