@@ -200,9 +200,10 @@ fn dfn_macro(
 
     #[cfg(feature = "export_candid")]
     let candid_method_attr = match method {
-        MethodType::Query => {
-            quote! { #[::candid::candid_method(query, rename = #function_name)] }
+        MethodType::Query if attrs.composite => {
+            quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
         }
+        MethodType::Query => quote! { #[::candid::candid_method(query, rename = #function_name)] },
         MethodType::Update => {
             quote! { #[::candid::candid_method(update, rename = #function_name)] }
         }
