@@ -1,9 +1,7 @@
 [toolchain]
-channel = "1.65.0"
+channel = "1.71.1"
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]
 
-# Sync rust-version in following files
-# Cargo.toml
-# .github/workflows/ci.yml
-# .github/workflows/examples.yml
+# The version only influences the local develop environment.
+# No need to sync with Cargo.toml and CI.
