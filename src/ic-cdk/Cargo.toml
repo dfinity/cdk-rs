@@ -32,10 +32,6 @@ rstest = "0.12.0"
 
 [features]
 transform-closure = ["dep:slotmap"]
-# The feature below is not additive as normal crate features.
-# Enable it may cause other dependent projects malfunctioning.
-# It is only to be used by canister IDL generation.
-wasi = ["ic0/wasi", "ic-cdk-macros/export_candid"]
 
 [package.metadata.docs.rs]
 features = ["transform-closure"]

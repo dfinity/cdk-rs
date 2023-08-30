@@ -1,6 +1,6 @@
 [package]
 name = "ic0"
-version = "0.18.11"
+version = "0.18.12"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,12 +15,6 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 [dev-dependencies]
 quote.workspace = true
 syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
-
-[features]
-# This feature is not additive as normal crate features.
-# Enable it may cause other dependent projects malfunctioning.
-# It is only to be used by `ic-cdk`.
-wasi = []
 
 # This is not a real example but a utility for auto-generating ic0.rs
 [[example]]
