@@ -1,0 +1,3 @@
+service : {
+    fetch_quote : () -> (text);
+};
