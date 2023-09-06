@@ -56,11 +56,10 @@ jobs:
             cargo install ic-wasm
           fi
 
-      - name: Install wasmtime
+      - name: Install candid_extractor
         run: |
-          wget https://github.com/bytecodealliance/wasmtime/releases/download/v${{env.wasmtime-version}}/wasmtime-v${{env.wasmtime-version}}-x86_64-linux.tar.xz
-          tar xf wasmtime-v${{env.wasmtime-version}}-x86_64-linux.tar.xz
-          mv wasmtime-v${{env.wasmtime-version}}-x86_64-linux/wasmtime /usr/local/bin/
+          wget https://github.com/lwshang/candid_extractor/releases/download/0.1.0/candid_extractor-linux
+          mv candid_extractor-linux /usr/local/bin/candid_extractor
 
       - name: Install DFX
         run: |
