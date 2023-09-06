@@ -6,10 +6,6 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
-#[cfg(feature = "wasi")]
-#[doc(hidden)]
-pub mod wasi;
-
 /// Prints the given message.
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();

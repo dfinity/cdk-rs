@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-macros"
-version = "0.7.1" # no need to sync with ic-cdk
+version = "0.8.0" # no need to sync with ic-cdk
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -33,9 +33,3 @@ syn = { workspace = true, features = ["fold", "full"] }
 [dev-dependencies]
 trybuild = "1.0"
 ic-cdk.workspace = true
-
-[features]
-# This feature is not additive as normal crate features.
-# Enable it may cause other dependent projects malfunctioning.
-# It is only to be used by `ic-cdk`.
-export_candid = []
