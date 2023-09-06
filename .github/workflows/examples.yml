@@ -13,7 +13,7 @@ concurrency:
 env:
   rust-version: 1.65.0
   dfx-version: 0.14.1
-  wasmtime-version: 10.0.1
+  ic-wasm-version: 0.4.0
 
 jobs:
   test:
@@ -52,12 +52,14 @@ jobs:
       - name: Install ic-wasm
         # might already in cache
         run: |
-          wget https://github.com/dfinity/ic-wasm/releases/download/0.4.0/ic-wasm-linux64
+          wget https://github.com/dfinity/ic-wasm/releases/download/${{env.ic-wasm-version }}/ic-wasm-linux64
+          chmod 755 ic-wasm-linux64
           mv ic-wasm-linux64 /usr/local/bin/ic-wasm
 
       - name: Install candid_extractor
         run: |
           wget https://github.com/lwshang/candid_extractor/releases/download/0.1.0/candid_extractor-linux
+          chmod 755 candid_extractor-linux
           mv candid_extractor-linux /usr/local/bin/candid_extractor
 
       - name: Install DFX
