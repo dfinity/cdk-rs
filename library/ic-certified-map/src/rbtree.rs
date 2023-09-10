@@ -888,22 +888,21 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     }
 }
 
-
 use serde::{
-    ser::{Serialize, Serializer, SerializeMap},
-    de::{Deserialize, Deserializer, Visitor, MapAccess},
+    de::{Deserialize, Deserializer, MapAccess, Visitor},
+    ser::{Serialize, SerializeMap, Serializer},
 };
 use std::marker::PhantomData;
 
-impl<K, V> Serialize for RbTree<K, V> 
-where 
+impl<K, V> Serialize for RbTree<K, V>
+where
     K: Serialize + AsRef<[u8]> + 'static,
-    V: Serialize + AsHashTree + 'static, 
-{ // impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Serialize for RbTree<K, V> {
+    V: Serialize + AsHashTree + 'static,
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
-    {   
+    {
         let mut map = serializer.serialize_map(None)?;
         for (k, v) in self.iter() {
             map.serialize_entry(k, v)?;
@@ -914,13 +913,13 @@ where
 
 // The PhantomData keeps the compiler from complaining about unused generic type parameters.
 struct RbTreeSerdeVisitor<K, V> {
-    marker: PhantomData<fn() -> RbTree<K, V>>
+    marker: PhantomData<fn() -> RbTree<K, V>>,
 }
 
 impl<K, V> RbTreeSerdeVisitor<K, V> {
     fn new() -> Self {
         RbTreeSerdeVisitor {
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
@@ -960,10 +959,6 @@ where
         deserializer.deserialize_map(RbTreeSerdeVisitor::new())
     }
 }
-
-
-
-
 
 fn three_way_fork<'a>(l: HashTree<'a>, m: HashTree<'a>, r: HashTree<'a>) -> HashTree<'a> {
     match (l, m, r) {
