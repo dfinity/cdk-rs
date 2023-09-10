@@ -8,14 +8,14 @@ license = "Apache-2.0"
 repository = "https://github.com/dfinity/cdk-rs"
 
 [dependencies]
+candid.workspace = true
 cargo_metadata = "0.14.2"
 escargot = { version = "0.5.7", features = ["print"] }
-ic-cdk = { path = "../src/ic-cdk" }
-ic-cdk-macros = { path = "../src/ic-cdk-macros" }
-ic-cdk-timers = { path = "../src/ic-cdk-timers" }
+ic-cdk.workspace = true
+ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
-serde_bytes = "0.11"
-futures = "0.3"
+serde_bytes.workspace = true
+futures.workspace = true
 
 [[bin]]
 name = "simple-kv-store"
@@ -37,6 +37,11 @@ path = "canisters/api_call.rs"
 name = "timers"
 path = "canisters/timers.rs"
 
+[[bin]]
+name = "canister_info"
+path = "canisters/canister_info.rs"
+
 [dev-dependencies]
-candid = "0.8"
-ic-test-state-machine-client = "1"
+hex.workspace = true
+# TODO: Use the public crate when this [PR](https://github.com/dfinity/test-state-machine-client/pull/19) merge.
+ic-test-state-machine-client = { git = "https://github.com/lwshang/test-state-machine-client", branch = "lwshang/candid_0.9" }

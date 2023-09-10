@@ -1,11 +1,19 @@
 use std::time::Duration;
 
 use candid::{Encode, Principal};
+use ic_cdk::api::management_canister::main::{
+    CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
+    CanisterInfoResponse,
+    CanisterInstallMode::{Install, Reinstall, Upgrade},
+    CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
+    FromUserRecord, InstallCodeArgument,
+};
 use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_test_state_machine_client::{
-    call_candid, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
+    call_candid, call_candid_as, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
 };
 use serde_bytes::ByteBuf;
+use std::time::SystemTime;
 
 pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
@@ -28,13 +36,13 @@ ERROR: Could not find state machine binary to run e2e tests.
 fn test_storage_roundtrip() {
     let env = env();
     let wasm = cargo_build_canister("simple-kv-store");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm.clone(), vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm.clone(), vec![], None);
 
     let () = call_candid(&env, canister_id, "insert", (&"candid", &b"did"))
         .expect("failed to insert 'candid'");
 
-    env.upgrade_canister(canister_id, wasm, vec![])
+    env.upgrade_canister(canister_id, wasm, vec![], None)
         .expect("failed to upgrade the simple-kv-store canister");
 
     let (result,): (Option<ByteBuf>,) =
@@ -46,8 +54,8 @@ fn test_storage_roundtrip() {
 fn test_panic_after_async_frees_resources() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     for i in 1..3 {
         match call_candid(&env, canister_id, "panic_after_async", ()) {
@@ -93,8 +101,8 @@ fn test_panic_after_async_frees_resources() {
 fn test_raw_api() {
     let env = env();
     let wasm = cargo_build_canister("reverse");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     let result = env
         .query_call(
@@ -121,10 +129,10 @@ fn test_raw_api() {
 fn test_notify_calls() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let sender_id = env.create_canister();
-    env.install_canister(sender_id, wasm.clone(), vec![]);
-    let receiver_id = env.create_canister();
-    env.install_canister(receiver_id, wasm, vec![]);
+    let sender_id = env.create_canister(None);
+    env.install_canister(sender_id, wasm.clone(), vec![], None);
+    let receiver_id = env.create_canister(None);
+    env.install_canister(receiver_id, wasm, vec![], None);
 
     let (n,): (u64,) = query_candid(&env, receiver_id, "notifications_received", ())
         .expect("failed to query 'notifications_received'");
@@ -144,10 +152,10 @@ fn test_notify_calls() {
 fn test_composite_query() {
     let env = env();
     let wasm = cargo_build_canister("async");
-    let sender_id = env.create_canister();
-    env.install_canister(sender_id, wasm.clone(), vec![]);
-    let receiver_id = env.create_canister();
-    env.install_canister(receiver_id, wasm, vec![]);
+    let sender_id = env.create_canister(None);
+    env.install_canister(sender_id, wasm.clone(), vec![], None);
+    let receiver_id = env.create_canister(None);
+    env.install_canister(receiver_id, wasm, vec![], None);
 
     let (greeting,): (String,) = query_candid(&env, sender_id, "greet_self", (receiver_id,))
         .expect("failed to query 'greet_self'");
@@ -158,8 +166,8 @@ fn test_composite_query() {
 fn test_api_call() {
     let env = env();
     let wasm = cargo_build_canister("api-call");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
     let (result,): (u64,) = query_candid(&env, canister_id, "instruction_counter", ())
         .expect("failed to query instruction_counter");
     assert!(result > 0);
@@ -179,8 +187,8 @@ fn test_api_call() {
 fn test_timers() {
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     call_candid::<(), ()>(&env, canister_id, "schedule", ()).expect("Failed to call schedule");
     advance_seconds(&env, 5);
@@ -210,8 +218,8 @@ fn test_timers() {
 fn test_timers_can_cancel_themselves() {
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     call_candid::<_, ()>(&env, canister_id, "set_self_cancelling_timer", ())
         .expect("Failed to call set_self_cancelling_timer");
@@ -234,8 +242,8 @@ fn test_scheduling_many_timers() {
     let timers_to_schedule = 1_000;
     let env = env();
     let wasm = cargo_build_canister("timers");
-    let canister_id = env.create_canister();
-    env.install_canister(canister_id, wasm, vec![]);
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
 
     let () = call_candid(
         &env,
@@ -259,4 +267,175 @@ fn advance_seconds(env: &StateMachine, seconds: u32) {
         env.advance_time(Duration::from_secs(1));
         env.tick();
     }
+}
+
+#[test]
+fn test_canister_info() {
+    let env = env();
+    let wasm = cargo_build_canister("canister_info");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 1_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![], None);
+
+    let new_canister: (Principal,) = call_candid(&env, canister_id, "canister_lifecycle", ())
+        .expect("Error calling canister_lifecycle");
+
+    let () = call_candid_as(
+        &env,
+        Principal::management_canister(),
+        Principal::anonymous(),
+        "uninstall_code",
+        (CanisterIdRecord {
+            canister_id: new_canister.0,
+        },),
+    )
+    .expect("Error calling uninstall_code");
+    let () = call_candid_as(
+        &env,
+        Principal::management_canister(),
+        Principal::anonymous(),
+        "install_code",
+        (InstallCodeArgument {
+            mode: Install,
+            arg: vec![],
+            wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
+            canister_id: new_canister.0,
+        },),
+    )
+    .expect("Error calling install_code");
+
+    let info: (CanisterInfoResponse,) = call_candid(&env, canister_id, "info", (new_canister.0,))
+        .expect("Error calling canister_info");
+
+    let timestamp_nanos = env
+        .time()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
+    assert_eq!(
+        info.0,
+        CanisterInfoResponse {
+            total_num_changes: 9,
+            recent_changes: vec![
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 0,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(1)
+                    }),
+                    details: CanisterChangeDetails::Creation(CreationRecord {
+                        controllers: vec![canister_id]
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 1,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(2)
+                    }),
+                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                        mode: Install,
+                        module_hash: hex::decode(
+                            "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                        )
+                        .unwrap(),
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 2,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(3)
+                    }),
+                    details: CanisterChangeDetails::CodeUninstall,
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 3,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(4)
+                    }),
+                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                        mode: Install,
+                        module_hash: hex::decode(
+                            "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                        )
+                        .unwrap(),
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 4,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(5)
+                    }),
+                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                        mode: Reinstall,
+                        module_hash: hex::decode(
+                            "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                        )
+                        .unwrap(),
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 5,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(6)
+                    }),
+                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                        mode: Upgrade,
+                        module_hash: hex::decode(
+                            "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                        )
+                        .unwrap(),
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 6,
+                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                        canister_id,
+                        canister_version: Some(7)
+                    }),
+                    details: CanisterChangeDetails::ControllersChange(ControllersChangeRecord {
+                        controllers: vec![Principal::anonymous(), canister_id, new_canister.0]
+                    }),
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 7,
+                    origin: CanisterChangeOrigin::FromUser(FromUserRecord {
+                        user_id: Principal::anonymous(),
+                    }),
+                    details: CanisterChangeDetails::CodeUninstall,
+                },
+                CanisterChange {
+                    timestamp_nanos,
+                    canister_version: 8,
+                    origin: CanisterChangeOrigin::FromUser(FromUserRecord {
+                        user_id: Principal::anonymous(),
+                    }),
+                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                        mode: Install,
+                        module_hash: hex::decode(
+                            "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
+                        )
+                        .unwrap(),
+                    }),
+                },
+            ],
+            module_hash: Some(
+                hex::decode("93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476")
+                    .unwrap()
+            ),
+            controllers: vec![Principal::anonymous(), canister_id, new_canister.0],
+        }
+    );
 }

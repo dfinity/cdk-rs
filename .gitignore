@@ -17,3 +17,6 @@ Cargo.lock
 .DS_Store
 
 ic-test-state-machine
+
+# Generated bindings
+**/declarations/

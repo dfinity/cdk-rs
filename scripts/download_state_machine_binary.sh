@@ -8,7 +8,7 @@ cd "$SCRIPTS_DIR/.."
 
 uname_sys=$(uname -s | tr '[:upper:]' '[:lower:]')
 echo "uname_sys: $uname_sys"
-commit_sha="d0ea9d15cc51bd5bba16c8f1be3a6dfc8ec7dc24"
+commit_sha="b314222935b7d06c70036b0b54aa80a33252d79c"
 
 curl -sLO "https://download.dfinity.systems/ic/$commit_sha/binaries/x86_64-$uname_sys/ic-test-state-machine.gz"
 gzip -d ic-test-state-machine.gz

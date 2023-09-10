@@ -1,8 +1,5 @@
-use ic_cdk::{
-    api::call::ManualReply,
-    export::{candid, Principal},
-    init, query, update,
-};
+use candid::Principal;
+use ic_cdk::{api::call::ManualReply, init, query, update};
 use std::cell::{Cell, RefCell};
 
 thread_local! {
@@ -30,3 +27,5 @@ fn read() -> ManualReply<candid::Nat> {
 fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
+
+ic_cdk::export_candid!();

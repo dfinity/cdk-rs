@@ -1,8 +1,8 @@
-//! This crate provide a set of attribute macros to faciliate canister development.
+//! This crate provide a set of attribute macros to facilitate canister development.
 //!
 //! The macros fall into two categories:
 //! * To register functions as canister entry points
-//! * To import another canister as a rust struct for inter-canister operation.
+//! * To export candid definitions
 //!
 //! ## Register functions as canister entry points
 //!
@@ -16,9 +16,9 @@
 //! * [`update`](attr.update.html)
 //! * [`query`](attr.query.html)
 //!
-//! ## Import another canister as a rust struct
+//! ## Export candid definitions
 //!
-//! * [`import`](attr.import.html)
+//! * [`export_candid`](attr.export_candid.html)
 
 #![warn(
     elided_lifetimes_in_paths,
@@ -34,7 +34,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
 
 mod export;
-mod import;
 
 // To generate unique identifiers for functions and arguments
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -70,6 +69,36 @@ where
     }
 
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
+}
+
+/// Create a WASI start function which print the Candid interface of the canister.
+///
+/// Requiring "wasi" feature enabled. Or the function will have empty body.
+///
+/// Call this macro only if you want the Candid export behavior.
+/// Only call it once at the end of canister code outside query/update definition.
+#[cfg(feature = "export_candid")]
+#[proc_macro]
+pub fn export_candid(input: TokenStream) -> TokenStream {
+    let input: proc_macro2::TokenStream = input.into();
+    quote::quote! {
+        ::candid::export_service!(#input);
+
+        #[no_mangle]
+        pub unsafe extern "C" fn _start() {
+            let result = __export_service();
+            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
+            ::ic_cdk::api::wasi::proc_exit(ret as u32);
+        }
+    }
+    .into()
+}
+
+#[doc(hidden)]
+#[cfg(not(feature = "export_candid"))]
+#[proc_macro]
+pub fn export_candid(_: TokenStream) -> TokenStream {
+    quote::quote! {}.into()
 }
 
 /// Register a query call entry point.
@@ -119,7 +148,7 @@ where
 ///
 /// ```rust
 /// # use ic_cdk::query;
-/// # fn wallet_canister_principal() -> ic_cdk::export::Principal { unimplemented!() }
+/// # fn wallet_canister_principal() -> candid::Principal { unimplemented!() }
 /// #[query(composite = true)]
 /// async fn composite_query_function() {
 ///    let (wallet_name,): (Option<String>,) = ic_cdk::call(wallet_canister_principal(), "name", ()).await.unwrap();
@@ -233,22 +262,6 @@ pub fn update(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// You can specify a guard function to be executed before the init function.
-/// When the guard function returns an error, the init function will not proceed.
-///
-/// ```rust
-/// # use ic_cdk::init;
-/// fn guard_function() -> Result<(), String> {
-///     // ...
-/// # unimplemented!()
-/// }
-/// #[init(guard = "guard_function")]
-/// fn init_function() {
-///     // ...
-/// # unimplemented!()
-/// }
-/// ```
-///
 /// The init function may accept an argument, if that argument is a `CandidType`:
 ///
 /// ```rust
@@ -294,22 +307,6 @@ pub fn init(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
-///
-/// You can specify a guard function to be executed before the pre_upgrade function.
-/// When the guard function returns an error, the pre_upgrade function will not proceed.
-///
-/// ```rust
-/// # use ic_cdk::pre_upgrade;
-/// fn guard_function() -> Result<(), String> {
-///     // ...
-/// # unimplemented!()
-/// }
-/// #[pre_upgrade(guard = "guard_function")]
-/// fn pre_upgrade_function() {
-///     // ...
-/// # unimplemented!()
-/// }
-/// ```
 #[proc_macro_attribute]
 pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_pre_upgrade, "ic_pre_upgrade", attr, item)
@@ -329,22 +326,6 @@ pub fn pre_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```rust
 /// # use ic_cdk::post_upgrade;
 /// #[post_upgrade]
-/// fn post_upgrade_function() {
-///     // ...
-/// # unimplemented!()
-/// }
-/// ```
-///
-/// You can specify a guard function to be executed before the post_upgrade function.
-/// When the guard function returns an error, the post_upgrade function will not proceed.
-///
-/// ```rust
-/// # use ic_cdk::post_upgrade;
-/// fn guard_function() -> Result<(), String> {
-///     // ...
-/// # unimplemented!()
-/// }
-/// #[post_upgrade(guard = "guard_function")]
 /// fn post_upgrade_function() {
 ///     // ...
 /// # unimplemented!()
@@ -374,22 +355,6 @@ pub fn post_upgrade(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
-///
-/// You can specify a guard function to be executed before the heartbeat function.
-/// When the guard function returns an error, the heartbeat function will not proceed.
-///
-/// ```rust
-/// # use ic_cdk::heartbeat;
-/// fn guard_function() -> Result<(), String> {
-///     // ...
-/// # unimplemented!()
-/// }
-/// #[heartbeat(guard = "guard_function")]
-/// fn heartbeat_function() {
-///     // ...
-/// # unimplemented!()
-/// }
-/// ```
 #[proc_macro_attribute]
 pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_heartbeat, "ic_heartbeat", attr, item)
@@ -414,53 +379,7 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # unimplemented!()
 /// }
 /// ```
-///
-/// You can specify a guard function to be executed before the inspect_message function.
-/// When the guard function returns an error, the inspect_message function will not proceed.
-///
-/// ```rust
-/// # use ic_cdk::*;
-/// fn guard_function() -> Result<(), String> {
-///     // ...
-/// # unimplemented!()
-/// }
-/// #[inspect_message(guard = "guard_function")]
-/// fn inspect_message_function() {
-///     // ...
-/// # unimplemented!()
-/// }
-/// ```
 #[proc_macro_attribute]
 pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
-}
-
-/// Import another canister as a rust struct.
-///
-/// All public interfaces defined in corresponding candid file can be accessed through the annotated struct.
-///
-/// # Example
-///
-/// You can specify the canister with it's name.
-///
-/// Please be noted that this approach relies on the project organization by [dfx](https://github.com/dfinity/sdk).
-///
-/// During `dfx build`, the imported canister will be correctly resolved.
-///
-/// ```rust,ignore
-/// # use ic_cdk::import;
-/// #[import(canister = "some_canister")]
-/// struct SomeCanister;
-/// ```
-///
-/// Or you can specify both the `canister_id` and the `candid_path`.
-///
-/// ```rust,ignore
-/// # use ic_cdk::import;
-/// #[import(canister_id = "abcde-cai", candid_path = "path/to/some_canister.did")]
-/// struct SomeCanister;
-/// ```
-#[proc_macro_attribute]
-pub fn import(attr: TokenStream, item: TokenStream) -> TokenStream {
-    handle_debug_and_errors(import::ic_import, "ic_import", attr, item)
 }

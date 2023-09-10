@@ -135,15 +135,12 @@ fn dfn_macro(
 
     let outer_function_ident = Ident::new(&format!("{}_{}_", name, crate::id()), Span::call_site());
 
+    let function_name = attrs.name.unwrap_or_else(|| name.to_string());
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
     } else if method == MethodType::Query && attrs.composite {
-        format!(
-            "canister_composite_query {}",
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        format!("canister_composite_query {function_name}",)
     } else {
-        let function_name = attrs.name.unwrap_or_else(|| name.to_string());
         if function_name.starts_with("<ic-cdk internal>") {
             return Err(Error::new(
                 Span::call_site(),
@@ -181,6 +178,13 @@ fn dfn_macro(
     };
 
     let guard = if let Some(guard_name) = attrs.guard {
+        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+        if method.is_lifecycle() {
+            return Err(Error::new(
+                attr.span(),
+                format!("#[{}] cannot have a guard function.", method),
+            ));
+        }
         let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
 
         quote! {
@@ -192,6 +196,25 @@ fn dfn_macro(
         }
     } else {
         quote! {}
+    };
+
+    #[cfg(feature = "export_candid")]
+    let candid_method_attr = match method {
+        MethodType::Query if attrs.composite => {
+            quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
+        }
+        MethodType::Query => quote! { #[::candid::candid_method(query, rename = #function_name)] },
+        MethodType::Update => {
+            quote! { #[::candid::candid_method(update, rename = #function_name)] }
+        }
+        MethodType::Init => quote! { #[::candid::candid_method(init)] },
+        _ => quote! {},
+    };
+
+    #[cfg(feature = "export_candid")]
+    let item = quote! {
+        #candid_method_attr
+        #item
     };
 
     Ok(quote! {
