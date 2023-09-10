@@ -6,9 +6,7 @@ use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Color {
     Red,
     Black,
@@ -91,7 +89,7 @@ type NodeRef<K, V> = Option<Box<Node<K, V>>>;
 // 2. Children of a red node are black.
 // 3. Every path from a node goes through the same number of black
 //    nodes.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 struct Node<K, V> {
     key: K,
     value: V,
@@ -271,7 +269,7 @@ impl<'a, K, V> std::iter::Iterator for Iter<'a, K, V> {
 
 /// Implements mutable left-leaning red-black trees as defined in
 /// <https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf>
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone)]
 pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
 }
@@ -889,6 +887,83 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         debug_assert!(self.get(key).is_none());
     }
 }
+
+
+use serde::{
+    ser::{Serialize, Serializer, SerializeMap},
+    de::{Deserialize, Deserializer, Visitor, MapAccess},
+};
+use std::marker::PhantomData;
+
+impl<K, V> Serialize for RbTree<K, V> 
+where 
+    K: Serialize + AsRef<[u8]> + 'static,
+    V: Serialize + AsHashTree + 'static, 
+{ // impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Serialize for RbTree<K, V> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {   
+        let mut map = serializer.serialize_map(None)?;
+        for (k, v) in self.iter() {
+            map.serialize_entry(k, v)?;
+        }
+        map.end()
+    }
+}
+
+// The PhantomData keeps the compiler from complaining about unused generic type parameters.
+struct RbTreeSerdeVisitor<K, V> {
+    marker: PhantomData<fn() -> RbTree<K, V>>
+}
+
+impl<K, V> RbTreeSerdeVisitor<K, V> {
+    fn new() -> Self {
+        RbTreeSerdeVisitor {
+            marker: PhantomData
+        }
+    }
+}
+
+impl<'de, K, V> Visitor<'de> for RbTreeSerdeVisitor<K, V>
+where
+    K: Deserialize<'de> + AsRef<[u8]> + 'static,
+    V: Deserialize<'de> + AsHashTree + 'static,
+{
+    type Value = RbTree<K, V>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a map")
+    }
+
+    fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+    where
+        M: MapAccess<'de>,
+    {
+        let mut t = RbTree::<K, V>::new();
+        while let Some((key, value)) = access.next_entry()? {
+            t.insert(key, value);
+        }
+        Ok(t)
+    }
+}
+
+impl<'de, K, V> Deserialize<'de> for RbTree<K, V>
+where
+    K: Deserialize<'de> + AsRef<[u8]> + 'static,
+    V: Deserialize<'de> + AsHashTree + 'static,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(RbTreeSerdeVisitor::new())
+    }
+}
+
+
+
+
 
 fn three_way_fork<'a>(l: HashTree<'a>, m: HashTree<'a>, r: HashTree<'a>) -> HashTree<'a> {
     match (l, m, r) {
