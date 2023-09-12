@@ -55,7 +55,7 @@ impl AsHashTree for Hash {
     }
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> AsHashTree for RbTree<K, V> {
+impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> AsHashTree for RbTree<K, V> {
     fn root_hash(&self) -> Hash {
         match self.root.as_ref() {
             None => Empty.reconstruct(),
@@ -102,7 +102,7 @@ struct Node<K, V> {
     subtree_hash: Hash,
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> Node<K, V> {
+impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> Node<K, V> {
     fn new(key: K, value: V) -> Box<Node<K, V>> {
         let value_hash = value.root_hash();
         let data_hash = labeled_hash(key.as_ref(), &value_hash);
@@ -274,47 +274,47 @@ pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
 }
 
-impl<K, V> PartialEq for RbTree<K, V>
+impl<'t, K, V> PartialEq for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]> + PartialEq,
-    V: 'static + AsHashTree + PartialEq,
+    K: 't + AsRef<[u8]> + PartialEq,
+    V: 't + AsHashTree + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.iter().eq(other.iter())
     }
 }
 
-impl<K, V> Eq for RbTree<K, V>
+impl<'t, K, V> Eq for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]> + Eq,
-    V: 'static + AsHashTree + Eq,
+    K: 't + AsRef<[u8]> + Eq,
+    V: 't + AsHashTree + Eq,
 {
 }
 
-impl<K, V> PartialOrd for RbTree<K, V>
+impl<'t, K, V> PartialOrd for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]> + PartialOrd,
-    V: 'static + AsHashTree + PartialOrd,
+    K: 't + AsRef<[u8]> + PartialOrd,
+    V: 't + AsHashTree + PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.iter().partial_cmp(other.iter())
     }
 }
 
-impl<K, V> Ord for RbTree<K, V>
+impl<'t, K, V> Ord for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]> + Ord,
-    V: 'static + AsHashTree + Ord,
+    K: 't + AsRef<[u8]> + Ord,
+    V: 't + AsHashTree + Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.iter().cmp(other.iter())
     }
 }
 
-impl<K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
+impl<'t, K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]>,
-    V: 'static + AsHashTree,
+    K: 't + AsRef<[u8]>,
+    V: 't + AsHashTree,
 {
     fn from_iter<T>(iter: T) -> Self
     where
@@ -328,10 +328,10 @@ where
     }
 }
 
-impl<K, V> std::fmt::Debug for RbTree<K, V>
+impl<'t, K, V> std::fmt::Debug for RbTree<K, V>
 where
-    K: 'static + AsRef<[u8]> + std::fmt::Debug,
-    V: 'static + AsHashTree + std::fmt::Debug,
+    K: 't + AsRef<[u8]> + std::fmt::Debug,
+    V: 't + AsHashTree + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
@@ -347,7 +347,7 @@ where
     }
 }
 
-impl<K, V> RbTree<K, V> {
+impl<'t, K, V> RbTree<K, V> {
     /// Constructs a new empty tree.
     pub const fn new() -> Self {
         Self { root: None }
@@ -359,7 +359,7 @@ impl<K, V> RbTree<K, V> {
     }
 }
 
-impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
+impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> RbTree<K, V> {
     /// Looks up the key in the map and returns the associated value, if there is one.
     pub fn get(&self, key: &[u8]) -> Option<&V> {
         let mut root = self.root.as_ref();
@@ -375,7 +375,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
 
     /// Updates the value corresponding to the specified key.
     pub fn modify(&mut self, key: &[u8], f: impl FnOnce(&mut V)) {
-        fn go<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             h: &mut NodeRef<K, V>,
             k: &[u8],
             f: impl FnOnce(&mut V),
@@ -506,7 +506,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         lo: KeyBound<'a>,
         f: fn(&'a Node<K, V>) -> HashTree<'a>,
     ) -> HashTree<'a> {
-        fn go<'a, K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             n: &'a NodeRef<K, V>,
             lo: KeyBound<'a>,
             f: fn(&'a Node<K, V>) -> HashTree<'a>,
@@ -543,7 +543,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         hi: KeyBound<'a>,
         f: fn(&'a Node<K, V>) -> HashTree<'a>,
     ) -> HashTree<'a> {
-        fn go<'a, K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             n: &'a NodeRef<K, V>,
             hi: KeyBound<'a>,
             f: fn(&'a Node<K, V>) -> HashTree<'a>,
@@ -587,7 +587,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             lo.as_ref(),
             hi.as_ref()
         );
-        fn go<'a, K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             n: &'a NodeRef<K, V>,
             lo: KeyBound<'a>,
             hi: KeyBound<'a>,
@@ -645,7 +645,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     }
 
     fn lower_bound(&self, key: &[u8]) -> Option<KeyBound<'_>> {
-        fn go<'a, K: 'static + AsRef<[u8]>, V>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V>(
             n: &'a NodeRef<K, V>,
             key: &[u8],
         ) -> Option<KeyBound<'a>> {
@@ -662,7 +662,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
     }
 
     fn upper_bound(&self, key: &[u8]) -> Option<KeyBound<'_>> {
-        fn go<'a, K: 'static + AsRef<[u8]>, V>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V>(
             n: &'a NodeRef<K, V>,
             key: &[u8],
         ) -> Option<KeyBound<'a>> {
@@ -685,7 +685,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             }
             &x[0..p.len()] == p
         }
-        fn go<'a, K: 'static + AsRef<[u8]>, V>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V>(
             n: &'a NodeRef<K, V>,
             prefix: &[u8],
         ) -> Option<KeyBound<'a>> {
@@ -706,7 +706,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         key: &[u8],
         f: impl FnOnce(&'a V) -> HashTree<'a>,
     ) -> Option<HashTree<'a>> {
-        fn go<'a, K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'a, 't, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             n: &'a NodeRef<K, V>,
             key: &[u8],
             f: impl FnOnce(&'a V) -> HashTree<'a>,
@@ -740,7 +740,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
 
     /// Inserts a key-value entry into the map.
     pub fn insert(&mut self, key: K, value: V) {
-        fn go<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             h: NodeRef<K, V>,
             k: K,
             v: V,
@@ -778,7 +778,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
 
     /// Removes the specified key from the map.
     pub fn delete(&mut self, key: &[u8]) {
-        fn move_red_left<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn move_red_left<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             mut h: Box<Node<K, V>>,
         ) -> Box<Node<K, V>> {
             flip_colors(&mut h);
@@ -790,7 +790,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             h
         }
 
-        fn move_red_right<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn move_red_right<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             mut h: Box<Node<K, V>>,
         ) -> Box<Node<K, V>> {
             flip_colors(&mut h);
@@ -802,7 +802,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
         }
 
         #[inline]
-        fn min<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn min<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             mut h: &mut Box<Node<K, V>>,
         ) -> &mut Box<Node<K, V>> {
             while h.left.is_some() {
@@ -811,7 +811,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             h
         }
 
-        fn delete_min<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn delete_min<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             mut h: Box<Node<K, V>>,
         ) -> NodeRef<K, V> {
             if h.left.is_none() {
@@ -827,7 +827,7 @@ impl<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static> RbTree<K, V> {
             Some(balance(h))
         }
 
-        fn go<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+        fn go<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
             mut h: Box<Node<K, V>>,
             key: &[u8],
         ) -> NodeRef<K, V> {
@@ -894,10 +894,10 @@ use serde::{
 };
 use std::marker::PhantomData;
 
-impl<K, V> Serialize for RbTree<K, V>
+impl<'t, K, V> Serialize for RbTree<K, V>
 where
-    K: Serialize + AsRef<[u8]> + 'static,
-    V: Serialize + AsHashTree + 'static,
+    K: Serialize + AsRef<[u8]> + 't,
+    V: Serialize + AsHashTree + 't,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -924,10 +924,10 @@ impl<K, V> RbTreeSerdeVisitor<K, V> {
     }
 }
 
-impl<'de, K, V> Visitor<'de> for RbTreeSerdeVisitor<K, V>
+impl<'de, 't, K, V> Visitor<'de> for RbTreeSerdeVisitor<K, V>
 where
-    K: Deserialize<'de> + AsRef<[u8]> + 'static,
-    V: Deserialize<'de> + AsHashTree + 'static,
+    K: Deserialize<'de> + AsRef<[u8]> + 't,
+    V: Deserialize<'de> + AsHashTree + 't,
 {
     type Value = RbTree<K, V>;
 
@@ -947,10 +947,10 @@ where
     }
 }
 
-impl<'de, K, V> Deserialize<'de> for RbTree<K, V>
+impl<'de, 't, K, V> Deserialize<'de> for RbTree<K, V>
 where
-    K: Deserialize<'de> + AsRef<[u8]> + 'static,
-    V: Deserialize<'de> + AsHashTree + 'static,
+    K: Deserialize<'de> + AsRef<[u8]> + 't,
+    V: Deserialize<'de> + AsHashTree + 't,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -978,9 +978,7 @@ fn is_red<K, V>(x: &NodeRef<K, V>) -> bool {
     x.as_ref().map(|h| h.color == Color::Red).unwrap_or(false)
 }
 
-fn balance<K: AsRef<[u8]> + 'static, V: AsHashTree + 'static>(
-    mut h: Box<Node<K, V>>,
-) -> Box<Node<K, V>> {
+fn balance<'t, K: AsRef<[u8]> + 't, V: AsHashTree + 't>(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
     if is_red(&h.right) && !is_red(&h.left) {
         h = rotate_left(h);
     }
@@ -994,7 +992,7 @@ fn balance<K: AsRef<[u8]> + 'static, V: AsHashTree + 'static>(
 }
 
 /// Make a left-leaning link lean to the right.
-fn rotate_right<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+fn rotate_right<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
     mut h: Box<Node<K, V>>,
 ) -> Box<Node<K, V>> {
     debug_assert!(is_red(&h.left));
@@ -1011,7 +1009,7 @@ fn rotate_right<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
     x
 }
 
-fn rotate_left<K: 'static + AsRef<[u8]>, V: AsHashTree + 'static>(
+fn rotate_left<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't>(
     mut h: Box<Node<K, V>>,
 ) -> Box<Node<K, V>> {
     debug_assert!(is_red(&h.right));
