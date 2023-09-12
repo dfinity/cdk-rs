@@ -347,7 +347,7 @@ where
     }
 }
 
-impl<'t, K, V> RbTree<K, V> {
+impl<K, V> RbTree<K, V> {
     /// Constructs a new empty tree.
     pub const fn new() -> Self {
         Self { root: None }
