@@ -903,8 +903,9 @@ where
     where
         S: Serializer,
     {
-        let mut map = serializer.serialize_map(None)?;
-        for (k, v) in self.iter() {
+        let collect_refs = self.iter().collect::<Vec<(&K, &V)>>();
+        let mut map = serializer.serialize_map(Some(collect_refs.len()))?;
+        for (k, v) in collect_refs.into_iter() {
             map.serialize_entry(k, v)?;
         }
         map.end()

@@ -382,10 +382,14 @@ fn test_serde_serialize_and_deserialize() {
     let t1: Tree<'_> = Tree::from_iter([("hi", [1; 32]), ("hello", [2; 32]), ("world", [3; 32])]);
 
     let mut b: Vec<u8> = Vec::new();
-
+    // cbor test
     serde_cbor::to_writer(&mut b, &t1).unwrap();
-
     let t2: Tree<'_> = serde_cbor::from_slice(&b[..]).unwrap();
-
     assert_eq!(t1, t2);
+    // bincode test
+    use bincode::Options;
+    b = bincode::options().serialize(&t1).unwrap();
+    let t3: Tree<'_> = bincode::options().deserialize(&b).unwrap();     
+    assert_eq!(t1, t3);
+    
 }
