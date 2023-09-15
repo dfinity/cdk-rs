@@ -16,8 +16,42 @@ env:
   ic-wasm-version: 0.4.0
 
 jobs:
+  build-candid-extractor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.project-name }}-
+            ${{ runner.os }}-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+
+      - name: Build candid-extractor
+        run: cargo build -p candid-extractor --release
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: candid-extractor
+          path: target/release/candid-extractor
+
   test:
     runs-on: ubuntu-latest
+    needs: build-candid-extractor
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +70,6 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
             examples/${{ matrix.project-name }}/target/
           key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
           restore-keys: |
@@ -57,9 +90,15 @@ jobs:
           chmod 755 ic-wasm-linux64
           mv ic-wasm-linux64 /usr/local/bin/ic-wasm
 
+      - name: Download candid-extractor
+        uses: actions/download-artifact@v3
+        with:
+          name: candid-extractor
+
       - name: Install candid-extractor
         run: |
-          cargo install --path src/candid-extractor/
+          chmod 755 candid-extractor
+          mv candid-extractor /usr/local/bin/candid-extractor
 
       - name: Install DFX
         run: |
