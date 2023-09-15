@@ -31,9 +31,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.project-name }}-
+            ${{ runner.os }}-candid-extractor-
             ${{ runner.os }}-
 
       - name: Install Rust
