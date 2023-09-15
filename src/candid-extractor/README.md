@@ -2,9 +2,17 @@
 
 A CLI tool to extract candid definition from canister WASM.
 
-## What
+## Installation
 
-`ic0` is simply an unsafe Rust translation of Internet Computer System API as described in the [Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-imports).
+```
+cargo install candid-extractor
+```
+
+## Usage
+
+```
+candid-extractor path/to/canister.wasm
+```
 
 ## Update ic_mock.wat
 

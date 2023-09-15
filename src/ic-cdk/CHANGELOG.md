@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.11.0] - 2023-09-15
+
+### Changed
+
+- Upgrade `candid` to `0.9`. (#411)
+- Remove `export` module. Please use candid directly in your project instead of using `ic_cdk::export::candid`.
+- Remove `ic_cdk_macro::import` module. See below for a new way to import canisters.
+
 ## [0.10.0] - 2023-07-13
 
 ### Changed

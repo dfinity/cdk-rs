@@ -36,6 +36,8 @@ Generate Rust bindings from Candid to make inter-canister calls.
 Annotate functions with attribute macros to make them exposed public interfaces.
 - [`ic-cdk-timers`](src/ic-cdk-timers):
 The library implements multiple and periodic timers.
+- [`candid-extractor`](src/candid-extractor/):
+A CLI tool to extract candid definition from canister WASM.
 - [`ic-certified-map`](library/ic-certified-map):
 An implementation of map which support *certified queries*.
 - [`ic-ledger-types`](library/ic-ledger-types):
@@ -51,7 +53,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 candid = "0.9" # this version is required if you want to define Candid data types
-ic-cdk = "0.10"
+ic-cdk = "0.11"
 ```
 
 Then in your rust source code:
