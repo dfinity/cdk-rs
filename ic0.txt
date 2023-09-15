@@ -1,14 +1,14 @@
-ic0.msg_arg_data_size : () -> i32;                                          // I U Q Ry F
-ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q Ry F
-ic0.msg_caller_size : () -> i32;                                            // I G U Q F
-ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // I G U Q F
-ic0.msg_reject_code : () -> i32;                                            // Ry Rt
-ic0.msg_reject_msg_size : () -> i32;                                        // Rt
-ic0.msg_reject_msg_copy : (dst : i32, offset : i32, size : i32) -> ();      // Rt
+ic0.msg_arg_data_size : () -> i32;                                          // I U Q CQ Ry CRy F
+ic0.msg_arg_data_copy : (dst : i32, offset : i32, size : i32) -> ();        // I U Q CQ Ry CRy F
+ic0.msg_caller_size : () -> i32;                                            // *
+ic0.msg_caller_copy : (dst : i32, offset: i32, size : i32) -> ();           // *
+ic0.msg_reject_code : () -> i32;                                            // Ry Rt CRy CRt
+ic0.msg_reject_msg_size : () -> i32;                                        // Rt CRt
+ic0.msg_reject_msg_copy : (dst : i32, offset : i32, size : i32) -> ();      // Rt CRt
 
-ic0.msg_reply_data_append : (src : i32, size : i32) -> ();                  // U Q Ry Rt
-ic0.msg_reply : () -> ();                                                   // U Q Ry Rt
-ic0.msg_reject : (src : i32, size : i32) -> ();                             // U Q Ry Rt
+ic0.msg_reply_data_append : (src : i32, size : i32) -> ();                  // U Q CQ Ry Rt CRy CRt
+ic0.msg_reply : () -> ();                                                   // U Q CQ Ry Rt CRy CRt
+ic0.msg_reject : (src : i32, size : i32) -> ();                             // U Q CQ Ry Rt CRy CRt
 
 ic0.msg_cycles_available : () -> i64;                                       // U Rt Ry
 ic0.msg_cycles_available128 : (dst : i32) -> ();                            // U Rt Ry
@@ -29,7 +29,7 @@ ic0.msg_method_name_size : () -> i32;                                       // F
 ic0.msg_method_name_copy : (dst : i32, offset : i32, size : i32) -> ();     // F
 ic0.accept_message : () -> ();                                              // F
 
-ic0.call_new :                                                              // U Ry Rt T
+ic0.call_new :                                                              // U CQ Ry Rt CRy CRt T
   ( callee_src  : i32,
     callee_size : i32,
     name_src : i32,
@@ -39,11 +39,11 @@ ic0.call_new :                                                              // U
     reject_fun : i32,
     reject_env : i32
   ) -> ();
-ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U Ry Rt T
-ic0.call_data_append : (src : i32, size : i32) -> ();                       // U Ry Rt T
+ic0.call_on_cleanup : (fun : i32, env : i32) -> ();                         // U CQ Ry Rt CRy CRt T
+ic0.call_data_append : (src : i32, size : i32) -> ();                       // U CQ Ry Rt CRy CRt T
 ic0.call_cycles_add : (amount : i64) -> ();                                 // U Ry Rt T
 ic0.call_cycles_add128 : (amount_high : i64, amount_low: i64) -> ();        // U Ry Rt T
-ic0.call_perform : () -> ( err_code : i32 );                                // U Ry Rt T
+ic0.call_perform : () -> ( err_code : i32 );                                // U CQ Ry Rt CRy CRt T
 
 ic0.stable_size : () -> (page_count : i32);                                 // * s
 ic0.stable_grow : (new_pages : i32) -> (old_page_count : i32);              // * s
