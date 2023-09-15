@@ -36,6 +36,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            target/
             examples/${{ matrix.project-name }}/target/
           key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
           restore-keys: |
@@ -56,11 +57,9 @@ jobs:
           chmod 755 ic-wasm-linux64
           mv ic-wasm-linux64 /usr/local/bin/ic-wasm
 
-      - name: Install candid_extractor
+      - name: Install candid-extractor
         run: |
-          wget https://github.com/lwshang/candid_extractor/releases/download/0.1.0/candid_extractor-linux
-          chmod 755 candid_extractor-linux
-          mv candid_extractor-linux /usr/local/bin/candid_extractor
+          cargo install --path src/candid-extractor/
 
       - name: Install DFX
         run: |

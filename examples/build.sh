@@ -12,7 +12,7 @@ cargo build --manifest-path="$example_root/Cargo.toml" \
     --release \
     --package "$package"
 
-candid_extractor "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" 2>/dev/null > $did_file || true
+candid-extractor "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" 2>/dev/null > $did_file || true
 
 ic-wasm "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" \
     -o "$example_root/target/wasm32-unknown-unknown/release/$package.wasm" \
