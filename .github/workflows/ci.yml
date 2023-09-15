@@ -40,8 +40,8 @@ jobs:
           target: wasm32-unknown-unknown
       - name: Run builds
         run: |
-          cargo build --workspace --exclude ic-cdk-e2e-tests candid-extractor --target wasm32-unknown-unknown
-          cargo build --workspace --exclude ic-cdk-e2e-tests candid-extractor --target wasm32-unknown-unknown --release
+          cargo build --workspace --exclude ic-cdk-e2e-tests --exclude candid-extractor --target wasm32-unknown-unknown
+          cargo build --workspace --exclude ic-cdk-e2e-tests --exclude candid-extractor --target wasm32-unknown-unknown --release
           cargo build --example=work
 
   test:
