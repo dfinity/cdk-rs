@@ -10,7 +10,7 @@ description = "CLI tool to extract candid definition from canister WASM."
 readme = "README.md"
 categories = ["development-tools"]
 keywords = ["internet-computer", "wasm", "dfinity", "canister", "cdk"]
-include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md", "ic_mock.wat"]
 
 [dependencies]
 anyhow = "1.0.72"
