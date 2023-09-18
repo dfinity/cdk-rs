@@ -6,13 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.11.0] - 2023-09-15
+## [0.11.0] - 2023-09-18
 
 ### Changed
 
-- Upgrade `candid` to `0.9`. (#411)
-- Remove `export` module. Please use candid directly in your project instead of using `ic_cdk::export::candid`.
-- Remove `ic_cdk_macro::import` module. See below for a new way to import canisters.
+- Candid Export workflow is changed. (#424)
+  * No need to compile for WASI separately.
+  * Canisters should still invoke `ic_cdk::export_candid!()` to export candid.
+  * Then use [`candid-extractor`](../candid-extractor/) to extract candid from the canister WASM.
 
 ## [0.10.0] - 2023-07-13
 
