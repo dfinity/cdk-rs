@@ -198,7 +198,6 @@ fn dfn_macro(
         quote! {}
     };
 
-    #[cfg(feature = "export_candid")]
     let candid_method_attr = match method {
         MethodType::Query if attrs.composite => {
             quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
@@ -211,7 +210,6 @@ fn dfn_macro(
         _ => quote! {},
     };
 
-    #[cfg(feature = "export_candid")]
     let item = quote! {
         #candid_method_attr
         #item

@@ -71,13 +71,10 @@ where
     result.map_or_else(|e| e.to_compile_error().into(), Into::into)
 }
 
-/// Create a WASI start function which print the Candid interface of the canister.
-///
-/// Requiring "wasi" feature enabled. Or the function will have empty body.
+/// Create a `get_candid_pointer` method so that `dfx` can execute it to extract candid definition.
 ///
 /// Call this macro only if you want the Candid export behavior.
 /// Only call it once at the end of canister code outside query/update definition.
-#[cfg(feature = "export_candid")]
 #[proc_macro]
 pub fn export_candid(input: TokenStream) -> TokenStream {
     let input: proc_macro2::TokenStream = input.into();
@@ -85,20 +82,12 @@ pub fn export_candid(input: TokenStream) -> TokenStream {
         ::candid::export_service!(#input);
 
         #[no_mangle]
-        pub unsafe extern "C" fn _start() {
-            let result = __export_service();
-            let ret = unsafe { ::ic_cdk::api::wasi::print(&result) };
-            ::ic_cdk::api::wasi::proc_exit(ret as u32);
+        pub fn get_candid_pointer() -> *mut std::os::raw::c_char {
+            let c_string = std::ffi::CString::new(__export_service()).unwrap();
+            c_string.into_raw()
         }
     }
     .into()
-}
-
-#[doc(hidden)]
-#[cfg(not(feature = "export_candid"))]
-#[proc_macro]
-pub fn export_candid(_: TokenStream) -> TokenStream {
-    quote::quote! {}.into()
 }
 
 /// Register a query call entry point.

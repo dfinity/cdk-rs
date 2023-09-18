@@ -1,0 +1,25 @@
+[package]
+name = "candid-extractor"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "CLI tool to extract candid definition from canister WASM."
+readme = "README.md"
+categories = ["development-tools"]
+keywords = ["internet-computer", "wasm", "dfinity", "canister", "cdk"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+
+[dependencies]
+anyhow = "1.0.72"
+wasmtime = "12"
+
+[dev-dependencies]
+quote.workspace = true
+syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
+
+[[example]]
+name = "generate_mock_wat"
+path = "util/generate_mock_wat.rs"

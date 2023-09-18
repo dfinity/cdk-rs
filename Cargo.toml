@@ -5,6 +5,7 @@ members = [
     "src/ic-cdk-bindgen",
     "src/ic-cdk-macros",
     "src/ic-cdk-timers",
+    "src/candid-extractor",
     "library/ic-certified-map",
     "library/ic-ledger-types",
     "e2e-tests",
@@ -30,11 +31,11 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "src/ic0", version = "0.18.11" }
-ic-cdk = { path = "src/ic-cdk", version = "0.10" }
-ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.4.0" }
+ic0 = { path = "src/ic0", version = "0.18.12" }
+ic-cdk = { path = "src/ic-cdk", version = "0.11" }
+ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.5.0" }
 
-candid = "0.9"
+candid = "0.9.6"
 futures = "0.3"
 hex = "0.4"
 quote = "1"

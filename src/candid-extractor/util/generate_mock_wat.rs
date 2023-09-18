@@ -1,4 +1,4 @@
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
@@ -9,12 +9,11 @@ use syn::{FnArg, Ident, Token, TypePath};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
 
 #[derive(Clone, Debug)]
 pub struct SystemAPI {
     pub name: Ident,
-    pub args: Vec<FnArg>,
+    pub arg_types: Vec<TypePath>,
     pub output: Option<TypePath>,
 }
 
@@ -33,12 +32,14 @@ impl Parse for SystemAPI {
         parenthesized!(content in input);
         let args = Punctuated::<FnArg, Comma>::parse_terminated(&content)?;
         let args: Vec<FnArg> = args.iter().cloned().collect();
+        let mut arg_types = vec![];
         for arg in &args {
             match arg {
                 FnArg::Receiver(r) => return Err(Error::new(r.span(), "receiver not expected")),
                 FnArg::Typed(pat_type) => match &*pat_type.ty {
                     syn::Type::Path(ty) => {
                         type_supported(ty)?;
+                        arg_types.push(ty.clone());
                     }
                     _ => return Err(Error::new(pat_type.span(), "expected type as i32")),
                 },
@@ -71,7 +72,11 @@ impl Parse for SystemAPI {
 
         input.parse::<Token![;]>()?;
 
-        Ok(Self { name, args, output })
+        Ok(Self {
+            name,
+            arg_types,
+            output,
+        })
     }
 }
 
@@ -110,86 +115,43 @@ fn main() {
     let ic0: IC0 = syn::parse_str(s).unwrap();
 
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    d.push("src/ic0.rs");
+    d.push("ic_mock.wat");
 
     let mut f = fs::File::create(d).unwrap();
 
     writeln!(
         f,
-        r#"// This file is generated from ic0.txt.
-// Don't manually modify it.
-#[cfg(target_arch = "wasm32")]
-#[link(wasm_import_module = "ic0")]
-extern "C" {{"#,
+        r#"(module
+    ;; This file is generated from ic0.txt.
+    ;; Don't manually modify it."#,
     )
     .unwrap();
 
     for api in &ic0.apis {
         let fn_name = &api.name;
-        let args = &api.args;
+        let arg_types = &api.arg_types;
 
-        let mut r = quote! {
-            pub fn #fn_name(#(#args),*)
+        let params = if arg_types.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                (param #(#arg_types)*)
+            }
         };
 
-        if let Some(output) = &api.output {
-            r = quote! {
-                #r -> #output
-            }
-        }
+        let result = if let Some(output) = &api.output {
+            format!(
+                "(result {0}) {0}.const 0",
+                output.to_token_stream().to_string()
+            )
+        } else {
+            "".to_string()
+        };
 
-        r = quote! {#r;};
+        let r = format!("    (func (export \"{fn_name}\") {params} {result})");
+
         writeln!(f, "{}", r).unwrap();
     }
 
-    writeln!(f, "}}").unwrap();
-
-    writeln!(
-        f,
-        r#"
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(unused_variables)]
-#[allow(clippy::missing_safety_doc)]
-#[allow(clippy::too_many_arguments)]
-mod non_wasm{{"#,
-    )
-    .unwrap();
-
-    for api in &ic0.apis {
-        let fn_name = &api.name;
-        let args = &api.args;
-
-        let mut r = quote! {
-            pub unsafe fn #fn_name(#(#args),*)
-        };
-
-        if let Some(output) = &api.output {
-            r = quote! {
-                #r -> #output
-            }
-        }
-
-        let panic_str = format!("{} should only be called inside canisters.", fn_name);
-
-        r = quote! {
-        #r {
-            panic!(#panic_str);
-        }};
-        writeln!(f, "{}", r).unwrap();
-    }
-
-    writeln!(
-        f,
-        r#"}}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use non_wasm::*;
-"#
-    )
-    .unwrap();
-
-    Command::new("cargo")
-        .args(["fmt"])
-        .output()
-        .expect("`cargo fmt` failed");
+    writeln!(f, ")").unwrap();
 }

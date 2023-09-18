@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.0] - 2023-09-18
+
+### Changed
+
+- Remove `export_candid` feature. (#424)
+
 ### Fixed
 
 - Export composite_query to Candid. (#419)
