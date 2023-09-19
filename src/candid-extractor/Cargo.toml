@@ -23,3 +23,6 @@ syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
 [[example]]
 name = "generate_mock_wat"
 path = "util/generate_mock_wat.rs"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/candid-extractor-v{ version }/{ name }-{ target }-v{ version }{ archive-suffix }"

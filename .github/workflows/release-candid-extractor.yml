@@ -1,0 +1,60 @@
+name: Release candid-extractor
+on:
+  push:
+    tags:
+      - 'candid-extractor-*'
+
+env:
+  rust-version: 1.65.0
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            binstall_pkg: candid-extractor-x86_64-unknown-linux-gnu.tar.gz
+          - os: macos-latest
+            binstall_pkg: candid-extractor-x86_64-apple-darwin.tar.gz
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-release-
+            ${{ runner.os }}-
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust-version }}
+      
+      - name: Build
+        run: |
+          cargo build -p candid-extractor --release
+      
+      - name: Bundle
+        run: |
+          cp target/release/candid-extractor .
+          chmod +x candid-extractor
+          tar -cvzf ${{ matrix.binstall_pkg }} candid-extractor
+
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          asset_name: ${{ matrix.binstall_pkg }}
+          tag: ${{ github.ref }}
