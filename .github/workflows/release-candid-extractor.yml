@@ -2,7 +2,7 @@ name: Release candid-extractor
 on:
   push:
     tags:
-      - 'candid-extractor-*'
+      - "candid-extractor-*"
 
 env:
   rust-version: 1.65.0
@@ -18,11 +18,11 @@ jobs:
             binstall_pkg: candid-extractor-x86_64-unknown-linux-gnu.tar.gz
           - os: macos-latest
             binstall_pkg: candid-extractor-x86_64-apple-darwin.tar.gz
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -36,16 +36,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-release-
             ${{ runner.os }}-
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-      
+
       - name: Build
         run: |
           cargo build -p candid-extractor --release
-      
+
       - name: Bundle
         run: |
           cp target/release/candid-extractor .
@@ -56,5 +56,6 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.binstall_pkg }}
           asset_name: ${{ matrix.binstall_pkg }}
           tag: ${{ github.ref }}
