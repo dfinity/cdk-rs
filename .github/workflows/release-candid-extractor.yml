@@ -5,6 +5,9 @@ on:
       - "candid-extractor-*"
 
 env:
+  # MSRV
+  # should be the same as in Cargo.toml
+  # not rust-toolchain.toml
   rust-version: 1.65.0
 
 jobs:
