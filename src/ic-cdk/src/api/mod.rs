@@ -91,7 +91,7 @@ pub fn set_certified_data(data: &[u8]) {
     unsafe { ic0::certified_data_set(data.as_ptr() as i32, data.len() as i32) }
 }
 
-/// When called from a query call, returns the data certificate authenticating
+/// When called from an update call, returns the data certificate authenticating
 /// certified_data set by this canister.
 ///
 /// Returns None if called not from a query call.
