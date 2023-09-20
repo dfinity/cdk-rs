@@ -37,6 +37,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          override: true
           target: wasm32-unknown-unknown
       - name: Run builds
         run: |
@@ -67,6 +68,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          override: true
       - name: Install protoc
         run: |
           sudo apt-get install -y protobuf-compiler
@@ -100,6 +102,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          override: true
           components: rustfmt
       - name: Check formatting
         run: |
@@ -128,6 +131,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          override: true
           components: clippy
       - name: Install protoc
         run: |

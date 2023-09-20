@@ -14,8 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-            # The indirect dependency `zstd-safe` (introduced by `wasmtime`) needs higher version of GLIBC.
-            # using ubuntu-20.04 will fail to compile
+          # The indirect dependency `zstd-safe` (introduced by `wasmtime`) needs higher version of GLIBC.
+          # using ubuntu-20.04 will fail to compile
           - os: ubuntu-22.04
             binstall_pkg: candid-extractor-x86_64-unknown-linux-gnu.tar.gz
           - os: macos-12
@@ -43,6 +43,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
+          override: true
 
       - name: Build
         run: |
