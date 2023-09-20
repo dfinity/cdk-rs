@@ -46,7 +46,9 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
+
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
 
       - name: Build
         run: |

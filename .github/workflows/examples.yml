@@ -43,7 +43,9 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
+
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
 
       - name: Build candid-extractor
         run: cargo build -p candid-extractor --release
@@ -84,9 +86,11 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
           target: wasm32-unknown-unknown
           components: rustfmt
+
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
 
       - name: Install ic-wasm
         # might already in cache

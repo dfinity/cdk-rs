@@ -40,8 +40,9 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
           target: wasm32-unknown-unknown
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
       - name: Run builds
         run: |
           cargo build --workspace --exclude ic-cdk-e2e-tests --exclude candid-extractor --target wasm32-unknown-unknown
@@ -71,7 +72,8 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
       - name: Install protoc
         run: |
           sudo apt-get install -y protobuf-compiler
@@ -105,8 +107,9 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
           components: rustfmt
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
       - name: Check formatting
         run: |
           cargo fmt --all -- --check
@@ -134,8 +137,9 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.rust-version }}
-          override: true
           components: clippy
+      - name: Override Rust
+        run: rustup override set ${{ env.rust-version }}
       - name: Install protoc
         run: |
           sudo apt-get install -y protobuf-compiler
