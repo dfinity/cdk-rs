@@ -65,7 +65,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             examples/${{ matrix.project-name }}/target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('rust-toolchain.toml') }}
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.project-name }}-
             ${{ runner.os }}-
