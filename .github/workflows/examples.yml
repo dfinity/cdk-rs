@@ -120,7 +120,7 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      - name: cargo fmt # no clippy because #[import] makes it fail
+      - name: cargo fmt # no clippy because build.rs using ic-cdk-bindgen would fail
         run: |
           pushd examples/${{ matrix.project-name }}
           cargo fmt --check
