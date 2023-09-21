@@ -11,6 +11,7 @@ edition = "2021"
 repository = "https://github.com/dfinity/cdk-rs"
 # MSRV
 # Avoid updating this field unless we use new Rust features
+# Sync with rust-toolchain.toml
 rust-version = "1.66.0"
 license = "Apache-2.0"
 
