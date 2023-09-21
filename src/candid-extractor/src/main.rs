@@ -25,7 +25,7 @@ where
 
     let memory = canister
         .get_memory(&mut store, "memory")
-        .ok_or(anyhow::format_err!("failed to find `memory` export"))?;
+        .ok_or_else(|| anyhow::format_err!("failed to find `memory` export"))?;
     let memory_buffer = memory.data(&store);
 
     let mut i = candid_pointer as usize;
