@@ -20,7 +20,7 @@ repository = "https://github.com/dfinity/cdk-rs"
 # Sync rust-version in following CI files:
 # .github/workflows/ci.yml
 # .github/workflows/examples.yml
-rust-version = "1.65.0"
+rust-version = "1.66.0"
 license = "Apache-2.0"
 
 [profile.canister-release]
