@@ -60,7 +60,7 @@ jobs:
           bash scripts/download_state_machine_binary.sh
       - name: Run tests
         run: |
-          cargo test --exclude candid-extractor --all-targets
+          cargo test --workspace --exclude candid-extractor --all-targets
 
   fmt:
     name: cargo fmt
