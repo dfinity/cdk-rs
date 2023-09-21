@@ -11,7 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  rust-version: 1.65.0
   dfx-version: 0.14.1
   ic-wasm-version: 0.4.0
 
@@ -31,15 +30,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-candid-extractor-
             ${{ runner.os }}-
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
 
       - name: Build candid-extractor
         run: cargo build -p candid-extractor --release
@@ -71,17 +65,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             examples/${{ matrix.project-name }}/target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.project-name }}-
             ${{ runner.os }}-
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-          target: wasm32-unknown-unknown
-          components: rustfmt
 
       - name: Install ic-wasm
         # might already in cache
@@ -133,7 +120,7 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      - name: cargo fmt # no clippy because #[import] makes it fail
+      - name: cargo fmt # no clippy because build.rs using ic-cdk-bindgen would fail
         run: |
           pushd examples/${{ matrix.project-name }}
           cargo fmt --check

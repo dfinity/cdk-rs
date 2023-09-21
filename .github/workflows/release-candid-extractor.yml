@@ -4,9 +4,6 @@ on:
     tags:
       - "candid-extractor-*"
 
-env:
-  rust-version: 1.65.0
-
 jobs:
   release:
     runs-on: ${{ matrix.os }}
@@ -14,8 +11,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-            # The indirect dependency `zstd-safe` (introduced by `wasmtime`) needs higher version of GLIBC.
-            # using ubuntu-20.04 will fail to compile
+          # The indirect dependency `zstd-safe` (introduced by `wasmtime`) needs higher version of GLIBC.
+          # using ubuntu-20.04 will fail to compile
           - os: ubuntu-22.04
             binstall_pkg: candid-extractor-x86_64-unknown-linux-gnu.tar.gz
           - os: macos-12
@@ -34,16 +31,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-release-
+            ${{ runner.os }}-candid-extractor-
             ${{ runner.os }}-
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-
       - name: Build
         run: |
           cargo build -p candid-extractor --release --locked
