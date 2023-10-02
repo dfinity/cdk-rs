@@ -30,16 +30,9 @@
 )]
 
 use proc_macro::TokenStream;
-use std::sync::atomic::{AtomicU32, Ordering};
 use syn::Error;
 
 mod export;
-
-// To generate unique identifiers for functions and arguments
-static NEXT_ID: AtomicU32 = AtomicU32::new(0);
-pub(crate) fn id() -> u32 {
-    NEXT_ID.fetch_add(1, Ordering::SeqCst)
-}
 
 fn handle_debug_and_errors<F>(
     cb: F,
