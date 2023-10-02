@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.1] - 2023-10-02
+
+### Fixed
+
+- Macros no longer use global state in the names of functions. JetBrains IDEs should no longer produce spurious errors. (#430)
+
 ## [0.8.0] - 2023-09-18
 
 ### Changed
