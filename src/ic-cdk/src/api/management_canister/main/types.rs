@@ -164,6 +164,17 @@ pub struct DefiniteCanisterSettings {
     pub freezing_threshold: Nat,
 }
 
+/// Argument type of query stats, which are returned by [canister_status](super::canister_status).
+#[derive(
+    CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+pub struct QueryStats {
+    num_calls: candid::Nat,
+    num_instructions: candid::Nat,
+    ingress_payload_size: candid::Nat,
+    egress_payload_size: candid::Nat,
+}
+
 /// Argument type of [canister_status](super::canister_status).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
@@ -181,6 +192,8 @@ pub struct CanisterStatusResponse {
     pub cycles: Nat,
     /// Amount of cycles burned per day.
     pub idle_cycles_burned_per_day: Nat,
+    /// Query Stats
+    query_stats: QueryStats,
 }
 
 /// Details about a canister change initiated by a user.
