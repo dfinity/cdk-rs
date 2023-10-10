@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+  - Added support for query statistics in the canister status API (#432)
+
 ## [0.11.0] - 2023-09-18
 
 ### Changed
@@ -174,7 +178,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
--  `StableWriter` and `StableReader` are now wrappers around `StableIO`. 
+-  `StableWriter` and `StableReader` are now wrappers around `StableIO`.
 
 ## [0.6.5] - 2022-11-04
 
@@ -280,14 +284,14 @@ BREAKING CHANGE of experimental API:
 - Add Clone and Copy to RejectionCode (#202)
 
 ### Fixed
-- Do not call done() in stable_restore() (#216) 
+- Do not call done() in stable_restore() (#216)
 - Remove out-of-bounds vulnerability (#208)
 - Run inter-canister calls without awaiting (#233)
 
 ## [0.4.0] - 2022-01-26
 ### Changed
-- `candid` is required to be included in `[dependencies]` to use the `#[import]` macro  (#190) 
-- Deprecate block_on in favour of the new spawn function (#189) 
+- `candid` is required to be included in `[dependencies]` to use the `#[import]` macro  (#190)
+- Deprecate block_on in favour of the new spawn function (#189)
 - Trap in setup panic hook (#172)
 
 ## [0.3.3] - 2021-11-17
@@ -296,5 +300,5 @@ BREAKING CHANGE of experimental API:
 
 ## [0.3.2] - 2021-09-16
 ### Added
-- Add support for 64 bit stable memory (#137) 
+- Add support for 64 bit stable memory (#137)
 - Add support for 'heartbeat' and 'inspect_message' (#129)
