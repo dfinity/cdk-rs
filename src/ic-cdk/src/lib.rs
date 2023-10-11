@@ -1,4 +1,6 @@
 #![warn(
+    elided_lifetimes_in_paths,
+    missing_debug_implementations,
     missing_docs,
     unsafe_op_in_unsafe_fn,
     clippy::undocumented_unsafe_blocks,
@@ -22,9 +24,6 @@ pub mod api;
 mod futures;
 mod printer;
 pub mod storage;
-#[cfg(feature = "timers")]
-#[cfg_attr(docsrs, doc(cfg(feature = "timers")))]
-pub mod timer;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -33,13 +32,6 @@ pub use api::call::notify;
 pub use api::{caller, id, print, trap};
 
 static DONE: AtomicBool = AtomicBool::new(false);
-
-/// Re-exports crates those are necessary for using ic-cdk
-pub mod export {
-    pub use candid;
-    pub use candid::Principal;
-    pub use serde;
-}
 
 /// Setup the stdlib hooks.
 pub fn setup() {

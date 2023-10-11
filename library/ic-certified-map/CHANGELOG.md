@@ -6,9 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.4.0] - 2023-07-13
+
+### Changed
+- Upgrade `ic-cdk` to v0.10 and `candid` to v0.9.
+
+## [0.3.4] - 2023-03-01
+### Added
+- Derive common traits for structs.
+
+## [0.3.3] - 2023-02-22
+### Fixed
+- Update links in doc.
+
 ## [0.3.2] - 2022-11-10
 ### Changed
-Make `RbTree::new` and `RbTree::is_empty` both `const`.
+- Make `RbTree::new` and `RbTree::is_empty` both `const`.
 
 ## [0.3.1] - 2022-09-16
 ### Changed

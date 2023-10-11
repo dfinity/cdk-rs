@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::fmt::Formatter;
@@ -57,7 +57,7 @@ impl std::fmt::Display for MethodType {
 fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Error> {
     // We only need the tuple of arguments, not their types. Magic of type inference.
     let mut args = vec![];
-    for ref arg in &signature.inputs {
+    for (i, arg) in signature.inputs.iter().enumerate() {
         let (ident, ty) = match arg {
             FnArg::Receiver(r) => {
                 return Err(Error::new(
@@ -73,7 +73,7 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
                     (ident.clone(), ty.clone())
                 } else {
                     (
-                        syn::Ident::new(&format!("arg_{}", crate::id()), pat.span()),
+                        format_ident!("__unnamed_arg_{i}", span = pat.span()),
                         ty.clone(),
                     )
                 }
@@ -133,17 +133,14 @@ fn dfn_macro(
         get_args(method, signature)?.iter().cloned().unzip();
     let name = &signature.ident;
 
-    let outer_function_ident = Ident::new(&format!("{}_{}_", name, crate::id()), Span::call_site());
+    let outer_function_ident = format_ident!("__canister_method_{name}");
 
+    let function_name = attrs.name.unwrap_or_else(|| name.to_string());
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
     } else if method == MethodType::Query && attrs.composite {
-        format!(
-            "canister_composite_query {}",
-            attrs.name.unwrap_or_else(|| name.to_string())
-        )
+        format!("canister_composite_query {function_name}",)
     } else {
-        let function_name = attrs.name.unwrap_or_else(|| name.to_string());
         if function_name.starts_with("<ic-cdk internal>") {
             return Err(Error::new(
                 Span::call_site(),
@@ -181,6 +178,13 @@ fn dfn_macro(
     };
 
     let guard = if let Some(guard_name) = attrs.guard {
+        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+        if method.is_lifecycle() {
+            return Err(Error::new(
+                attr.span(),
+                format!("#[{}] cannot have a guard function.", method),
+            ));
+        }
         let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
 
         quote! {
@@ -192,6 +196,23 @@ fn dfn_macro(
         }
     } else {
         quote! {}
+    };
+
+    let candid_method_attr = match method {
+        MethodType::Query if attrs.composite => {
+            quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
+        }
+        MethodType::Query => quote! { #[::candid::candid_method(query, rename = #function_name)] },
+        MethodType::Update => {
+            quote! { #[::candid::candid_method(update, rename = #function_name)] }
+        }
+        MethodType::Init => quote! { #[::candid::candid_method(init)] },
+        _ => quote! {},
+    };
+
+    let item = quote! {
+        #candid_method_attr
+        #item
     };
 
     Ok(quote! {

@@ -1,20 +1,20 @@
 [package]
 name = "ic0"
-version = "0.18.7"
-authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
-edition = "2021"
+version = "0.21.1"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
 description = "Internet Computer System API Binding."
-license = "Apache-2.0"
 readme = "README.md"
 categories = ["api-bindings", "development-tools::ffi"]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
-repository = "https://github.com/dfinity/cdk-rs"
-rust-version = "1.60.0"
 
 [dev-dependencies]
-quote = { version = "1.0" }
-syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
+quote.workspace = true
+syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
 
 # This is not a real example but a utility for auto-generating ic0.rs
 [[example]]

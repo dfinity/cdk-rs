@@ -1,4 +1,5 @@
-use ic_cdk::{export::candid::CandidType, query, update};
+use candid::CandidType;
+use ic_cdk::{query, update};
 use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -74,3 +75,5 @@ fn ai_move(name: String) {
 fn get_fen(name: String) -> Option<String> {
     STORE.with(|game_store| game_store.borrow().get(&name).map(|game| game.board.fen()))
 }
+
+ic_cdk::export_candid!();

@@ -14,11 +14,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Removed `ic_cdk::api::call::performance_counter()`.
-  Please use `ic_cdk::api::performance_counter` instead.
+  Please use `ic_cdk::api::performance_counter()` instead.
+
+## [0.11.2] - 2023-10-11
+
+### Added
+
+- `cycles_burn` corresponding to system API `ic0.cycles_burn128`. (#434)
+
+### Changed
+
+- Upgrade `ic0` to `0.21.1`. (#434)
+
+## [0.11.1] - 2023-10-11
+
+### Changed
+
+- Upgrade `ic0` to `0.21.0`. (#433)
+
+## [0.11.0] - 2023-09-18
+
+### Changed
+
+- Candid Export workflow is changed. (#424)
+  * No need to compile for WASI separately.
+  * Canisters should still invoke `ic_cdk::export_candid!()` to export candid.
+  * Then use [`candid-extractor`](../candid-extractor/) to extract candid from the canister WASM.
+
+## [0.10.0] - 2023-07-13
+
+### Changed
+
+- Upgrade `candid` to `0.9`. (#411)
+- Remove `export` module. Please use candid directly in your project instead of using `ic_cdk::export::candid`.
+- Remove `ic_cdk_macro::import` module. See below for a new way to import canisters.
+
+### Added
+
+- Export Candid: (#386)
+  * A wasi feature that builds the canister as a standalone WASI binary. Running the binary in wasmtime outputs the canister interface
+  * Build step:
+  ```
+  cargo build --target wasm32-unknown-unknown \
+      --release \
+      --package "$package" --features "ic-cdk/wasi"
+
+  wasmtime "target/wasm32-unknown-unknown/release/$package.wasm" > $did_file
+
+  cargo build --target wasm32-unknown-unknown \
+      --release \
+      --package "$package"
+
+  ic-wasm "target/wasm32-unknown-unknown/release/$package.wasm" \
+      -o "target/wasm32-unknown-unknown/release/$package.wasm" \
+      metadata candid:service -v public -f $did_file
+  ```
+  * In the canister code, users have to add `ic_cdk::export_candid!()` at the end of `lib.rs`. In the future we may lift this requirement to provide a better DX.
+
+- Import Candid: (#390)
+
+  * Canister project adds `ic_cdk_bindgen` as a build dependency to generate canister bindings
+  * build.rs
+  ```
+  use ic_cdk_bindgen::{Builder, Config};
+  fn main() {
+      let counter = Config::new("counter");
+      let mut builder = Builder::new();
+      builder.add(counter);
+      builder.build(None);  // default write to src/declarations
+  }
+  ```
+  * In the canister code,
+  ```
+  mod declarations;
+  use declarations::counter::counter;
+
+  counter.inc().await?
+  ```
+
+## [0.9.2] - 2023-06-22
+
+### Changed
+
+- Hardcodes the fee for `sign_with_ecdsa`. (#407)
+
+## [0.9.1] - 2023-06-21 (yanked)
+
+### Changed
+
+- Bitcoin API handles cycles cost under the hood. (#406)
+
+## [0.9.0] - 2023-06-20 (yanked)
+
+### Added
+
+- Set caller's canister version in the field `sender_canister_version` of management canister call payloads. (#401)
+- Add management canister types for `canister_info` management canister call (`CanisterInfoRequest` and `CanisterInfoResponse`). (#401)
+
+### Changed
+
+- No hard-coded fees for management canister calls. (#404)
+
+## [0.8.0] - 2023-05-26
+
+### Added
+
+- `ic0.is_controller` as a public function. (#383)
+
+### Changed
+
+- `TransformContext::new` has been replaced with dedicated functions that accept closures. (#385)
+- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
+
+## [0.7.4] - 2023-03-21
+
+### Added
+
+- `WASM_PAGE_SIZE_IN_BYTES` made `pub`. (#380)
+- `http_request_with_cycles`. (#381)
+
+## [0.7.3] - 2023-03-01
+
+### Fixed
+
+- Addressed a compatibility error in the signature of the `call` family of functions. (#379)
+
+## [0.7.2] - 2023-03-01
+
+### Fixed
+
+- Fix type name in error message when a deserialization error occurs after making a canister-to-canister call. (#355)
+
+## [0.7.1] - 2023-02-22
+
+### Fixed
+
+- Update document for http_request. (#372)
+
+## [0.7.0] - 2023-02-03
+
+### Changed
+
+- The timers API is not a feature anymore, it moved into a separate library, `ic-cdk-timers`. (#368)
+
+## [0.6.10] - 2023-01-20
+
+### Added
+
+- Added `ic0.canister_version` as a public function. (#350)
+
+## [0.6.9] - 2023-01-18
+
+### Fixed
+
+- Allow timers to cancel themselves. (#360)
 
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)
+- Refactor the executor to prevent a double-free on `join_all`. (#357)
 
 ## [0.6.8] - 2022-11-28
 

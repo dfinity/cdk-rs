@@ -1,24 +1,24 @@
-use ic_cdk::{import, update};
+use ic_cdk::update;
 
-#[import(canister = "profile_rs")]
-struct ProfileCanister;
+mod declarations;
+use declarations::profile_rs::{profile_rs, Profile};
 
 #[update(name = "getSelf")]
-async fn get_self() -> Box<Profile> {
-    ProfileCanister::getSelf().await.0
+async fn get_self() -> Profile {
+    profile_rs.get_self().await.unwrap().0
 }
 
 #[update]
-async fn get(name: String) -> Box<Profile> {
-    ProfileCanister::get(name).await.0
+async fn get(name: String) -> Profile {
+    profile_rs.get(name).await.unwrap().0
 }
 
 #[update]
 async fn update(profile: Profile) {
-    ProfileCanister::update(Box::new(profile)).await
+    profile_rs.update(profile).await.unwrap()
 }
 
 #[update]
-async fn search(text: String) -> Option<Box<Profile>> {
-    ProfileCanister::search(text).await.0
+async fn search(text: String) -> Option<Profile> {
+    profile_rs.search(text).await.unwrap().0
 }

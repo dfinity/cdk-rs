@@ -25,7 +25,7 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
         .bin(bin_name)
         .args(["--profile", "canister-release"])
         .manifest_path(&cargo_toml_path)
-        .target_dir(&wasm_target_dir);
+        .target_dir(wasm_target_dir);
 
     let binary = cargo_build
         .run()
