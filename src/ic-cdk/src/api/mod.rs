@@ -142,10 +142,12 @@ pub fn is_controller(principal: &Principal) -> bool {
 }
 
 /// Burns cycles from the canister.
+///
+/// Returns the amount of cycles that were actually burned.
 pub fn cycles_burn(amount: u128) -> u128 {
     let amount_high = (amount >> 64) as u64;
     let amount_low = (amount & u64::MAX as u128) as u64;
-    let mut dst: u128 = 0u128;
+    let mut dst = 0u128;
     // SAFETY: `dst` is writable and sixteen bytes wide, and therefore safe to pass to ic0.cycles_burn128
     unsafe {
         ic0::cycles_burn128(
