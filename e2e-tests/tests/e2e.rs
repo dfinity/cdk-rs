@@ -439,3 +439,36 @@ fn test_canister_info() {
         }
     );
 }
+
+#[test]
+fn test_cycles_burn() {
+    let env = env();
+    let wasm = cargo_build_canister("api-call");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 1500);
+
+    env.install_canister(canister_id, wasm, vec![], None);
+    eprintln!("Canister installed.");
+    let balance1 = env.cycle_balance(canister_id);
+    eprintln!("Balance 1: {balance1}");
+
+    let attempted = 1000u128;
+
+    // Scenario 1: burn less than balance
+    let (burned,): (u128,) = call_candid(&env, canister_id, "cycles_burn", (attempted,))
+        .expect("Error calling cycles_burn");
+    eprintln!("Attempted to burn {attempted}, actually burned {burned}");
+    assert_eq!(burned, attempted);
+    let balance2 = env.cycle_balance(canister_id);
+    eprintln!("Balance 2: {balance2}");
+
+    // Scenario 2: burn more than balance
+    let (burned,): (u128,) = call_candid(&env, canister_id, "cycles_burn", (attempted,))
+        .expect("Error calling cycles_burn");
+    eprintln!("Attempted to burn {attempted}, actually burned {burned}");
+    assert!(burned < attempted);
+    assert_eq!(burned, balance2);
+    let balance3 = env.cycle_balance(canister_id);
+    eprintln!("Balance 3: {balance3}");
+    assert_eq!(balance3, 0);
+}
