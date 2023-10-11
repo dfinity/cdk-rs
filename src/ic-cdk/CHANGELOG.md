@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added `ic_cdk::api::performance_counter` type 1 (call context instruction counter)
+- Added `call_context_instruction_counter` function as a shorthand for `performance_counter(1)`
+
+### Changed
+
+- Removed `ic_cdk::api::call::performance_counter()`.
+  Please use `ic_cdk::api::performance_counter` instead.
+
 ### Refactored
 
 - Change from pleco to tanton for the chess library in the chess example. (#345)

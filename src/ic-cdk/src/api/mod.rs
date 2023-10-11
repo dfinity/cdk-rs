@@ -111,17 +111,35 @@ pub fn data_certificate() -> Option<Vec<u8>> {
     Some(buf)
 }
 
-/// Returns the number of instructions that the canister executed since the last [entry
+/// Return the number of instructions that the canister executed since the last [entry
 /// point](https://internetcomputer.org/docs/current/references/ic-interface-spec/#entry-points).
 #[inline]
 pub fn instruction_counter() -> u64 {
     performance_counter(0)
 }
 
+/// Return the number of WebAssembly instructions the canister has executed
+/// within the call context of the current Message execution since
+/// Call context creation.
+/// 
+/// The counter monotonically increases across all message executions
+/// in the call context until the corresponding call context is removed.
+#[inline]
+pub fn call_context_instruction_counter() -> u64 {
+    performance_counter(1)
+}
+
 /// Get the value of specified performance counter.
 ///
-/// Supported counter type:
-/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+/// Supported counter types:
+/// * `0` : current execution instruction counter. The number of WebAssembly
+///         instructions the canister has executed since the beginning of the
+///         current Message execution.
+/// * `1` : call context instruction counter. The number of WebAssembly
+///         instructions the canister has executed within the call context
+///         of the current Message execution since Call context creation.
+///         The counter monotonically increases across all message executions
+///         in the call context until the corresponding call context is removed.
 #[inline]
 pub fn performance_counter(counter_type: u32) -> u64 {
     // SAFETY: ic0.performance_counter is always safe to call.
