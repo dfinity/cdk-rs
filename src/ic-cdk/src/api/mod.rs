@@ -140,3 +140,19 @@ pub fn is_controller(principal: &Principal) -> bool {
     // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
     unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) != 0 }
 }
+
+/// Burns cycles from the canister.
+pub fn cycles_burn(amount: u128) -> u128 {
+    let amount_high = (amount >> 64) as u64;
+    let amount_low = (amount & u64::MAX as u128) as u64;
+    let mut dst: u128 = 0u128;
+    // SAFETY: `dst` is writable and sixteen bytes wide, and therefore safe to pass to ic0.cycles_burn128
+    unsafe {
+        ic0::cycles_burn128(
+            amount_high as i64,
+            amount_low as i64,
+            &mut dst as *mut u128 as i32,
+        )
+    }
+    dst
+}
