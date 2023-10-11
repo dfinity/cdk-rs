@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "candid-extractor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "quote",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "ic0"
-version = "0.18.12"
+version = "0.18.13"
 dependencies = [
  "quote",
  "syn 1.0.107",
