@@ -17,6 +17,7 @@ ic0.msg_cycles_refunded128 : (dst : i32) -> ();                             // R
 ic0.msg_cycles_accept : (max_amount : i64) -> (amount : i64);               // U Rt Ry
 ic0.msg_cycles_accept128 : (max_amount_high : i64, max_amount_low: i64, dst : i32)
                        -> ();                                               // U Rt Ry
+ic0.cycles_burn128 : (amount_high : i64, amount_low : i64, dst : i32) -> ();// I G U Ry Rt C T
 
 ic0.canister_self_size : () -> i32;                                         // *
 ic0.canister_self_copy : (dst : i32, offset : i32, size : i32) -> ();       // *
