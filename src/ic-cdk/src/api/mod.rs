@@ -121,7 +121,7 @@ pub fn instruction_counter() -> u64 {
 /// Returns the number of WebAssembly instructions the canister has executed
 /// within the call context of the current Message execution since
 /// Call context creation.
-/// 
+///
 /// The counter monotonically increases across all message executions
 /// in the call context until the corresponding call context is removed.
 #[inline]
