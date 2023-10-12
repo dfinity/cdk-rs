@@ -6,15 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.11.3] - 2023-10-12
+
 ### Added
 
-- Added `ic_cdk::api::performance_counter` type 1 (call context instruction counter)
-- Added `call_context_instruction_counter` function as a shorthand for `performance_counter(1)`
+- Another type of performance counter: "call context instruction counter".
+  Can be fetched using either method below: (#435)
+  - `ic_cdk::api::performance_counter(1)`;
+  - `ic_cdk::api::call_context_instruction_counter()` as a shorthand;
 
 ### Changed
 
-- Removed `ic_cdk::api::call::performance_counter()`.
-  Please use `ic_cdk::api::performance_counter()` instead.
+- Deprecate `ic_cdk::api::call::performance_counter()` in favor of `ic_cdk::api::performance_counter()`. (#435)
 
 ## [0.11.2] - 2023-10-11
 
