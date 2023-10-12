@@ -530,7 +530,7 @@ pub fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
-/// Get the len of the raw-argument-data-bytes.
+/// Gets the len of the raw-argument-data-bytes.
 pub fn arg_data_raw_size() -> usize {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     unsafe { ic0::msg_arg_data_size() as usize }
@@ -577,7 +577,7 @@ pub fn method_name() -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// Get the value of specified performance counter
+/// Gets the value of specified performance counter
 ///
 /// See [`crate::api::performance_counter`].
 #[deprecated(

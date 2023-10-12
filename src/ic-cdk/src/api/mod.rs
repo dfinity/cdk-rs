@@ -24,7 +24,7 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-/// Get current timestamp, in nanoseconds since the epoch (1970-01-01)
+/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01)
 pub fn time() -> u64 {
     // SAFETY: ic0.time is always safe to call.
     unsafe { ic0::time() as u64 }
@@ -54,13 +54,13 @@ pub fn id() -> Principal {
     Principal::try_from(&bytes).unwrap()
 }
 
-/// Get the amount of funds available in the canister.
+/// Gets the amount of funds available in the canister.
 pub fn canister_balance() -> u64 {
     // SAFETY: ic0.canister_cycle_balance is always safe to call.
     unsafe { ic0::canister_cycle_balance() as u64 }
 }
 
-/// Get the amount of funds available in the canister.
+/// Gets the amount of funds available in the canister.
 pub fn canister_balance128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and the size expected by ic0.canister_cycle_balance128.
@@ -111,14 +111,14 @@ pub fn data_certificate() -> Option<Vec<u8>> {
     Some(buf)
 }
 
-/// Return the number of instructions that the canister executed since the last [entry
+/// Returns the number of instructions that the canister executed since the last [entry
 /// point](https://internetcomputer.org/docs/current/references/ic-interface-spec/#entry-points).
 #[inline]
 pub fn instruction_counter() -> u64 {
     performance_counter(0)
 }
 
-/// Return the number of WebAssembly instructions the canister has executed
+/// Returns the number of WebAssembly instructions the canister has executed
 /// within the call context of the current Message execution since
 /// Call context creation.
 /// 
@@ -129,7 +129,7 @@ pub fn call_context_instruction_counter() -> u64 {
     performance_counter(1)
 }
 
-/// Get the value of specified performance counter.
+/// Gets the value of specified performance counter.
 ///
 /// Supported counter types:
 /// * `0` : current execution instruction counter. The number of WebAssembly
@@ -146,13 +146,13 @@ pub fn performance_counter(counter_type: u32) -> u64 {
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }
 
-/// Get the value of canister version.
+/// Gets the value of canister version.
 pub fn canister_version() -> u64 {
     // SAFETY: ic0.canister_version is always safe to call.
     unsafe { ic0::canister_version() as u64 }
 }
 
-/// Determine if a Principal is a controller of the canister.
+/// Determines if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
     // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
