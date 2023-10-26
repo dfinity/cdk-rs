@@ -17,6 +17,7 @@
     (func (export "msg_cycles_refunded128") (param i32) )
     (func (export "msg_cycles_accept") (param i64) (result i64) i64.const 0)
     (func (export "msg_cycles_accept128") (param i64 i64 i32) )
+    (func (export "cycles_burn128") (param i64 i64 i32) )
     (func (export "canister_self_size")  (result i32) i32.const 0)
     (func (export "canister_self_copy") (param i32 i32 i32) )
     (func (export "canister_cycle_balance")  (result i64) i64.const 0)

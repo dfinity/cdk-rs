@@ -8,7 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-  - Added support for query statistics in the canister status API (#432)
+- `query_stats` in `canister_status` response (#432).
+  
+## [0.11.3] - 2023-10-12
+
+### Added
+
+- Another type of performance counter: "call context instruction counter".
+  Can be fetched using either method below: (#435)
+  - `ic_cdk::api::performance_counter(1)`;
+  - `ic_cdk::api::call_context_instruction_counter()` as a shorthand;
+
+### Changed
+
+- Deprecate `ic_cdk::api::call::performance_counter()` in favor of `ic_cdk::api::performance_counter()`. (#435)
+
+## [0.11.2] - 2023-10-11
+
+### Added
+
+- `cycles_burn` corresponding to system API `ic0.cycles_burn128`. (#434)
+
+### Changed
+
+- Upgrade `ic0` to `0.21.1`. (#434)
+
+## [0.11.1] - 2023-10-11
+
+### Changed
+
+- Upgrade `ic0` to `0.21.0`. (#433)
 
 ## [0.11.0] - 2023-09-18
 

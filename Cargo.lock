@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "candid-extractor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "quote",
@@ -883,7 +883,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "ic-cdk"
-version = "0.11.0"
+version = "0.11.3"
 dependencies = [
  "candid",
  "ic-cdk-macros",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-timers"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "futures",
  "ic-cdk",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "ic0"
-version = "0.18.12"
+version = "0.21.1"
 dependencies = [
  "quote",
  "syn 1.0.107",
