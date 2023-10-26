@@ -164,7 +164,7 @@ pub struct DefiniteCanisterSettings {
     pub freezing_threshold: Nat,
 }
 
-/// Argument type of query stats, which are returned by [canister_status](super::canister_status).
+/// Query statistics, returned by [canister_status](super::canister_status).
 #[derive(
     CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
@@ -192,8 +192,8 @@ pub struct CanisterStatusResponse {
     pub cycles: Nat,
     /// Amount of cycles burned per day.
     pub idle_cycles_burned_per_day: Nat,
-    /// Query Stats
-    query_stats: QueryStats,
+    /// Query statistics
+    pub query_stats: QueryStats,
 }
 
 /// Details about a canister change initiated by a user.
