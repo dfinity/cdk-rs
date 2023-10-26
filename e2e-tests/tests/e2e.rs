@@ -472,3 +472,16 @@ fn test_cycles_burn() {
     eprintln!("Balance 3: {balance3}");
     assert_eq!(balance3, 0);
 }
+
+#[test]
+fn call_management() {
+    let env = env();
+    let wasm = cargo_build_canister("management_caller");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 100_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![], None);
+    let () = call_candid(&env, canister_id, "execute_main_methods", ())
+        .expect("Error calling execute_main_methods");
+    let () = call_candid(&env, canister_id, "execute_provisional_methods", ())
+        .expect("Error calling execute_provisional_methods");
+}

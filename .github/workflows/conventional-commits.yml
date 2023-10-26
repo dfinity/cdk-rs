@@ -7,6 +7,8 @@ on:
       - reopened
       - edited
       - synchronize
+  schedule:
+    - cron: '0 4 * * 0,3' # 4 a.m. UTC every Sun and Wed, keep actions-cache available
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
