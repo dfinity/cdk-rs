@@ -129,7 +129,10 @@ mod bitcoin {
         assert!(response.is_err());
         if let Err((rejection_code, rejection_reason)) = response {
             assert_eq!(rejection_code, RejectionCode::CanisterReject);
-            assert_eq!(&rejection_reason, "send_transaction failed: MalformedTransaction");
+            assert_eq!(
+                &rejection_reason,
+                "send_transaction failed: MalformedTransaction"
+            );
         };
     }
 }
