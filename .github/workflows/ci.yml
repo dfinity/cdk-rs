@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: '0 4 * * 3,7' # 4 a.m. UTC every Wed and Sun, keep actions-cache available
+    - cron: '0 4 * * 0,3' # 4 a.m. UTC every Sun and Wed, keep actions-cache available
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
