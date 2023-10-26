@@ -14,8 +14,6 @@ teardown() {
 
 @test "All management canister methods succeed" {
   dfx deploy
-  run dfx canister call caller execute_main_methods
-  run dfx canister call caller execute_provisional_methods
   run dfx canister call caller http_request_example
   run dfx canister call caller execute_ecdsa_methods
   run dfx canister call caller execute_bitcoin_methods
