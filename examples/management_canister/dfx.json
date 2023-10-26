@@ -7,13 +7,5 @@
       "wasm": "target/wasm32-unknown-unknown/release/caller-opt.wasm",
       "build": "sh ../build.sh management_canister caller"
     }
-  },
-  "defaults": {
-    "canister_http": {
-      "enabled": true
-    },
-    "bitcoin": {
-      "enabled": true
-    }
   }
 }

@@ -915,6 +915,7 @@ dependencies = [
  "ic-test-state-machine-client",
  "lazy_static",
  "serde_bytes",
+ "sha2",
 ]
 
 [[package]]
