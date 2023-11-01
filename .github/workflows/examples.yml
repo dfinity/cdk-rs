@@ -114,7 +114,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          examples/bats/bats-core/bin/bats -r examples/${{ matrix.project-name }}
+          ./examples/bats/bats-core/bin/bats -r examples/${{ matrix.project-name }}
         env:
           RUST_BACKTRACE: 1
 
