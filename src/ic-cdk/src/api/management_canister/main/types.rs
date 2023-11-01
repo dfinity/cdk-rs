@@ -169,10 +169,10 @@ pub struct DefiniteCanisterSettings {
     CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
 pub struct QueryStats {
-    num_calls: candid::Nat,
-    num_instructions: candid::Nat,
-    ingress_payload_size: candid::Nat,
-    egress_payload_size: candid::Nat,
+    num_calls_total: candid::Nat,
+    num_instructions_total: candid::Nat,
+    request_payload_bytes_total: candid::Nat,
+    response_payload_bytes_total: candid::Nat,
 }
 
 /// Argument type of [canister_status](super::canister_status).
