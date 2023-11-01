@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: '0 4 * * 0,3' # 4 a.m. UTC every Sun and Wed, keep actions-cache available
+    - cron: "0 4 * * 0,3" # 4 a.m. UTC every Sun and Wed, keep actions-cache available
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -57,6 +57,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
 
       - name: Cache
         uses: actions/cache@v3
@@ -90,14 +92,9 @@ jobs:
           mv candid-extractor /usr/local/bin/candid-extractor
 
       - name: Install DFX
-        uses: dfinity/setup-dfx@main    
-        with: 
-          dfx-version: "${{ env.dfx-version }}"
-
-      - name: Setup BATS
-        uses: mig4/setup-bats@v1.0.2
+        uses: dfinity/setup-dfx@main
         with:
-          bats-version: 1.2.1
+          dfx-version: "${{ env.dfx-version }}"
 
       - name: Install bitcoin
         if: ${{ matrix.project-name == 'management_canister' }}
@@ -117,7 +114,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          bats -r examples/${{ matrix.project-name }}
+          ./examples/bats/bats-core/bin/bats -r examples/${{ matrix.project-name }}
         env:
           RUST_BACKTRACE: 1
 
