@@ -88,10 +88,9 @@ jobs:
           mv candid-extractor /usr/local/bin/candid-extractor
 
       - name: Install DFX
-        run: |
-          export DFX_VERSION=${{env.dfx-version }}
-          echo Install DFX v$DFX_VERSION
-          yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+        uses: dfinity/setup-dfx@main    
+        with: 
+          dfx-version: "${{ env.dfx-version }}"
 
       - name: Setup BATS
         uses: mig4/setup-bats@v1.0.2
