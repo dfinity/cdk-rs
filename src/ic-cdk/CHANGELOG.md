@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.11.4] - 2023-11-20
+
 ### Added
 
-- `query_stats` in `canister_status` response (#432).
+- `query_stats` in `canister_status` response. (#432)
   
 ## [0.11.3] - 2023-10-12
 
