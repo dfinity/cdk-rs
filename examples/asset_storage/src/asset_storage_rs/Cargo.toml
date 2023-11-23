@@ -10,5 +10,5 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.9"
+candid = "0.10"
 ic-cdk = { path = "../../../../src/ic-cdk" }

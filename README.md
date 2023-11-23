@@ -52,7 +52,7 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.9" # this version is required if you want to define Candid data types
+candid = "0.10" # this version is required if you want to define Candid data types
 ic-cdk = "0.11"
 ```
 
