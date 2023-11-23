@@ -29,7 +29,3 @@ quote.workspace = true
 serde.workspace = true
 serde_tokenstream = "0.1.0"
 syn = { workspace = true, features = ["fold", "full"] }
-
-[dev-dependencies]
-trybuild = "1.0"
-ic-cdk.workspace = true

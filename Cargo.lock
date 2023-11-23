@@ -884,6 +884,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "slotmap",
+ "trybuild",
 ]
 
 [[package]]
@@ -915,13 +916,11 @@ name = "ic-cdk-macros"
 version = "0.8.2"
 dependencies = [
  "candid",
- "ic-cdk",
  "proc-macro2",
  "quote",
  "serde",
  "serde_tokenstream",
  "syn 1.0.109",
- "trybuild",
 ]
 
 [[package]]
