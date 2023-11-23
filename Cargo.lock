@@ -894,7 +894,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "ic-cdk"
-version = "0.11.4"
+version = "0.12.0"
 dependencies = [
  "candid",
  "ic-cdk-macros",
@@ -945,7 +945,7 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-timers"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "futures",
  "ic-cdk",
@@ -970,7 +970,7 @@ dependencies = [
 
 [[package]]
 name = "ic-ledger-types"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "candid",
  "crc32fast",
