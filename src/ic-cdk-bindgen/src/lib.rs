@@ -25,7 +25,6 @@ impl Config {
         binding
             // User will depend on candid crate directly
             .set_candid_crate("candid".to_string())
-            .set_type_attributes("".to_string())
             .set_canister_id(canister_id)
             .set_service_name(canister_name.to_string())
             .set_target(rust::Target::CanisterCall);
