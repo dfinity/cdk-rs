@@ -22,7 +22,7 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 [dependencies]
 candid.workspace = true
 ic0.workspace = true
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.0" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.2" }
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }
