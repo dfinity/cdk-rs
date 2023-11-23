@@ -1,4 +1,4 @@
-use candid::{bindings::rust, pretty_check_file, Principal};
+use candid_parser::{bindings::rust, pretty_check_file, Principal};
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -11,6 +11,7 @@ pub struct Config {
     pub skip_existing_files: bool,
     pub binding: rust::Config,
 }
+
 impl Config {
     pub fn new(canister_name: &str) -> Self {
         let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name);
@@ -20,18 +21,20 @@ impl Config {
         let canister_id =
             Principal::from_text(env::var(canister_id_var_name).expect("Cannot find canister id"))
                 .unwrap();
+        let mut binding = rust::Config::new();
+        binding
+            // User will depend on candid crate directly
+            .set_candid_crate("candid".to_string())
+            .set_type_attributes("".to_string())
+            .set_canister_id(canister_id)
+            .set_service_name(canister_name.to_string())
+            .set_target(rust::Target::CanisterCall);
+
         Config {
             canister_name: canister_name.to_string(),
             candid_path,
             skip_existing_files: false,
-            binding: rust::Config {
-                // User will depend on candid crate directly
-                candid_crate: "candid".to_string(),
-                type_attributes: "".to_string(),
-                canister_id: Some(canister_id),
-                service_name: canister_name.to_string(),
-                target: rust::Target::CanisterCall,
-            },
+            binding,
         }
     }
 }
