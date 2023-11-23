@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Update `candid` dependency to 0.10.0 which splits the candid library into 3 smaller libraries.
+  See here: https://github.com/dfinity/candid/blob/master/Changelog.md#2023-11-16-rust-0100
+
 ## [0.1.1] - 2023-09-18
 
 - Update `candid` dependency to 0.9.6 which change the Rust bindings.
