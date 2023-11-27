@@ -21,7 +21,7 @@ pub struct CanisterSettings {
     pub freezing_threshold: Option<Nat>,
     /// Must be a number between 0 and 2^128^-1, inclusively, and indicates the
     /// upper limit on cycles in the `reserved_cycles` balance of the canister.
-    pub reserved_cycles_limit: Option<Nat>.
+    pub reserved_cycles_limit: Option<Nat>,
 }
 
 /// Argument type of [create_canister](super::create_canister).
