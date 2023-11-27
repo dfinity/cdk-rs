@@ -11,6 +11,7 @@ mod main {
                 compute_allocation: Some(0u8.into()),
                 memory_allocation: Some(10000u16.into()),
                 freezing_threshold: Some(10000u16.into()),
+                reserved_cycles_limit: Some(10000.into()),
             }),
         };
         let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
@@ -58,6 +59,7 @@ mod provisional {
             compute_allocation: Some(50u8.into()),
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
+            reserved_cycles_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
             amount: Some(1_000_000_000u64.into()),
