@@ -203,7 +203,7 @@ pub struct CanisterStatusResponse {
     /// These are cycles that are reserved by the resource reservation mechanism
     /// on storage allocation. See also the `reserved_cycles_limit` parameter in
     /// canister settings.
-    pub reserved_cycles: candid::Nat,
+    pub reserved_cycles: Nat,
 }
 
 /// Details about a canister change initiated by a user.

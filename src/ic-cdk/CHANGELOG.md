@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-- Add `reserved_cycles` and `reserved_cycles_limit` to the management canister.
+### Changed
+
+- Add "reserved cycles" fields to the management canister API: (#449)
+  - `reserved_cycles` to `CanisterStatusResponse`
+  - `reserved_cycles_limit` to `CanisterSettings` and `DefiniteCanisterSettings`
 
 ## [0.12.0] - 2023-11-23
 
