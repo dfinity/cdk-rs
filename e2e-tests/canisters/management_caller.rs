@@ -11,6 +11,7 @@ mod main {
                 compute_allocation: Some(0u8.into()),
                 memory_allocation: Some(10000u16.into()),
                 freezing_threshold: Some(10000u16.into()),
+                reserved_cycles_limit: Some(10000u16.into()),
             }),
         };
         let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
@@ -40,6 +41,7 @@ mod main {
         stop_canister(arg).await.unwrap();
         let response = canister_status(arg).await.unwrap().0;
         assert_eq!(response.status, CanisterStatusType::Stopped);
+        assert_eq!(response.reserved_cycles.0, 0u128.into());
         deposit_cycles(arg, 1_000_000_000_000u128).await.unwrap();
         delete_canister(arg).await.unwrap();
         let response = raw_rand().await.unwrap().0;
@@ -58,6 +60,7 @@ mod provisional {
             compute_allocation: Some(50u8.into()),
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
+            reserved_cycles_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
             amount: Some(1_000_000_000u64.into()),
