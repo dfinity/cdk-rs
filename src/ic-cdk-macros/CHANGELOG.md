@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Add `#[query(no_export)]`/`#[update(no_export)]` attribute to exclude exporting certain endpoints in did file.
+
 ## [0.8.2] - 2023-11-23
 
 ### Changed
