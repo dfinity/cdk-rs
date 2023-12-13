@@ -114,7 +114,7 @@ pub fn export_candid(input: TokenStream) -> TokenStream {
 /// you will need to set `hidden` to `true`. The entry point still exists in the canister.
 ///
 /// ```rust
-/// # use ic_cdk::update;
+/// # use ic_cdk::query;
 /// #[query(hidden = true)]
 /// fn query_function() {
 ///     // ...
