@@ -15,7 +15,7 @@ struct ExportAttributes {
     #[serde(default)]
     pub composite: bool,
     #[serde(default)]
-    pub no_export: bool,
+    pub hidden: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -200,7 +200,7 @@ fn dfn_macro(
         quote! {}
     };
 
-    let candid_method_attr = if attrs.no_export {
+    let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
         match method {

@@ -28,10 +28,10 @@ fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
 
-#[update(no_export = true)]
-fn update_no_export() {}
+#[update(hidden = true)]
+fn update_hidden() {}
 
-#[query(no_export = true)]
-fn query_no_export() {}
+#[query(hidden = true)]
+fn query_hidden() {}
 
 ic_cdk::export_candid!();

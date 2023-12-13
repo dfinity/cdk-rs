@@ -12,14 +12,14 @@ fn post_upgrade() {}
 #[update]
 fn update() {}
 
-#[update(no_export = true)]
-fn update_no_export() {}
+#[update(hidden = true)]
+fn update_hidden() {}
 
 #[query]
 fn query() {}
 
-#[query(no_export = true)]
-fn query_no_export() {}
+#[query(hidden = true)]
+fn query_hidden() {}
 
 #[query(composite = true)]
 fn composite_query() {}

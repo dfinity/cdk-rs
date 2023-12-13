@@ -57,8 +57,8 @@ teardown() {
   [ "$output" == '(6 : nat)' ]
 }
 
-@test "counter_rs generated Candid excludes no_export methods" {
+@test "counter_rs generated Candid excludes hidden methods" {
   dfx build --check counter_rs
-  ! grep -q update_no_export src/counter_rs/counter.did
-  ! grep -q query_no_export src/counter_rs/counter.did
+  ! grep -q update_hidden src/counter_rs/counter.did
+  ! grep -q query_hidden src/counter_rs/counter.did
 }
