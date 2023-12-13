@@ -56,3 +56,9 @@ teardown() {
   run dfx canister call counter_rs read
   [ "$output" == '(6 : nat)' ]
 }
+
+@test "counter_rs generated Candid excludes no_export methods" {
+  dfx build --check counter_rs
+  ! grep -q update_no_export src/counter_rs/counter.did
+  ! grep -q query_no_export src/counter_rs/counter.did
+}
