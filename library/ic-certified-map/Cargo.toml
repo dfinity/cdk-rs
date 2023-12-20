@@ -22,10 +22,10 @@ include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 serde.workspace = true
 serde_bytes.workspace = true
 sha2.workspace = true
+candid.workspace = true
 
 [dev-dependencies]
 hex.workspace = true
 serde_cbor = "0.11"
 ic-cdk.workspace = true
-candid.workspace = true
 bincode = "1.3.3"

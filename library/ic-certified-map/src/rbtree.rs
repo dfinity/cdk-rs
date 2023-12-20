@@ -888,6 +888,22 @@ impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> RbTree<K, V> {
     }
 }
 
+use candid::CandidType;
+
+impl<'t, K, V> CandidType for RbTree<K, V> 
+where
+    K: CandidType + AsRef<[u8]> + 't,
+    V: CandidType + AsHashTree + 't,
+{
+    fn _ty() -> candid::types::internal::Type {
+        <Vec<(&K, &V)> as CandidType>::_ty()
+    }
+    fn idl_serialize<S: candid::types::Serializer>(&self, serializer: S) -> Result<(), S::Error> {
+        let collect_as_vec = self.iter().collect::<Vec<(&K, &V)>>();
+        <Vec<(&K, &V)> as CandidType>::idl_serialize(&collect_as_vec, serializer)
+    }
+}
+
 use serde::{
     de::{Deserialize, Deserializer, MapAccess, Visitor},
     ser::{Serialize, SerializeMap, Serializer},
