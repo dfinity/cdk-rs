@@ -890,7 +890,7 @@ impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> RbTree<K, V> {
 
 use candid::CandidType;
 
-impl<'t, K, V> CandidType for RbTree<K, V> 
+impl<'t, K, V> CandidType for RbTree<K, V>
 where
     K: CandidType + AsRef<[u8]> + 't,
     V: CandidType + AsHashTree + 't,

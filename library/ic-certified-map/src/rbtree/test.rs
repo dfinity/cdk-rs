@@ -386,16 +386,15 @@ fn test_serde_serialize_and_deserialize() {
     serde_cbor::to_writer(&mut b, &t1).unwrap();
     let t2: Tree<'_> = serde_cbor::from_slice(&b[..]).unwrap();
     assert_eq!(t1, t2);
-    
+
     // bincode test
     use bincode::Options;
     let b = bincode::options().serialize(&t1).unwrap();
-    let t3: Tree<'_> = bincode::options().deserialize(&b).unwrap();     
+    let t3: Tree<'_> = bincode::options().deserialize(&b).unwrap();
     assert_eq!(t1, t3);
-    
+
     // candid test
     let b = candid::encode_one(&t1).unwrap();
-    let t4: Tree<'_> = candid::decode_one(&b).unwrap();     
+    let t4: Tree<'_> = candid::decode_one(&b).unwrap();
     assert_eq!(t1, t4);
-    
 }
