@@ -16,6 +16,7 @@ ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
+sha2.workspace = true
 
 [[bin]]
 name = "simple-kv-store"
@@ -41,7 +42,10 @@ path = "canisters/timers.rs"
 name = "canister_info"
 path = "canisters/canister_info.rs"
 
+[[bin]]
+name = "management_caller"
+path = "canisters/management_caller.rs"
+
 [dev-dependencies]
 hex.workspace = true
-# TODO: Use the public crate when this [PR](https://github.com/dfinity/test-state-machine-client/pull/19) merge.
-ic-test-state-machine-client = { git = "https://github.com/lwshang/test-state-machine-client", branch = "lwshang/candid_0.9" }
+ic-test-state-machine-client = "3"

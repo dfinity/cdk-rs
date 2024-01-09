@@ -118,7 +118,7 @@ fn main() {
         f,
         r#"// This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(all(target_arch = "wasm32", not(feature = "wasi")))]
+#[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "ic0")]
 extern "C" {{"#,
     )
@@ -147,7 +147,7 @@ extern "C" {{"#,
     writeln!(
         f,
         r#"
-#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -182,7 +182,7 @@ mod non_wasm{{"#,
         f,
         r#"}}
 
-#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use non_wasm::*;
 "#
     )

@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.10.0"
+version = "0.12.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -22,20 +22,17 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 [dependencies]
 candid.workspace = true
 ic0.workspace = true
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.7.0" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.3" }
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest = "0.12.0"
+trybuild = "1.0"
 
 [features]
 transform-closure = ["dep:slotmap"]
-# The feature below is not additive as normal crate features.
-# Enable it may cause other dependent projects malfunctioning.
-# It is only to be used by canister IDL generation.
-wasi = ["ic0/wasi", "ic-cdk-macros/export_candid"]
 
 [package.metadata.docs.rs]
 features = ["transform-closure"]

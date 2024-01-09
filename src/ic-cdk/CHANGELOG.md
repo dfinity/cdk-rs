@@ -6,6 +6,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Add "reserved cycles" fields to the management canister API: (#449)
+  - `reserved_cycles` to `CanisterStatusResponse`
+  - `reserved_cycles_limit` to `CanisterSettings` and `DefiniteCanisterSettings`
+
+## [0.12.0] - 2023-11-23
+
+### Changed
+
+- Upgrade `candid` to `0.10`. (#448)
+
+## [0.11.4] - 2023-11-20
+
+### Added
+
+- `query_stats` in `canister_status` response. (#432)
+  
+## [0.11.3] - 2023-10-12
+
+### Added
+
+- Another type of performance counter: "call context instruction counter".
+  Can be fetched using either method below: (#435)
+  - `ic_cdk::api::performance_counter(1)`;
+  - `ic_cdk::api::call_context_instruction_counter()` as a shorthand;
+
+### Changed
+
+- Deprecate `ic_cdk::api::call::performance_counter()` in favor of `ic_cdk::api::performance_counter()`. (#435)
+
+## [0.11.2] - 2023-10-11
+
+### Added
+
+- `cycles_burn` corresponding to system API `ic0.cycles_burn128`. (#434)
+
+### Changed
+
+- Upgrade `ic0` to `0.21.1`. (#434)
+
+## [0.11.1] - 2023-10-11
+
+### Changed
+
+- Upgrade `ic0` to `0.21.0`. (#433)
+
+## [0.11.0] - 2023-09-18
+
+### Changed
+
+- Candid Export workflow is changed. (#424)
+  * No need to compile for WASI separately.
+  * Canisters should still invoke `ic_cdk::export_candid!()` to export candid.
+  * Then use [`candid-extractor`](../candid-extractor/) to extract candid from the canister WASM.
+
 ## [0.10.0] - 2023-07-13
 
 ### Changed
@@ -165,7 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
--  `StableWriter` and `StableReader` are now wrappers around `StableIO`. 
+-  `StableWriter` and `StableReader` are now wrappers around `StableIO`.
 
 ## [0.6.5] - 2022-11-04
 
@@ -271,14 +327,14 @@ BREAKING CHANGE of experimental API:
 - Add Clone and Copy to RejectionCode (#202)
 
 ### Fixed
-- Do not call done() in stable_restore() (#216) 
+- Do not call done() in stable_restore() (#216)
 - Remove out-of-bounds vulnerability (#208)
 - Run inter-canister calls without awaiting (#233)
 
 ## [0.4.0] - 2022-01-26
 ### Changed
-- `candid` is required to be included in `[dependencies]` to use the `#[import]` macro  (#190) 
-- Deprecate block_on in favour of the new spawn function (#189) 
+- `candid` is required to be included in `[dependencies]` to use the `#[import]` macro  (#190)
+- Deprecate block_on in favour of the new spawn function (#189)
 - Trap in setup panic hook (#172)
 
 ## [0.3.3] - 2021-11-17
@@ -287,5 +343,5 @@ BREAKING CHANGE of experimental API:
 
 ## [0.3.2] - 2021-09-16
 ### Added
-- Add support for 64 bit stable memory (#137) 
+- Add support for 64 bit stable memory (#137)
 - Add support for 'heartbeat' and 'inspect_message' (#129)

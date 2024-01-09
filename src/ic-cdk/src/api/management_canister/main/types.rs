@@ -19,6 +19,9 @@ pub struct CanisterSettings {
     pub memory_allocation: Option<Nat>,
     /// Must be a number between 0 and 2^64^-1, inclusively, and indicates a length of time in seconds.
     pub freezing_threshold: Option<Nat>,
+    /// Must be a number between 0 and 2^128^-1, inclusively, and indicates the
+    /// upper limit on cycles in the `reserved_cycles` balance of the canister.
+    pub reserved_cycles_limit: Option<Nat>,
 }
 
 /// Argument type of [create_canister](super::create_canister).
@@ -162,6 +165,19 @@ pub struct DefiniteCanisterSettings {
     pub memory_allocation: Nat,
     /// Freezing threshold.
     pub freezing_threshold: Nat,
+    /// Reserved cycles limit.
+    pub reserved_cycles_limit: Nat,
+}
+
+/// Query statistics, returned by [canister_status](super::canister_status).
+#[derive(
+    CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+pub struct QueryStats {
+    num_calls_total: candid::Nat,
+    num_instructions_total: candid::Nat,
+    request_payload_bytes_total: candid::Nat,
+    response_payload_bytes_total: candid::Nat,
 }
 
 /// Argument type of [canister_status](super::canister_status).
@@ -181,6 +197,13 @@ pub struct CanisterStatusResponse {
     pub cycles: Nat,
     /// Amount of cycles burned per day.
     pub idle_cycles_burned_per_day: Nat,
+    /// Query statistics
+    pub query_stats: QueryStats,
+    /// The reserved cycles balance of the canister.
+    /// These are cycles that are reserved by the resource reservation mechanism
+    /// on storage allocation. See also the `reserved_cycles_limit` parameter in
+    /// canister settings.
+    pub reserved_cycles: Nat,
 }
 
 /// Details about a canister change initiated by a user.

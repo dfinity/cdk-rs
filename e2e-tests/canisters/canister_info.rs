@@ -71,6 +71,7 @@ async fn canister_lifecycle() -> Principal {
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
+            reserved_cycles_limit: None,
         },
         canister_id: canister_id.canister_id,
     })

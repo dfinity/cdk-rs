@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-bindgen"
-version = "0.1.0"
+version = "0.1.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,4 +13,4 @@ keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-candid = { workspace = true, features = ["parser"] }
+candid_parser.workspace = true
