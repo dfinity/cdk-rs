@@ -6,7 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.8.2] - 2023-12-13
+## [0.8.4] - 2024-01-12
+
+### Fixed
+
+- The README file is now more informative and used as the front page of the doc site.
+
+## [0.8.3] - 2023-12-13
 
 ### Added
 
