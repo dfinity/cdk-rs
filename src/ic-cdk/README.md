@@ -41,6 +41,33 @@ fn hello() -> String{
 
 This will register a **query** entry point named `hello`.
 
+## Macros
+
+This library re-export macros defined in `ic-cdk-marcos` crate.
+
+The macros fall into two categories:
+
+* To register functions as canister entry points
+* To export Candid definitions
+
+### Register functions as canister entry points
+
+These macros are directly related to the [Internet Computer Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#entry-points).
+
+* [`init`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.init.html)
+* [`pre_upgrade`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.pre_upgrade.html)
+* [`post_upgrade`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.post_upgrade.html)
+* [`inspect_message`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.inspect_message.html)
+* [`heartbeat`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.heartbeat.html)
+* [`update`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.update.html)
+* [`query`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.query.html)
+
+### Export Candid definitions
+
+* [`export_candid`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/macro.export_candid.html)
+
+Check [Generating Candid files for Rust canisters](https://internetcomputer.org/docs/current/developer-docs/backend/candid/generating-candid/) for more details.
+
 ## More examples
 
 * [Basic examples](https://github.com/dfinity/cdk-rs/tree/main/examples): Demonstrate usage of `ic-cdk` API.
