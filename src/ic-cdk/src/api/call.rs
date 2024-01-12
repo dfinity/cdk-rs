@@ -280,7 +280,21 @@ pub fn notify_raw(
     }
 }
 
-/// Similar to `call`, but without serialization.
+/// Performs an asynchronous call to another canister and pay cycles at the same time.
+///
+/// Treating arguments and returns as raw bytes. No data serialization and deserialization.
+///
+/// # Example
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::call_raw;
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() ->  Vec<u8>{
+///     call_raw(callee_canister(), "add_user", b"abcd", 1_000_000u64).await.unwrap()
+/// }
+/// ```
 pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
@@ -290,7 +304,21 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     call_raw_internal(id, method, args_raw, payment.into())
 }
 
-/// Similar to `call128`, but without serialization.
+/// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
+///
+/// Treating arguments and returns as raw bytes. No data serialization and deserialization.
+///
+/// # Example
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::call_raw128;
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() ->  Vec<u8>{
+///     call_raw128(callee_canister(), "add_user", b"abcd", 1_000_000u128).await.unwrap()
+/// }
+/// ```
 pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
@@ -328,14 +356,35 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
     )
 }
 
-/// Performs an asynchronous call to another canister using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+/// Performs an asynchronous call to another canister.
 ///
-/// If the reply payload is not a valid encoding of the expected type `T`,
-/// the call results in [RejectionCode::CanisterError] error.
+/// # Example
 ///
-/// Note that the asynchronous call must be awaited
-/// in order for the inter-canister call to be made
-/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+/// Assuming that the callee canister has following interface:
+///
+/// ```text
+/// service : {
+///     add_user(name: Text) -> (nat64);
+/// }
+/// ```
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::call;
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() -> u64{
+///     let (user_id,) = call(callee_canister(), "add_user", ("Alice".to_string(),)).await.unwrap();
+///     user_id
+/// }
+/// ```
+///
+/// # Note
+///
+/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
+/// * The type annotation on return type is required. Or the return type can be inferred from the context.
+/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -351,9 +400,33 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
 ///
-/// Note that the asynchronous call must be awaited
-/// in order for the inter-canister call to be made
-/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+/// # Example
+///
+/// Assuming that the callee canister has following interface:
+///
+/// ```text
+/// service : {
+///     add_user(name: Text) -> (nat64);
+/// }
+/// ```
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::call_with_payment;
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() -> u64{
+///     let (user_id,) = call_with_payment(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u64).await.unwrap();
+///     user_id
+/// }
+/// ```
+///
+/// # Note
+///
+/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
+/// * The type annotation on return type is required. Or the return type can be inferred from the context.
+/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -368,11 +441,35 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     }
 }
 
-/// Performs an asynchronous call to another canister and pay cycles at the same time.
+/// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
 ///
-/// Note that the asynchronous call must be awaited
-/// in order for the inter-canister call to be made
-/// using the [System API](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call).
+/// # Example
+///
+/// Assuming that the callee canister has following interface:
+///
+/// ```text
+/// service : {
+///     add_user(name: Text) -> (nat64);
+/// }
+/// ```
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::call_with_payment128;
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() -> u64{
+///     let (user_id,) = call_with_payment128(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u128).await.unwrap();
+///     user_id
+/// }
+/// ```
+///
+/// # Note
+///
+/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
+/// * The type annotation on return type is required. Or the return type can be inferred from the context.
+/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,

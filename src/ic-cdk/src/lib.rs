@@ -1,5 +1,4 @@
 #![doc = include_str!("../README.md")]
-
 #![warn(
     elided_lifetimes_in_paths,
     missing_debug_implementations,
