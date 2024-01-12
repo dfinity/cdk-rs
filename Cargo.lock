@@ -940,6 +940,7 @@ dependencies = [
 name = "ic-certified-map"
 version = "0.4.0"
 dependencies = [
+ "bincode",
  "candid",
  "hex",
  "ic-cdk",
