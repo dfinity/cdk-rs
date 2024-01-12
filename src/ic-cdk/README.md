@@ -34,7 +34,7 @@ Then in Rust source code:
 
 ```rust
 #[ic_cdk::query]
-fn hello() -> String{
+fn hello() -> String {
     "world".to_string()
 }
 ```
@@ -43,7 +43,7 @@ This will register a **query** entry point named `hello`.
 
 ## Macros
 
-This library re-export macros defined in `ic-cdk-marcos` crate.
+This library re-exports macros defined in `ic-cdk-macros` crate.
 
 The macros fall into two categories:
 
@@ -75,6 +75,6 @@ Check [Generating Candid files for Rust canisters](https://internetcomputer.org/
 
 ## Manage Data Structure in Stable Memory
 
-Using `ic_cdk::storage::{stable_save, stable_restore}` API is easy but it doesn't scale well.
+Using the `ic_cdk::storage::{stable_save, stable_restore}` API is easy but it doesn't scale well.
 
 [`ic-stable-structures`](https://crates.io/crates/ic-stable-structures) is recommended when you are dealing with multiple data structures with larger datasets.

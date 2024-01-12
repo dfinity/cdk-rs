@@ -282,7 +282,7 @@ pub fn notify_raw(
 
 /// Performs an asynchronous call to another canister and pay cycles at the same time.
 ///
-/// Treating arguments and returns as raw bytes. No data serialization and deserialization.
+/// Treats arguments and returns as raw bytes. No data serialization and deserialization is performed.
 ///
 /// # Example
 ///
@@ -291,7 +291,7 @@ pub fn notify_raw(
 /// ```rust
 /// # use ic_cdk::api::call::call_raw;
 /// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() ->  Vec<u8>{
+/// async fn call_add_user() -> Vec<u8>{
 ///     call_raw(callee_canister(), "add_user", b"abcd", 1_000_000u64).await.unwrap()
 /// }
 /// ```
@@ -306,8 +306,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
 
 /// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
 ///
-/// Treating arguments and returns as raw bytes. No data serialization and deserialization.
-///
+/// Treats arguments and returns as raw bytes. No data serialization and deserialization is performed.
 /// # Example
 ///
 /// It can be called:
@@ -315,7 +314,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
 /// ```rust
 /// # use ic_cdk::api::call::call_raw128;
 /// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() ->  Vec<u8>{
+/// async fn call_add_user() -> Vec<u8>{
 ///     call_raw128(callee_canister(), "add_user", b"abcd", 1_000_000u128).await.unwrap()
 /// }
 /// ```
@@ -364,7 +363,7 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 ///
 /// ```text
 /// service : {
-///     add_user(name: Text) -> (nat64);
+///     add_user: (name: text) -> (nat64);
 /// }
 /// ```
 ///
@@ -373,7 +372,7 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 /// ```rust
 /// # use ic_cdk::api::call::call;
 /// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64{
+/// async fn call_add_user() -> u64 {
 ///     let (user_id,) = call(callee_canister(), "add_user", ("Alice".to_string(),)).await.unwrap();
 ///     user_id
 /// }
@@ -406,7 +405,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 ///
 /// ```text
 /// service : {
-///     add_user(name: Text) -> (nat64);
+///     add_user: (name: text) -> (nat64);
 /// }
 /// ```
 ///
@@ -415,7 +414,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// ```rust
 /// # use ic_cdk::api::call::call_with_payment;
 /// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64{
+/// async fn call_add_user() -> u64 {
 ///     let (user_id,) = call_with_payment(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u64).await.unwrap();
 ///     user_id
 /// }
@@ -449,7 +448,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 ///
 /// ```text
 /// service : {
-///     add_user(name: Text) -> (nat64);
+///     add_user: (name: text) -> (nat64);
 /// }
 /// ```
 ///
@@ -458,7 +457,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// ```rust
 /// # use ic_cdk::api::call::call_with_payment128;
 /// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64{
+/// async fn call_add_user() -> u64 {
 ///     let (user_id,) = call_with_payment128(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u128).await.unwrap();
 ///     user_id
 /// }

@@ -6,7 +6,7 @@
 
 # ic-cdk-macros
 
-This crate provide a set of macros to facilitate canister development.
+This crate provides a set of macros to facilitate canister development.
 
 The macros fall into two categories:
 
