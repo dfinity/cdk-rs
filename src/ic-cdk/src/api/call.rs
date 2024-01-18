@@ -645,3 +645,19 @@ where
         Err(S::Error::custom("`Empty` cannot be serialized"))
     }
 }
+
+/// Tells you whether the current async fn is being canceled due to a trap/panic.
+/// 
+/// If a function traps/panics, then the canister state is rewound to the beginning of the function.
+/// However, due to the way async works, the beginning of the function as the IC understands it is actually
+/// the most recent `await` from an inter-canister-call. This means that part of the function will have executed,
+/// and part of it won't. 
+/// 
+/// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
+/// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
+/// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
+/// [`is_panicking`](std::thread::is_panicking) - it tells you whether the destructor is executing *because* of a trap,
+/// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
+pub fn is_recovering_from_trap() -> bool {
+    crate::futures::CLEANUP.load(Ordering::Relaxed)
+}

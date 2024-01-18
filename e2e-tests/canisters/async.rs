@@ -47,7 +47,7 @@ async fn panic_twice() {
 }
 
 async fn async_then_panic() {
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "on_notify", ())
+    let _: () = ic_cdk::call(ic_cdk::api::id(), "on_notify", ())
         .await
         .expect("Failed to call self");
     panic!();

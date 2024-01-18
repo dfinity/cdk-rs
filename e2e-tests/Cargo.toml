@@ -6,11 +6,12 @@ edition = "2021"
 description = "End-to-end tests for the Rust Canister Development Kit"
 license = "Apache-2.0"
 repository = "https://github.com/dfinity/cdk-rs"
+publish = false
 
 [dependencies]
 candid.workspace = true
 cargo_metadata = "0.14.2"
-escargot = { version = "0.5.7", features = ["print"] }
+escargot = "0.5.7"
 ic-cdk.workspace = true
 ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
