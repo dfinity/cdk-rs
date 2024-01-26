@@ -71,7 +71,12 @@ impl TaskWaker {
                     return None;
                 };
                 tasks.get_mut(self.task_id).map(mem::take)
-            }) else { return };
+            }) else {
+                // The task is dropped on the first callback that panics, but the last callback is the one that sets the flag.
+                // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
+                // This should be the only possible case in which this happens.
+                crate::trap("Call already trapped");
+            };
             let waker = self.clone().into_waker();
             let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
             match poll {

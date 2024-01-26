@@ -5,6 +5,7 @@ use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Prin
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
@@ -53,14 +54,30 @@ impl From<u32> for RejectionCode {
 /// Errors on the IC have two components; a Code and a message associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
-// Internal state for the Future when sending a call.
-struct CallFutureState<T: AsRef<[u8]>> {
-    result: Option<CallResult<Vec<u8>>>,
-    waker: Option<Waker>,
-    id: Principal,
-    method: String,
-    arg: T,
-    payment: u128,
+/// Internal state for the Future when sending a call.
+#[derive(Debug, Default)]
+enum CallFutureState<T: AsRef<[u8]>> {
+    /// The future has been constructed, and the call has not yet been performed.
+    /// Needed because futures are supposed to do nothing unless polled.
+    /// Polling will attempt to fire off the request. Success returns `Pending` and transitions to `Executing`,
+    /// failure returns `Ready` and transitions to `PostComplete.`
+    Prepared {
+        id: Principal,
+        method: String,
+        arg: T,
+        payment: u128,
+    },
+    /// The call has been performed and the message is in flight. Neither callback has been called. Polling will return `Pending`.
+    /// This state will transition to `Trapped` if the future is canceled because of a trap in another future.
+    Executing { waker: Waker },
+    /// `callback` has been called, so the call has been completed. This completion state has not yet been read by the user.
+    /// Polling will return `Ready` and transition to `PostComplete`.
+    Complete { result: CallResult<Vec<u8>> },
+    /// The completion state of `Complete` has been returned from `poll` as `Poll::Ready`. Polling again will trap.
+    #[default]
+    PostComplete,
+    /// The future (*not* the state) was canceled because of a trap in another future during `Executing`. Polling will trap.
+    Trapped,
 }
 
 struct CallFuture<T: AsRef<[u8]>> {
@@ -72,17 +89,17 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
-        let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
+        let userdata_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
         let mut state = self_ref.state.write().unwrap();
-
-        if let Some(result) = state.result.take() {
-            Poll::Ready(result)
-        } else {
-            if state.waker.is_none() {
-                let callee = state.id.as_slice();
-                let method = &state.method;
-                let args = state.arg.as_ref();
-                let payment = state.payment;
+        match mem::take(&mut *state) {
+            CallFutureState::Prepared {
+                id,
+                method,
+                arg,
+                payment,
+            } => {
+                let callee = id.as_slice();
+                let args = arg.as_ref();
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -102,29 +119,57 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         method.as_ptr() as i32,
                         method.len() as i32,
                         callback::<T> as usize as i32,
-                        state_ptr as i32,
+                        userdata_ptr as i32,
                         callback::<T> as usize as i32,
-                        state_ptr as i32,
+                        userdata_ptr as i32,
                     );
 
                     ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
                     add_payment(payment);
-                    ic0::call_on_cleanup(cleanup::<T> as usize as i32, state_ptr as i32);
+                    ic0::call_on_cleanup(cleanup::<T> as usize as i32, userdata_ptr as i32);
                     ic0::call_perform()
                 };
 
                 // 0 is a special error code meaning call succeeded.
                 if err_code != 0 {
+                    *state = CallFutureState::PostComplete;
+                    // SAFETY: We just constructed this from Weak::into_raw.
+                    unsafe {
+                        Weak::from_raw(userdata_ptr);
+                    }
                     let result = Err((
                         RejectionCode::from(err_code),
                         "Couldn't send message".to_string(),
                     ));
-                    state.result = Some(result.clone());
                     return Poll::Ready(result);
                 }
+                *state = CallFutureState::Executing {
+                    waker: context.waker().clone(),
+                };
+                Poll::Pending
             }
-            state.waker = Some(context.waker().clone());
-            Poll::Pending
+            CallFutureState::Executing { .. } => {
+                *state = CallFutureState::Executing {
+                    waker: context.waker().clone(),
+                };
+                Poll::Pending
+            }
+            CallFutureState::Complete { result } => {
+                *state = CallFutureState::PostComplete;
+                Poll::Ready(result)
+            }
+            CallFutureState::Trapped => trap("Call already trapped"),
+            CallFutureState::PostComplete => trap("CallFuture polled after completing"),
+        }
+    }
+}
+
+impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
+    fn drop(&mut self) {
+        // If this future is dropped while is_recovering_from_trap is true,
+        // then it has been canceled due to a trap in another future.
+        if is_recovering_from_trap() {
+            *self.state.write().unwrap() = CallFutureState::Trapped;
         }
     }
 }
@@ -140,19 +185,24 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
-        // Make sure to un-borrow_mut the state.
-        {
-            state.write().unwrap().result = Some(match reject_code() {
+        let completed_state = CallFutureState::Complete {
+            result: match reject_code() {
                 RejectionCode::NoError => Ok(arg_data_raw()),
                 n => Err((n, reject_message())),
-            });
-        }
-        let w = state.write().unwrap().waker.take();
-        if let Some(waker) = w {
-            // This is all to protect this little guy here which will call the poll() which
-            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-            waker.wake()
-        }
+            },
+        };
+        let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
+            CallFutureState::Executing { waker } => waker,
+            // This future has already been cancelled and waking it will do nothing.
+            // All that's left is to explicitly trap in case this is the last call being multiplexed,
+            // to replace an automatic trap from not replying.
+            CallFutureState::Trapped => trap("Call already trapped"),
+            _ => unreachable!(
+                "CallFutureState for in-flight calls should only be Executing or Trapped"
+            ),
+        };
+        // No rwlock guards must be active at this point, because wake() will call poll() which will want to write().
+        waker.wake();
     }
 }
 
@@ -175,15 +225,25 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
         //
         // Borrowing does not trap - the rollback from the
         // previous trap ensures that the RwLock can be borrowed again.
-        state.write().unwrap().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
-        let w = state.write().unwrap().waker.take();
-        if let Some(waker) = w {
-            // Flag that we do not want to actually wake the task - we
-            // want to drop it *without* executing it.
-            crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-            waker.wake();
-            crate::futures::CLEANUP.store(false, Ordering::Relaxed);
-        }
+        let err_state = CallFutureState::Complete {
+            result: Err((RejectionCode::NoError, "cleanup".to_string())),
+        };
+        let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
+            CallFutureState::Executing { waker } => waker,
+            CallFutureState::Trapped => {
+                // The future has already been canceled and dropped. There is nothing
+                // more to clean up except for the CallFutureState.
+                return;
+            }
+            _ => unreachable!(
+                "CallFutureState for in-flight calls should only be Executing or Trapped"
+            ),
+        };
+        // Flag that we do not want to actually wake the task - we
+        // want to drop it *without* executing it.
+        crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+        waker.wake();
+        crate::futures::CLEANUP.store(false, Ordering::Relaxed);
     }
 }
 
@@ -306,9 +366,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    let state = Arc::new(RwLock::new(CallFutureState {
-        result: None,
-        waker: None,
+    let state = Arc::new(RwLock::new(CallFutureState::Prepared {
         id,
         method: method.to_string(),
         arg: args_raw,
@@ -647,12 +705,12 @@ where
 }
 
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
-/// 
+///
 /// If a function traps/panics, then the canister state is rewound to the beginning of the function.
 /// However, due to the way async works, the beginning of the function as the IC understands it is actually
 /// the most recent `await` from an inter-canister-call. This means that part of the function will have executed,
-/// and part of it won't. 
-/// 
+/// and part of it won't.
+///
 /// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
 /// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
 /// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
