@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 
 /// Rejection code from calling another canister.
@@ -89,7 +89,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
-        let userdata_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
+        let userdata_ptr = Arc::into_raw(Arc::clone(&self_ref.state));
         let mut state = self_ref.state.write().unwrap();
         match mem::take(&mut *state) {
             CallFutureState::Prepared {
@@ -109,9 +109,8 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
                 // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
                 // ic0.call_perform is always safe to call.
-                // callback and cleanup are safe to parameterize with T because:
-                // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
-                // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
+                // callback and cleanup are safe to parameterize with T because they will always be called in the
+                //   Executing or Trapped states which do not contain a T.
                 let err_code = unsafe {
                     ic0::call_new(
                         callee.as_ptr() as i32,
@@ -133,9 +132,9 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // 0 is a special error code meaning call succeeded.
                 if err_code != 0 {
                     *state = CallFutureState::PostComplete;
-                    // SAFETY: We just constructed this from Weak::into_raw.
+                    // SAFETY: We just constructed this from Arc::into_raw.
                     unsafe {
-                        Weak::from_raw(userdata_ptr);
+                        Arc::from_raw(userdata_ptr);
                     }
                     let result = Err((
                         RejectionCode::from(err_code),
@@ -180,30 +179,28 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
-    let state = unsafe { Weak::from_raw(state_ptr) };
-    if let Some(state) = state.upgrade() {
-        let completed_state = CallFutureState::Complete {
-            result: match reject_code() {
-                RejectionCode::NoError => Ok(arg_data_raw()),
-                n => Err((n, reject_message())),
-            },
-        };
-        let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
-            CallFutureState::Executing { waker } => waker,
-            // This future has already been cancelled and waking it will do nothing.
-            // All that's left is to explicitly trap in case this is the last call being multiplexed,
-            // to replace an automatic trap from not replying.
-            CallFutureState::Trapped => trap("Call already trapped"),
-            _ => unreachable!(
-                "CallFutureState for in-flight calls should only be Executing or Trapped"
-            ),
-        };
-        // No rwlock guards must be active at this point, because wake() will call poll() which will want to write().
-        waker.wake();
-    }
+    // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
+    let completed_state = CallFutureState::Complete {
+        result: match reject_code() {
+            RejectionCode::NoError => Ok(arg_data_raw()),
+            n => Err((n, reject_message())),
+        },
+    };
+    let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
+        CallFutureState::Executing { waker } => waker,
+        // This future has already been cancelled and waking it will do nothing.
+        // All that's left is to explicitly trap in case this is the last call being multiplexed,
+        // to replace an automatic trap from not replying.
+        CallFutureState::Trapped => trap("Call already trapped"),
+        _ => {
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+        }
+    };
+    // No rwlock guards must be active at this point, because wake() will call poll() which will want to write().
+    waker.wake();
 }
 
 /// This function is called when [callback] was just called with the same parameter, and trapped.
@@ -212,39 +209,37 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
-    let state = unsafe { Weak::from_raw(state_ptr) };
-    if let Some(state) = state.upgrade() {
-        // We set the call result, even though it won't be read on the
-        // default executor, because we can't guarantee it was called on
-        // our executor. However, we are not allowed to inspect
-        // reject_code() inside of a cleanup callback, so always set the
-        // result to a reject.
-        //
-        // Borrowing does not trap - the rollback from the
-        // previous trap ensures that the RwLock can be borrowed again.
-        let err_state = CallFutureState::Complete {
-            result: Err((RejectionCode::NoError, "cleanup".to_string())),
-        };
-        let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
-            CallFutureState::Executing { waker } => waker,
-            CallFutureState::Trapped => {
-                // The future has already been canceled and dropped. There is nothing
-                // more to clean up except for the CallFutureState.
-                return;
-            }
-            _ => unreachable!(
-                "CallFutureState for in-flight calls should only be Executing or Trapped"
-            ),
-        };
-        // Flag that we do not want to actually wake the task - we
-        // want to drop it *without* executing it.
-        crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-        waker.wake();
-        crate::futures::CLEANUP.store(false, Ordering::Relaxed);
-    }
+    // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
+    // We set the call result, even though it won't be read on the
+    // default executor, because we can't guarantee it was called on
+    // our executor. However, we are not allowed to inspect
+    // reject_code() inside of a cleanup callback, so always set the
+    // result to a reject.
+    //
+    // Borrowing does not trap - the rollback from the
+    // previous trap ensures that the RwLock can be borrowed again.
+    let err_state = CallFutureState::Complete {
+        result: Err((RejectionCode::NoError, "cleanup".to_string())),
+    };
+    let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
+        CallFutureState::Executing { waker } => waker,
+        CallFutureState::Trapped => {
+            // The future has already been canceled and dropped. There is nothing
+            // more to clean up except for the CallFutureState.
+            return;
+        }
+        _ => {
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+        }
+    };
+    // Flag that we do not want to actually wake the task - we
+    // want to drop it *without* executing it.
+    crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+    waker.wake();
+    crate::futures::CLEANUP.store(false, Ordering::Relaxed);
 }
 
 fn add_payment(payment: u128) {

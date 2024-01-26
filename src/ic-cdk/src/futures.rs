@@ -76,6 +76,7 @@ impl TaskWaker {
                 // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
                 // This should be the only possible case in which this happens.
                 crate::trap("Call already trapped");
+                // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
             };
             let waker = self.clone().into_waker();
             let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
