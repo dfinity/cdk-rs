@@ -6,6 +6,7 @@ edition = "2021"
 description = "End-to-end tests for the Rust Canister Development Kit"
 license = "Apache-2.0"
 repository = "https://github.com/dfinity/cdk-rs"
+publish = false
 
 [dependencies]
 candid.workspace = true
