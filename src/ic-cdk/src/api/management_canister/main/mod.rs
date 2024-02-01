@@ -59,7 +59,12 @@ pub async fn upload_chunk(arg: UploadChunkArgument) -> CallResult<(UploadChunkRe
 
 /// See [IC method `clear_chunk_store`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-clear_chunk_store).
 pub async fn clear_chunk_store(arg: ClearChunkStoreArgument) -> CallResult<()> {
-    call(Principal::management_canister(), "clear_chunk_store", (arg,)).await
+    call(
+        Principal::management_canister(),
+        "clear_chunk_store",
+        (arg,),
+    )
+    .await
 }
 
 /// See [IC method `stored_chunks`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stored_chunks).
@@ -104,7 +109,7 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgument) -> CallResult
         "install_chunked_code",
         (extended_arg,),
     )
-        .await
+    .await
 }
 
 /// Remove a canister's code and state, making the canister empty again.

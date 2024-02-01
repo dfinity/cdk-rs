@@ -68,7 +68,9 @@ pub(crate) struct UpdateSettingsArgumentExtended {
 }
 
 /// Argument type of [update_chunk](super::update_chunk).
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct UploadChunkArgument {
     /// The canister whose chunk store the chunk will be uploaded to
     pub canister_id: CanisterId,
@@ -78,21 +80,27 @@ pub struct UploadChunkArgument {
 }
 
 /// Return type of [upload_chunk](super::upload_chunk).
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct UploadChunkResponse {
     /// The hash of the uploaded chunk
     pub hash: Vec<u8>,
 }
 
 /// Argument type of [clear_chunk_store](super::clear_chunk_store).
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct ClearChunkStoreArgument {
     /// The canister whose chunk store will be cleared
     pub canister_id: CanisterId,
 }
 
 /// Argument type of [stored_chunks](super::stored_chunks).
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct StoredChunksArgument {
     /// The canister whose chunk store will be queried
     pub canister_id: CanisterId,
@@ -119,7 +127,20 @@ pub enum CanisterInstallMode {
 ///
 /// This second version of the mode allows someone to specify the
 /// optional `SkipPreUpgrade` parameter in case of an upgrade
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
 pub enum CanisterInstallModeV2 {
     /// A fresh install of a new canister.
     #[serde(rename = "install")]
@@ -134,7 +155,20 @@ pub enum CanisterInstallModeV2 {
 }
 
 /// If set to true, the pre_upgrade step will be skipped during the canister upgrade
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
 pub struct SkipPreUpgrade(pub Option<bool>);
 
 /// WASM module.
@@ -172,7 +206,9 @@ pub(crate) struct InstallCodeArgumentExtended {
 }
 
 /// Argument type of [install_chunked_code](super::install_chunked_code).
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct InstallChunkedCodeArgument {
     /// See [CanisterInstallModeV2].
     pub mode: CanisterInstallModeV2,
@@ -190,7 +226,9 @@ pub struct InstallChunkedCodeArgument {
     pub arg: Vec<u8>,
 }
 
-#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub(crate) struct InstallChunkedCodeArgumentExtended {
     /// See [CanisterInstallModeV2].
     pub mode: CanisterInstallModeV2,
