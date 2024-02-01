@@ -79,12 +79,12 @@ pub struct UploadChunkArgument {
     pub chunk: Vec<u8>,
 }
 
-/// Return type of [upload_chunk](super::upload_chunk).
+/// Return type of [upload_chunk](super::upload_chunk) and [stored_chunks](super::stored_chunks).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct UploadChunkResponse {
-    /// The hash of the uploaded chunk
+pub struct ChunkHash {
+    /// The hash of an uploaded chunk
     pub hash: Vec<u8>,
 }
 

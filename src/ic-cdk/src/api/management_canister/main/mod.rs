@@ -53,7 +53,7 @@ pub async fn update_settings(arg: UpdateSettingsArgument) -> CallResult<()> {
 }
 
 /// See [IC method `upload_chunk`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_chunk).
-pub async fn upload_chunk(arg: UploadChunkArgument) -> CallResult<(UploadChunkResponse,)> {
+pub async fn upload_chunk(arg: UploadChunkArgument) -> CallResult<(ChunkHash,)> {
     call(Principal::management_canister(), "upload_chunk", (arg,)).await
 }
 
@@ -68,7 +68,7 @@ pub async fn clear_chunk_store(arg: ClearChunkStoreArgument) -> CallResult<()> {
 }
 
 /// See [IC method `stored_chunks`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stored_chunks).
-pub async fn stored_chunks(arg: StoredChunksArgument) -> CallResult<(Vec<Vec<u8>>,)> {
+pub async fn stored_chunks(arg: StoredChunksArgument) -> CallResult<(Vec<ChunkHash>,)> {
     call(Principal::management_canister(), "stored_chunks", (arg,)).await
 }
 
