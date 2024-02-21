@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Look up the `CANISTER_ID_<canister_name_uppercase>` and `CANISTER_CANDID_PATH_<canister_name_uppercase>` 
+  environment variables to get the canister ID for a canister name. Previously the case of the canister
+  name matched the case of the canister, typically lowercase.
+
 ## [0.1.2] - 2023-11-23
 
 - Change `candid` dependency to the new `candid_parser` library.

@@ -14,10 +14,11 @@ pub struct Config {
 
 impl Config {
     pub fn new(canister_name: &str) -> Self {
-        let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name);
+        let canister_name_upper = canister_name.to_uppercase();
+        let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
         let candid_path =
             PathBuf::from(env::var(candid_path_var_name).expect("Cannot find candid path"));
-        let canister_id_var_name = format!("CANISTER_ID_{}", canister_name);
+        let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
         let canister_id =
             Principal::from_text(env::var(canister_id_var_name).expect("Cannot find canister id"))
                 .unwrap();
