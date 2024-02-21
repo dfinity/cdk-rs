@@ -85,6 +85,7 @@ pub struct UploadChunkArgument {
 )]
 pub struct ChunkHash {
     /// The hash of an uploaded chunk
+    #[serde(with = "serde_bytes")]
     pub hash: Vec<u8>,
 }
 
