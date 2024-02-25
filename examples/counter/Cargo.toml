@@ -2,6 +2,6 @@
 members = ["src/counter_rs", "src/inter_rs", "src/inter2_rs"]
 
 [workspace.dependencies]
-candid = "0.10"
+candid = { git = "https://github.com/dfinity/candid.git", branch = "cost-metering" }
 ic-cdk = { path = "../../src/ic-cdk" }
 ic-cdk-bindgen = { path = "../../src/ic-cdk-bindgen" }

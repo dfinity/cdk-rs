@@ -1,7 +1,10 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::trap;
-use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, write_args, CandidType, Deserialize, Principal};
+use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
+use candid::{
+    decode_args_with_config, encode_args, write_args, CandidType, DecoderConfig, Deserialize,
+    Principal,
+};
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
@@ -355,6 +358,12 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
     )
 }
 
+fn decode_args<T: for<'a> ArgumentDecoder<'a>>(bytes: &[u8]) -> candid::Result<T> {
+    let mut config = DecoderConfig::new();
+    config.set_skipping_quota(100_000); // should we enforce this or only for untrusted calls?
+    decode_args_with_config(bytes, &config)
+}
+
 /// Performs an asynchronous call to another canister.
 ///
 /// # Example
@@ -642,14 +651,49 @@ pub fn reply_raw(buf: &[u8]) {
     unsafe { ic0::msg_reply() };
 }
 
+#[derive(Debug)]
+/// Config to control the behavior of decoding canister endpoint arguments.
+pub struct ArgDecoderConfig {
+    /// Limit the total amount of work the deserializer can perform.
+    pub decoding_quota: Option<usize>,
+    /// Limit the total amount of work for skipping unneeded data on the wire.
+    pub skipping_quota: Option<usize>,
+    /// When set to true, print the decoding and skipping cost for each message via debug_print.
+    pub debug: bool,
+}
+
 /// Returns the argument data in the current call. Traps if the data cannot be
 /// decoded.
-pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>() -> R {
+pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) -> R {
     let bytes = arg_data_raw();
 
-    match decode_args(&bytes) {
+    let mut config = DecoderConfig::new();
+    if let Some(n) = arg_config.decoding_quota {
+        config.set_decoding_quota(n);
+    }
+    if let Some(n) = arg_config.skipping_quota {
+        config.set_skipping_quota(n);
+    }
+    if arg_config.debug {
+        config.set_full_error_message(true);
+    }
+    let res = decode_args_with_config_debug(&bytes, &config);
+    match res {
         Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
-        Ok(r) => r,
+        Ok((r, cost)) => {
+            if arg_config.debug {
+                use crate::api::print;
+                let instrs = crate::api::performance_counter(0);
+                print(format!("[Debug] Argument decoding instructions: {instrs}"));
+                if let Some(n) = cost.decoding_quota {
+                    print(format!("[Debug] Argument decoding cost: {n}"));
+                }
+                if let Some(n) = cost.skipping_quota {
+                    print(format!("[Debug] Argument skipping cost: {n}"));
+                }
+            }
+            r
+        }
     }
 }
 
