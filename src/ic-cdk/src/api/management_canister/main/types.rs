@@ -1,6 +1,5 @@
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
 
 /// Canister ID is Principal.
 pub type CanisterId = Principal;
@@ -108,23 +107,6 @@ pub struct StoredChunksArgument {
 }
 
 /// The mode with which a canister is installed.
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
-)]
-// #[serde(rename_all = "lowercase")]
-pub enum CanisterInstallMode {
-    /// A fresh install of a new canister.
-    #[serde(rename = "install")]
-    Install,
-    /// Reinstalling a canister that was already installed.
-    #[serde(rename = "reinstall")]
-    Reinstall,
-    /// Upgrade an existing canister.
-    #[serde(rename = "upgrade")]
-    Upgrade,
-}
-
-/// The mode with which a canister is installed.
 ///
 /// This second version of the mode allows someone to specify the
 /// optional `SkipPreUpgrade` parameter in case of an upgrade
@@ -142,7 +124,7 @@ pub enum CanisterInstallMode {
     Copy,
     Default,
 )]
-pub enum CanisterInstallModeV2 {
+pub enum CanisterInstallMode {
     /// A fresh install of a new canister.
     #[serde(rename = "install")]
     #[default]
@@ -211,14 +193,14 @@ pub(crate) struct InstallCodeArgumentExtended {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct InstallChunkedCodeArgument {
-    /// See [CanisterInstallModeV2].
-    pub mode: CanisterInstallModeV2,
+    /// See [CanisterInstallMode].
+    pub mode: CanisterInstallMode,
     /// Principal of the canister being installed
     pub target_canister: CanisterId,
     /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
-    pub store_canister: Option<CanisterId>,
+    pub storage_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm
-    pub chunk_hashes_list: Vec<ByteBuf>,
+    pub chunk_hashes_list: Vec<ChunkHash>,
     /// The sha256 hash of the wasm
     #[serde(with = "serde_bytes")]
     pub wasm_module_hash: Vec<u8>,
@@ -231,14 +213,14 @@ pub struct InstallChunkedCodeArgument {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub(crate) struct InstallChunkedCodeArgumentExtended {
-    /// See [CanisterInstallModeV2].
-    pub mode: CanisterInstallModeV2,
+    /// See [CanisterInstallMode].
+    pub mode: CanisterInstallMode,
     /// Principal of the canister being installed
     pub target_canister: CanisterId,
     /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
-    pub store_canister: Option<CanisterId>,
+    pub storage_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm
-    pub chunk_hashes_list: Vec<ByteBuf>,
+    pub chunk_hashes_list: Vec<ChunkHash>,
     /// The sha256 hash of the wasm
     #[serde(with = "serde_bytes")]
     pub wasm_module_hash: Vec<u8>,
@@ -386,13 +368,30 @@ pub struct CreationRecord {
     pub controllers: Vec<Principal>,
 }
 
+/// The mode with which a canister is installed.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
+// #[serde(rename_all = "lowercase")]
+pub enum CodeDeploymentMode {
+    /// A fresh install of a new canister.
+    #[serde(rename = "install")]
+    Install,
+    /// Reinstalling a canister that was already installed.
+    #[serde(rename = "reinstall")]
+    Reinstall,
+    /// Upgrade an existing canister.
+    #[serde(rename = "upgrade")]
+    Upgrade,
+}
+
 /// Details about a canister code deployment.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CodeDeploymentRecord {
-    /// See [CanisterInstallMode].
-    pub mode: CanisterInstallMode,
+    /// See [CodeDeploymentMode].
+    pub mode: CodeDeploymentMode,
     /// A SHA256 hash of the new module installed on the canister.
     pub module_hash: Vec<u8>,
 }
