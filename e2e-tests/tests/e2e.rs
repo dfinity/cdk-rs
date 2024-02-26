@@ -1,10 +1,11 @@
 use std::time::Duration;
+use std::time::SystemTime;
 
 use candid::{Encode, Principal};
 use ic_cdk::api::management_canister::main::{
     CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
-    CanisterInfoResponse,
-    CanisterInstallMode::{Install, Reinstall, Upgrade},
+    CanisterInfoResponse, CanisterInstallMode,
+    CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
@@ -13,7 +14,7 @@ use ic_test_state_machine_client::{
     call_candid, call_candid_as, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
 };
 use serde_bytes::ByteBuf;
-use std::time::SystemTime;
+use sha2::Digest;
 
 pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
@@ -296,7 +297,7 @@ fn test_canister_info() {
         Principal::anonymous(),
         "install_code",
         (InstallCodeArgument {
-            mode: Install,
+            mode: CanisterInstallMode::Install,
             arg: vec![],
             wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
             canister_id: new_canister.0,
@@ -484,4 +485,69 @@ fn call_management() {
         .expect("Error calling execute_main_methods");
     let () = call_candid(&env, canister_id, "execute_provisional_methods", ())
         .expect("Error calling execute_provisional_methods");
+}
+
+#[test]
+fn test_chunk() {
+    let env = env();
+    let wasm = cargo_build_canister("chunk");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 100_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![], None);
+    let (target_canister_id,): (Principal,) =
+        call_candid(&env, canister_id, "call_create_canister", ())
+            .expect("Error calling call_create_canister");
+
+    let wasm_module = b"\x00asm\x01\x00\x00\x00".to_vec();
+    let wasm_module_hash = sha2::Sha256::digest(&wasm_module).to_vec();
+    let chunk1 = wasm_module[..4].to_vec();
+    let chunk2 = wasm_module[4..].to_vec();
+    let hash1_expected = sha2::Sha256::digest(&chunk1).to_vec();
+    let hash2_expected = sha2::Sha256::digest(&chunk2).to_vec();
+
+    let (hash1_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk1.clone()),
+    )
+    .expect("Error calling call_upload_chunk");
+    assert_eq!(&hash1_return, &hash1_expected);
+
+    let () = call_candid(
+        &env,
+        canister_id,
+        "call_clear_chunk_store",
+        (target_canister_id,),
+    ).expect("Error calling call_clear_chunk_store");
+
+    let (_hash1_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk1.clone()),
+    )
+    .expect("Error calling call_upload_chunk");
+    let (_hash2_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk2.clone()),
+    )
+    .expect("Error calling call_upload_chunk");
+
+    let (hashes,): (Vec<Vec<u8>>,) =
+        call_candid(&env, canister_id, "call_stored_chunks", (target_canister_id,))
+            .expect("Error calling call_stored_chunks");
+    assert_eq!(hashes.len(), 2);
+    assert!(hashes.contains(&hash1_expected));
+    assert!(hashes.contains(&hash2_expected));
+
+    let () = call_candid(
+        &env,
+        canister_id,
+        "call_install_chunked_code",
+        (target_canister_id, hashes, wasm_module_hash),
+    ).expect("Error calling call_install_chunked_code");
+    
 }

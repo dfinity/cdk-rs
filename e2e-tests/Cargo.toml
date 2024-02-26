@@ -47,6 +47,10 @@ path = "canisters/canister_info.rs"
 name = "management_caller"
 path = "canisters/management_caller.rs"
 
+[[bin]]
+name = "chunk"
+path = "canisters/chunk.rs"
+
 [dev-dependencies]
 hex.workspace = true
 ic-test-state-machine-client = "3"
