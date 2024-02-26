@@ -9,12 +9,12 @@ use ic_cdk::update;
 #[update]
 async fn call_create_canister() -> Principal {
     let arg = CreateCanisterArgument::default();
-    let canister_id = create_canister(arg, 100_000_000_000u128)
+
+    create_canister(arg, 100_000_000_000u128)
         .await
         .unwrap()
         .0
-        .canister_id;
-    canister_id
+        .canister_id
 }
 
 #[update]
@@ -23,8 +23,8 @@ async fn call_upload_chunk(canister_id: Principal, chunk: Vec<u8>) -> Vec<u8> {
         canister_id,
         chunk: chunk.to_vec(),
     };
-    let hash = upload_chunk(arg).await.unwrap().0.hash;
-    hash
+
+    upload_chunk(arg).await.unwrap().0.hash
 }
 
 #[update]

@@ -519,7 +519,8 @@ fn test_chunk() {
         canister_id,
         "call_clear_chunk_store",
         (target_canister_id,),
-    ).expect("Error calling call_clear_chunk_store");
+    )
+    .expect("Error calling call_clear_chunk_store");
 
     let (_hash1_return,): (Vec<u8>,) = call_candid(
         &env,
@@ -536,9 +537,13 @@ fn test_chunk() {
     )
     .expect("Error calling call_upload_chunk");
 
-    let (hashes,): (Vec<Vec<u8>>,) =
-        call_candid(&env, canister_id, "call_stored_chunks", (target_canister_id,))
-            .expect("Error calling call_stored_chunks");
+    let (hashes,): (Vec<Vec<u8>>,) = call_candid(
+        &env,
+        canister_id,
+        "call_stored_chunks",
+        (target_canister_id,),
+    )
+    .expect("Error calling call_stored_chunks");
     assert_eq!(hashes.len(), 2);
     assert!(hashes.contains(&hash1_expected));
     assert!(hashes.contains(&hash2_expected));
@@ -548,6 +553,6 @@ fn test_chunk() {
         canister_id,
         "call_install_chunked_code",
         (target_canister_id, hashes, wasm_module_hash),
-    ).expect("Error calling call_install_chunked_code");
-    
+    )
+    .expect("Error calling call_install_chunked_code");
 }
