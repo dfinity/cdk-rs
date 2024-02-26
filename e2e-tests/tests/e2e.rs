@@ -544,6 +544,7 @@ fn test_chunk() {
         (target_canister_id,),
     )
     .expect("Error calling call_stored_chunks");
+    // the hashes returned are not guaranteed to be in order
     assert_eq!(hashes.len(), 2);
     assert!(hashes.contains(&hash1_expected));
     assert!(hashes.contains(&hash2_expected));
@@ -552,7 +553,12 @@ fn test_chunk() {
         &env,
         canister_id,
         "call_install_chunked_code",
-        (target_canister_id, hashes, wasm_module_hash),
+        (
+            target_canister_id,
+            // the order of the hashes matters
+            vec![hash1_expected, hash2_expected],
+            wasm_module_hash,
+        ),
     )
     .expect("Error calling call_install_chunked_code");
 }

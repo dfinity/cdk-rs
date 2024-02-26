@@ -98,7 +98,7 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgument) -> CallResult
     let extended_arg = InstallChunkedCodeArgumentExtended {
         mode: arg.mode,
         target_canister: arg.target_canister,
-        storage_canister: arg.storage_canister,
+        store_canister: arg.store_canister,
         chunk_hashes_list: arg.chunk_hashes_list,
         wasm_module_hash: arg.wasm_module_hash,
         arg: arg.arg,

@@ -1,7 +1,7 @@
 use candid::Principal;
 use ic_cdk::api::management_canister::main::{
     clear_chunk_store, create_canister, install_chunked_code, stored_chunks, upload_chunk,
-    CanisterInstallMode, ChunkHash, ClearChunkStoreArgument, CreateCanisterArgument,
+    CanisterInstallMode, ClearChunkStoreArgument, CreateCanisterArgument,
     InstallChunkedCodeArgument, StoredChunksArgument, UploadChunkArgument,
 };
 use ic_cdk::update;
@@ -43,17 +43,13 @@ async fn call_clear_chunk_store(canister_id: Principal) {
 #[update]
 async fn call_install_chunked_code(
     canister_id: Principal,
-    chunk_hashes: Vec<Vec<u8>>,
+    chunk_hashes_list: Vec<Vec<u8>>,
     wasm_module_hash: Vec<u8>,
 ) {
-    let chunk_hashes_list = chunk_hashes
-        .into_iter()
-        .map(|hash| ChunkHash { hash })
-        .collect();
     let arg = InstallChunkedCodeArgument {
         mode: CanisterInstallMode::Install,
         target_canister: canister_id,
-        storage_canister: None,
+        store_canister: None,
         chunk_hashes_list,
         wasm_module_hash,
         arg: vec![],
