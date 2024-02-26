@@ -526,14 +526,14 @@ fn test_chunk() {
         &env,
         canister_id,
         "call_upload_chunk",
-        (target_canister_id, chunk1.clone()),
+        (target_canister_id, chunk1),
     )
     .expect("Error calling call_upload_chunk");
     let (_hash2_return,): (Vec<u8>,) = call_candid(
         &env,
         canister_id,
         "call_upload_chunk",
-        (target_canister_id, chunk2.clone()),
+        (target_canister_id, chunk2),
     )
     .expect("Error calling call_upload_chunk");
 
