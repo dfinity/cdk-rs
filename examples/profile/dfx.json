@@ -16,15 +16,5 @@
       "wasm": "target/wasm32-unknown-unknown/release/profile_rs-opt.wasm",
       "build": "sh ../build.sh profile profile_rs"
     }
-  },
-  "defaults": {
-    "build": {
-      "output": "canisters/"
-    },
-    "start": {
-      "address": "127.0.0.1",
-      "port": 8000,
-      "serve_root": "canisters/eeoo/assets"
-    }
   }
 }
