@@ -22,3 +22,5 @@ async fn update(profile: Profile) {
 async fn search(text: String) -> Option<Profile> {
     profile_rs.search(text).await.unwrap().0
 }
+
+ic_cdk::export_candid!();
