@@ -15,21 +15,29 @@ teardown() {
   dfx start --clean --background
   dfx deploy
 
-  run dfx canister call profile_rs getSelf
-  [ "$output" == '(record { name = ""; description = ""; keywords = vec {} })' ]
-  dfx canister call profile_rs update 'record {"name"= "abc"; "description"="123"; "keywords"= vec {} }'
-  run dfx canister call profile_rs get abc
-  [ "$output" == '(record { name = "abc"; description = "123"; keywords = vec {} })' ]
-  run dfx canister call profile_rs search ab
-  [ "$output" == '(opt record { name = "abc"; description = "123"; keywords = vec {} })' ]
+  run dfx canister call profile-rs getSelf
+  assert_success
+  assert_output '(record { name = ""; description = ""; keywords = vec {} })'
+  run dfx canister call profile-rs update 'record {"name"= "abc"; "description"="123"; "keywords"= vec {} }'
+  assert_success
+  run dfx canister call profile-rs get abc
+  assert_success
+  assert_output '(record { name = "abc"; description = "123"; keywords = vec {} })'
+  run dfx canister call profile-rs search ab
+  assert_success
+  assert_output '(opt record { name = "abc"; description = "123"; keywords = vec {} })'
 
-  run dfx canister call profile_inter_rs getSelf
-  [ "$output" == '(record { name = ""; description = ""; keywords = vec {} })' ]
-  dfx canister call profile_inter_rs update 'record {"name"= "def"; "description"="456"; "keywords"= vec {} }'
-  run dfx canister call profile_inter_rs get def
-  [ "$output" == '(record { name = "def"; description = "456"; keywords = vec {} })' ]
-  run dfx canister call profile_inter_rs search de
-  [ "$output" == '(opt record { name = "def"; description = "456"; keywords = vec {} })' ]
+  run dfx canister call profile-inter-rs getSelf
+  assert_success
+  assert_output '(record { name = ""; description = ""; keywords = vec {} })'
+  run dfx canister call profile-inter-rs update 'record {"name"= "def"; "description"="456"; "keywords"= vec {} }'
+  assert_success
+  run dfx canister call profile-inter-rs get def
+  assert_success
+  assert_output '(record { name = "def"; description = "456"; keywords = vec {} })'
+  run dfx canister call profile-inter-rs search de
+  assert_success
+  assert_output '(opt record { name = "def"; description = "456"; keywords = vec {} })'
 }
 
 @test "ic-cdk-bindgen warns about deprecated env vars when running with dfx v0.13.1" {
