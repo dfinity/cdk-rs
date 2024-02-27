@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 fn main() {
     // A workaround to force always rerun build.rs 
-    println!("cargo:rerun-if-env-changed=REBUILD");
+    println!("cargo:rerun-if-changed=NULL");
     let manifest_dir =
         PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("Cannot find manifest dir"));
     let profile_rs = Config::new("profile_rs");
