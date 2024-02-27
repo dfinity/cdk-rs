@@ -1,8 +1,9 @@
+load ../../bats/bats-support/load.bash
+load ../../bats/bats-assert/load.bash
+
 # Executed before each test.
 setup() {
   cd examples/profile
-  # Make sure the directory is clean.
-  dfx start --clean --background
 }
 
 # executed after each test
@@ -11,6 +12,7 @@ teardown() {
 }
 
 @test "Can get, update, search (profile_rs)" {
+  dfx start --clean --background
   dfx deploy
 
   run dfx canister call profile_rs getSelf
@@ -28,4 +30,12 @@ teardown() {
   [ "$output" == '(record { name = "def"; description = "456"; keywords = vec {} })' ]
   run dfx canister call profile_inter_rs search de
   [ "$output" == '(opt record { name = "def"; description = "456"; keywords = vec {} })' ]
+}
+
+@test "ic-cdk-bindgen warns about deprecated env vars when running with dfx v0.13.0" {
+  dfxvm install 0.13.0
+  run dfx +0.13.0 build --check
+  assert_success
+  assert_regex "$output" "The environment variable CANISTER_CANDID_PATH_profile_rs is deprecated. Please set CANISTER_CANDID_PATH_PROFILE_RS instead. Upgrading dfx may fix this issue."
+  assert_regex "$output" "The environment variable CANISTER_ID_profile_rs is deprecated. Please set CANISTER_ID_PROFILE_RS instead. Upgrading dfx may fix this issue."
 }
