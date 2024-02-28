@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  dfx-version: 0.14.1
   ic-wasm-version: 0.4.0
 
 jobs:
@@ -21,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -40,7 +39,7 @@ jobs:
       - name: Build candid-extractor
         run: cargo build -p candid-extractor --release
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: candid-extractor
           path: target/release/candid-extractor
@@ -56,12 +55,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -82,7 +81,7 @@ jobs:
           mv ic-wasm-linux64 /usr/local/bin/ic-wasm
 
       - name: Download candid-extractor
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: candid-extractor
 
@@ -93,8 +92,6 @@ jobs:
 
       - name: Install DFX
         uses: dfinity/setup-dfx@main
-        with:
-          dfx-version: "${{ env.dfx-version }}"
 
       - name: Install bitcoin
         if: ${{ matrix.project-name == 'management_canister' }}
