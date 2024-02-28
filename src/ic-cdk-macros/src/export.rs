@@ -330,7 +330,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data();
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query();
                     ic_cdk::api::call::reply(())
                 });
@@ -346,7 +352,6 @@ mod test {
             _ => panic!("not a function"),
         };
     }
-
     #[test]
     fn ic_query_return_one_value() {
         let generated = ic_query(
@@ -367,7 +372,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data();
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query();
                     ic_cdk::api::call::reply((result,))
                 });
@@ -404,7 +415,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data();
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query();
                     ic_cdk::api::call::reply(result)
                 });
@@ -441,7 +458,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let (a, ) = ic_cdk::api::call::arg_data();
+                    let (a, ) = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query(a);
                     ic_cdk::api::call::reply(())
                 });
@@ -478,7 +501,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let (a, b, ) = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query(a, b);
                     ic_cdk::api::call::reply(())
                 });
@@ -515,7 +544,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data();
+                    let (a, b, ) = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query(a, b);
                     ic_cdk::api::call::reply((result,))
                 });
@@ -552,7 +587,13 @@ mod test {
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data();
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
                     let result = query();
                     ic_cdk::api::call::reply(())
                 });
