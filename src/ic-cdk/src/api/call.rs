@@ -2,8 +2,7 @@
 use crate::api::trap;
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{
-    decode_args_with_config, encode_args, write_args, CandidType, DecoderConfig, Deserialize,
-    Principal,
+    decode_args, encode_args, write_args, CandidType, DecoderConfig, Deserialize, Principal,
 };
 use serde::ser::Error;
 use std::future::Future;
@@ -358,12 +357,6 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
     )
 }
 
-fn decode_args<T: for<'a> ArgumentDecoder<'a>>(bytes: &[u8]) -> candid::Result<T> {
-    let mut config = DecoderConfig::new();
-    config.set_skipping_quota(100_000); // should we enforce this or only for untrusted calls?
-    decode_args_with_config(bytes, &config)
-}
-
 /// Performs an asynchronous call to another canister.
 ///
 /// # Example
@@ -489,6 +482,80 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     async {
         let bytes = fut.await?;
         decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
+    }
+}
+
+/// Performs an asynchronous call to another canister and pay cycles (in `u128`).
+/// It also allows setting a quota for decoding the return values.
+/// The decoding quota is strongly recommended when calling third-party or untrusted canisters.
+///
+/// # Example
+///
+/// Assuming that the callee canister has following interface:
+///
+/// ```text
+/// service : {
+///     add_user: (name: text) -> (nat64);
+/// }
+/// ```
+///
+/// It can be called:
+///
+/// ```rust
+/// # use ic_cdk::api::call::{call_with_config, ArgDecoderConfig};
+/// # fn callee_canister() -> candid::Principal { unimplemented!() }
+/// async fn call_add_user() -> u64 {
+///     let config = ArgDecoderConfig {
+///         // The function only returns a nat64, to accomodate future upgrades, we set a larger decoding_quota.
+///         decoding_quota: Some(10_000),
+///         // To accomodate future upgrades, reserve some skipping_quota.
+///         skipping_quota: Some(100),
+///         // Enable debug mode to print decoding instructions and cost to the replica log.
+///         debug: true,
+///     };
+///     let (user_id,) = call_with_config(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u128, &config).await.unwrap();
+///     user_id
+/// }
+/// ```
+pub fn call_with_config<'b, T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
+    id: Principal,
+    method: &'b str,
+    args: T,
+    cycles: u128,
+    arg_config: &'b ArgDecoderConfig,
+) -> impl Future<Output = CallResult<R>> + Send + Sync + 'b {
+    let args_raw = encode_args(args).expect("Failed to encode arguments.");
+    let fut = call_raw128(id, method, args_raw, cycles);
+    async move {
+        let bytes = fut.await?;
+        let config = arg_config.to_candid_config();
+        let pre_cycles = if arg_config.debug {
+            Some(crate::api::performance_counter(0))
+        } else {
+            None
+        };
+        match decode_args_with_config_debug(&bytes, &config) {
+            Err(e) => Err(decoder_error_to_reject::<R>(e)),
+            Ok((r, cost)) => {
+                if arg_config.debug {
+                    print_decoding_debug_info(&format!("{method} return"), &cost, pre_cycles);
+                }
+                Ok(r)
+            }
+        }
+    }
+}
+
+fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Option<u64>) {
+    use crate::api::{performance_counter, print};
+    let pre_cycles = pre_cycles.unwrap_or(0);
+    let instrs = performance_counter(0) - pre_cycles;
+    print(format!("[Debug] {title} decoding instructions: {instrs}"));
+    if let Some(n) = cost.decoding_quota {
+        print(format!("[Debug] {title} decoding cost: {n}"));
+    }
+    if let Some(n) = cost.skipping_quota {
+        print(format!("[Debug] {title} skipping cost: {n}"));
     }
 }
 
@@ -654,12 +721,27 @@ pub fn reply_raw(buf: &[u8]) {
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
 pub struct ArgDecoderConfig {
-    /// Limit the total amount of work the deserializer can perform.
+    /// Limit the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.
     pub decoding_quota: Option<usize>,
-    /// Limit the total amount of work for skipping unneeded data on the wire.
+    /// Limit the total amount of work for skipping unneeded data on the wire. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_skipping_quota) to understand the skipping cost.
     pub skipping_quota: Option<usize>,
-    /// When set to true, print the decoding and skipping cost for each message via debug_print.
+    /// When set to true, print instruction count and the decoding/skipping cost to the replica log.
     pub debug: bool,
+}
+impl ArgDecoderConfig {
+    fn to_candid_config(&self) -> DecoderConfig {
+        let mut config = DecoderConfig::new();
+        if let Some(n) = self.decoding_quota {
+            config.set_decoding_quota(n);
+        }
+        if let Some(n) = self.skipping_quota {
+            config.set_skipping_quota(n);
+        }
+        if self.debug {
+            config.set_full_error_message(true);
+        }
+        config
+    }
 }
 
 /// Returns the argument data in the current call. Traps if the data cannot be
@@ -667,30 +749,13 @@ pub struct ArgDecoderConfig {
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) -> R {
     let bytes = arg_data_raw();
 
-    let mut config = DecoderConfig::new();
-    if let Some(n) = arg_config.decoding_quota {
-        config.set_decoding_quota(n);
-    }
-    if let Some(n) = arg_config.skipping_quota {
-        config.set_skipping_quota(n);
-    }
-    if arg_config.debug {
-        config.set_full_error_message(true);
-    }
+    let config = arg_config.to_candid_config();
     let res = decode_args_with_config_debug(&bytes, &config);
     match res {
         Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
         Ok((r, cost)) => {
             if arg_config.debug {
-                use crate::api::print;
-                let instrs = crate::api::performance_counter(0);
-                print(format!("[Debug] Argument decoding instructions: {instrs}"));
-                if let Some(n) = cost.decoding_quota {
-                    print(format!("[Debug] Argument decoding cost: {n}"));
-                }
-                if let Some(n) = cost.skipping_quota {
-                    print(format!("[Debug] Argument skipping cost: {n}"));
-                }
+                print_decoding_debug_info("Argument", &cost, None);
             }
             r
         }
