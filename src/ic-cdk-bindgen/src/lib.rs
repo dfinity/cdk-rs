@@ -14,13 +14,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(canister_name: &str) -> Self {
-        let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name);
-        let candid_path =
-            PathBuf::from(env::var(candid_path_var_name).expect("Cannot find candid path"));
-        let canister_id_var_name = format!("CANISTER_ID_{}", canister_name);
-        let canister_id =
-            Principal::from_text(env::var(canister_id_var_name).expect("Cannot find canister id"))
-                .unwrap();
+        let (candid_path, canister_id) = resolve_candid_path_and_canister_id(canister_name);
         let mut binding = rust::Config::new();
         binding
             // User will depend on candid crate directly
@@ -36,6 +30,60 @@ impl Config {
             binding,
         }
     }
+}
+
+/// Resolve the candid path and canister id from environment variables.
+///
+/// The name and format of the environment variables are standardized:
+/// https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.md#canister_id_canistername
+///
+/// We previously used environment variables like`CANISTER_CANDID_PATH_<canister_name>` without to_uppercase.
+/// That is deprecated. To keep backward compatibility, we also check for the old format.
+/// Just in case the user run `ic-cdk-bindgen` outside `dfx`.
+/// If the old format is found, we print a warning to the user.
+/// dfx v0.13.0 only provides the old format, which can be used to check the warning logic.
+/// TODO: remove the support for the old format, in the next major release (v0.2) of `ic-cdk-bindgen`.
+fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Principal) {
+    fn warning_deprecated_env(deprecated_name: &str, new_name: &str) {
+        println!("cargo:warning=The environment variable {} is deprecated. Please set {} instead. Upgrading dfx may fix this issue.", deprecated_name, new_name);
+    }
+
+    let canister_name = canister_name.replace('-', "_");
+    let canister_name_upper = canister_name.to_uppercase();
+
+    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
+    let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{}", canister_name);
+
+    let candid_path_str = if let Ok(candid_path_str) = env::var(&candid_path_var_name) {
+        candid_path_str
+    } else if let Ok(candid_path_str) = env::var(&candid_path_var_name_legacy) {
+        warning_deprecated_env(&candid_path_var_name_legacy, &candid_path_var_name);
+        candid_path_str
+    } else {
+        panic!(
+            "Cannot find environment variable: {}",
+            &candid_path_var_name
+        );
+    };
+    let candid_path = PathBuf::from(candid_path_str);
+
+    let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
+    let canister_id_var_name_legacy = format!("CANISTER_ID_{}", canister_name);
+    let canister_id_str = if let Ok(canister_id_str) = env::var(&canister_id_var_name) {
+        canister_id_str
+    } else if let Ok(canister_id_str) = env::var(&canister_id_var_name_legacy) {
+        warning_deprecated_env(&canister_id_var_name_legacy, &canister_id_var_name);
+        canister_id_str
+    } else {
+        panic!(
+            "Cannot find environment variable: {}",
+            &canister_id_var_name
+        );
+    };
+    let canister_id = Principal::from_text(&canister_id_str)
+        .unwrap_or_else(|_| panic!("Invalid principal: {}", &canister_id_str));
+
+    (candid_path, canister_id)
 }
 
 #[derive(Default)]

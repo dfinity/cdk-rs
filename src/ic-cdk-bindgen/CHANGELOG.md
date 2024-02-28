@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.3] - 2024-02-27
+
+- Resolve CANISTER_CANDID_PATH and CANISTER_ID from standardized environment variables (uppercase canister names).
+  - The support for legacy (non-uppercase) env vars is kept.
+  - It will be removed in next major release (v0.2).
+
 ## [0.1.2] - 2023-11-23
 
 - Change `candid` dependency to the new `candid_parser` library.
