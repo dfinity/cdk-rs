@@ -743,6 +743,15 @@ impl ArgDecoderConfig {
         config
     }
 }
+impl Default for ArgDecoderConfig {
+    fn default() -> Self {
+        Self {
+            decoding_quota: None,
+            skipping_quota: Some(10_000),
+            debug: false,
+        }
+    }
+}
 
 /// Returns the argument data in the current call. Traps if the data cannot be
 /// decoded.
