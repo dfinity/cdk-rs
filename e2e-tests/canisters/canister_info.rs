@@ -54,7 +54,7 @@ async fn canister_lifecycle() -> Principal {
     .await
     .unwrap();
     install_code(InstallCodeArgument {
-        mode: Upgrade,
+        mode: Upgrade(None),
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
         canister_id: canister_id.canister_id,

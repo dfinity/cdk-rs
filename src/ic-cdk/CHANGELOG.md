@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add `is_recovering_from_trap` function for implementing trap cleanup logic
+- Add management canister methods for interacting with the chunk store
 
 ## [0.12.1] - 2024-01-12
 
