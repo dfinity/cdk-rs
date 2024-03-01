@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.12.1"
+version = "0.13.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -22,7 +22,7 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 [dependencies]
 candid.workspace = true
 ic0.workspace = true
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.4" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.8.5" }
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }
