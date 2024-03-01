@@ -12,7 +12,7 @@ fn init() {
     OWNER.with(|owner| owner.set(ic_cdk::api::caller()));
 }
 
-#[update]
+#[update(debug = true, decoding_quota = 50, skipping_quota = 0)]
 fn inc() {
     ic_cdk::println!("{:?}", OWNER.with(|owner| owner.get()));
     COUNTER.with(|counter| *counter.borrow_mut() += 1u64);
