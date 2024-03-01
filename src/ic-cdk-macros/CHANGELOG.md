@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.5] - 2024-03-01
+
+### Added
+
+- Allow setting decoding quota for canister endpoints and inter-canister calls. (#465)
+
 ## [0.8.4] - 2024-01-12
 
 ### Fixed
