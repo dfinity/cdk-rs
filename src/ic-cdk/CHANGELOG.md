@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `debug = true` prints the instruction count and the decoding/skipping cost to the replica log, after a successful deserialization. The decoding/skipping cost is logged only when you have already set a quota in the attributes. The debug mode is useful to determine the right quotas above. Developers can send a few large payloads to the debugging endpoint and know the actual decoding cost.
   * When making inter-canister calls, we have a new function `call_with_config` to config the same decoding quotas described above. It's strongly recommended to use `call_with_config` when calling third-party untrusted canisters.
 
+### Changed
+
+- `ic_cdk::api::call::arg_data` takes `ArgDecoderConfig` as argument.
+
 ## [0.12.1] - 2024-01-12
 
 ### Changed
