@@ -1,3 +1,5 @@
+load ../../bats/bats-assert/load.bash
+
 # Executed before each test.
 setup() {
   cd examples/print
@@ -13,5 +15,6 @@ teardown() {
 @test "Can print" {
   dfx deploy
 
-  dfx canister call print print
+  run dfx canister call print print
+  assert_success
 }
