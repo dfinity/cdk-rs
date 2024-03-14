@@ -28,7 +28,10 @@ teardown() {
 
 @test "bitcoin methods succeed" {
   bitcoind -regtest -daemonwait
-  dfx start --clean --background --enable-bitcoin
+
+  wget https://github.com/dfinity/bitcoin-canister/releases/download/release%2F2023-10-13/ic-btc-canister.wasm.gz
+  DFX_BITCOIN_WASM=ic-btc-canister.wasm.gz dfx start --clean --background --enable-bitcoin
+
   dfx deploy
   run dfx canister call caller execute_bitcoin_methods
   assert_success
