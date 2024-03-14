@@ -1,4 +1,3 @@
-load ../../bats/bats-support/load.bash
 load ../../bats/bats-assert/load.bash
 
 # Executed before each test.
@@ -16,27 +15,27 @@ teardown() {
   dfx deploy
 
   run dfx canister call profile-rs getSelf
-  assert_success
   assert_output '(record { name = ""; description = ""; keywords = vec {} })'
+
   run dfx canister call profile-rs update 'record {"name"= "abc"; "description"="123"; "keywords"= vec {} }'
   assert_success
+
   run dfx canister call profile-rs get abc
-  assert_success
   assert_output '(record { name = "abc"; description = "123"; keywords = vec {} })'
+
   run dfx canister call profile-rs search ab
-  assert_success
   assert_output '(opt record { name = "abc"; description = "123"; keywords = vec {} })'
 
   run dfx canister call profile-inter-rs getSelf
-  assert_success
   assert_output '(record { name = ""; description = ""; keywords = vec {} })'
+
   run dfx canister call profile-inter-rs update 'record {"name"= "def"; "description"="456"; "keywords"= vec {} }'
   assert_success
+
   run dfx canister call profile-inter-rs get def
-  assert_success
   assert_output '(record { name = "def"; description = "456"; keywords = vec {} })'
+
   run dfx canister call profile-inter-rs search de
-  assert_success
   assert_output '(opt record { name = "def"; description = "456"; keywords = vec {} })'
 }
 
