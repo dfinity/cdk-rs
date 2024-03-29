@@ -118,7 +118,7 @@ fn main() {
         f,
         r#"// This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(feature = "mock", target_arch = "wasm32"))]
 #[link(wasm_import_module = "ic0")]
 extern "C" {{"#,
     )
@@ -126,9 +126,11 @@ extern "C" {{"#,
 
     for api in &ic0.apis {
         let fn_name = &api.name;
+        let prefixed_fn_name = format!("ic0_{fn_name}");
         let args = &api.args;
 
         let mut r = quote! {
+            #[cfg_attr(feature = "mock", link_name = #prefixed_fn_name)]
             pub fn #fn_name(#(#args),*)
         };
 
@@ -147,7 +149,7 @@ extern "C" {{"#,
     writeln!(
         f,
         r#"
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(feature = "mock", target_arch = "wasm32")))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -182,7 +184,7 @@ mod non_wasm{{"#,
         f,
         r#"}}
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(feature = "mock", target_arch = "wasm32")))]
 pub use non_wasm::*;
 "#
     )

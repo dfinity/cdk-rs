@@ -1,34 +1,61 @@
 // This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(feature = "mock", target_arch = "wasm32"))]
 #[link(wasm_import_module = "ic0")]
 extern "C" {
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_arg_data_size")]
     pub fn msg_arg_data_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_arg_data_copy")]
     pub fn msg_arg_data_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_caller_size")]
     pub fn msg_caller_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_caller_copy")]
     pub fn msg_caller_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reject_code")]
     pub fn msg_reject_code() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reject_msg_size")]
     pub fn msg_reject_msg_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reject_msg_copy")]
     pub fn msg_reject_msg_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reply_data_append")]
     pub fn msg_reply_data_append(src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reply")]
     pub fn msg_reply();
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_reject")]
     pub fn msg_reject(src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_available")]
     pub fn msg_cycles_available() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_available128")]
     pub fn msg_cycles_available128(dst: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_refunded")]
     pub fn msg_cycles_refunded() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_refunded128")]
     pub fn msg_cycles_refunded128(dst: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_accept")]
     pub fn msg_cycles_accept(max_amount: i64) -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_cycles_accept128")]
     pub fn msg_cycles_accept128(max_amount_high: i64, max_amount_low: i64, dst: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_cycles_burn128")]
     pub fn cycles_burn128(amount_high: i64, amount_low: i64, dst: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_self_size")]
     pub fn canister_self_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_self_copy")]
     pub fn canister_self_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_cycle_balance")]
     pub fn canister_cycle_balance() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_cycle_balance128")]
     pub fn canister_cycle_balance128(dst: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_status")]
     pub fn canister_status() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_canister_version")]
     pub fn canister_version() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_method_name_size")]
     pub fn msg_method_name_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_msg_method_name_copy")]
     pub fn msg_method_name_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_accept_message")]
     pub fn accept_message();
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_new")]
     pub fn call_new(
         callee_src: i32,
         callee_size: i32,
@@ -39,32 +66,55 @@ extern "C" {
         reject_fun: i32,
         reject_env: i32,
     );
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_on_cleanup")]
     pub fn call_on_cleanup(fun: i32, env: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_data_append")]
     pub fn call_data_append(src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_cycles_add")]
     pub fn call_cycles_add(amount: i64);
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_cycles_add128")]
     pub fn call_cycles_add128(amount_high: i64, amount_low: i64);
+    #[cfg_attr(feature = "mock", link_name = "ic0_call_perform")]
     pub fn call_perform() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable_size")]
     pub fn stable_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable_grow")]
     pub fn stable_grow(new_pages: i32) -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable_write")]
     pub fn stable_write(offset: i32, src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable_read")]
     pub fn stable_read(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable64_size")]
     pub fn stable64_size() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable64_grow")]
     pub fn stable64_grow(new_pages: i64) -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable64_write")]
     pub fn stable64_write(offset: i64, src: i64, size: i64);
+    #[cfg_attr(feature = "mock", link_name = "ic0_stable64_read")]
     pub fn stable64_read(dst: i64, offset: i64, size: i64);
+    #[cfg_attr(feature = "mock", link_name = "ic0_certified_data_set")]
     pub fn certified_data_set(src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_data_certificate_present")]
     pub fn data_certificate_present() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_data_certificate_size")]
     pub fn data_certificate_size() -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_data_certificate_copy")]
     pub fn data_certificate_copy(dst: i32, offset: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_time")]
     pub fn time() -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_global_timer_set")]
     pub fn global_timer_set(timestamp: i64) -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_performance_counter")]
     pub fn performance_counter(counter_type: i32) -> i64;
+    #[cfg_attr(feature = "mock", link_name = "ic0_is_controller")]
     pub fn is_controller(src: i32, size: i32) -> i32;
+    #[cfg_attr(feature = "mock", link_name = "ic0_debug_print")]
     pub fn debug_print(src: i32, size: i32);
+    #[cfg_attr(feature = "mock", link_name = "ic0_trap")]
     pub fn trap(src: i32, size: i32);
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(feature = "mock", target_arch = "wasm32")))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -230,5 +280,5 @@ mod non_wasm {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(feature = "mock", target_arch = "wasm32")))]
 pub use non_wasm::*;
