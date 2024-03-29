@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Provide safe wrapper of global_timer_set in ic-cdk. (#475)
+
 ## [0.13.1] - 2024-03-01
 
 ### Changed
