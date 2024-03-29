@@ -38,30 +38,32 @@ impl StableMemory for CanisterStableMemory {
     }
 
     fn stable_write(&self, offset: u32, buf: &[u8]) {
+        assert!(buf.len() < u32::MAX as usize);
         // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.stable_write.
         unsafe {
-            ic0::stable_write(offset as i32, buf.as_ptr() as i32, buf.len() as i32);
+            ic0::stable_write(offset, buf.as_ptr() as usize, buf.len() as u32);
         }
     }
 
     fn stable64_write(&self, offset: u64, buf: &[u8]) {
         // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.stable64_write.
         unsafe {
-            ic0::stable64_write(offset as i64, buf.as_ptr() as i64, buf.len() as i64);
+            ic0::stable64_write(offset, buf.as_ptr() as u64, buf.len() as u64);
         }
     }
 
     fn stable_read(&self, offset: u32, buf: &mut [u8]) {
+        assert!(buf.len() < u32::MAX as usize);
         // SAFETY: `buf`, being &mut [u8], is a writable sequence of bytes, and therefore valid to pass to ic0.stable_read.
         unsafe {
-            ic0::stable_read(buf.as_ptr() as i32, offset as i32, buf.len() as i32);
+            ic0::stable_read(buf.as_ptr() as usize, offset, buf.len() as u32);
         }
     }
 
     fn stable64_read(&self, offset: u64, buf: &mut [u8]) {
         // SAFETY: `buf`, being &mut [u8], is a writable sequence of bytes, and therefore valid to pass to ic0.stable64_read.
         unsafe {
-            ic0::stable64_read(buf.as_ptr() as i64, offset as i64, buf.len() as i64);
+            ic0::stable64_read(buf.as_ptr() as u64, offset, buf.len() as u64);
         }
     }
 }

@@ -77,12 +77,14 @@ impl Parse for SystemAPI {
 
 fn type_supported(ty: &TypePath) -> Result<()> {
     let supported = match ty.path.get_ident() {
-        Some(i) => i == "i32" || i == "i64",
+        Some(i) => {
+            i == "i32" || i == "i64" || i == "u32" || i == "u64" || i == "usize" || i == "isize"
+        }
         None => false,
     };
     match supported {
         true => Ok(()),
-        false => Err(Error::new(ty.span(), "expected i32 or i64")),
+        false => Err(Error::new(ty.span(), "expected i/u32, 64, or size")),
     }
 }
 
