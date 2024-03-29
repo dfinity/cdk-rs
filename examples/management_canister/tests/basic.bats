@@ -30,8 +30,9 @@ teardown() {
   # The bitcoin canister bundled with dfx 0.18.0 doesn't work with application replica
   # As a temporary remedy, we download a previous release.
   # TODO: remove when dfx fix, SDKTG-296
-  wget -O ic-btc-canister.wasm.gz https://github.com/dfinity/bitcoin-canister/releases/download/release%2F2023-10-13/ic-btc-canister.wasm.gz
-  DFX_BITCOIN_WASM=ic-btc-canister.wasm.gz dfx start --clean --background --enable-bitcoin
+  # wget -O ic-btc-canister.wasm.gz https://github.com/dfinity/bitcoin-canister/releases/download/release%2F2023-10-13/ic-btc-canister.wasm.gz
+  # DFX_BITCOIN_WASM=ic-btc-canister.wasm.gz dfx start --clean --background --enable-bitcoin
+  dfx start --clean --background --enable-bitcoin
 
   dfx deploy
   run dfx canister call caller execute_bitcoin_methods
