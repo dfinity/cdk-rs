@@ -161,6 +161,7 @@ fn dfn_macro(
         }
         format!("canister_{method} {function_name}")
     };
+    let ld_name = export_name.replace(' ', "$");
 
     let function_call = if is_async {
         quote! { #name ( #(#arg_tuple),* ) .await }
@@ -255,8 +256,9 @@ fn dfn_macro(
     };
 
     Ok(quote! {
-        #[export_name = #export_name]
-        fn #outer_function_ident() {
+        #[cfg_attr(target_family = "wasm", export_name = #export_name)]
+        #[cfg_attr(not(target_family = "wasm"), export_name = #ld_name)]
+        extern "C-unwind" fn #outer_function_ident() {
             ic_cdk::setup();
 
             #guard

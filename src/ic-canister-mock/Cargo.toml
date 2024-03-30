@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 ic0 = { workspace = true, features = ["mock"] }
+ic-cdk = { workspace = true }
+candid = { workspace = true }
+time = "0.3"
+libloading = { version = "0.8" }

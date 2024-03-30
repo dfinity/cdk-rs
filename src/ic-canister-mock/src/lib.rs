@@ -1,213 +1,210 @@
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_arg_data_size() -> usize {
-    panic!("msg_arg_data_size should only be called inside canisters.");
+use std::collections::HashMap;
+use std::path::Path;
+use std::{cell::RefCell, collections::VecDeque};
+
+use candid::{
+    utils::{encode_args, ArgumentEncoder},
+    Principal,
+};
+use ic_cdk::api::call::RejectionCode;
+use libloading::Library;
+
+mod implementation;
+mod interface;
+
+thread_local! {
+    static QUEUE: RefCell<VecDeque<Message>> = <_>::default();
+    static ACTIVE_MESSAGE: RefCell<Option<Message>> = <_>::default();
+    static CALLBACK_CONTEXT: RefCell<Option<CallbackContext>> = <_>::default();
+    static LOADED_CANISTERS: RefCell<HashMap<Principal, Canister>> = <_>::default();
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_arg_data_copy(dst: usize, offset: usize, size: usize) {
-    panic!("msg_arg_data_copy should only be called inside canisters.");
+
+#[derive(Debug)]
+struct Message {
+    from: Principal,
+    to: Principal,
+    method: String,
+    payload: Option<Vec<u8>>,
+    cycles: u128,
+    callback: Option<Callback>,
+    status: MessageStatus,
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_caller_size() -> usize {
-    panic!("msg_caller_size should only be called inside canisters.");
+
+#[derive(Debug)]
+struct Callback {
+    reply_callback: unsafe extern "C-unwind" fn(env: *mut ()),
+    reject_callback: unsafe extern "C-unwind" fn(env: *mut ()),
+    cleanup_callback: Option<unsafe extern "C-unwind" fn(env: *mut ())>,
+    reply_env: *mut (),
+    reject_env: *mut (),
+    cleanup_env: Option<*mut ()>,
+    message_in_progress: Option<Box<Message>>,
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_caller_copy(dst: usize, offset: usize, size: usize) {
-    panic!("msg_caller_copy should only be called inside canisters.");
+
+struct CallbackContext {
+    reject_code: Option<RejectionCode>,
+    reject_message: Option<Vec<u8>>,
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reject_code() -> u32 {
-    panic!("msg_reject_code should only be called inside canisters.");
+
+#[derive(Debug)]
+enum MessageStatus {
+    Pending,
+    Continuing,
+    Replied(Vec<u8>),
+    Rejected(Vec<u8>, RejectionCode),
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reject_msg_size() -> usize {
-    panic!("msg_reject_msg_size should only be called inside canisters.");
+
+enum Canister {
+    Dll(libloading::Library),
+    //todo
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reject_msg_copy(dst: usize, offset: usize, size: usize) {
-    panic!("msg_reject_msg_copy should only be called inside canisters.");
+
+pub unsafe fn load_canister(
+    module: impl AsRef<Path>,
+    principal: Principal,
+    init_args: impl ArgumentEncoder,
+) -> Result<(), ()> {
+    let module = module.as_ref();
+    let canister = if module == Path::new("@") {
+        Canister::Dll(
+            {
+                #[cfg(windows)]
+                {
+                    libloading::os::windows::Library::this()
+                }
+                #[cfg(unix)]
+                {
+                    libloading::os::unix::Library::this()
+                }
+            }
+            .into(),
+        )
+    } else {
+        let library = unsafe { Library::new(module) }.map_err(|_| ())?;
+        Canister::Dll(library)
+    };
+    let init_message = Message {
+        from: Principal::management_canister(),
+        to: principal,
+        method: "#[init]".to_string(),
+        callback: None,
+        payload: Some(encode_args(init_args).map_err(|_| ())?),
+        cycles: 0,
+        status: MessageStatus::Pending,
+    };
+    LOADED_CANISTERS.with_borrow_mut(|c| c.insert(principal, canister));
+    enqueue_message(init_message);
+    Ok(())
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reply_data_append(src: usize, size: usize) {
-    panic!("msg_reply_data_append should only be called inside canisters.");
+
+fn enqueue_message(message: Message) {
+    QUEUE.with_borrow_mut(|q| q.push_back(message));
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reply() {
-    panic!("msg_reply should only be called inside canisters.");
+
+fn with_active_message<T>(f: impl FnOnce(&Message) -> T) -> T {
+    ACTIVE_MESSAGE.with_borrow(|m| {
+        let m = m
+            .as_ref()
+            .unwrap_or_else(|| panic!("no active canister message"));
+        f(m)
+    })
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_reject(src: usize, size: usize) {
-    panic!("msg_reject should only be called inside canisters.");
+
+fn with_active_message_mut<T>(f: impl FnOnce(&mut Message) -> T) -> T {
+    ACTIVE_MESSAGE.with_borrow_mut(|m| {
+        let m = m
+            .as_mut()
+            .unwrap_or_else(|| panic!("no active canister message"));
+        f(m)
+    })
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_available() -> u64 {
-    panic!("msg_cycles_available should only be called inside canisters.");
+
+fn run_all_messages() {
+    while run_one_message() {}
 }
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_available128(dst: usize) {
-    panic!("msg_cycles_available128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_refunded() -> u64 {
-    panic!("msg_cycles_refunded should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_refunded128(dst: usize) {
-    panic!("msg_cycles_refunded128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_accept(max_amount: u64) -> u64 {
-    panic!("msg_cycles_accept should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_cycles_accept128(
-    max_amount_high: u64,
-    max_amount_low: u64,
-    dst: usize,
-) {
-    panic!("msg_cycles_accept128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_cycles_burn128(amount_high: i64, amount_low: i64, dst: usize) {
-    panic!("cycles_burn128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_self_size() -> usize {
-    panic!("canister_self_size should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_self_copy(dst: usize, offset: usize, size: usize) {
-    panic!("canister_self_copy should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_cycle_balance() -> u64 {
-    panic!("canister_cycle_balance should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_cycle_balance128(dst: usize) {
-    panic!("canister_cycle_balance128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_status() -> u32 {
-    panic!("canister_status should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_canister_version() -> u64 {
-    panic!("canister_version should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_method_name_size() -> usize {
-    panic!("msg_method_name_size should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_msg_method_name_copy(dst: usize, offset: usize, size: usize) {
-    panic!("msg_method_name_copy should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_accept_message() {
-    panic!("accept_message should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_new(
-    callee_src: usize,
-    callee_size: usize,
-    name_src: usize,
-    name_size: usize,
-    reply_fun: usize,
-    reply_env: usize,
-    reject_fun: usize,
-    reject_env: usize,
-) {
-    panic!("call_new should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_on_cleanup(fun: usize, env: usize) {
-    panic!("call_on_cleanup should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_data_append(src: usize, size: usize) {
-    panic!("call_data_append should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_cycles_add(amount: u64) {
-    panic!("call_cycles_add should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_cycles_add128(amount_high: u64, amount_low: u64) {
-    panic!("call_cycles_add128 should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_call_perform() -> u32 {
-    panic!("call_perform should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable_size() -> i32 {
-    panic!("stable_size should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable_grow(new_pages: i32) -> i32 {
-    panic!("stable_grow should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable_write(offset: u32, src: usize, size: u32) {
-    panic!("stable_write should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable_read(dst: usize, offset: u32, size: u32) {
-    panic!("stable_read should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable64_size() -> i64 {
-    panic!("stable64_size should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable64_grow(new_pages: i64) -> i64 {
-    panic!("stable64_grow should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable64_write(offset: u64, src: u64, size: u64) {
-    panic!("stable64_write should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_stable64_read(dst: u64, offset: u64, size: u64) {
-    panic!("stable64_read should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_certified_data_set(src: usize, size: usize) {
-    panic!("certified_data_set should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_data_certificate_present() -> u32 {
-    panic!("data_certificate_present should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_data_certificate_size() -> usize {
-    panic!("data_certificate_size should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_data_certificate_copy(dst: usize, offset: usize, size: usize) {
-    panic!("data_certificate_copy should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_time() -> i64 {
-    panic!("time should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_global_timer_set(timestamp: i64) -> i64 {
-    panic!("global_timer_set should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_performance_counter(counter_type: u32) -> i64 {
-    panic!("performance_counter should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_is_controller(src: usize, size: usize) -> usize {
-    panic!("is_controller should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_debug_print(src: usize, size: usize) {
-    panic!("debug_print should only be called inside canisters.");
-}
-#[no_mangle]
-unsafe extern "C-unwind" fn ic0_trap(src: usize, size: usize) {
-    panic!("trap should only be called inside canisters.");
+
+// todo catch_unwind
+fn run_one_message() -> bool {
+    let Some(mut message) = QUEUE.with_borrow_mut(|q| q.pop_front()) else {
+        return false;
+    };
+    let to = message.to;
+    let method = &message.method;
+    let function: unsafe extern "C-unwind" fn() = LOADED_CANISTERS.with_borrow(|l| {
+        let canister = l
+            .get(&to)
+            .unwrap_or_else(|| panic!("no canister with ID {to}"));
+        match canister {
+            Canister::Dll(library) => unsafe {
+                if let Some(method) = method.strip_prefix("#[") {
+                    *library.get(format!("canister_{}\0", &method[..method.len() - 1]).as_bytes()).unwrap_or_else(|e| {
+                        panic!("error looking up {method} in canister {to}: {e}")
+                    })
+                } else {
+                    match library.get(format!("canister_query${method}\0").as_bytes()) {
+                        Ok(sym) => *sym,
+                        Err(e1) => *library
+                            .get(format!("canister_update${method}\0").as_bytes())
+                            .unwrap_or_else(|e2| {
+                                panic!("error looking up {method} in canister {to}: either '{e1}' or '{e2}'")
+                            }),
+                    }
+                }
+            },
+        }
+    });
+    ACTIVE_MESSAGE.with_borrow_mut(|m| *m = Some(message));
+    unsafe { function() };
+    let mut message = ACTIVE_MESSAGE
+        .with_borrow_mut(|m| m.take())
+        .unwrap_or_else(|| panic!("internal state error: lost the active message"));
+    let method = &message.method;
+    if matches!(message.status, MessageStatus::Pending) {
+        panic!("canister {to} did not reply in method {method}")
+    }
+    while let Some(callback) = message.callback {
+        match message.status {
+            MessageStatus::Continuing => {
+                panic!("internal state error: callback invoked without a return")
+            }
+            MessageStatus::Pending => unreachable!(),
+            MessageStatus::Replied(value) => unsafe {
+                message = *callback.message_in_progress.unwrap(); // todo
+                message.payload = Some(value);
+                ACTIVE_MESSAGE.with_borrow_mut(|m| *m = Some(message));
+                CALLBACK_CONTEXT.with_borrow_mut(|c| {
+                    *c = Some(CallbackContext {
+                        reject_code: None,
+                        reject_message: None,
+                    })
+                });
+                (callback.reply_callback)(callback.reply_env);
+                CALLBACK_CONTEXT.with_borrow_mut(|c| *c = None);
+                message = ACTIVE_MESSAGE
+                    .with_borrow_mut(|m| m.take())
+                    .unwrap_or_else(|| {
+                        panic!("internal state error: lost the active message (callback)")
+                    });
+            },
+            MessageStatus::Rejected(reject_message, reject_code) => unsafe {
+                message = *callback.message_in_progress.unwrap(); // todo
+                message.payload = None;
+                ACTIVE_MESSAGE.with_borrow_mut(|m| *m = Some(message));
+                CALLBACK_CONTEXT.with_borrow_mut(|c| {
+                    *c = Some(CallbackContext {
+                        reject_message: Some(reject_message),
+                        reject_code: Some(reject_code),
+                    })
+                });
+                (callback.reject_callback)(callback.reject_env);
+                CALLBACK_CONTEXT.with_borrow_mut(|c| *c = None);
+                message = ACTIVE_MESSAGE
+                    .with_borrow_mut(|m| m.take())
+                    .unwrap_or_else(|| {
+                        panic!("internal state error: lost the active message (callback)")
+                    });
+            },
+        }
+    }
+    true
 }
