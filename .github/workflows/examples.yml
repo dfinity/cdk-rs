@@ -92,8 +92,6 @@ jobs:
 
       - name: Install DFX
         uses: dfinity/setup-dfx@main
-        with:
-          dfx-version: "0.19.0-beta.1"
 
       - name: Install bitcoin
         if: ${{ matrix.project-name == 'management_canister' }}
