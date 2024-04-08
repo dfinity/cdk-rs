@@ -271,6 +271,39 @@ fn advance_seconds(env: &StateMachine, seconds: u32) {
 }
 
 #[test]
+fn test_set_global_timers() {
+    // Must be more than the queue limit (500)
+    let env = env();
+    let system_time = std::time::SystemTime::now();
+
+    env.set_time(system_time);
+
+    let wasm = cargo_build_canister("timers");
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
+
+    call_candid::<_, ()>(&env, canister_id, "schedule_long", ())
+        .expect("Failed to call schedule_long");
+    let ts0 = system_time
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64
+        + 9_000_000_000; // the long event is scheduled 9 seconds from ts0
+    advance_seconds(&env, 5);
+
+    // set the timer to 5 seconds from ts0
+    let ts1 = ts0 + 5_000_000_000;
+    let (previous,) = call_candid::<(u64,), (u64,)>(&env, canister_id, "set_global_timer", (ts1,))
+        .expect("Failed to call set_global_timer");
+    assert_eq!(previous, ts0);
+
+    // deactivate the timer
+    let (previous,) = call_candid::<(u64,), (u64,)>(&env, canister_id, "set_global_timer", (0,))
+        .expect("Failed to call set_global_timer");
+    assert_eq!(previous, ts1);
+}
+
+#[test]
 fn test_canister_info() {
     let env = env();
     let wasm = cargo_build_canister("canister_info");

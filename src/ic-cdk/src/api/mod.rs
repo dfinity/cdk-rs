@@ -176,3 +176,20 @@ pub fn cycles_burn(amount: u128) -> u128 {
     }
     dst
 }
+
+/// Sets global timer.
+///
+/// The canister can set a global timer to make the system
+/// schedule a call to the exported canister_global_timer
+/// Wasm method after the specified time.
+/// The time must be provided as nanoseconds since 1970-01-01.
+///
+/// The function returns the previous value of the timer.
+/// If no timer is set before invoking the function, then the function returns zero.
+///
+/// Passing zero as an argument to the function deactivates the timer and thus
+/// prevents the system from scheduling calls to the canister's canister_global_timer Wasm method.
+pub fn set_global_timer(timestamp: u64) -> u64 {
+    // SAFETY: ic0.global_timer_set is always safe to call.
+    unsafe { ic0::global_timer_set(timestamp as i64) as u64 }
+}

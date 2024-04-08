@@ -1,7 +1,6 @@
 [workspace]
-members = [
-    "src/chess_rs",
-]
+members = ["src/chess_rs"]
+resolver = "2"
 
 [profile.release]
 lto = true

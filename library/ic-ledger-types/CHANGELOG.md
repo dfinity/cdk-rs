@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.10.0] - 2024-03-01
+
+### Changed
+- Upgrade `ic-cdk` to v0.13.
+
 ## [0.9.0] - 2023-11-23
 
 ### Changed
