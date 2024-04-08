@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.13.2] - 2024-04-08
+
 ### Added
 
 - Management canister methods for interacting with the chunk store. (#461)
