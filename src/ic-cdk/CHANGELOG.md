@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Management canister methods for interacting with the chunk store. (#461)
 - Provide safe wrapper of global_timer_set in ic-cdk. (#475)
 
 ## [0.13.1] - 2024-03-01
