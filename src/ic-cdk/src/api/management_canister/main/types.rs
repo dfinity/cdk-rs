@@ -200,7 +200,7 @@ pub struct InstallChunkedCodeArgument {
     /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
     pub store_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm
-    pub chunk_hashes_list: Vec<Vec<u8>>,
+    pub chunk_hashes_list: Vec<ChunkHash>,
     /// The sha256 hash of the wasm
     #[serde(with = "serde_bytes")]
     pub wasm_module_hash: Vec<u8>,
@@ -220,7 +220,7 @@ pub(crate) struct InstallChunkedCodeArgumentExtended {
     /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
     pub store_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm
-    pub chunk_hashes_list: Vec<Vec<u8>>,
+    pub chunk_hashes_list: Vec<ChunkHash>,
     /// The sha256 hash of the wasm
     #[serde(with = "serde_bytes")]
     pub wasm_module_hash: Vec<u8>,
