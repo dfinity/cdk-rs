@@ -53,6 +53,8 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
 
     let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
     let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{}", canister_name);
+    println!("cargo:rerun-if-env-changed={candid_path_var_name}");
+    println!("cargo:rerun-if-env-changed={candid_path_var_name_legacy}");
 
     let candid_path_str = if let Ok(candid_path_str) = env::var(&candid_path_var_name) {
         candid_path_str
@@ -69,6 +71,8 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
 
     let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
     let canister_id_var_name_legacy = format!("CANISTER_ID_{}", canister_name);
+    println!("cargo:rerun-if-env-changed={canister_id_var_name}");
+    println!("cargo:rerun-if-env-changed={canister_id_var_name_legacy}");
     let canister_id_str = if let Ok(canister_id_str) = env::var(&canister_id_var_name) {
         canister_id_str
     } else if let Ok(canister_id_str) = env::var(&canister_id_var_name_legacy) {
