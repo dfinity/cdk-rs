@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Re-generate bindings if the canister ids changed (e.g. when switching networks) or when the path to the candid file of a dependency changed.
+
 ## [0.1.3] - 2024-02-27
 
 - Resolve CANISTER_CANDID_PATH and CANISTER_ID from standardized environment variables (uppercase canister names).
