@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Refactor!: move Rust codegen logic from candid_parser. (#480)
+- Refactor!: move Rust code generation logic from candid_parser. (#480)
 
 ### Fixed
 

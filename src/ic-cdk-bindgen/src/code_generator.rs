@@ -252,11 +252,11 @@ fn pp_defs<'a>(
                 .append(": ")
                 .append(pp_ty_func(func))
                 .append(");"),
-            TypeInner::Service(service) => str("candid::define_service!(")
+            TypeInner::Service(serv) => str("candid::define_service!(")
                 .append(vis)
                 .append(name)
                 .append(": ")
-                .append(pp_ty_service(service))
+                .append(pp_ty_service(serv))
                 .append(");"),
             _ => {
                 if recs.contains(id) {
@@ -295,9 +295,9 @@ fn pp_ty_func(f: &Function) -> RcDoc {
         .append(rets.append(modes))
         .nest(INDENT_SPACE)
 }
-fn pp_ty_service(service: &[(String, Type)]) -> RcDoc {
+fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
     let doc = concat(
-        service.iter().map(|(id, func)| {
+        serv.iter().map(|(id, func)| {
             let func_doc = match func.as_ref() {
                 TypeInner::Func(ref f) => enclose("candid::func!(", pp_ty_func(f), ")"),
                 TypeInner::Var(_) => pp_ty(func, &RecPoints::default()).append("::ty()"),
@@ -391,9 +391,9 @@ fn pp_function<'a>(config: &Config, id: &'a str, func: &'a Function) -> RcDoc<'a
 
 fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<'a> {
     // TODO trace to service before we figure out what canister means in Rust
-    let service = env.as_service(actor).unwrap();
+    let serv = env.as_service(actor).unwrap();
     let body = RcDoc::intersperse(
-        service.iter().map(|(id, func)| {
+        serv.iter().map(|(id, func)| {
             let func = env.as_func(func).unwrap();
             pp_function(config, id, func)
         }),
@@ -616,10 +616,9 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 TypeInner::Var(new_var)
             }
         },
-        TypeInner::Service(service) => match path.last() {
+        TypeInner::Service(serv) => match path.last() {
             None | Some(TypePath::Id(_)) => TypeInner::Service(
-                service
-                    .iter()
+                serv.iter()
                     .map(|(meth, ty)| {
                         path.push(TypePath::Id(meth.to_string()));
                         let ty = nominalize(env, path, ty);
@@ -633,7 +632,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 let ty = nominalize(
                     env,
                     &mut vec![TypePath::Id(new_var.clone())],
-                    &TypeInner::Service(service.clone()).into(),
+                    &TypeInner::Service(serv.clone()).into(),
                 );
                 env.0.insert(new_var.clone(), ty);
                 TypeInner::Var(new_var)
