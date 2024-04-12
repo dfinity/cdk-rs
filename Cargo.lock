@@ -892,7 +892,10 @@ dependencies = [
 name = "ic-cdk-bindgen"
 version = "0.1.3"
 dependencies = [
+ "candid",
  "candid_parser",
+ "convert_case",
+ "pretty",
 ]
 
 [[package]]
