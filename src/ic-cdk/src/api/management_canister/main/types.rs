@@ -22,6 +22,12 @@ pub struct CanisterSettings {
     /// Must be a number between 0 and 2^128^-1, inclusively, and indicates the
     /// upper limit on cycles in the `reserved_cycles` balance of the canister.
     pub reserved_cycles_limit: Option<Nat>,
+    /// A soft limit on the Wasm memory usage of the canister. Update calls,
+    /// timers, heartbeats, install, and post-upgrade fail if the Wasm memory
+    /// usage exceeds this limit. The main purpose of this field is to protect
+    /// against the case when the canister reaches the hard 4GiB limit.
+    /// Must be a number between 0 and 2^48^ (i.e 256TB), inclusively.
+    pub wasm_memory_limit: Option<Nat>,
 }
 
 /// Argument type of [create_canister](super::create_canister).
@@ -281,6 +287,8 @@ pub struct DefiniteCanisterSettings {
     pub freezing_threshold: Nat,
     /// Reserved cycles limit.
     pub reserved_cycles_limit: Nat,
+    /// The Wasm memory limit.
+    pub wasm_memory_limit: Nat,
 }
 
 /// Query statistics, returned by [canister_status](super::canister_status).
