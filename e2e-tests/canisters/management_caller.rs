@@ -1,5 +1,8 @@
 use ic_cdk::*;
 
+/// Some management canister "main" methods are tested with other e2e canisters:
+/// - canister_info.rs
+/// - chunk.rs
 mod main {
     use super::*;
     use ic_cdk::api::management_canister::main::*;
@@ -8,10 +11,14 @@ mod main {
         let arg = CreateCanisterArgument {
             settings: Some(CanisterSettings {
                 controllers: Some(vec![ic_cdk::id()]),
-                compute_allocation: Some(0u8.into()),
+                // There is no canister in the subnet, so we can set it to 100.
+                compute_allocation: Some(100u8.into()),
+                // Though the upper limit is 256TiB, the actual subnet may have less memory resource (e.g. local replica).
+                // Here we set it to 10KiB for testing.
                 memory_allocation: Some(10000u16.into()),
-                freezing_threshold: Some(10000u16.into()),
-                reserved_cycles_limit: Some(10000u16.into()),
+                freezing_threshold: Some(u64::MAX.into()),
+                reserved_cycles_limit: Some(u128::MAX.into()),
+                wasm_memory_limit: Some((2u64.pow(48) - 1).into()),
             }),
         };
         let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
@@ -19,6 +26,21 @@ mod main {
             .unwrap()
             .0
             .canister_id;
+
+        let canister_id_record = CanisterIdRecord { canister_id };
+        let response = canister_status(canister_id_record).await.unwrap().0;
+        assert_eq!(response.status, CanisterStatusType::Running);
+        assert_eq!(response.reserved_cycles.0, 0u128.into());
+        let definite_canister_setting = response.settings;
+        assert_eq!(definite_canister_setting.controllers, vec![ic_cdk::id()]);
+        assert_eq!(definite_canister_setting.compute_allocation, 100u8);
+        assert_eq!(definite_canister_setting.memory_allocation, 10000u16);
+        assert_eq!(definite_canister_setting.freezing_threshold, u64::MAX);
+        assert_eq!(definite_canister_setting.reserved_cycles_limit, u128::MAX);
+        assert_eq!(
+            definite_canister_setting.wasm_memory_limit,
+            2u64.pow(48) - 1
+        );
 
         let arg = UpdateSettingsArgument {
             canister_id,
@@ -35,15 +57,14 @@ mod main {
             arg: vec![],
         };
         install_code(arg).await.unwrap();
-        let arg = CanisterIdRecord { canister_id };
-        uninstall_code(arg).await.unwrap();
-        start_canister(arg).await.unwrap();
-        stop_canister(arg).await.unwrap();
-        let response = canister_status(arg).await.unwrap().0;
-        assert_eq!(response.status, CanisterStatusType::Stopped);
-        assert_eq!(response.reserved_cycles.0, 0u128.into());
-        deposit_cycles(arg, 1_000_000_000_000u128).await.unwrap();
-        delete_canister(arg).await.unwrap();
+
+        uninstall_code(canister_id_record).await.unwrap();
+        start_canister(canister_id_record).await.unwrap();
+        stop_canister(canister_id_record).await.unwrap();
+        deposit_cycles(canister_id_record, 1_000_000_000_000u128)
+            .await
+            .unwrap();
+        delete_canister(canister_id_record).await.unwrap();
         let response = raw_rand().await.unwrap().0;
         assert_eq!(response.len(), 32);
     }
@@ -61,6 +82,7 @@ mod provisional {
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
             reserved_cycles_limit: Some(10000u16.into()),
+            wasm_memory_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
             amount: Some(1_000_000_000u64.into()),
