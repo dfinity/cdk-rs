@@ -126,9 +126,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-clippy-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-doc-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-clippy-
+            ${{ runner.os }}-doc-
             ${{ runner.os }}-
       - name: Run doc
         run: |
