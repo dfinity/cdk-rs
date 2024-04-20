@@ -111,10 +111,33 @@ jobs:
         run: |
           cargo clippy --tests --benches -- -D warnings
 
+  doc:
+    name: cargo doc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-clippy-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-clippy-
+            ${{ runner.os }}-
+      - name: Run doc
+        run: |
+          RUSTDOCFLAGS="-D warnings" cargo doc
+
   aggregate:
     name: ci:required
     if: ${{ always() }}
-    needs: [build, test, fmt, clippy]
+    needs: [build, test, fmt, clippy, doc]
     runs-on: ubuntu-latest
     steps:
       - name: check build result
