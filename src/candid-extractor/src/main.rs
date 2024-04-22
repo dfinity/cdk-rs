@@ -1,14 +1,20 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
+use clap::Parser;
+use std::path::PathBuf;
 
 mod extract;
 
+/// Extract the Candid interface from a Canister WASM file.
+#[derive(Parser)]
+#[command(version, about)]
+struct Cli {
+    /// Path to the Canister WASM file.
+    path: PathBuf,
+}
+
 fn main() -> Result<()> {
-    let args: Vec<_> = std::env::args().collect();
-    if args.len() != 2 {
-        // The first arg will the name of current binary.
-        bail!("Expecting one argument: path to the canister WASM file");
-    }
-    let c = extract::extract_candid(args.last().unwrap())?;
-    println!("{c}");
+    let cli = Cli::parse();
+    let candid = extract::extract_candid(cli.path)?;
+    println!("{candid}");
     Ok(())
 }
