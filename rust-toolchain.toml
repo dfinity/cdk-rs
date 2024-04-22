@@ -1,4 +1,4 @@
 [toolchain]
-channel = "1.70.0" # sync with rust-version in root Cargo.toml
+channel = "1.75.0" # sync with rust-version in root Cargo.toml
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]
