@@ -15,6 +15,7 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md", "ic_mock.wat"]
 [dependencies]
 anyhow = "1.0.72"
 wasmtime = "19"
+clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies]
 quote.workspace = true
