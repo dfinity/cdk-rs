@@ -14,7 +14,7 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md", "ic_mock.wat"]
 
 [dependencies]
 anyhow = "1.0.72"
-wasmtime = "12"
+wasmtime = "19"
 
 [dev-dependencies]
 quote.workspace = true
