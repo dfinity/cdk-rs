@@ -6,32 +6,87 @@ use std::io::Write;
 use std::path::PathBuf;
 
 mod code_generator;
+mod error;
 
-#[derive(Clone)]
-pub struct Config {
-    pub canister_name: String,
-    pub candid_path: PathBuf,
-    pub skip_existing_files: bool,
-    pub binding: code_generator::Config,
+pub use error::IcCdkBindgenError;
+
+#[derive(Debug, Clone)]
+pub struct Builder {
+    pub(crate) canister_name: String,
+    pub(crate) canister_id: Option<Principal>,
+    pub(crate) candid_path: Option<PathBuf>,
+    pub(crate) out_dir: Option<PathBuf>,
 }
 
-impl Config {
-    pub fn new(canister_name: &str) -> Self {
-        let (candid_path, canister_id) = resolve_candid_path_and_canister_id(canister_name);
+impl Builder {
+    pub fn new<S>(canister_name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self {
+            canister_name: canister_name.into(),
+            canister_id: None,
+            candid_path: None,
+            out_dir: None,
+        }
+    }
+
+    pub fn canister_id<S>(&mut self, canister_id: S) -> &mut Self
+    where
+        S: Into<Principal>,
+    {
+        self.canister_id = Some(canister_id.into());
+        self
+    }
+
+    pub fn candid_path<S>(&mut self, path: S) -> &mut Self
+    where
+        S: Into<PathBuf>,
+    {
+        self.candid_path = Some(path.into());
+        self
+    }
+
+    pub fn out_dir<S>(&mut self, path: S) -> &mut Self
+    where
+        S: Into<PathBuf>,
+    {
+        self.out_dir = Some(path.into());
+        self
+    }
+}
+
+impl Builder {
+    pub fn generate_consumer(&self) -> Result<(), IcCdkBindgenError> {
+        let (candid_path_env, canister_id_env) =
+            resolve_candid_path_and_canister_id(&self.canister_name);
+        let candid_path = self.candid_path.clone().unwrap_or(candid_path_env);
+        let canister_id = self.canister_id.unwrap_or(canister_id_env);
+
         let mut binding = code_generator::Config::new();
         binding
             // User will depend on candid crate directly
             .set_candid_crate("candid".to_string())
             .set_canister_id(canister_id)
-            .set_service_name(canister_name.to_string())
-            .set_target(code_generator::Target::CanisterCall);
+            .set_service_name(self.canister_name.to_string())
+            .set_target(code_generator::Target::Consumer);
 
-        Config {
-            canister_name: canister_name.to_string(),
-            candid_path,
-            skip_existing_files: false,
-            binding,
-        }
+        let (env, actor) = pretty_check_file(&candid_path).expect("Cannot parse candid file");
+        let content = code_generator::compile(&binding, &env, &actor);
+        let out_dir = self.out_dir.clone().map(Ok).unwrap_or_else(|| {
+            env::var_os("OUT_DIR")
+                .ok_or_else(|| {
+                    IcCdkBindgenError::Custom("OUT_DIR environment variable is not set".to_string())
+                })
+                .map(PathBuf::from)
+        })?;
+        let consumer_dir = out_dir.join("consumer");
+        fs::create_dir_all(&consumer_dir)?;
+
+        let generated_path = consumer_dir.join(format!("{}.rs", &self.canister_name));
+        let mut file = fs::File::create(generated_path)?;
+        file.write_all(content.as_bytes())?;
+        Ok(())
     }
 }
 
@@ -91,49 +146,4 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
         .unwrap_or_else(|_| panic!("Invalid principal: {}", &canister_id_str));
 
     (candid_path, canister_id)
-}
-
-#[derive(Default)]
-pub struct Builder {
-    configs: Vec<Config>,
-}
-
-impl Builder {
-    pub fn new() -> Self {
-        Builder {
-            configs: Vec::new(),
-        }
-    }
-    pub fn add(&mut self, config: Config) -> &mut Self {
-        self.configs.push(config);
-        self
-    }
-    pub fn build(self, out_path: Option<PathBuf>) {
-        let out_path = out_path.unwrap_or_else(|| {
-            let manifest_dir =
-                PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("Cannot find manifest dir"));
-            manifest_dir.join("src").join("declarations")
-        });
-        fs::create_dir_all(&out_path).unwrap();
-        for conf in self.configs.iter() {
-            let (env, actor) =
-                pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
-            let content = code_generator::compile(&conf.binding, &env, &actor);
-            let generated_path = out_path.join(format!("{}.rs", conf.canister_name));
-            if !(conf.skip_existing_files && generated_path.exists()) {
-                fs::write(generated_path, content).expect("Cannot store generated binding");
-            }
-        }
-        let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
-        module.write_all(b"#![allow(unused_imports)]\n").unwrap();
-        module
-            .write_all(b"#![allow(non_upper_case_globals)]\n")
-            .unwrap();
-        module.write_all(b"#![allow(non_snake_case)]\n").unwrap();
-        for conf in self.configs.iter() {
-            module.write_all(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
-            let line = format!("pub mod {};\n", conf.canister_name);
-            module.write_all(line.as_bytes()).unwrap();
-        }
-    }
 }
