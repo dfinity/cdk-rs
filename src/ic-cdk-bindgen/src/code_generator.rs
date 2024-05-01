@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 pub enum Target {
     Consumer,
     Provider,
-    TypeOnly,
+    Type,
 }
 
 #[derive(Clone)]
@@ -304,7 +304,7 @@ fn pp_function<'a>(config: &Config, id: &'a str, func: &'a Function) -> RcDoc<'a
     let arg_prefix = str(match config.target {
         Target::Consumer => "&self",
         Target::Provider => unimplemented!(),
-        Target::TypeOnly => unimplemented!(),
+        Target::Type => unimplemented!(),
     });
     let args = concat(
         std::iter::once(arg_prefix).chain(
@@ -322,7 +322,7 @@ fn pp_function<'a>(config: &Config, id: &'a str, func: &'a Function) -> RcDoc<'a
             ")",
         ),
         Target::Provider => unimplemented!(),
-        Target::TypeOnly => unimplemented!(),
+        Target::Type => unimplemented!(),
     };
     let sig = kwd("pub async fn")
         .append(name)
@@ -340,14 +340,14 @@ fn pp_function<'a>(config: &Config, id: &'a str, func: &'a Function) -> RcDoc<'a
                 .append(").await")
         }
         Target::Provider => unimplemented!(),
-        Target::TypeOnly => unimplemented!(),
+        Target::Type => unimplemented!(),
     };
     sig.append(enclose_space("{", body, "}"))
 }
 
 fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<'a> {
     // TODO: currently we only generate actor for consumer
-    if matches!(config.target, Target::TypeOnly | Target::Provider) {
+    if matches!(config.target, Target::Type | Target::Provider) {
         return RcDoc::nil();
     }
     let serv = env.as_service(actor).unwrap();
@@ -362,12 +362,12 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
     let service_def = match config.target {
         Target::Consumer => format!("pub struct {}(pub Principal);", struct_name),
         Target::Provider => unimplemented!(),
-        Target::TypeOnly => unimplemented!(),
+        Target::Type => unimplemented!(),
     };
     let service_impl = match config.target {
         Target::Consumer => format!("impl {} ", struct_name),
         Target::Provider => unimplemented!(),
-        Target::TypeOnly => unimplemented!(),
+        Target::Type => unimplemented!(),
     };
     let res = RcDoc::text(service_def)
         .append(RcDoc::hardline())
@@ -391,7 +391,7 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
                 config.service_name, struct_name, struct_name
             ),
             Target::Provider => unimplemented!(),
-            Target::TypeOnly => unimplemented!(),
+            Target::Type => unimplemented!(),
         };
         res.append(id).append(RcDoc::hardline()).append(instance)
     } else {
@@ -412,7 +412,7 @@ use {}::{{self, CandidType, Deserialize, Principal, Encode, Decode}};
         + match &config.target {
             Target::Consumer => "use ic_cdk::api::call::CallResult as Result;\n",
             Target::Provider => "",
-            Target::TypeOnly => "",
+            Target::Type => "",
         };
     let (env, actor) = nominalize_all(env, actor);
     let def_list: Vec<_> = if let Some(actor) = &actor {

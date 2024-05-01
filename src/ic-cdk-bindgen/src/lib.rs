@@ -88,6 +88,14 @@ impl Builder {
         file.write_all(content.as_bytes())?;
         Ok(())
     }
+
+    pub fn generate_provider(&self) -> Result<(), IcCdkBindgenError> {
+        unimplemented!()
+    }
+
+    pub fn generate_type(&self) -> Result<(), IcCdkBindgenError> {
+        unimplemented!()
+    }
 }
 
 /// Resolve the candid path and canister id from environment variables.
