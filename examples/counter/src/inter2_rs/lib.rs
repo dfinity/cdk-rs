@@ -1,7 +1,9 @@
 use ic_cdk::update;
 
-mod declarations;
-use declarations::inter_mo::inter_mo;
+mod inter_mo {
+    include!(concat!(env!("OUT_DIR"), "/consumer/inter_mo.rs"));
+}
+use inter_mo::inter_mo;
 
 #[update]
 async fn read() -> candid::Nat {
