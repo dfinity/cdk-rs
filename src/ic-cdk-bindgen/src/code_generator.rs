@@ -5,7 +5,7 @@ use convert_case::{Case, Casing};
 use pretty::RcDoc;
 use std::collections::BTreeSet;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum Target {
     Consumer,
@@ -15,7 +15,6 @@ pub enum Target {
 
 #[derive(Clone)]
 pub struct Config {
-    candid_crate: String,
     canister_id: Option<candid::Principal>,
     service_name: String,
     target: Target,
@@ -23,15 +22,10 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Config {
-            candid_crate: "candid".to_string(),
             canister_id: None,
             service_name: "service".to_string(),
             target: Target::Consumer,
         }
-    }
-    pub fn set_candid_crate(&mut self, name: String) -> &mut Self {
-        self.candid_crate = name;
-        self
     }
     /// Only generates SERVICE struct if canister_id is not provided
     pub fn set_canister_id(&mut self, id: candid::Principal) -> &mut Self {
@@ -400,20 +394,19 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
 }
 
 pub fn compile(config: &Config, env: &TypeEnv, actor: &Option<Type>) -> String {
-    let header = format!(
-        r#"// This is an experimental feature to generate Rust binding from Candid.
+    let header = r#"// This is an experimental feature to generate Rust binding from Candid.
 // You may want to manually adjust some of the types.
 #[allow(unused_imports)]
-use {}::{{self, CandidType, Deserialize, Principal, Encode, Decode}};
-"#,
-        config.candid_crate
-    );
+use candid::{{self, CandidType, Deserialize, Principal, Encode, Decode}};
+"#
+    .to_string();
     let header = header
         + match &config.target {
             Target::Consumer => "use ic_cdk::api::call::CallResult as Result;\n",
             Target::Provider => "",
             Target::Type => "",
         };
+
     let (env, actor) = nominalize_all(env, actor);
     let def_list: Vec<_> = if let Some(actor) = &actor {
         chase_actor(&env, actor).unwrap()
@@ -424,12 +417,17 @@ use {}::{{self, CandidType, Deserialize, Principal, Encode, Decode}};
 
     let defs = pp_defs(&env, &def_list, &recs);
 
-    let doc = match &actor {
-        None => defs,
-        Some(actor) => {
-            let actor = pp_actor(config, &env, actor);
-            defs.append(actor)
+    let doc = match config.target {
+        Target::Consumer => {
+            if let Some(actor) = &actor {
+                let actor = pp_actor(config, &env, actor);
+                defs.append(actor)
+            } else {
+                defs
+            }
         }
+        Target::Provider => defs,
+        Target::Type => defs,
     };
     let doc = RcDoc::text(header).append(RcDoc::line()).append(doc);
     doc.pretty(LINE_WIDTH).to_string()
