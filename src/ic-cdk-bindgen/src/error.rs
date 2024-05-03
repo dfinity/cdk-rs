@@ -5,6 +5,15 @@ pub enum IcCdkBindgenError {
     #[error("Custom error: {0}")]
     Custom(String),
 
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    #[error("Io error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Principal error: {0}")]
+    Principal(#[from] candid::types::principal::PrincipalError),
+
+    #[error("Environment variable not found: {var}")]
+    EnvVarNotFound {
+        var: String,
+        source: std::env::VarError,
+    },
 }
