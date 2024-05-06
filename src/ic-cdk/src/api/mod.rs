@@ -193,3 +193,15 @@ pub fn set_global_timer(timestamp: u64) -> u64 {
     // SAFETY: ic0.global_timer_set is always safe to call.
     unsafe { ic0::global_timer_set(timestamp as i64) as u64 }
 }
+
+/// Checks if in replicated execution.
+///
+/// The canister can check whether it is currently running in replicated or non replicated execution.
+pub fn in_replicated_execution() -> bool {
+    // SAFETY: ic0.in_replicated_execution is always safe to call.
+    match unsafe { ic0::in_replicated_execution() } {
+        0 => false,
+        1 => true,
+        _ => unreachable!(),
+    }
+}

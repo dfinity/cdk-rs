@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Upgrade `ic0` to 0.23.0 which includes the new system API `in_replicated_execution`.
+
 ## [0.1.3] - 2024-04-22
 
 ### Added
@@ -17,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Includes new system API `cycles_burn128`. (#434)
+
 ## [0.1.1] - 2023-09-19
 
 ### Added
