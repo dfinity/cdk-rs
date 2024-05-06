@@ -182,6 +182,14 @@ fn test_api_call() {
         )
         .unwrap();
     assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
+
+    let (result,): (bool,) = call_candid(&env, canister_id, "update_is_replicated", ())
+        .expect("Failed to call update_is_replicated");
+    assert!(result);
+
+    let (result,): (bool,) = query_candid(&env, canister_id, "query_is_not_replicated", ())
+        .expect("Failed to call query_is_not_replicated");
+    assert!(!result);
 }
 
 #[test]
