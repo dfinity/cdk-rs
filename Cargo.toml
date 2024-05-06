@@ -20,7 +20,7 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "src/ic0", version = "0.21.1" }
+ic0 = { path = "src/ic0", version = "0.23.0" }
 ic-cdk = { path = "src/ic-cdk", version = "0.13.2"}
 ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.7.0" }
 
