@@ -4,4 +4,6 @@ type List = opt record { head: blob; tail: List };
 service : {
   f:(my_type, vec Profile)->(List) composite_query;
   g:() -> ();
+  inner:()->();
+  missing:() -> () query;
 }

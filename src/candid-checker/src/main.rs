@@ -1,6 +1,6 @@
+use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
-use anyhow::Result;
 
 use candid_checker::check_rust;
 
