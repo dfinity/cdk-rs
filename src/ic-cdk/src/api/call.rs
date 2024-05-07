@@ -99,17 +99,17 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
                 let err_code = unsafe {
                     ic0::call_new(
-                        callee.as_ptr() as i32,
-                        callee.len() as i32,
-                        method.as_ptr() as i32,
-                        method.len() as i32,
+                        callee.as_ptr() as isize,
+                        callee.len() as isize,
+                        method.as_ptr() as isize,
+                        method.len() as isize,
                         callback::<T> as usize as i32,
                         state_ptr as i32,
                         callback::<T> as usize as i32,
                         state_ptr as i32,
                     );
 
-                    ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
+                    ic0::call_data_append(args.as_ptr() as isize, args.len() as isize);
                     add_payment(payment);
                     ic0::call_on_cleanup(cleanup::<T> as usize as i32, state_ptr as i32);
                     ic0::call_perform()
@@ -263,17 +263,17 @@ pub fn notify_raw(
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
-            callee.as_ptr() as i32,
-            callee.len() as i32,
-            method.as_ptr() as i32,
-            method.len() as i32,
+            callee.as_ptr() as isize,
+            callee.len() as isize,
+            method.as_ptr() as isize,
+            method.len() as isize,
             /* reply_fun = */ -1,
             /* reply_env = */ -1,
             /* reject_fun = */ -1,
             /* reject_env = */ -1,
         );
         add_payment(payment);
-        ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+        ic0::call_data_append(args_raw.as_ptr() as isize, args_raw.len() as isize);
         ic0::call_perform()
     };
     match err_code {
@@ -582,11 +582,11 @@ pub fn reject_code() -> RejectionCode {
 /// Returns the rejection message.
 pub fn reject_message() -> String {
     // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
-    let mut bytes = vec![0u8; len as usize];
+    let len = unsafe { ic0::msg_reject_msg_size() as usize };
+    let mut bytes = vec![0u8; len];
     // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
     unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as isize, 0, len as isize);
     }
     String::from_utf8_lossy(&bytes).into_owned()
 }
@@ -596,7 +596,7 @@ pub fn reject(message: &str) {
     let err_message = message.as_bytes();
     // SAFETY: `err_message`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
     unsafe {
-        ic0::msg_reject(err_message.as_ptr() as i32, err_message.len() as i32);
+        ic0::msg_reject(err_message.as_ptr() as isize, err_message.len() as isize);
     }
 }
 
@@ -608,7 +608,7 @@ impl std::io::Write for CallReplyWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         // SAFETY: buf, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reply_data_append.
         unsafe {
-            ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32);
+            ic0::msg_reply_data_append(buf.as_ptr() as isize, buf.len() as isize);
         }
         Ok(buf.len())
     }
@@ -640,7 +640,7 @@ pub fn msg_cycles_available128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
     unsafe {
-        ic0::msg_cycles_available128(&mut recv as *mut u128 as i32);
+        ic0::msg_cycles_available128(&mut recv as *mut u128 as isize);
     }
     recv
 }
@@ -660,7 +660,7 @@ pub fn msg_cycles_refunded128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
     unsafe {
-        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as i32);
+        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as isize);
     }
     recv
 }
@@ -682,7 +682,7 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
     let mut recv = 0u128;
     // SAFETY: `recv` is writable and sixteen bytes wide, and therefore safe to pass to ic0.msg_cycles_accept128
     unsafe {
-        ic0::msg_cycles_accept128(high as i64, low as i64, &mut recv as *mut u128 as i32);
+        ic0::msg_cycles_accept128(high as i64, low as i64, &mut recv as *mut u128 as isize);
     }
     recv
 }
@@ -690,13 +690,13 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 /// Returns the argument data as bytes.
 pub fn arg_data_raw() -> Vec<u8> {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    let len: usize = unsafe { ic0::msg_arg_data_size() as usize };
+    let len = unsafe { ic0::msg_arg_data_size() as usize };
     let mut bytes = Vec::with_capacity(len);
     // SAFETY:
     // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
     // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
     unsafe {
-        ic0::msg_arg_data_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+        ic0::msg_arg_data_copy(bytes.as_mut_ptr() as isize, 0, len as isize);
         bytes.set_len(len);
     }
     bytes
@@ -712,7 +712,7 @@ pub fn arg_data_raw_size() -> usize {
 pub fn reply_raw(buf: &[u8]) {
     if !buf.is_empty() {
         // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
-        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as i32, buf.len() as i32) }
+        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as isize, buf.len() as isize) }
     };
     // SAFETY: ic0.msg_reply is always safe to call.
     unsafe { ic0::msg_reply() };
@@ -782,11 +782,11 @@ pub fn accept_message() {
 /// Returns the name of current canister method.
 pub fn method_name() -> String {
     // SAFETY: ic0.msg_method_name_size is always safe to call.
-    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
-    let mut bytes = vec![0u8; len as usize];
+    let len = unsafe { ic0::msg_method_name_size() as usize };
+    let mut bytes = vec![0u8; len];
     // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
     unsafe {
-        ic0::msg_method_name_copy(bytes.as_mut_ptr() as i32, 0, len as i32);
+        ic0::msg_method_name_copy(bytes.as_mut_ptr() as isize, 0, len as isize);
     }
     String::from_utf8_lossy(&bytes).into_owned()
 }
