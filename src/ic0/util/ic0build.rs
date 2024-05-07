@@ -77,7 +77,7 @@ impl Parse for SystemAPI {
 
 fn type_supported(ty: &TypePath) -> Result<()> {
     let supported = match ty.path.get_ident() {
-        Some(i) => i == "i32" || i == "i64",
+        Some(i) => i == "i32" || i == "i64" || i == "I",
         None => false,
     };
     match supported {
@@ -119,6 +119,12 @@ fn main() {
         r#"// This file is generated from ic0.txt.
 // Don't manually modify it.
 #[cfg(target_arch = "wasm32")]
+pub type I = i32;
+
+#[cfg(target_arch = "wasm64")]
+pub type I = i64;
+
+#[cfg(target_family = "wasm")]
 #[link(wasm_import_module = "ic0")]
 extern "C" {{"#,
     )
@@ -147,11 +153,13 @@ extern "C" {{"#,
     writeln!(
         f,
         r#"
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
-mod non_wasm{{"#,
+mod non_wasm{{
+    pub type I = i32;
+"#,
     )
     .unwrap();
 
@@ -182,7 +190,7 @@ mod non_wasm{{"#,
         f,
         r#"}}
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub use non_wasm::*;
 "#
     )
