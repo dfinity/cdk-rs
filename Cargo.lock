@@ -234,9 +234,9 @@ dependencies = [
  "anyhow",
  "binread",
  "byteorder",
- "candid_derive",
+ "candid_derive 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
- "ic_principal",
+ "ic_principal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "leb128",
  "num-bigint",
  "num-traits",
@@ -246,6 +246,40 @@ dependencies = [
  "serde_bytes",
  "stacker",
  "thiserror",
+]
+
+[[package]]
+name = "candid"
+version = "0.10.8"
+source = "git+https://github.com/dfinity/candid.git?branch=configs#221422f495fa7ec12df32bd4e0fd40dd1d9f0704"
+dependencies = [
+ "anyhow",
+ "binread",
+ "byteorder",
+ "candid_derive 0.6.6 (git+https://github.com/dfinity/candid.git?branch=configs)",
+ "hex",
+ "ic_principal 0.1.1 (git+https://github.com/dfinity/candid.git?branch=configs)",
+ "leb128",
+ "num-bigint",
+ "num-traits",
+ "paste",
+ "pretty",
+ "serde",
+ "serde_bytes",
+ "stacker",
+ "thiserror",
+]
+
+[[package]]
+name = "candid-checker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "candid_parser 0.2.0-beta.0",
+ "clap",
+ "codespan-reporting",
+ "proc-macro2",
+ "syn 2.0.60",
 ]
 
 [[package]]
@@ -272,13 +306,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "candid_derive"
+version = "0.6.6"
+source = "git+https://github.com/dfinity/candid.git?branch=configs#221422f495fa7ec12df32bd4e0fd40dd1d9f0704"
+dependencies = [
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.60",
+]
+
+[[package]]
 name = "candid_parser"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48a3da76f989cd350b7342c64c6c6008341bb6186f6832ef04e56dc50ba0fd76"
 dependencies = [
  "anyhow",
- "candid",
+ "candid 0.10.7",
  "codespan-reporting",
  "convert_case",
  "hex",
@@ -288,6 +333,29 @@ dependencies = [
  "num-bigint",
  "pretty",
  "thiserror",
+]
+
+[[package]]
+name = "candid_parser"
+version = "0.2.0-beta.0"
+source = "git+https://github.com/dfinity/candid.git?branch=configs#221422f495fa7ec12df32bd4e0fd40dd1d9f0704"
+dependencies = [
+ "anyhow",
+ "candid 0.10.8",
+ "codespan-reporting",
+ "convert_case",
+ "handlebars",
+ "hex",
+ "lalrpop",
+ "lalrpop-util",
+ "logos",
+ "num-bigint",
+ "pretty",
+ "proc-macro2",
+ "serde",
+ "syn 2.0.60",
+ "thiserror",
+ "toml",
 ]
 
 [[package]]
@@ -890,6 +958,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "handlebars"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d08485b96a0e6393e9e4d1b8d48cf74ad6c063cd905eb33f42c1ce3f0377539b"
+dependencies = [
+ "log",
+ "pest",
+ "pest_derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -930,7 +1012,7 @@ name = "ic-cdk"
 version = "0.13.2"
 dependencies = [
  "anyhow",
- "candid",
+ "candid 0.10.7",
  "ic-cdk-macros",
  "ic0",
  "rstest",
@@ -944,8 +1026,8 @@ dependencies = [
 name = "ic-cdk-bindgen"
 version = "0.1.3"
 dependencies = [
- "candid",
- "candid_parser",
+ "candid 0.10.7",
+ "candid_parser 0.1.4",
  "convert_case",
  "pretty",
 ]
@@ -954,7 +1036,7 @@ dependencies = [
 name = "ic-cdk-e2e-tests"
 version = "0.1.0"
 dependencies = [
- "candid",
+ "candid 0.10.7",
  "cargo_metadata",
  "escargot",
  "futures",
@@ -971,7 +1053,7 @@ dependencies = [
 name = "ic-cdk-macros"
 version = "0.13.2"
 dependencies = [
- "candid",
+ "candid 0.10.7",
  "proc-macro2",
  "quote",
  "serde",
@@ -996,7 +1078,7 @@ name = "ic-certified-map"
 version = "0.4.0"
 dependencies = [
  "bincode",
- "candid",
+ "candid 0.10.7",
  "hex",
  "ic-cdk",
  "serde",
@@ -1009,7 +1091,7 @@ dependencies = [
 name = "ic-ledger-types"
 version = "0.10.0"
 dependencies = [
- "candid",
+ "candid 0.10.7",
  "crc32fast",
  "hex",
  "ic-cdk",
@@ -1024,7 +1106,7 @@ version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8e05a81e0cbdf178228d72ace06c60ac7fa99927b49a238f9ccf5ef82eaced6"
 dependencies = [
- "candid",
+ "candid 0.10.7",
  "ciborium",
  "serde",
  "serde_bytes",
@@ -1043,6 +1125,19 @@ name = "ic_principal"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1762deb6f7c8d8c2bdee4b6c5a47b60195b74e9b5280faa5ba29692f8e17429c"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "data-encoding",
+ "serde",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "ic_principal"
+version = "0.1.1"
+source = "git+https://github.com/dfinity/candid.git?branch=configs#221422f495fa7ec12df32bd4e0fd40dd1d9f0704"
 dependencies = [
  "arbitrary",
  "crc32fast",
@@ -1350,6 +1445,51 @@ name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
+
+[[package]]
+name = "pest"
+version = "2.7.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "560131c633294438da9f7c4b08189194b20946c8274c6b9e38881a7874dc8ee8"
+dependencies = [
+ "memchr",
+ "thiserror",
+ "ucd-trie",
+]
+
+[[package]]
+name = "pest_derive"
+version = "2.7.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26293c9193fbca7b1a3bf9b79dc1e388e927e6cacaa78b4a3ab705a1d3d41459"
+dependencies = [
+ "pest",
+ "pest_generator",
+]
+
+[[package]]
+name = "pest_generator"
+version = "2.7.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ec22af7d3fb470a85dd2ca96b7c577a1eb4ef6f1683a9fe9a8c16e136c04687"
+dependencies = [
+ "pest",
+ "pest_meta",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.60",
+]
+
+[[package]]
+name = "pest_meta"
+version = "2.7.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7a240022f37c361ec1878d646fc5b7d7c4d28d5946e1a80ad5a7a4f4ca0bdcd"
+dependencies = [
+ "once_cell",
+ "pest",
+ "sha2",
+]
 
 [[package]]
 name = "petgraph"
@@ -1908,6 +2048,12 @@ name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
+
+[[package]]
+name = "ucd-trie"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9"
 
 [[package]]
 name = "unicode-ident"

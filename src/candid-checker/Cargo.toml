@@ -1,0 +1,27 @@
+[package]
+name = "candid-checker"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CLI tool to check if Rust code implements a given did file"
+
+[[bin]]
+name = "candid-checker"
+path = "src/main.rs"
+required-features = ["exe"]
+
+[dependencies]
+syn = { version = "2.0", features = ["full", "visit", "extra-traits"] }
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
+candid_parser = { git = "https://github.com/dfinity/candid.git", branch = "configs" }
+codespan-reporting = "0.11"
+
+clap = { version = "4", features = ["derive"], optional = true }
+anyhow = { version = "1.0", optional = true }
+
+[features]
+exe = ["dep:clap", "dep:anyhow"]
+
