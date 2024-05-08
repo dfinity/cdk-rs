@@ -18,6 +18,9 @@ pub async fn f(test: MyType, argument: Vec/* whatever */<Profile>) -> (List, u8)
 
 fn not_candid() {}
 
+#[init]
+fn take_init() {}
+
 mod A {
   #[query(composite = true)]
   async fn inner(a: List) -> Result<List> {}

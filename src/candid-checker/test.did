@@ -1,7 +1,7 @@
 type my_type = principal;
 type Profile = record { name: text; age: nat8; country: text };
 type List = opt record { head: blob; tail: List };
-service : {
+service : (Profile) -> {
   f:(my_type, vec Profile)->(List) composite_query;
   g:() -> ();
   inner:()->();

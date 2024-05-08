@@ -140,10 +140,7 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
             let args = m.args.iter().map(|x| x.1.clone()).collect::<Vec<_>>();
             let (mut labs, need_pp) = check_args(&func.args, &args, &func.args_span);
             if need_pp {
-                let mut pp = pp_args(&m.args);
-                if pp.is_empty() {
-                    pp = "remove the input argument".to_string();
-                }
+                let pp = pp_args(&m.args);
                 labs.push(
                     Label::secondary((), func.args_span.clone())
                         .with_message(format!("Suggestion: {}", pp)),
@@ -188,8 +185,13 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
         }
         res.push(diag.with_labels(labels).with_notes(notes));
     }
+    if let Some(init_args) = &candid.init_args {
+        let diags = check_init_args(init_args, &mut ids);
+        res.extend(diags);
+    }
     for (_, func) in ids {
-        let label = Label::secondary((), func.fn_span.clone());
+        let span = func.mode.span().byte_range().start..func.fn_span.end;
+        let label = Label::secondary((), span);
         let diag = Diagnostic::warning()
             .with_message(format!(
                 "Function {} doesn't appear in Candid file",
@@ -199,6 +201,37 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
         res.push(diag);
     }
     res
+}
+fn check_init_args(
+    candid: &[(String, String)],
+    rust: &mut BTreeMap<String, &CDKMethod>,
+) -> Vec<Diagnostic<()>> {
+    let diag = Diagnostic::error().with_message("Checking init args");
+    let mut notes = Vec::new();
+    let mut labels = Vec::new();
+    if let Some((name, func)) = rust.iter().find(|(_, m)| m.mode == "init") {
+        let args = candid.iter().map(|x| x.1.clone()).collect::<Vec<_>>();
+        let (mut labs, need_pp) = check_args(&func.args, &args, &func.args_span);
+        if need_pp {
+            let pp = pp_args(candid);
+            labs.push(
+                Label::secondary((), func.args_span.clone())
+                    .with_message(format!("Suggestion: {}", pp)),
+            );
+        }
+        labels.extend(labs);
+        rust.remove(&name.clone());
+    } else {
+        notes.push(format!(
+            "Init args is missing from Rust code. Use this signature to get started:\n{}",
+            pp_init_args(candid)
+        ));
+    }
+    if notes.is_empty() && labels.is_empty() {
+        Vec::new()
+    } else {
+        vec![diag.with_notes(notes).with_labels(labels)]
+    }
 }
 fn check_args(
     rust: &[syn::Type],
@@ -223,10 +256,12 @@ fn check_args(
     (labels, false)
 }
 fn pp_args(args: &[(String, String)]) -> String {
-    args.iter()
+    let body = args
+        .iter()
         .map(|(id, ty)| format!("{id}: {ty}"))
         .collect::<Vec<_>>()
-        .join(", ")
+        .join(", ");
+    format!("({body})")
 }
 fn pp_rets(rets: &[String]) -> String {
     match rets.len() {
@@ -234,6 +269,9 @@ fn pp_rets(rets: &[String]) -> String {
         1 => format!("-> {}", rets[0]),
         _ => format!("-> ({})", rets.join(", ")),
     }
+}
+fn pp_init_args(args: &[(String, String)]) -> String {
+    format!("#[init]\nfn init{}", pp_args(args))
 }
 fn pp_attr(m: &Method) -> String {
     let mode = if m.mode == "update" {
@@ -257,7 +295,7 @@ fn pp_attr(m: &Method) -> String {
 }
 fn pp_func(m: &Method) -> String {
     format!(
-        "{}\nfn {}({}) {}",
+        "{}\nfn {}{} {}",
         pp_attr(m),
         m.name,
         pp_args(&m.args),
@@ -332,6 +370,12 @@ fn get_cdk_function(attrs: &[Attribute], sig: &Signature) -> Option<CDKMethod> {
             _ => vec![*ty.clone()],
         },
     };
+    let args_span = sig.paren_token.span;
+    let args_span = args_span.open().byte_range().start..args_span.close().byte_range().end;
+    let mut rets_span = sig.output.span().byte_range();
+    if rets_span.end == 0 {
+        rets_span = args_span.end..args_span.end;
+    }
     mode.map(|mode| CDKMethod {
         func_name,
         export_name,
@@ -340,8 +384,8 @@ fn get_cdk_function(attrs: &[Attribute], sig: &Signature) -> Option<CDKMethod> {
         rets,
         mode,
         fn_span: fn_span.unwrap(),
-        args_span: sig.inputs.span().byte_range(),
-        rets_span: sig.output.span().byte_range(),
+        args_span,
+        rets_span,
     })
 }
 impl CDKMethod {
