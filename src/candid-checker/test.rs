@@ -13,7 +13,7 @@ pub struct List(Option<ListInner>);
 
 #[ic_cdk::update]
 #[candid_method(update)]
-pub async fn f(test: MyType, argument: Vec/* whatever */<Profile>) -> List {
+pub async fn f(test: MyType, argument: Vec/* whatever */<Profile>) -> (List, u8) {
 }
 
 fn not_candid() {}

@@ -1,4 +1,4 @@
-use candid_parser::bindings::rust::{emit_bindgen, Config, Output};
+use candid_parser::bindings::rust::{emit_bindgen, Config, Method, Output};
 use candid_parser::configs::Configs;
 use candid_parser::{utils::CandidSource, Result};
 use codespan_reporting::{
@@ -24,20 +24,32 @@ pub fn check_rust(rust: &Path, candid: &Path, config: &Option<PathBuf>) -> Resul
     let config: Configs = config.parse()?;
     let config = Config::new(config);
     let (output, unused) = emit_bindgen(&config, &env, &actor);
+    report_unused(unused);
     let name = rust.file_name().unwrap().to_str().unwrap();
     let source = fs::read_to_string(rust)?;
-    report_errors(name, &source, &output);
+    let rust = get_endpoint_from_rust_source(&source);
+    let diags = diff_did_and_rust(&output, &rust);
+    report_errors(name, &source, &diags);
     Ok(())
 }
-
-fn report_errors(name: &str, source: &str, candid: &Output) {
-    let rust = get_endpoint_from_rust_source(source);
-    let diags = diff_did_and_rust(candid, &rust);
+fn report_unused(unused: Vec<String>) {
+    if !unused.is_empty() {
+        let unused = unused
+            .iter()
+            .map(|x| format!("{x} is not used"))
+            .collect::<Vec<_>>();
+        let diag = Diagnostic::warning()
+            .with_message("Unused paths from the config file")
+            .with_notes(unused);
+        report_errors("config", "", &[diag]);
+    }
+}
+fn report_errors(name: &str, source: &str, diags: &[Diagnostic<()>]) {
     let writer = StandardStream::stderr(term::termcolor::ColorChoice::Auto);
     let config = term::Config::default();
     let file = SimpleFile::new(name, source);
     for diag in diags {
-        term::emit(&mut writer.lock(), &config, &file, &diag).unwrap();
+        term::emit(&mut writer.lock(), &config, &file, diag).unwrap();
     }
 }
 fn get_endpoint_from_rust_source(source: &str) -> Vec<CDKMethod> {
@@ -63,13 +75,14 @@ fn get_endpoint_from_rust_source(source: &str) -> Vec<CDKMethod> {
     let ast = syn::parse_file(source).unwrap();
     let mut visitor = FnVisitor(Vec::new());
     visitor.visit_file(&ast);
-    for m in &visitor.0 {
-        m.debug_print(source);
-    }
     visitor.0
 }
 fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic<()>> {
     let mut res = Vec::new();
+    let mut ids: BTreeMap<_, _> = rust_list
+        .iter()
+        .map(|m| (m.func_name.to_string(), m))
+        .collect();
     let rust: BTreeMap<_, _> = rust_list
         .iter()
         .map(|m| {
@@ -82,11 +95,12 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
         })
         .collect();
     for m in &candid.methods {
-        let diag = Diagnostic::error()
-            .with_message(format!("Error with Candid method {}", m.original_name));
+        let diag =
+            Diagnostic::error().with_message(format!("Checking Candid method {}", m.original_name));
         let mut labels = Vec::new();
         let mut notes = Vec::new();
         if let Some(func) = rust.get(&m.original_name) {
+            ids.remove(&func.func_name.to_string());
             // check function name
             if func.func_name != m.name {
                 labels.push(
@@ -124,13 +138,35 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
             }
             // check args
             let args = m.args.iter().map(|x| x.1.clone()).collect::<Vec<_>>();
-            labels.extend(check_args(&func.args, &args, &func.args_span));
-            labels.extend(check_args(&func.rets, &m.rets, &func.rets_span));
+            let (mut labs, need_pp) = check_args(&func.args, &args, &func.args_span);
+            if need_pp {
+                let mut pp = pp_args(&m.args);
+                if pp.is_empty() {
+                    pp = "remove the input argument".to_string();
+                }
+                labs.push(
+                    Label::secondary((), func.args_span.clone())
+                        .with_message(format!("Suggestion: {}", pp)),
+                );
+            }
+            labels.extend(labs);
+            let (mut labs, need_pp) = check_args(&func.rets, &m.rets, &func.rets_span);
+            if need_pp {
+                let mut pp = pp_rets(&m.rets);
+                if pp.is_empty() {
+                    pp = "remove the return type".to_string();
+                }
+                labs.push(
+                    Label::secondary((), func.rets_span.clone())
+                        .with_message(format!("Suggestion: {}", pp)),
+                );
+            }
+            labels.extend(labs);
             if !labels.is_empty() {
                 labels.push(Label::secondary((), func.fn_span.clone()));
             }
         } else {
-            if let Some(func) = rust_list.iter().find(|x| x.func_name == m.original_name) {
+            if let Some(func) = ids.remove(&m.original_name) {
                 let (_, meta) = func.export_name.as_ref().unwrap();
                 labels.push(
                     Label::primary((), meta.span().byte_range())
@@ -142,8 +178,8 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
                 );
             } else {
                 notes.push(format!(
-                    "method \"{}\" missing from Rust code",
-                    m.original_name
+                    "Method \"{}\" is missing from Rust code. Use this signature to get started:\n{}",
+                    m.original_name, pp_func(m),
                 ));
             }
         }
@@ -152,13 +188,27 @@ fn diff_did_and_rust(candid: &Output, rust_list: &[CDKMethod]) -> Vec<Diagnostic
         }
         res.push(diag.with_labels(labels).with_notes(notes));
     }
+    for (_, func) in ids {
+        let label = Label::secondary((), func.fn_span.clone());
+        let diag = Diagnostic::warning()
+            .with_message(format!(
+                "Function {} doesn't appear in Candid file",
+                func.func_name
+            ))
+            .with_labels(vec![label]);
+        res.push(diag);
+    }
     res
 }
-fn check_args(rust: &[syn::Type], candid: &[String], span: &Range<usize>) -> Vec<Label<()>> {
+fn check_args(
+    rust: &[syn::Type],
+    candid: &[String],
+    span: &Range<usize>,
+) -> (Vec<Label<()>>, bool) {
     let mut labels = Vec::new();
     if rust.len() != candid.len() {
         labels.push(Label::primary((), span.clone()).with_message("Argument count mismatch"));
-        return labels;
+        return (labels, true);
     }
     let args = rust.iter().zip(candid.iter());
     for (rust_arg, candid_arg) in args {
@@ -170,7 +220,49 @@ fn check_args(rust: &[syn::Type], candid: &[String], span: &Range<usize>) -> Vec
             );
         }
     }
-    labels
+    (labels, false)
+}
+fn pp_args(args: &[(String, String)]) -> String {
+    args.iter()
+        .map(|(id, ty)| format!("{id}: {ty}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+fn pp_rets(rets: &[String]) -> String {
+    match rets.len() {
+        0 => "".to_string(),
+        1 => format!("-> {}", rets[0]),
+        _ => format!("-> ({})", rets.join(", ")),
+    }
+}
+fn pp_attr(m: &Method) -> String {
+    let mode = if m.mode == "update" {
+        "update"
+    } else {
+        "query"
+    };
+    let mut attr = Vec::new();
+    if m.mode == "composite_query" {
+        attr.push("composite = true".to_string());
+    }
+    if m.original_name != m.name {
+        attr.push(format!("name = \"{}\"", m.original_name.escape_debug()));
+    }
+    let attr = if attr.is_empty() {
+        String::new()
+    } else {
+        format!("({})", attr.join(", "))
+    };
+    format!("#[{mode}{attr}]")
+}
+fn pp_func(m: &Method) -> String {
+    format!(
+        "{}\nfn {}({}) {}",
+        pp_attr(m),
+        m.name,
+        pp_args(&m.args),
+        pp_rets(&m.rets)
+    )
 }
 struct CDKMethod {
     func_name: syn::Ident,

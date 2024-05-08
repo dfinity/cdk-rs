@@ -5,5 +5,5 @@ service : {
   f:(my_type, vec Profile)->(List) composite_query;
   g:() -> ();
   inner:()->();
-  missing:() -> () query;
+  missing:(int) -> (nat) query;
 }
