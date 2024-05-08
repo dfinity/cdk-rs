@@ -529,6 +529,20 @@ fn call_management() {
 }
 
 #[test]
+#[ignore]
+fn call_management64() {
+    let env = env();
+    let wasm = ic_cdk_e2e_tests::cargo_build_canister64("management_caller");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 100_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![], None);
+    let () = call_candid(&env, canister_id, "execute_main_methods", ())
+        .expect("Error calling execute_main_methods");
+    let () = call_candid(&env, canister_id, "execute_provisional_methods", ())
+        .expect("Error calling execute_provisional_methods");
+}
+
+#[test]
 fn test_chunk() {
     let env = env();
     let wasm = cargo_build_canister("chunk");
