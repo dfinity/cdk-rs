@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.4] - 2024-05-10
+
 ### Added
 
 - Upgrade `ic0` to 0.23.0 which includes the new system API `in_replicated_execution`.
