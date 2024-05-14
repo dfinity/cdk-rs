@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.13.3] - 2024-05-10
+
 ### Added
 
 - Add `wasm_memory_limit` to the management canister API types: (#483)
