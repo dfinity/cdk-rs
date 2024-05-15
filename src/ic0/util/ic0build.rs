@@ -112,7 +112,7 @@ impl Parse for IC0 {
 
 fn main() {
     let s = include_str!("../ic0.txt");
-    let s = s.replace("I", "isize");
+    let s = s.replace('I', "isize");
     let ic0: IC0 = syn::parse_str(&s).unwrap();
 
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
