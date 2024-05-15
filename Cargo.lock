@@ -931,8 +931,8 @@ dependencies = [
  "rstest",
  "serde",
  "serde_bytes",
- "slotmap 1.0.7",
  "slotmap 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slotmap 1.0.7 (git+https://github.com/lwshang/slotmap?branch=key32)",
  "trybuild",
 ]
 
@@ -1716,6 +1716,8 @@ checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
 [[package]]
 name = "slotmap"
 version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbff4acf519f630b3a3ddcfaea6c06b42174d9a44bc70c620e9ed1649d58b82a"
 dependencies = [
  "version_check",
 ]
@@ -1723,8 +1725,7 @@ dependencies = [
 [[package]]
 name = "slotmap"
 version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbff4acf519f630b3a3ddcfaea6c06b42174d9a44bc70c620e9ed1649d58b82a"
+source = "git+https://github.com/lwshang/slotmap?branch=key32#2d2f955260cbfdd0599b9789727c3dd24237ae4b"
 dependencies = [
  "version_check",
 ]
