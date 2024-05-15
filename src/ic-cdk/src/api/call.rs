@@ -4,7 +4,6 @@ use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEnco
 use candid::{
     decode_args, encode_args, write_args, CandidType, DecoderConfig, Deserialize, Principal,
 };
-use core::panic;
 use serde::ser::Error;
 use slotmap32::{new_key_type, KeyData, SlotMap};
 use std::cell::RefCell;
@@ -12,7 +11,7 @@ use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
-// use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, RwLock, Weak};
 use std::task::{Context, Poll, Waker};
 
 /// Rejection code from calling another canister.
@@ -59,91 +58,92 @@ impl From<u32> for RejectionCode {
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
 // Internal state for the Future when sending a call.
-struct CallFutureState {
+struct CallFutureState<T: AsRef<[u8]>> {
     result: Option<CallResult<Vec<u8>>>,
     waker: Option<Waker>,
     id: Principal,
     method: String,
-    arg: Vec<u8>,
+    arg: T,
     payment: u128,
 }
 
-struct CallFuture {
+struct CallFuture<T: AsRef<[u8]>> {
+    state: Arc<RwLock<CallFutureState<T>>>,
     state_id: StateId,
 }
 
 new_key_type! { struct StateId;}
 
 thread_local! {
-    static STATES: RefCell<SlotMap<StateId, CallFutureState>> = RefCell::default();
+    // The inner map is a mapping from StateId to the pointer of Arc<RwLock<CallFutureState<T>>>
+    static STATES: RefCell<SlotMap<StateId, usize>> = RefCell::default();
 }
 
-impl Future for CallFuture {
+impl<T: AsRef<[u8]>> Future for CallFuture<T> {
     type Output = CallResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        // let self_ref = Pin::into_inner(self);
-        STATES.with(|states| {
-            let mut states = states.borrow_mut();
-            if let Some(state) = states.get_mut(self.state_id) {
-                if let Some(result) = state.result.take() {
-                    states.remove(self.state_id);
-                    Poll::Ready(result)
-                } else {
-                    if state.waker.is_none() {
-                        let state_id_u32 = self.state_id.0.as_ffi();
-                        let callee = state.id.as_slice();
-                        let method = &state.method;
-                        let args = &state.arg;
-                        let payment = state.payment;
-                        // SAFETY:
-                        // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                        // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                        // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-                        // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
-                        // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-                        // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-                        // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
-                        // ic0.call_perform is always safe to call.
-                        // callback and cleanup are safe to parameterize with T because:
-                        // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
-                        // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
-                        let err_code = unsafe {
-                            ic0::call_new(
-                                callee.as_ptr() as isize,
-                                callee.len() as isize,
-                                method.as_ptr() as isize,
-                                method.len() as isize,
-                                callback as usize as i32,
-                                state_id_u32 as i32,
-                                callback as usize as i32,
-                                state_id_u32 as i32,
-                            );
+        let self_ref = Pin::into_inner(self);
+        let state_id_u32 = self_ref.state_id.0.as_ffi();
+        let mut state = self_ref.state.write().unwrap();
 
-                            ic0::call_data_append(args.as_ptr() as isize, args.len() as isize);
-                            add_payment(payment);
-                            ic0::call_on_cleanup(cleanup as usize as i32, state_id_u32 as i32);
-                            ic0::call_perform()
-                        };
+        if let Some(result) = state.result.take() {
+            Poll::Ready(result)
+        } else {
+            if state.waker.is_none() {
+                let callee = state.id.as_slice();
+                let method = &state.method;
+                let args = state.arg.as_ref();
+                let payment = state.payment;
+                // SAFETY:
+                // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+                // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+                // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
+                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
+                // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+                // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
+                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
+                // ic0.call_perform is always safe to call.
+                // callback and cleanup are safe to parameterize with T because:
+                // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
+                // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
+                let err_code = unsafe {
+                    ic0::call_new(
+                        callee.as_ptr() as isize,
+                        callee.len() as isize,
+                        method.as_ptr() as isize,
+                        method.len() as isize,
+                        callback::<T> as usize as i32,
+                        state_id_u32 as i32,
+                        callback::<T> as usize as i32,
+                        state_id_u32 as i32,
+                    );
 
-                        // 0 is a special error code meaning call succeeded.
-                        if err_code != 0 {
-                            let result = Err((
-                                RejectionCode::from(err_code),
-                                "Couldn't send message".to_string(),
-                            ));
-                            state.result = Some(result.clone());
-                            states.remove(self.state_id);
-                            return Poll::Ready(result);
-                        }
-                    }
-                    state.waker = Some(context.waker().clone());
-                    Poll::Pending
+                    ic0::call_data_append(args.as_ptr() as isize, args.len() as isize);
+                    add_payment(payment);
+                    ic0::call_on_cleanup(cleanup::<T> as usize as i32, state_id_u32 as i32);
+                    ic0::call_perform()
+                };
+
+                // 0 is a special error code meaning call succeeded.
+                if err_code != 0 {
+                    let result = Err((
+                        RejectionCode::from(err_code),
+                        "Couldn't send message".to_string(),
+                    ));
+                    state.result = Some(result.clone());
+                    return Poll::Ready(result);
                 }
-            } else {
-                panic!("State not found")
             }
-        })
+            state.waker = Some(context.waker().clone());
+            Poll::Pending
+        }
+    }
+}
+
+impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
+    fn drop(&mut self) {
+        STATES.with_borrow_mut(|states| states.remove(self.state_id));
     }
 }
 
@@ -153,28 +153,29 @@ impl Future for CallFuture {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with an id of a state that is currently being processed.
-unsafe extern "C" fn callback(state_id_u32: u32) {
-    let key = KeyData::from_ffi(state_id_u32);
-    let state_id = key.into();
-    STATES.with(|states| {
-        let mut states = states.borrow_mut();
-        if let Some(state) = states.get_mut(state_id) {
-            // Make sure to un-borrow_mut the state.
-            {
-                state.result = Some(match reject_code() {
-                    RejectionCode::NoError => Ok(arg_data_raw()),
-                    n => Err((n, reject_message())),
-                });
-            }
-            let w = state.waker.take();
-            if let Some(waker) = w {
-                // This is all to protect this little guy here which will call the poll() which
-                // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-                waker.wake()
-            }
+/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
+unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_id_u32: u32) {
+    let state_id: StateId = KeyData::from_ffi(state_id_u32).into();
+    let state_ptr = STATES
+        .with_borrow(|states| states.get(state_id).copied())
+        .expect("callback called with invalid state id");
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
+    let state = unsafe { Weak::from_raw(state_ptr as *const RwLock<CallFutureState<T>>) };
+    if let Some(state) = state.upgrade() {
+        // Make sure to un-borrow_mut the state.
+        {
+            state.write().unwrap().result = Some(match reject_code() {
+                RejectionCode::NoError => Ok(arg_data_raw()),
+                n => Err((n, reject_message())),
+            });
         }
-    });
+        let w = state.write().unwrap().waker.take();
+        if let Some(waker) = w {
+            // This is all to protect this little guy here which will call the poll() which
+            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
+            waker.wake()
+        }
+    }
 }
 
 /// This function is called when [callback] was just called with the same parameter, and trapped.
@@ -183,43 +184,33 @@ unsafe extern "C" fn callback(state_id_u32: u32) {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with an id of a state that is currently being processed.
-unsafe extern "C" fn cleanup(state_id_u32: u32) {
-    let key = KeyData::from_ffi(state_id_u32);
-    let state_id = key.into();
-    STATES.with(|states| {
-        let mut states = states.borrow_mut();
-        if let Some(state) = states.get_mut(state_id) {
-            state.result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
-            let w = state.waker.take();
-            if let Some(waker) = w {
-                // Flag that we do not want to actually wake the task - we
-                // want to drop it *without* executing it.
-                crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-                waker.wake();
-                crate::futures::CLEANUP.store(false, Ordering::Relaxed);
-            }
+/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
+unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_id_u32: u32) {
+    let state_id: StateId = KeyData::from_ffi(state_id_u32).into();
+    let state_ptr = STATES
+        .with_borrow(|states| states.get(state_id).copied())
+        .expect("callback called with invalid state id");
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
+    let state = unsafe { Weak::from_raw(state_ptr as *const RwLock<CallFutureState<T>>) };
+    if let Some(state) = state.upgrade() {
+        // We set the call result, even though it won't be read on the
+        // default executor, because we can't guarantee it was called on
+        // our executor. However, we are not allowed to inspect
+        // reject_code() inside of a cleanup callback, so always set the
+        // result to a reject.
+        //
+        // Borrowing does not trap - the rollback from the
+        // previous trap ensures that the RwLock can be borrowed again.
+        state.write().unwrap().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
+        let w = state.write().unwrap().waker.take();
+        if let Some(waker) = w {
+            // Flag that we do not want to actually wake the task - we
+            // want to drop it *without* executing it.
+            crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+            waker.wake();
+            crate::futures::CLEANUP.store(false, Ordering::Relaxed);
         }
-    });
-    // if let Some(state) = state.upgrade() {
-    //     // We set the call result, even though it won't be read on the
-    //     // default executor, because we can't guarantee it was called on
-    //     // our executor. However, we are not allowed to inspect
-    //     // reject_code() inside of a cleanup callback, so always set the
-    //     // result to a reject.
-    //     //
-    //     // Borrowing does not trap - the rollback from the
-    //     // previous trap ensures that the RwLock can be borrowed again.
-    //     state.write().unwrap().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
-    //     let w = state.write().unwrap().waker.take();
-    //     if let Some(waker) = w {
-    //         // Flag that we do not want to actually wake the task - we
-    //         // want to drop it *without* executing it.
-    //         crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-    //         waker.wake();
-    //         crate::futures::CLEANUP.store(false, Ordering::Relaxed);
-    //     }
-    // }
+    }
 }
 
 fn add_payment(payment: u128) {
@@ -368,17 +359,17 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    let state = CallFutureState {
+    let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
         id,
         method: method.to_string(),
         arg: args_raw.as_ref().to_vec(),
         payment,
-    };
-    CallFuture {
-        state_id: STATES.with(|states| states.borrow_mut().insert(state)),
-    }
+    }));
+    let state_ptr = Weak::into_raw(Arc::downgrade(&state));
+    let state_id = STATES.with_borrow_mut(|states| states.insert(state_ptr as usize));
+    CallFuture { state, state_id }
 }
 
 fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
