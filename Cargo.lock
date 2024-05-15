@@ -931,7 +931,8 @@ dependencies = [
  "rstest",
  "serde",
  "serde_bytes",
- "slotmap",
+ "slotmap 1.0.7",
+ "slotmap 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "trybuild",
 ]
 
@@ -983,7 +984,7 @@ dependencies = [
  "ic0",
  "serde",
  "serde_bytes",
- "slotmap",
+ "slotmap 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1711,6 +1712,13 @@ name = "slice-group-by"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
+
+[[package]]
+name = "slotmap"
+version = "1.0.7"
+dependencies = [
+ "version_check",
+]
 
 [[package]]
 name = "slotmap"
