@@ -14,19 +14,30 @@ use std::task::{Context, Poll, Waker};
 
 /// Rejection code from calling another canister.
 ///
-/// These can be obtained either using `reject_code()` or `reject_result()`.
-#[allow(missing_docs)]
+/// These can be obtained using [reject_code].
 #[repr(i32)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
+    /// No error.
     NoError = 0,
 
+    /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
+    /// Transient system error, retry might be possible.
     SysTransient = 2,
+    /// Invalid destination (e.g. canister/account does not exist)
     DestinationInvalid = 3,
+    /// Explicit reject by the canister.
     CanisterReject = 4,
+    /// Canister error (e.g., trap, no response)
     CanisterError = 5,
+    /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
+    SysUnknown = 6,
 
+    /// Unknown rejection code.
+    ///
+    /// Note that this variant is not part of the IC interface spec, and is used to represent
+    /// rejection codes that are not recognized by the library.
     Unknown,
 }
 
@@ -39,6 +50,7 @@ impl From<i32> for RejectionCode {
             3 => RejectionCode::DestinationInvalid,
             4 => RejectionCode::CanisterReject,
             5 => RejectionCode::CanisterError,
+            6 => RejectionCode::SysUnknown,
             _ => RejectionCode::Unknown,
         }
     }
