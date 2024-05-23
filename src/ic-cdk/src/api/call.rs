@@ -203,42 +203,51 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
 
 /// Inter-Canister Call.
 #[derive(Debug)]
-pub struct Call<'a, T: ArgumentEncoder> {
+pub struct Call<'a, T: ArgumentEncoder, A: AsRef<[u8]>> {
     id: Principal,
     method: &'a str,
-    args: Args<T>,
+    typed_args: Option<T>,
+    encoded_args: EncodedArgs<A>,
     payment: Option<u128>,
 }
 
 #[derive(Debug)]
-enum Args<T: ArgumentEncoder> {
-    Raw(Vec<u8>),
-    Typed(T),
+enum EncodedArgs<A: AsRef<[u8]>> {
+    Borrowed(A),
+    Owned(Vec<u8>),
 }
 
-impl<'a, T: ArgumentEncoder> Call<'a, T> {
+impl<A: AsRef<[u8]>> AsRef<[u8]> for EncodedArgs<A> {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            EncodedArgs::Borrowed(b) => b.as_ref(),
+            EncodedArgs::Owned(v) => v.as_ref(),
+        }
+    }
+}
+
+impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
     /// Constructs a new call with the Canister id and method name.
     pub fn new(id: Principal, method: &'a str) -> Self {
         Self {
             id,
             method,
-            args: Args::Raw(vec![]),
+            typed_args: None,
+            encoded_args: EncodedArgs::Owned(vec![]),
             payment: None,
         }
     }
 
     /// Sets the arguments for the call.
     pub fn with_args(mut self, args: T) -> Self {
-        self.args = Args::Typed(args);
+        self.typed_args = Some(args);
         self
     }
 
     /// Sets the arguments for the call as raw bytes.
-    pub fn with_args_raw<A>(mut self, args_raw: A) -> Self
-    where
-        A: AsRef<[u8]>,
-    {
-        self.args = Args::Raw(args_raw.as_ref().to_vec());
+    pub fn with_raw_args(mut self, args_raw: A) -> Self {
+        self.encoded_args = EncodedArgs::Borrowed(args_raw);
+        self.typed_args = None;
         self
     }
 
@@ -249,16 +258,25 @@ impl<'a, T: ArgumentEncoder> Call<'a, T> {
     }
 }
 
-impl<'a, T: ArgumentEncoder> Call<'a, T> {
+impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
+    fn encode_args(&mut self) {
+        if let Some(args) = self.typed_args.take() {
+            self.encoded_args =
+                EncodedArgs::Owned(encode_args(args).expect("Failed to encode arguments."));
+        }
+    }
+
     /// Sends the call and decodes the reply to a Candid type,
     pub fn call<R: for<'b> ArgumentDecoder<'b>>(
-        self,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync {
-        let args_raw = match self.args {
-            Args::Raw(raw) => raw,
-            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
-        };
-        let fut = call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0));
+        mut self,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync + 'a {
+        self.encode_args();
+        let fut = call_raw_internal(
+            self.id,
+            self.method,
+            self.encoded_args,
+            self.payment.unwrap_or(0),
+        );
         async {
             let bytes = fut.await?;
             decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
@@ -266,24 +284,28 @@ impl<'a, T: ArgumentEncoder> Call<'a, T> {
     }
 
     /// Sends the call and gets the reply as raw bytes.
-    pub fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-        let args_raw = match self.args {
-            Args::Raw(raw) => raw,
-            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
-        };
-        call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0))
+    pub fn call_raw(mut self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
+        self.encode_args();
+        call_raw_internal(
+            self.id,
+            self.method,
+            self.encoded_args,
+            self.payment.unwrap_or(0),
+        )
     }
 
     /// Sends the call and decodes the reply to a Candid type with a decoding quota.
     pub fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
-        self,
+        mut self,
         decoder_config: ArgDecoderConfig,
     ) -> impl Future<Output = CallResult<R>> + Send + Sync + 'a {
-        let args_raw = match self.args {
-            Args::Raw(raw) => raw,
-            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
-        };
-        let fut = call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0));
+        self.encode_args();
+        let fut = call_raw_internal(
+            self.id,
+            self.method,
+            self.encoded_args,
+            self.payment.unwrap_or(0),
+        );
         async move {
             let bytes = fut.await?;
             let config = decoder_config.to_candid_config();
@@ -308,13 +330,15 @@ impl<'a, T: ArgumentEncoder> Call<'a, T> {
         }
     }
 
-    /// Sends the call and ignore the reply
-    pub fn call_and_forget(self) -> Result<(), RejectionCode> {
-        let args_raw = match self.args {
-            Args::Raw(raw) => raw,
-            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
-        };
-        notify_raw_internal(self.id, self.method, &args_raw, self.payment.unwrap_or(0))
+    /// Sends the call and ignore the reply.
+    pub fn call_and_forget(mut self) -> Result<(), RejectionCode> {
+        self.encode_args();
+        notify_raw_internal(
+            self.id,
+            self.method,
+            self.encoded_args,
+            self.payment.unwrap_or(0),
+        )
     }
 }
 
@@ -379,10 +403,10 @@ pub fn notify_raw(
     notify_raw_internal(id, method, args_raw, payment)
 }
 
-fn notify_raw_internal(
+fn notify_raw_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
-    args_raw: &[u8],
+    args_raw: T,
     payment: u128,
 ) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
@@ -411,7 +435,10 @@ fn notify_raw_internal(
             /* reject_env = */ -1,
         );
         add_payment(payment);
-        ic0::call_data_append(args_raw.as_ptr() as i32, args_raw.len() as i32);
+        ic0::call_data_append(
+            args_raw.as_ref().as_ptr() as i32,
+            args_raw.as_ref().len() as i32,
+        );
         ic0::call_perform()
     };
     match err_code {
