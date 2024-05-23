@@ -201,6 +201,123 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
     }
 }
 
+/// Inter-Canister Call.
+#[derive(Debug)]
+pub struct Call<'a, T: ArgumentEncoder> {
+    id: Principal,
+    method: &'a str,
+    args: Args<T>,
+    payment: Option<u128>,
+}
+
+#[derive(Debug)]
+enum Args<T: ArgumentEncoder> {
+    Raw(Vec<u8>),
+    Typed(T),
+}
+
+impl<'a, T: ArgumentEncoder> Call<'a, T> {
+    /// Constructs a new call with the Canister id and method name.
+    pub fn new(id: Principal, method: &'a str) -> Self {
+        Self {
+            id,
+            method,
+            args: Args::Raw(vec![]),
+            payment: None,
+        }
+    }
+
+    /// Sets the arguments for the call.
+    pub fn with_args(mut self, args: T) -> Self {
+        self.args = Args::Typed(args);
+        self
+    }
+
+    /// Sets the arguments for the call as raw bytes.
+    pub fn with_args_raw<A>(mut self, args_raw: A) -> Self
+    where
+        A: AsRef<[u8]>,
+    {
+        self.args = Args::Raw(args_raw.as_ref().to_vec());
+        self
+    }
+
+    /// Sets the cycles payment for the call.
+    pub fn with_cycles(mut self, cycles: u128) -> Self {
+        self.payment = Some(cycles);
+        self
+    }
+}
+
+impl<'a, T: ArgumentEncoder> Call<'a, T> {
+    /// Sends the call and decodes the reply to a Candid type,
+    pub fn call<R: for<'b> ArgumentDecoder<'b>>(
+        self,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync {
+        let args_raw = match self.args {
+            Args::Raw(raw) => raw,
+            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
+        };
+        let fut = call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0));
+        async {
+            let bytes = fut.await?;
+            decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
+        }
+    }
+
+    /// Sends the call and gets the reply as raw bytes.
+    pub fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        let args_raw = match self.args {
+            Args::Raw(raw) => raw,
+            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
+        };
+        call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0))
+    }
+
+    /// Sends the call and decodes the reply to a Candid type with a decoding quota.
+    pub fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
+        self,
+        decoder_config: ArgDecoderConfig,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync + 'a {
+        let args_raw = match self.args {
+            Args::Raw(raw) => raw,
+            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
+        };
+        let fut = call_raw_internal(self.id, self.method, args_raw, self.payment.unwrap_or(0));
+        async move {
+            let bytes = fut.await?;
+            let config = decoder_config.to_candid_config();
+            let pre_cycles = if decoder_config.debug {
+                Some(crate::api::performance_counter(0))
+            } else {
+                None
+            };
+            match decode_args_with_config_debug(&bytes, &config) {
+                Err(e) => Err(decoder_error_to_reject::<R>(e)),
+                Ok((r, cost)) => {
+                    if decoder_config.debug {
+                        print_decoding_debug_info(
+                            &format!("{} return", self.method),
+                            &cost,
+                            pre_cycles,
+                        );
+                    }
+                    Ok(r)
+                }
+            }
+        }
+    }
+
+    /// Sends the call and ignore the reply
+    pub fn call_and_forget(self) -> Result<(), RejectionCode> {
+        let args_raw = match self.args {
+            Args::Raw(raw) => raw,
+            Args::Typed(args) => encode_args(args).expect("Failed to encode arguments."),
+        };
+        notify_raw_internal(self.id, self.method, &args_raw, self.payment.unwrap_or(0))
+    }
+}
+
 fn add_payment(payment: u128) {
     if payment == 0 {
         return;
@@ -254,6 +371,15 @@ pub fn notify<T: ArgumentEncoder>(
 
 /// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
 pub fn notify_raw(
+    id: Principal,
+    method: &str,
+    args_raw: &[u8],
+    payment: u128,
+) -> Result<(), RejectionCode> {
+    notify_raw_internal(id, method, args_raw, payment)
+}
+
+fn notify_raw_internal(
     id: Principal,
     method: &str,
     args_raw: &[u8],
