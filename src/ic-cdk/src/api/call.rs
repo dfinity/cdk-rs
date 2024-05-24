@@ -246,7 +246,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
     /// Sets the arguments for the call.
     ///
     /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are called, the last one is used.
+    /// If both are invoked, the last one is used.
     pub fn with_args(mut self, args: T) -> Self {
         self.typed_args = Some(args);
         self
@@ -255,7 +255,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
     /// Sets the arguments for the call as raw bytes.    
     ///
     /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are called, the last one is used.
+    /// If both are invoked, the last one is used.
     pub fn with_raw_args(mut self, args_raw: A) -> Self {
         self.encoded_args = EncodedArgs::Borrowed(args_raw);
         self.typed_args = None;
@@ -264,7 +264,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
 
     /// Sets the cycles payment for the call.
     ///
-    /// If called multiple times, the last value is used.
+    /// If invoked multiple times, the last value is used.
     pub fn with_cycles(mut self, cycles: u128) -> Self {
         self.payment = Some(cycles);
         self
@@ -272,7 +272,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
 
     /// Sets the timeout for the call.
     ///
-    /// If called multiple times, the last value is used.
+    /// If invoked multiple times, the last value is used.
     pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
@@ -280,6 +280,9 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
 }
 
 impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
+    // Encodes the arguments if they are not already encoded.
+    //
+    // Every `call_*` method below should invoke this method before sending the call.
     fn encode_args(&mut self) {
         if let Some(args) = self.typed_args.take() {
             self.encoded_args =
