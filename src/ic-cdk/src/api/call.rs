@@ -796,6 +796,11 @@ pub fn reject(message: &str) {
         ic0::msg_reject(err_message.as_ptr() as i32, err_message.len() as i32);
     }
 }
+/// The deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
+pub fn msg_deadline() -> u64 {
+    // SAFETY: ic0.msg_deadline is always safe to call.
+    unsafe { ic0::msg_deadline() as u64 }
+}
 
 /// An io::Write for message replies.
 #[derive(Debug, Copy, Clone)]
