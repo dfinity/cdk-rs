@@ -10,6 +10,7 @@ extern "C" {
     pub fn msg_reject_code() -> i32;
     pub fn msg_reject_msg_size() -> i32;
     pub fn msg_reject_msg_copy(dst: i32, offset: i32, size: i32);
+    pub fn msg_deadline() -> i64;
     pub fn msg_reply_data_append(src: i32, size: i32);
     pub fn msg_reply();
     pub fn msg_reject(src: i32, size: i32);
@@ -41,6 +42,7 @@ extern "C" {
     );
     pub fn call_on_cleanup(fun: i32, env: i32);
     pub fn call_data_append(src: i32, size: i32);
+    pub fn call_with_best_effort_response(timeout_seconds: i32);
     pub fn call_cycles_add(amount: i64);
     pub fn call_cycles_add128(amount_high: i64, amount_low: i64);
     pub fn call_perform() -> i32;
@@ -90,6 +92,9 @@ mod non_wasm {
     }
     pub unsafe fn msg_reject_msg_copy(dst: i32, offset: i32, size: i32) {
         panic!("msg_reject_msg_copy should only be called inside canisters.");
+    }
+    pub unsafe fn msg_deadline() -> i64 {
+        panic!("msg_deadline should only be called inside canisters.");
     }
     pub unsafe fn msg_reply_data_append(src: i32, size: i32) {
         panic!("msg_reply_data_append should only be called inside canisters.");
@@ -165,6 +170,9 @@ mod non_wasm {
     }
     pub unsafe fn call_data_append(src: i32, size: i32) {
         panic!("call_data_append should only be called inside canisters.");
+    }
+    pub unsafe fn call_with_best_effort_response(timeout_seconds: i32) {
+        panic!("call_with_best_effort_response should only be called inside canisters.");
     }
     pub unsafe fn call_cycles_add(amount: i64) {
         panic!("call_cycles_add should only be called inside canisters.");
