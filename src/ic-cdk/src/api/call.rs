@@ -73,9 +73,9 @@ struct CallFutureState<T: AsRef<[u8]>> {
     waker: Option<Waker>,
     id: Principal,
     method: String,
-    arg: T,
-    payment: u128,
-    timeout_seconds: u32,
+    arg: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 }
 
 struct CallFuture<T: AsRef<[u8]>> {
@@ -96,9 +96,6 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
             if state.waker.is_none() {
                 let callee = state.id.as_slice();
                 let method = &state.method;
-                let args = state.arg.as_ref();
-                let payment = state.payment;
-                let timeout_seconds = state.timeout_seconds;
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -122,11 +119,19 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         callback::<T> as usize as i32,
                         state_ptr as i32,
                     );
-
-                    ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
-                    add_payment(payment);
+                    if let Some(args) = &state.arg {
+                        ic0::call_data_append(
+                            args.as_ref().as_ptr() as i32,
+                            args.as_ref().len() as i32,
+                        );
+                    }
+                    if let Some(payment) = state.payment {
+                        add_payment(payment);
+                    }
+                    if let Some(timeout_seconds) = state.timeout_seconds {
+                        ic0::call_with_best_effort_response(timeout_seconds as i32);
+                    }
                     ic0::call_on_cleanup(cleanup::<T> as usize as i32, state_ptr as i32);
-                    ic0::call_with_best_effort_response(timeout_seconds as i32);
                     ic0::call_perform()
                 };
 
@@ -206,60 +211,36 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
 
 /// Inter-Canister Call.
 #[derive(Debug)]
-pub struct Call<'a, T: ArgumentEncoder, A: AsRef<[u8]>> {
-    id: Principal,
+pub struct Call<'a> {
+    canister_id: Principal,
     method: &'a str,
-    typed_args: Option<T>,
-    encoded_args: EncodedArgs<A>,
     payment: Option<u128>,
     timeout_seconds: Option<u32>,
 }
 
+/// TODO:
 #[derive(Debug)]
-enum EncodedArgs<A: AsRef<[u8]>> {
-    Borrowed(A),
-    Owned(Vec<u8>),
+pub struct CallWithArgs<'a, T> {
+    call: Call<'a>,
+    args: T,
 }
 
-impl<A: AsRef<[u8]>> AsRef<[u8]> for EncodedArgs<A> {
-    fn as_ref(&self) -> &[u8] {
-        match self {
-            EncodedArgs::Borrowed(b) => b.as_ref(),
-            EncodedArgs::Owned(v) => v.as_ref(),
-        }
-    }
+/// TODO:
+#[derive(Debug)]
+pub struct CallWithRawArgs<'a, A> {
+    call: Call<'a>,
+    raw_args: A,
 }
 
-impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
+impl<'a> Call<'a> {
     /// Constructs a new call with the Canister id and method name.
-    pub fn new(id: Principal, method: &'a str) -> Self {
+    pub fn new(canister_id: Principal, method: &'a str) -> Self {
         Self {
-            id,
+            canister_id,
             method,
-            typed_args: None,
-            encoded_args: EncodedArgs::Owned(vec![]),
             payment: None,
             timeout_seconds: None,
         }
-    }
-
-    /// Sets the arguments for the call.
-    ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
-    pub fn with_args(mut self, args: T) -> Self {
-        self.typed_args = Some(args);
-        self
-    }
-
-    /// Sets the arguments for the call as raw bytes.    
-    ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
-    pub fn with_raw_args(mut self, args_raw: A) -> Self {
-        self.encoded_args = EncodedArgs::Borrowed(args_raw);
-        self.typed_args = None;
-        self
     }
 
     /// Sets the cycles payment for the call.
@@ -277,62 +258,55 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
-}
 
-impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
-    // Encodes the arguments if they are not already encoded.
-    //
-    // Every `call_*` method below should invoke this method before sending the call.
-    fn encode_args(&mut self) {
-        if let Some(args) = self.typed_args.take() {
-            self.encoded_args =
-                EncodedArgs::Owned(encode_args(args).expect("Failed to encode arguments."));
-        }
+    /// Sets the arguments for the call.
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are invoked, the last one is used.
+    pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
+        CallWithArgs { call: self, args }
     }
 
+    /// Sets the arguments for the call as raw bytes.    
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are invoked, the last one is used.
+    pub fn with_raw_args<A: AsRef<[u8]>>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
+        CallWithRawArgs {
+            call: self,
+            raw_args,
+        }
+    }
+}
+
+/// TODO:
+pub trait Sendable {
+    /// Sends the call and gets the reply as raw bytes.
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
+
     /// Sends the call and decodes the reply to a Candid type,
-    pub fn call<R: for<'b> ArgumentDecoder<'b>>(
-        mut self,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync + 'a {
-        self.encode_args();
-        let fut = call_raw_internal(
-            self.id,
-            self.method,
-            self.encoded_args,
-            self.payment.unwrap_or(0),
-            self.timeout_seconds.unwrap_or(0),
-        );
+    fn call<R: for<'b> ArgumentDecoder<'b>>(
+        self,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync
+    where
+        Self: Sized,
+    {
+        let fut = self.call_raw();
         async {
             let bytes = fut.await?;
             decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
         }
     }
 
-    /// Sends the call and gets the reply as raw bytes.
-    pub fn call_raw(mut self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-        self.encode_args();
-        call_raw_internal(
-            self.id,
-            self.method,
-            self.encoded_args,
-            self.payment.unwrap_or(0),
-            self.timeout_seconds.unwrap_or(0),
-        )
-    }
-
     /// Sends the call and decodes the reply to a Candid type with a decoding quota.
-    pub fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
-        mut self,
+    fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
+        self,
         decoder_config: ArgDecoderConfig,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync + 'a {
-        self.encode_args();
-        let fut = call_raw_internal(
-            self.id,
-            self.method,
-            self.encoded_args,
-            self.payment.unwrap_or(0),
-            self.timeout_seconds.unwrap_or(0),
-        );
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync
+    where
+        Self: Sized,
+    {
+        let fut = self.call_raw();
         async move {
             let bytes = fut.await?;
             let config = decoder_config.to_candid_config();
@@ -346,7 +320,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
                 Ok((r, cost)) => {
                     if decoder_config.debug {
                         print_decoding_debug_info(
-                            &format!("{} return", self.method),
+                            &format!("{}", std::any::type_name::<R>()),
                             &cost,
                             pre_cycles,
                         );
@@ -357,15 +331,52 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
         }
     }
 
-    /// Sends the call and ignore the reply.
-    pub fn call_and_forget(mut self) -> Result<(), RejectionCode> {
-        self.encode_args();
-        notify_raw_internal(
-            self.id,
+    // /// Sends the call and ignore the reply.
+    //  fn call_and_forget(mut self) -> Result<(), RejectionCode> {
+    //     self.encode_args();
+    //     notify_raw_internal(
+    //         self.id,
+    //         self.method,
+    //         self.encoded_args,
+    //         self.payment.unwrap_or(0),
+    //         self.timeout_seconds.unwrap_or(0),
+    //     )
+    // }
+}
+
+impl Sendable for Call<'_> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        call_raw_internal::<Vec<u8>>(
+            self.canister_id,
             self.method,
-            self.encoded_args,
-            self.payment.unwrap_or(0),
-            self.timeout_seconds.unwrap_or(0),
+            None,
+            self.payment,
+            self.timeout_seconds,
+        )
+    }
+}
+
+impl<'a, T: ArgumentEncoder> Sendable for CallWithArgs<'a, T> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        let args = encode_args(self.args).expect("failed to encode arguments");
+        call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+}
+
+impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> Sendable for CallWithRawArgs<'a, A> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(self.raw_args),
+            self.call.payment,
+            self.call.timeout_seconds,
         )
     }
 }
@@ -498,7 +509,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment.into(), 0)
+    call_raw_internal(id, method, Some(args_raw), Some(payment.into()), None)
 }
 
 /// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
@@ -521,15 +532,15 @@ pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment, 0)
+    call_raw_internal(id, method, Some(args_raw), Some(payment), None)
 }
 
 fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
-    args_raw: T,
-    payment: u128,
-    timeout_seconds: u32,
+    args_raw: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
