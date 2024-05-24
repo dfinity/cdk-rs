@@ -75,6 +75,7 @@ struct CallFutureState<T: AsRef<[u8]>> {
     method: String,
     arg: T,
     payment: u128,
+    timeout_seconds: u32,
 }
 
 struct CallFuture<T: AsRef<[u8]>> {
@@ -97,6 +98,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 let method = &state.method;
                 let args = state.arg.as_ref();
                 let payment = state.payment;
+                let timeout_seconds = state.timeout_seconds;
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -124,6 +126,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     ic0::call_data_append(args.as_ptr() as i32, args.len() as i32);
                     add_payment(payment);
                     ic0::call_on_cleanup(cleanup::<T> as usize as i32, state_ptr as i32);
+                    ic0::call_with_best_effort_response(timeout_seconds as i32);
                     ic0::call_perform()
                 };
 
@@ -209,6 +212,7 @@ pub struct Call<'a, T: ArgumentEncoder, A: AsRef<[u8]>> {
     typed_args: Option<T>,
     encoded_args: EncodedArgs<A>,
     payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 }
 
 #[derive(Debug)]
@@ -235,16 +239,23 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
             typed_args: None,
             encoded_args: EncodedArgs::Owned(vec![]),
             payment: None,
+            timeout_seconds: None,
         }
     }
 
     /// Sets the arguments for the call.
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are called, the last one is used.
     pub fn with_args(mut self, args: T) -> Self {
         self.typed_args = Some(args);
         self
     }
 
-    /// Sets the arguments for the call as raw bytes.
+    /// Sets the arguments for the call as raw bytes.    
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are called, the last one is used.
     pub fn with_raw_args(mut self, args_raw: A) -> Self {
         self.encoded_args = EncodedArgs::Borrowed(args_raw);
         self.typed_args = None;
@@ -252,8 +263,18 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]>> Call<'a, T, A> {
     }
 
     /// Sets the cycles payment for the call.
+    ///
+    /// If called multiple times, the last value is used.
     pub fn with_cycles(mut self, cycles: u128) -> Self {
         self.payment = Some(cycles);
+        self
+    }
+
+    /// Sets the timeout for the call.
+    ///
+    /// If called multiple times, the last value is used.
+    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+        self.timeout_seconds = Some(timeout_seconds);
         self
     }
 }
@@ -276,6 +297,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
             self.method,
             self.encoded_args,
             self.payment.unwrap_or(0),
+            self.timeout_seconds.unwrap_or(0),
         );
         async {
             let bytes = fut.await?;
@@ -291,6 +313,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
             self.method,
             self.encoded_args,
             self.payment.unwrap_or(0),
+            self.timeout_seconds.unwrap_or(0),
         )
     }
 
@@ -305,6 +328,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
             self.method,
             self.encoded_args,
             self.payment.unwrap_or(0),
+            self.timeout_seconds.unwrap_or(0),
         );
         async move {
             let bytes = fut.await?;
@@ -338,6 +362,7 @@ impl<'a, T: ArgumentEncoder, A: AsRef<[u8]> + Send + Sync + 'a> Call<'a, T, A> {
             self.method,
             self.encoded_args,
             self.payment.unwrap_or(0),
+            self.timeout_seconds.unwrap_or(0),
         )
     }
 }
@@ -400,7 +425,7 @@ pub fn notify_raw(
     args_raw: &[u8],
     payment: u128,
 ) -> Result<(), RejectionCode> {
-    notify_raw_internal(id, method, args_raw, payment)
+    notify_raw_internal(id, method, args_raw, payment, 0)
 }
 
 fn notify_raw_internal<T: AsRef<[u8]>>(
@@ -408,6 +433,7 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     method: &str,
     args_raw: T,
     payment: u128,
+    timeout_seconds: u32,
 ) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
     // We set all callbacks to -1, which is guaranteed to be invalid callback index.
@@ -439,6 +465,7 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
             args_raw.as_ref().as_ptr() as i32,
             args_raw.as_ref().len() as i32,
         );
+        ic0::call_with_best_effort_response(timeout_seconds as i32);
         ic0::call_perform()
     };
     match err_code {
@@ -468,7 +495,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment.into())
+    call_raw_internal(id, method, args_raw, payment.into(), 0)
 }
 
 /// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
@@ -491,7 +518,7 @@ pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment)
+    call_raw_internal(id, method, args_raw, payment, 0)
 }
 
 fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
@@ -499,6 +526,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     method: &str,
     args_raw: T,
     payment: u128,
+    timeout_seconds: u32,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
@@ -507,6 +535,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
         method: method.to_string(),
         arg: args_raw,
         payment,
+        timeout_seconds,
     }));
     CallFuture { state }
 }
