@@ -332,9 +332,9 @@ fn test_set_global_timers() {
 fn test_canister_info() {
     let pic = PocketIc::new();
     let wasm = cargo_build_canister("canister_info");
+    pic.set_time(SystemTime::UNIX_EPOCH);
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.add_cycles(canister_id, 1_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
     let new_canister: (Principal,) = call_candid(&pic, canister_id, "canister_lifecycle", ())
@@ -369,18 +369,13 @@ fn test_canister_info() {
     let info: (CanisterInfoResponse,) = call_candid(&pic, canister_id, "info", (new_canister.0,))
         .expect("Error calling canister_info");
 
-    let timestamp_nanos = pic
-        .get_time()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64;
     assert_eq!(
         info.0,
         CanisterInfoResponse {
             total_num_changes: 9,
             recent_changes: vec![
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 4,
                     canister_version: 0,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -391,7 +386,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 6,
                     canister_version: 1,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -406,7 +401,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 8,
                     canister_version: 2,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -415,7 +410,7 @@ fn test_canister_info() {
                     details: CanisterChangeDetails::CodeUninstall,
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 10,
                     canister_version: 3,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -430,7 +425,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 12,
                     canister_version: 4,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -445,7 +440,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 14,
                     canister_version: 5,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -460,7 +455,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 16,
                     canister_version: 6,
                     origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
@@ -471,7 +466,7 @@ fn test_canister_info() {
                     }),
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 18,
                     canister_version: 7,
                     origin: CanisterChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
@@ -479,7 +474,7 @@ fn test_canister_info() {
                     details: CanisterChangeDetails::CodeUninstall,
                 },
                 CanisterChange {
-                    timestamp_nanos,
+                    timestamp_nanos: 19,
                     canister_version: 8,
                     origin: CanisterChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
