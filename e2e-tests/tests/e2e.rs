@@ -532,12 +532,11 @@ fn test_cycles_burn() {
 }
 
 #[test]
-fn call_management() {
+fn test_call_management() {
     let pic = PocketIc::new();
     let wasm = cargo_build_canister("management_caller");
     let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.add_cycles(canister_id, 100_000_000_000_000);
+    pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
     let () = call_candid(&pic, canister_id, "execute_main_methods", ())
         .expect("Error calling execute_main_methods");
