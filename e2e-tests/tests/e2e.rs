@@ -549,7 +549,6 @@ fn test_chunk() {
     let pic = PocketIc::new();
     let wasm = cargo_build_canister("chunk");
     let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
     let (target_canister_id,): (Principal,) =
