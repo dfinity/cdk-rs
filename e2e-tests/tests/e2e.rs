@@ -503,32 +503,29 @@ fn test_cycles_burn() {
     let wasm = cargo_build_canister("api-call");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.add_cycles(canister_id, 1500);
 
     pic.install_canister(canister_id, wasm, vec![], None);
     eprintln!("Canister installed.");
     let balance1 = pic.cycle_balance(canister_id);
     eprintln!("Balance 1: {balance1}");
 
-    let attempted = 1000u128;
-
     // Scenario 1: burn less than balance
-    let (burned,): (u128,) = call_candid(&pic, canister_id, "cycles_burn", (attempted,))
+    let attempted1 = 1000u128;
+    let (burned,): (u128,) = call_candid(&pic, canister_id, "cycles_burn", (attempted1,))
         .expect("Error calling cycles_burn");
-    eprintln!("Attempted to burn {attempted}, actually burned {burned}");
-    assert_eq!(burned, attempted);
+    eprintln!("Attempted to burn {attempted1}, actually burned {burned}");
+    assert_eq!(burned, attempted1);
     let balance2 = pic.cycle_balance(canister_id);
     eprintln!("Balance 2: {balance2}");
 
     // Scenario 2: burn more than balance
-    let (burned,): (u128,) = call_candid(&pic, canister_id, "cycles_burn", (attempted,))
+    let attempted2 = balance2 + 1;
+    let (burned,): (u128,) = call_candid(&pic, canister_id, "cycles_burn", (attempted2,))
         .expect("Error calling cycles_burn");
-    eprintln!("Attempted to burn {attempted}, actually burned {burned}");
-    assert!(burned < attempted);
-    assert_eq!(burned, balance2);
+    eprintln!("Attempted to burn {attempted2}, actually burned {burned}");
+    assert!(burned < balance2); // restrained by reserved_balance and freezing_limit
     let balance3 = pic.cycle_balance(canister_id);
     eprintln!("Balance 3: {balance3}");
-    assert_eq!(balance3, 0);
 }
 
 #[test]
