@@ -1,3 +1,4 @@
+use core::time;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -278,8 +279,10 @@ fn test_scheduling_many_timers() {
     )
     .expect("Error calling schedule_n_timers");
 
-    // Up to 500 timers will be executed per round
-    advance_seconds(&pic, timers_to_schedule / 500);
+    // Up to 20 timers will be executed per round
+    // Be conservative that advance 2 times the minimum number of rounds
+    const TIMERS_PER_ROUND: u32 = 20;
+    advance_seconds(&pic, 2 * timers_to_schedule / TIMERS_PER_ROUND);
 
     let (executed_timers,): (u32,) = query_candid(&pic, canister_id, "executed_timers", ())
         .expect("Error querying executed_timers");
