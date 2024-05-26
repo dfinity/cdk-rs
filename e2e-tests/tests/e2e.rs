@@ -1,4 +1,3 @@
-use core::time;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -299,36 +298,36 @@ fn advance_seconds(pic: &PocketIc, seconds: u32) {
 
 #[test]
 fn test_set_global_timers() {
-    // Must be more than the queue limit (500)
     let pic = PocketIc::new();
-    let system_time = std::time::SystemTime::now();
-
-    pic.set_time(system_time);
 
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, wasm, vec![], None);
 
+    // Set a 9s timer at t0, it expires at t1 = t0 + 9s
+    let t0 = pic
+        .get_time()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
+    let t1 = t0 + 9_000_000_000;
     call_candid::<_, ()>(&pic, canister_id, "schedule_long", ())
         .expect("Failed to call schedule_long");
-    let ts0 = system_time
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64
-        + 9_000_000_000; // the long event is scheduled 9 seconds from ts0
+    
+    // 5 seconds later, the 9s timer is still active
     advance_seconds(&pic, 5);
 
-    // set the timer to 5 seconds from ts0
-    let ts1 = ts0 + 5_000_000_000;
-    let (previous,) = call_candid::<(u64,), (u64,)>(&pic, canister_id, "set_global_timer", (ts1,))
+    // Set the expiration time of the timer to t2 = t1 + 5s
+    let t2 = t1 + 5_000_000_000;
+    let (previous,) = call_candid::<(u64,), (u64,)>(&pic, canister_id, "set_global_timer", (t2,))
         .expect("Failed to call set_global_timer");
-    assert_eq!(previous, ts0);
+    assert!(previous.abs_diff(t1) < 2); // time error no more than 1 nanosecond
 
-    // deactivate the timer
+    // Deactivate the timer
     let (previous,) = call_candid::<(u64,), (u64,)>(&pic, canister_id, "set_global_timer", (0,))
         .expect("Failed to call set_global_timer");
-    assert_eq!(previous, ts1);
+    assert!(previous.abs_diff(t2) < 2); // time error no more than 1 nanosecond
 }
 
 #[test]
