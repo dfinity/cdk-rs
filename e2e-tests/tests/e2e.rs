@@ -267,7 +267,7 @@ fn test_scheduling_many_timers() {
     let pic = PocketIc::new();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.add_cycles(canister_id, 100_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
 
     let () = call_candid(
@@ -314,7 +314,7 @@ fn test_set_global_timers() {
     let t1 = t0 + 9_000_000_000;
     call_candid::<_, ()>(&pic, canister_id, "schedule_long", ())
         .expect("Failed to call schedule_long");
-    
+
     // 5 seconds later, the 9s timer is still active
     advance_seconds(&pic, 5);
 
