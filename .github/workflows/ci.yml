@@ -57,9 +57,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-      - name: Download ic-test-state-machine
+      - name: Download pocket-ic
         run: |
-          bash scripts/download_state_machine_binary.sh
+          bash scripts/download_pocket_ic.sh
       - name: Run tests
         run: | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
           cargo test --all-targets
