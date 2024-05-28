@@ -4,8 +4,9 @@ use ic_cdk::api::management_canister::main::{CanisterIdRecord, CreateCanisterArg
 use ic_cdk::update;
 
 #[update]
-async fn create_canister_via_struct() -> Principal{
+async fn create_canister_via_struct() -> Principal {
     let res: (CanisterIdRecord,) = Call::new(Principal::management_canister(), "create_canister")
+        .with_cycles(200_000_000_000)
         .with_args((CreateCanisterArgument::default(),))
         .call()
         .await

@@ -621,11 +621,11 @@ fn test_chunk() {
 
 #[test]
 fn call_struct() {
-    let env = env();
+    let pic = PocketIc::new();
     let wasm = cargo_build_canister("call_struct");
-    let canister_id = env.create_canister(None);
-    env.add_cycles(canister_id, 100_000_000_000_000);
-    env.install_canister(canister_id, wasm, vec![], None);
-    let _: (Principal, ) = call_candid(&env, canister_id, "create_canister_via_struct", ())
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 100_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+    let _: (Principal,) = call_candid(&pic, canister_id, "create_canister_via_struct", ())
         .expect("Error calling execute_main_methods");
 }
