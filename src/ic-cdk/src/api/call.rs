@@ -218,14 +218,14 @@ pub struct Call<'a> {
     timeout_seconds: Option<u32>,
 }
 
-/// TODO:
+/// Inter-Canister Call with typed arguments.
 #[derive(Debug)]
 pub struct CallWithArgs<'a, T> {
     call: Call<'a>,
     args: T,
 }
 
-/// TODO:
+/// Inter-Canister Call with raw arguments.
 #[derive(Debug)]
 pub struct CallWithRawArgs<'a, A> {
     call: Call<'a>,
@@ -276,6 +276,42 @@ impl<'a> Call<'a> {
             call: self,
             raw_args,
         }
+    }
+}
+
+impl<'a, T: ArgumentEncoder> CallWithArgs<'a, T> {
+    /// Sets the cycles payment for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    pub fn with_cycles(mut self, cycles: u128) -> Self {
+        self.call.payment = Some(cycles);
+        self
+    }
+
+    /// Sets the timeout for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+        self.call.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> CallWithRawArgs<'a, A> {
+    /// Sets the cycles payment for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    pub fn with_cycles(mut self, cycles: u128) -> Self {
+        self.call.payment = Some(cycles);
+        self
+    }
+
+    /// Sets the timeout for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+        self.call.timeout_seconds = Some(timeout_seconds);
+        self
     }
 }
 

@@ -6,8 +6,8 @@ use ic_cdk::update;
 #[update]
 async fn create_canister_via_struct() -> Principal {
     let res: (CanisterIdRecord,) = Call::new(Principal::management_canister(), "create_canister")
-        .with_cycles(200_000_000_000)
         .with_args((CreateCanisterArgument::default(),))
+        .with_cycles(200_000_000_000)
         .call()
         .await
         .unwrap();
