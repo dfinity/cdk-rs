@@ -315,7 +315,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> CallWithRawArgs<'a, A> {
     }
 }
 
-/// TODO:
+/// Methods to send a call.
 pub trait Sendable {
     /// Sends the call and gets the reply as raw bytes.
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
@@ -367,22 +367,23 @@ pub trait Sendable {
         }
     }
 
-    // /// Sends the call and ignore the reply.
-    //  fn call_and_forget(mut self) -> Result<(), RejectionCode> {
-    //     self.encode_args();
-    //     notify_raw_internal(
-    //         self.id,
-    //         self.method,
-    //         self.encoded_args,
-    //         self.payment.unwrap_or(0),
-    //         self.timeout_seconds.unwrap_or(0),
-    //     )
-    // }
+    /// Sends the call and ignore the reply.
+    fn call_and_forget(self) -> Result<(), RejectionCode>;
 }
 
 impl Sendable for Call<'_> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         call_raw_internal::<Vec<u8>>(
+            self.canister_id,
+            self.method,
+            None,
+            self.payment,
+            self.timeout_seconds,
+        )
+    }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        notify_raw_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
             None,
@@ -403,11 +404,32 @@ impl<'a, T: ArgumentEncoder> Sendable for CallWithArgs<'a, T> {
             self.call.timeout_seconds,
         )
     }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        let args = encode_args(self.args).expect("failed to encode arguments");
+        notify_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
 }
 
 impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> Sendable for CallWithRawArgs<'a, A> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(self.raw_args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        notify_raw_internal(
             self.call.canister_id,
             self.call.method,
             Some(self.raw_args),
@@ -475,15 +497,15 @@ pub fn notify_raw(
     args_raw: &[u8],
     payment: u128,
 ) -> Result<(), RejectionCode> {
-    notify_raw_internal(id, method, args_raw, payment, 0)
+    notify_raw_internal(id, method, Some(args_raw), Some(payment), None)
 }
 
 fn notify_raw_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
-    args_raw: T,
-    payment: u128,
-    timeout_seconds: u32,
+    args_raw: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 ) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
     // We set all callbacks to -1, which is guaranteed to be invalid callback index.
@@ -510,12 +532,15 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
             /* reject_fun = */ -1,
             /* reject_env = */ -1,
         );
-        add_payment(payment);
-        ic0::call_data_append(
-            args_raw.as_ref().as_ptr() as i32,
-            args_raw.as_ref().len() as i32,
-        );
-        ic0::call_with_best_effort_response(timeout_seconds as i32);
+        if let Some(args) = args_raw {
+            ic0::call_data_append(args.as_ref().as_ptr() as i32, args.as_ref().len() as i32);
+        }
+        if let Some(payment) = payment {
+            add_payment(payment);
+        }
+        if let Some(timeout_seconds) = timeout_seconds {
+            ic0::call_with_best_effort_response(timeout_seconds as i32);
+        }
         ic0::call_perform()
     };
     match err_code {
