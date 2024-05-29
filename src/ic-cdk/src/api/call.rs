@@ -271,7 +271,7 @@ impl<'a> Call<'a> {
     ///
     /// Another way to set the arguments is to use `with_raw_args`.
     /// If both are invoked, the last one is used.
-    pub fn with_raw_args<A: AsRef<[u8]>>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
+    pub fn with_raw_args<A>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
         CallWithRawArgs {
             call: self,
             raw_args,
@@ -279,7 +279,7 @@ impl<'a> Call<'a> {
     }
 }
 
-impl<'a, T: ArgumentEncoder> CallWithArgs<'a, T> {
+impl<'a, T> CallWithArgs<'a, T> {
     /// Sets the cycles payment for the call.
     ///
     /// If invoked multiple times, the last value is used.
@@ -297,7 +297,7 @@ impl<'a, T: ArgumentEncoder> CallWithArgs<'a, T> {
     }
 }
 
-impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> CallWithRawArgs<'a, A> {
+impl<'a, A> CallWithRawArgs<'a, A> {
     /// Sets the cycles payment for the call.
     ///
     /// If invoked multiple times, the last value is used.
@@ -320,7 +320,7 @@ pub trait Sendable {
     /// Sends the call and gets the reply as raw bytes.
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
 
-    /// Sends the call and decodes the reply to a Candid type,
+    /// Sends the call and decodes the reply to a Candid type.
     fn call<R: for<'b> ArgumentDecoder<'b>>(
         self,
     ) -> impl Future<Output = CallResult<R>> + Send + Sync
@@ -337,7 +337,7 @@ pub trait Sendable {
     /// Sends the call and decodes the reply to a Candid type with a decoding quota.
     fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
         self,
-        decoder_config: ArgDecoderConfig,
+        decoder_config: &ArgDecoderConfig,
     ) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
         Self: Sized,
@@ -367,7 +367,7 @@ pub trait Sendable {
         }
     }
 
-    /// Sends the call and ignore the reply.
+    /// Sends the call and ignores the reply.
     fn call_and_forget(self) -> Result<(), RejectionCode>;
 }
 
