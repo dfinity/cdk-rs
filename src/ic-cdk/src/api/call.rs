@@ -356,7 +356,7 @@ pub trait Sendable {
                 Ok((r, cost)) => {
                     if decoder_config.debug {
                         print_decoding_debug_info(
-                            &format!("{}", std::any::type_name::<R>()),
+                            std::any::type_name::<R>(),
                             &cost,
                             pre_cycles,
                         );
