@@ -355,11 +355,7 @@ pub trait Sendable {
                 Err(e) => Err(decoder_error_to_reject::<R>(e)),
                 Ok((r, cost)) => {
                     if decoder_config.debug {
-                        print_decoding_debug_info(
-                            std::any::type_name::<R>(),
-                            &cost,
-                            pre_cycles,
-                        );
+                        print_decoding_debug_info(std::any::type_name::<R>(), &cost, pre_cycles);
                     }
                     Ok(r)
                 }
