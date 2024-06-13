@@ -17,7 +17,7 @@ examples/*/Cargo.lock
 **/*.rs.bk
 .DS_Store
 
-ic-test-state-machine
+e2e-tests/pocket-ic
 
 # Generated bindings
 **/declarations/
