@@ -17,3 +17,4 @@ candid.workspace = true
 candid_parser.workspace = true
 convert_case = "0.6"
 pretty = "0.12"
+thiserror = "1.0"

@@ -1139,6 +1139,7 @@ dependencies = [
  "candid_parser",
  "convert_case",
  "pretty",
+ "thiserror",
 ]
 
 [[package]]
