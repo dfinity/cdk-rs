@@ -277,15 +277,15 @@ pub trait ConfigurableCall {
 
     /// Sets the call to have a guaranteed response.
     ///
-    /// If [change_timeout] is invoked after this method,
-    /// the `Call` will instead be set with Best-Effort Responses.
+    /// If [change_timeout](ConfigurableCall::change_timeout) is invoked after this method,
+    /// the call will instead be set with Best-Effort Responses.
     fn with_guaranteed_response(self) -> Self;
 
     /// Sets the timeout for the Best-Effort Responses.
     ///
-    /// If invoked multiple times, the last value is used.
     /// If not set, the call will default to a 10 seconds timeout.
-    /// If [with_guaranteed_response] is invoked after this method,
+    /// If invoked multiple times, the last value is used.
+    /// If [with_guaranteed_response](ConfigurableCall::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
     fn change_timeout(self, timeout_seconds: u32) -> Self;
 }

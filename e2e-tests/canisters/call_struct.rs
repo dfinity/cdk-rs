@@ -1,7 +1,6 @@
 use candid::Principal;
-use ic_cdk::api::call::{Call, ConfigurableCall, SendableCall};
+use ic_cdk::prelude::*;
 use ic_cdk::api::management_canister::main::{CanisterIdRecord, CreateCanisterArgument};
-use ic_cdk::update;
 
 #[update]
 async fn create_canister_via_struct() -> Principal {
