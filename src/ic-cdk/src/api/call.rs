@@ -234,12 +234,17 @@ pub struct CallWithRawArgs<'a, A> {
 
 impl<'a> Call<'a> {
     /// Constructs a new call with the Canister id and method name.
+    ///
+    /// # Note
+    /// The `Call` default to set a 10 seconds timeout for Best-Effort Responses.
+    /// If you want to set a guaranteed response, you can use the `with_guaranteed_response` method.
     pub fn new(canister_id: Principal, method: &'a str) -> Self {
         Self {
             canister_id,
             method,
             payment: None,
-            timeout_seconds: None,
+            // Default to 10 seconds.
+            timeout_seconds: Some(10),
         }
     }
 
@@ -263,13 +268,40 @@ impl<'a> Call<'a> {
     }
 }
 
+/// Methods to configure a call.
+pub trait ConfigurableCall {
+    /// Sets the cycles payment for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    fn with_cycles(self, cycles: u128) -> Self;
+
+    /// Sets the call to have a guaranteed response.
+    ///
+    /// If [change_timeout] is invoked after this method,
+    /// the `Call` will instead be set with Best-Effort Responses.
+    fn with_guaranteed_response(self) -> Self;
+
+    /// Sets the timeout for the Best-Effort Responses.
+    ///
+    /// If invoked multiple times, the last value is used.
+    /// If not set, the call will default to a 10 seconds timeout.
+    /// If [with_guaranteed_response] is invoked after this method,
+    /// the timeout will be ignored.
+    fn change_timeout(self, timeout_seconds: u32) -> Self;
+}
+
 impl<'a> ConfigurableCall for Call<'a> {
     fn with_cycles(mut self, cycles: u128) -> Self {
         self.payment = Some(cycles);
         self
     }
 
-    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+    fn with_guaranteed_response(mut self) -> Self {
+        self.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
@@ -281,7 +313,12 @@ impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
         self
     }
 
-    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+    fn with_guaranteed_response(mut self) -> Self {
+        self.call.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
@@ -293,23 +330,15 @@ impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
         self
     }
 
-    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+    fn with_guaranteed_response(mut self) -> Self {
+        self.call.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
-}
-
-/// Methods to configure a call.
-pub trait ConfigurableCall {
-    /// Sets the cycles payment for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    fn with_cycles(self, cycles: u128) -> Self;
-
-    /// Sets the timeout for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    fn with_best_effort_response(self, timeout_seconds: u32) -> Self;
 }
 
 /// Methods to send a call.
