@@ -243,22 +243,6 @@ impl<'a> Call<'a> {
         }
     }
 
-    /// Sets the cycles payment for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_cycles(mut self, cycles: u128) -> Self {
-        self.payment = Some(cycles);
-        self
-    }
-
-    /// Sets the timeout for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
-        self.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-
     /// Sets the arguments for the call.
     ///
     /// Another way to set the arguments is to use `with_raw_args`.
@@ -279,44 +263,57 @@ impl<'a> Call<'a> {
     }
 }
 
-impl<'a, T> CallWithArgs<'a, T> {
-    /// Sets the cycles payment for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_cycles(mut self, cycles: u128) -> Self {
+impl<'a> ConfigurableCall for Call<'a> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
+        self.payment = Some(cycles);
+        self
+    }
+
+    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+        self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
         self.call.payment = Some(cycles);
         self
     }
 
-    /// Sets the timeout for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
 }
 
-impl<'a, A> CallWithRawArgs<'a, A> {
-    /// Sets the cycles payment for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_cycles(mut self, cycles: u128) -> Self {
+impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
         self.call.payment = Some(cycles);
         self
     }
 
-    /// Sets the timeout for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    pub fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
+    fn with_best_effort_response(mut self, timeout_seconds: u32) -> Self {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
+}
+
+/// Methods to configure a call.
+pub trait ConfigurableCall {
+    /// Sets the cycles payment for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    fn with_cycles(self, cycles: u128) -> Self;
+
+    /// Sets the timeout for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    fn with_best_effort_response(self, timeout_seconds: u32) -> Self;
 }
 
 /// Methods to send a call.
-pub trait Sendable {
+pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
 
@@ -367,7 +364,7 @@ pub trait Sendable {
     fn call_and_forget(self) -> Result<(), RejectionCode>;
 }
 
-impl Sendable for Call<'_> {
+impl SendableCall for Call<'_> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         call_raw_internal::<Vec<u8>>(
             self.canister_id,
@@ -389,7 +386,7 @@ impl Sendable for Call<'_> {
     }
 }
 
-impl<'a, T: ArgumentEncoder> Sendable for CallWithArgs<'a, T> {
+impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         let args = encode_args(self.args).expect("failed to encode arguments");
         call_raw_internal(
@@ -413,7 +410,7 @@ impl<'a, T: ArgumentEncoder> Sendable for CallWithArgs<'a, T> {
     }
 }
 
-impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> Sendable for CallWithRawArgs<'a, A> {
+impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         call_raw_internal(
             self.call.canister_id,

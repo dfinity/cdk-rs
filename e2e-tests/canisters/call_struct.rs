@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::api::call::{Call, Sendable};
+use ic_cdk::api::call::{Call, SendableCall, ConfigurableCall};
 use ic_cdk::api::management_canister::main::{CanisterIdRecord, CreateCanisterArgument};
 use ic_cdk::update;
 
