@@ -1,3 +1,4 @@
+load ../../bats/bats-support/load.bash
 load ../../bats/bats-assert/load.bash
 
 # Executed before each test.
