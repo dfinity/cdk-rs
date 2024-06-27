@@ -18,6 +18,7 @@ mod main {
                 memory_allocation: Some(10000u16.into()),
                 freezing_threshold: Some(u64::MAX.into()),
                 reserved_cycles_limit: Some(u128::MAX.into()),
+                log_visibility: Some(LogVisibility::Public),
                 wasm_memory_limit: Some((2u64.pow(48) - 1).into()),
             }),
         };
@@ -72,6 +73,7 @@ mod main {
 
 mod provisional {
     use super::*;
+    use api::management_canister::main::LogVisibility;
     use ic_cdk::api::management_canister::provisional::*;
 
     #[update]
@@ -82,6 +84,7 @@ mod provisional {
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
             reserved_cycles_limit: Some(10000u16.into()),
+            log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
