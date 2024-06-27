@@ -39,6 +39,10 @@ mod main {
         assert_eq!(definite_canister_setting.freezing_threshold, u64::MAX);
         assert_eq!(definite_canister_setting.reserved_cycles_limit, u128::MAX);
         assert_eq!(
+            definite_canister_setting.log_visibility,
+            LogVisibility::Public
+        );
+        assert_eq!(
             definite_canister_setting.wasm_memory_limit,
             2u64.pow(48) - 1
         );
