@@ -8,11 +8,12 @@ pub type CanisterId = Principal;
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-#[serde(rename_all = "lowercase")]
 pub enum LogVisibility {
     #[default]
+    #[serde(rename = "controllers")]
     /// Only controllers of the canister can access the logs.
     Controllers,
+    #[serde(rename = "public")]
     /// Everyone is allowed to access the canister's logs.
     Public,
 }
