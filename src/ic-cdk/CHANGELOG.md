@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- BREAKING: Stable Memory always use 64-bit addresses and `stable64_*` system API.
+
 ## [0.14.0] - 2024-05-17
 ## [0.13.3] - 2024-05-10 (yanked)
 
