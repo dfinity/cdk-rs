@@ -26,7 +26,7 @@ impl TestStableMemory {
 impl StableMemory for TestStableMemory {
     fn stable_size(&self) -> u64 {
         let bytes_len = self.memory.lock().unwrap().len();
-        pages_required(bytes_len) as u64
+        pages_required(bytes_len)
     }
 
     fn stable_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
@@ -137,7 +137,7 @@ mod stable_writer_tests {
         let min_pages_required =
             (total_bytes as u64 + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
 
-        assert_eq!(capacity_pages, min_pages_required as u64);
+        assert_eq!(capacity_pages, min_pages_required);
     }
 
     #[test]
@@ -248,7 +248,7 @@ mod stable_reader_tests {
             WASM_PAGE_SIZE_IN_BYTES
         );
         reader
-            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES as u64 * 2))
+            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES * 2))
             .unwrap();
         // out of bounds so should fail
         assert!(reader.read(&mut bytes).is_err());
