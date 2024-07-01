@@ -13,7 +13,10 @@ impl TestStableMemory {
         if bytes_len > 0 {
             let pages_required = pages_required(bytes_len);
             let bytes_required = pages_required * WASM_PAGE_SIZE_IN_BYTES;
-            memory.lock().unwrap().resize(bytes_required, 0);
+            memory
+                .lock()
+                .unwrap()
+                .resize(bytes_required.try_into().unwrap(), 0);
         }
 
         TestStableMemory { memory }
@@ -21,30 +24,22 @@ impl TestStableMemory {
 }
 
 impl StableMemory for TestStableMemory {
-    fn stable_size(&self) -> u32 {
+    fn stable_size(&self) -> u64 {
         let bytes_len = self.memory.lock().unwrap().len();
-        pages_required(bytes_len) as u32
+        pages_required(bytes_len) as u64
     }
 
-    fn stable64_size(&self) -> u64 {
-        self.stable_size() as u64
-    }
-
-    fn stable_grow(&self, new_pages: u32) -> Result<u32, StableMemoryError> {
-        let new_bytes = new_pages as usize * WASM_PAGE_SIZE_IN_BYTES;
+    fn stable_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
+        let new_bytes = new_pages * WASM_PAGE_SIZE_IN_BYTES;
 
         let mut vec = self.memory.lock().unwrap();
-        let previous_len = vec.len();
-        let new_len = vec.len() + new_bytes;
-        vec.resize(new_len, 0);
-        Ok((previous_len / WASM_PAGE_SIZE_IN_BYTES) as u32)
+        let previous_len = vec.len() as u64;
+        let new_len = vec.len() as u64 + new_bytes;
+        vec.resize(new_len.try_into().unwrap(), 0);
+        Ok(previous_len / WASM_PAGE_SIZE_IN_BYTES)
     }
 
-    fn stable64_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
-        self.stable_grow(new_pages as u32).map(|len| len as u64)
-    }
-
-    fn stable_write(&self, offset: u32, buf: &[u8]) {
+    fn stable_write(&self, offset: u64, buf: &[u8]) {
         let offset = offset as usize;
 
         let mut vec = self.memory.lock().unwrap();
@@ -54,11 +49,7 @@ impl StableMemory for TestStableMemory {
         vec[offset..(offset + buf.len())].clone_from_slice(buf);
     }
 
-    fn stable64_write(&self, offset: u64, buf: &[u8]) {
-        self.stable_write(offset as u32, buf)
-    }
-
-    fn stable_read(&self, offset: u32, buf: &mut [u8]) {
+    fn stable_read(&self, offset: u64, buf: &mut [u8]) {
         let offset = offset as usize;
 
         let vec = self.memory.lock().unwrap();
@@ -66,15 +57,11 @@ impl StableMemory for TestStableMemory {
 
         buf[..count_to_copy].copy_from_slice(&vec[offset..offset + count_to_copy]);
     }
-
-    fn stable64_read(&self, offset: u64, buf: &mut [u8]) {
-        self.stable_read(offset as u32, buf)
-    }
 }
 
-fn pages_required(bytes_len: usize) -> usize {
+fn pages_required(bytes_len: usize) -> u64 {
     let page_size = WASM_PAGE_SIZE_IN_BYTES;
-    (bytes_len + page_size - 1) / page_size
+    (bytes_len as u64 + page_size - 1) / page_size
 }
 
 mod stable_writer_tests {
@@ -146,9 +133,9 @@ mod stable_writer_tests {
         }
         writer.flush().unwrap();
 
-        let capacity_pages = TestStableMemory::new(memory).stable64_size();
+        let capacity_pages = TestStableMemory::new(memory).stable_size();
         let min_pages_required =
-            (total_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
+            (total_bytes as u64 + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
 
         assert_eq!(capacity_pages, min_pages_required as u64);
     }
@@ -161,7 +148,7 @@ mod stable_writer_tests {
         let mut writer = StableWriter::with_memory(TestStableMemory::new(memory.clone()), 0);
         assert_eq!(writer.offset(), 0);
         assert_eq!(writer.write(&vec![0; WRITE_SIZE]).unwrap(), WRITE_SIZE);
-        assert_eq!(writer.offset(), WRITE_SIZE);
+        assert_eq!(writer.offset(), WRITE_SIZE as u64);
 
         let mut writer = BufferedStableWriter::with_writer(
             WRITE_SIZE - 1,
@@ -169,7 +156,7 @@ mod stable_writer_tests {
         );
         assert_eq!(writer.offset(), 0);
         assert_eq!(writer.write(&vec![0; WRITE_SIZE]).unwrap(), WRITE_SIZE);
-        assert_eq!(writer.offset(), WRITE_SIZE);
+        assert_eq!(writer.offset(), WRITE_SIZE as u64);
     }
 
     #[test]
@@ -177,18 +164,15 @@ mod stable_writer_tests {
         let memory = Rc::new(Mutex::new(Vec::new()));
         let mut writer = StableWriter::with_memory(TestStableMemory::new(memory.clone()), 0);
         writer
-            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES as u64))
+            .seek(std::io::SeekFrom::Start(WASM_PAGE_SIZE_IN_BYTES))
             .unwrap();
-        assert_eq!(
-            writer.stream_position().unwrap() as usize,
-            WASM_PAGE_SIZE_IN_BYTES
-        );
+        assert_eq!(writer.stream_position().unwrap(), WASM_PAGE_SIZE_IN_BYTES);
         assert_eq!(writer.write(&[1_u8]).unwrap(), 1);
         assert_eq!(
-            writer.seek(std::io::SeekFrom::End(0)).unwrap() as usize,
+            writer.seek(std::io::SeekFrom::End(0)).unwrap(),
             WASM_PAGE_SIZE_IN_BYTES * 2
         );
-        let capacity_pages = TestStableMemory::new(memory).stable64_size();
+        let capacity_pages = TestStableMemory::new(memory).stable_size();
         assert_eq!(capacity_pages, 2);
     }
 
@@ -233,7 +217,7 @@ mod stable_reader_tests {
         assert_eq!(reader.offset(), 0);
         let mut bytes = vec![0; READ_SIZE];
         assert_eq!(reader.read(&mut bytes).unwrap(), READ_SIZE);
-        assert_eq!(reader.offset(), READ_SIZE);
+        assert_eq!(reader.offset(), READ_SIZE as u64);
 
         let mut reader = BufferedStableReader::with_reader(
             READ_SIZE - 1,
@@ -242,7 +226,7 @@ mod stable_reader_tests {
         assert_eq!(reader.offset(), 0);
         let mut bytes = vec![0; READ_SIZE];
         assert_eq!(reader.read(&mut bytes).unwrap(), READ_SIZE);
-        assert_eq!(reader.offset(), READ_SIZE);
+        assert_eq!(reader.offset(), READ_SIZE as u64);
     }
 
     #[test]
@@ -260,7 +244,7 @@ mod stable_reader_tests {
         assert_eq!(reader.read(&mut bytes).unwrap(), 1);
         assert_eq!(&bytes, &[OFFSET as u8]);
         assert_eq!(
-            reader.seek(std::io::SeekFrom::End(0)).unwrap() as usize,
+            reader.seek(std::io::SeekFrom::End(0)).unwrap(),
             WASM_PAGE_SIZE_IN_BYTES
         );
         reader
