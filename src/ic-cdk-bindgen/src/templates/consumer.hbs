@@ -1,4 +1,5 @@
-#[allow(unused_imports)]
+#[allow(dead_code, unused_imports)]
+
 use {{candid_crate}}::{self, CandidType, Deserialize, Principal};
 use ic_cdk::api::call::CallResult as Result;
 
@@ -14,6 +15,7 @@ impl {{PascalCase service_name}} {
 }
 {{#if canister_id}}
 pub const CANISTER_ID : Principal = Principal::from_slice(&[{{principal_slice canister_id}}]); // {{canister_id}}
+#[allow(non_upper_case_globals)]
 pub const {{snake_case service_name}} : {{PascalCase service_name}} = {{PascalCase service_name}}(CANISTER_ID);
 {{/if}}
 {{/if}}
