@@ -9,10 +9,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-mod code_generator;
 mod error;
 
-use code_generator::Target;
 pub use error::IcCdkBindgenError;
 
 type Result<T> = std::result::Result<T, IcCdkBindgenError>;
@@ -81,9 +79,17 @@ impl Builder {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Target {
+    Consumer,
+    Provider,
+    Type,
+}
+
 // Code generation.
 impl Builder {
     fn generate(&self, target: Target) -> Result<()> {
+        // 1. Parse the candid file and generate the Output (the struct for bindings)
         let config = Config::new(Configs::from_str("").unwrap());
         let candid_path = if let Some(p) = &self.candid_path {
             p.clone()
@@ -96,12 +102,12 @@ impl Builder {
         // TODO: handle unused.
         assert!(unused.is_empty());
 
+        // 2. Generate the Rust bindings using the Handlebars template
         let template = match target {
             Target::Consumer => include_str!("templates/consumer.hbs"),
             Target::Provider => include_str!("templates/provider.hbs"),
             Target::Type => include_str!("templates/type.hbs"),
         };
-
         let mut external = ExternalConfig::default();
         if target == Target::Consumer {
             let canister_id = if let Some(p) = &self.canister_id {
@@ -116,9 +122,9 @@ impl Builder {
         external
             .0
             .insert("service_name".to_string(), self.canister_name.to_string());
-
         let content = output_handlebar(output, external, template);
 
+        // 3. Write the generated Rust bindings to the output directory
         let out_dir = if let Some(p) = &self.out_dir {
             p.clone()
         } else {
