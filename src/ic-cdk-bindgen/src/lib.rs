@@ -1,9 +1,13 @@
 use candid::Principal;
+use candid_parser::bindings::rust::{emit_bindgen, output_handlebar, Config, ExternalConfig};
+use candid_parser::configs::Configs;
 use candid_parser::pretty_check_file;
+
 use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 mod code_generator;
 mod error;
@@ -80,19 +84,7 @@ impl Builder {
 // Code generation.
 impl Builder {
     fn generate(&self, target: Target) -> Result<()> {
-        let mut binding = code_generator::Config::new();
-        if target == Target::Consumer {
-            let canister_id = if let Some(p) = &self.canister_id {
-                *p
-            } else {
-                canister_id_from_env(&self.canister_name)?
-            };
-            binding.set_canister_id(canister_id);
-        }
-        binding
-            .set_service_name(self.canister_name.to_string())
-            .set_target(target);
-
+        let config = Config::new(Configs::from_str("").unwrap());
         let candid_path = if let Some(p) = &self.candid_path {
             p.clone()
         } else {
@@ -100,7 +92,32 @@ impl Builder {
         };
 
         let (env, actor) = pretty_check_file(&candid_path).expect("Cannot parse candid file");
-        let content = code_generator::compile(&binding, &env, &actor);
+        let (output, unused) = emit_bindgen(&config, &env, &actor);
+        // TODO: handle unused.
+        assert!(unused.is_empty());
+
+        let template = match target {
+            Target::Consumer => include_str!("templates/consumer.hbs"),
+            Target::Provider => include_str!("templates/provider.hbs"),
+            Target::Type => include_str!("templates/type.hbs"),
+        };
+
+        let mut external = ExternalConfig::default();
+        if target == Target::Consumer {
+            let canister_id = if let Some(p) = &self.canister_id {
+                *p
+            } else {
+                canister_id_from_env(&self.canister_name)?
+            };
+            external
+                .0
+                .insert("canister_id".to_string(), canister_id.to_string());
+        }
+        external
+            .0
+            .insert("service_name".to_string(), self.canister_name.to_string());
+
+        let content = output_handlebar(output, external, template);
 
         let out_dir = if let Some(p) = &self.out_dir {
             p.clone()
@@ -117,7 +134,7 @@ impl Builder {
 
         let generated_path = sub_dir.join(format!("{}.rs", &self.canister_name));
         let mut file = fs::File::create(generated_path)?;
-        file.write_all(content.as_bytes())?;
+        writeln!(file, "{content}")?;
         Ok(())
     }
 
