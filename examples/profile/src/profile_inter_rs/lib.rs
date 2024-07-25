@@ -1,7 +1,9 @@
 use ic_cdk::update;
 
-mod declarations;
-use declarations::profile_rs::{profile_rs, Profile};
+mod profile_rs {
+    include!(concat!(env!("OUT_DIR"), "/consumer/profile_rs.rs"));
+}
+use profile_rs::{profile_rs, Profile};
 
 #[update(name = "getSelf")]
 async fn get_self() -> Profile {
