@@ -49,6 +49,7 @@
     (func (export "global_timer_set") (param i64) (result i64) i64.const 0)
     (func (export "performance_counter") (param i32) (result i64) i64.const 0)
     (func (export "is_controller") (param i32 i32) (result i32) i32.const 0)
+    (func (export "in_replicated_execution")  (result i32) i32.const 0)
     (func (export "debug_print") (param i32 i32) )
     (func (export "trap") (param i32 i32) )
 )

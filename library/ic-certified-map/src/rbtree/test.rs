@@ -324,6 +324,7 @@ fn test_witness_value_range() {
 
 #[allow(clippy::map_identity)]
 #[test]
+#[allow(clippy::map_identity)]
 fn test_iter() {
     let mut t = TreeOfBytes::new();
     let mut v = vec![];

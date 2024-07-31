@@ -1,27 +1,30 @@
-use candid_parser::{bindings::rust, pretty_check_file, Principal};
+use candid::Principal;
+use candid_parser::pretty_check_file;
 use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+
+mod code_generator;
 
 #[derive(Clone)]
 pub struct Config {
     pub canister_name: String,
     pub candid_path: PathBuf,
     pub skip_existing_files: bool,
-    pub binding: rust::Config,
+    pub binding: code_generator::Config,
 }
 
 impl Config {
     pub fn new(canister_name: &str) -> Self {
         let (candid_path, canister_id) = resolve_candid_path_and_canister_id(canister_name);
-        let mut binding = rust::Config::new();
+        let mut binding = code_generator::Config::new();
         binding
             // User will depend on candid crate directly
             .set_candid_crate("candid".to_string())
             .set_canister_id(canister_id)
             .set_service_name(canister_name.to_string())
-            .set_target(rust::Target::CanisterCall);
+            .set_target(code_generator::Target::CanisterCall);
 
         Config {
             canister_name: canister_name.to_string(),
@@ -53,6 +56,8 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
 
     let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
     let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{}", canister_name);
+    println!("cargo:rerun-if-env-changed={candid_path_var_name}");
+    println!("cargo:rerun-if-env-changed={candid_path_var_name_legacy}");
 
     let candid_path_str = if let Ok(candid_path_str) = env::var(&candid_path_var_name) {
         candid_path_str
@@ -69,6 +74,8 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
 
     let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
     let canister_id_var_name_legacy = format!("CANISTER_ID_{}", canister_name);
+    println!("cargo:rerun-if-env-changed={canister_id_var_name}");
+    println!("cargo:rerun-if-env-changed={canister_id_var_name_legacy}");
     let canister_id_str = if let Ok(canister_id_str) = env::var(&canister_id_var_name) {
         canister_id_str
     } else if let Ok(canister_id_str) = env::var(&canister_id_var_name_legacy) {
@@ -111,7 +118,7 @@ impl Builder {
         for conf in self.configs.iter() {
             let (env, actor) =
                 pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
-            let content = rust::compile(&conf.binding, &env, &actor);
+            let content = code_generator::compile(&conf.binding, &env, &actor);
             let generated_path = out_path.join(format!("{}.rs", conf.canister_name));
             if !(conf.skip_existing_files && generated_path.exists()) {
                 fs::write(generated_path, content).expect("Cannot store generated binding");

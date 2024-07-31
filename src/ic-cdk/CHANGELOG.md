@@ -6,9 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.15.0] - 2024-07-01
+
+### Changed
+
+- BREAKING: Stable Memory always use 64-bit addresses and `stable64_*` system API. (#498)
+- BREAKING: Add `log_visibility` to the management canister API types: (#497)
+   - `CanisterSettings`
+   - `DefiniteCanisterSettings`.
+
+## [0.14.0] - 2024-05-17
+## [0.13.3] - 2024-05-10 (yanked)
+
 ### Added
 
-- Provide safe wrapper of global_timer_set in ic-cdk. (#475)
+- Provide safe wrapper of `in_replicated_execution` in ic-cdk. (#489)
+
+### Changed
+
+- Upgrade `ic0` to v0.23.0. (#489)
+- BREAKING: Add `wasm_memory_limit` to the management canister API types: (#483)
+   - `CanisterSettings`
+   - `DefiniteCanisterSettings`.
+
+## [0.13.2] - 2024-04-08
+
+### Added
+
+- Management canister methods for interacting with the chunk store. (#461)
+- Provide safe wrapper of `global_timer_set` in ic-cdk. (#475)
 
 ## [0.13.1] - 2024-03-01
 

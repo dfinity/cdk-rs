@@ -103,7 +103,8 @@ fn dfn_macro(
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Error> {
-    let attrs = from_tokenstream::<ExportAttributes>(&attr)?;
+    let attrs = from_tokenstream::<ExportAttributes>(&attr)
+        .map_err(|e| Error::new(attr.span(), format!("Failed to deserialize {attr}. \n{e}")))?;
 
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Error::new(
@@ -161,7 +162,7 @@ fn dfn_macro(
         }
         format!("canister_{method} {function_name}")
     };
-    let ld_name = export_name.replace(' ', "$");
+    let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
     let function_call = if is_async {
         quote! { #name ( #(#arg_tuple),* ) .await }
@@ -257,7 +258,7 @@ fn dfn_macro(
 
     Ok(quote! {
         #[cfg_attr(target_family = "wasm", export_name = #export_name)]
-        #[cfg_attr(not(target_family = "wasm"), export_name = #ld_name)]
+        #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
         extern "C-unwind" fn #outer_function_ident() {
             ic_cdk::setup();
 
@@ -328,7 +329,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -370,7 +372,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -413,7 +416,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -456,7 +460,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -499,7 +504,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -542,7 +548,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
@@ -585,7 +592,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[export_name = "canister_query custom_query"]
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
                 ic_cdk::setup();
                 ic_cdk::spawn(async {
