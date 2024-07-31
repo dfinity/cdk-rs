@@ -7,6 +7,7 @@ use candid::{
     Principal,
 };
 use ic_cdk::api::call::RejectionCode;
+use interface::{ic0, Ic0Vtable};
 use libloading::Library;
 
 mod implementation;
@@ -59,11 +60,21 @@ enum Canister {
     //todo
 }
 
+/// Loads a mocked canister by path and initializes it. Use `"@"` for the path of the current canister.
+///
+/// The canister will not be constructed until the message is processed. If you are only testing the
+/// constructor you must still use one of the `execute_*` functions.
+///
+/// # Safety
+///
+/// If you use this function to load canister mocks that only export methods using `ic-cdk`'s attributes,
+/// then this function is safe to call. Unfortunately, this cannot be verified at runtime. In principle
+/// it is impossible for a function that loads a DLL to ever be safe. In practice it's probably fine in tests.
 pub unsafe fn load_canister(
     module: impl AsRef<Path>,
     principal: Principal,
     init_args: impl ArgumentEncoder,
-) -> Result<(), ()> {
+) {
     let module = module.as_ref();
     let canister = if module == Path::new("@") {
         Canister::Dll(
@@ -80,7 +91,17 @@ pub unsafe fn load_canister(
             .into(),
         )
     } else {
-        let library = unsafe { Library::new(module) }.map_err(|_| ())?;
+        let library = unsafe { Library::new(module) }
+            .unwrap_or_else(|e| panic!("failed to load canister: {e}"));
+        let api = library
+            .get::<*mut Ic0Vtable>(b"ic0_testmock_interface\0")
+            .unwrap_or_else(|_| panic!("not a mock canister: {}", module.display()));
+        assert!(
+            unsafe { (**api).size } == ic0().size,
+            "incompatible mock canister {}",
+            module.display()
+        );
+        unsafe { **api = ic0() };
         Canister::Dll(library)
     };
     let init_message = Message {
@@ -88,13 +109,14 @@ pub unsafe fn load_canister(
         to: principal,
         method: "#[init]".to_string(),
         callback: None,
-        payload: Some(encode_args(init_args).map_err(|_| ())?),
+        payload: Some(
+            encode_args(init_args).unwrap_or_else(|e| panic!("failed to encode init args: {e}")),
+        ),
         cycles: 0,
         status: MessageStatus::Pending,
     };
     LOADED_CANISTERS.with_borrow_mut(|c| c.insert(principal, canister));
     enqueue_message(init_message);
-    Ok(())
 }
 
 fn enqueue_message(message: Message) {
@@ -125,7 +147,7 @@ fn run_all_messages() {
 
 // todo catch_unwind
 fn run_one_message() -> bool {
-    let Some(mut message) = QUEUE.with_borrow_mut(|q| q.pop_front()) else {
+    let Some(message) = QUEUE.with_borrow_mut(|q| q.pop_front()) else {
         return false;
     };
     let to = message.to;
@@ -141,10 +163,10 @@ fn run_one_message() -> bool {
                         panic!("error looking up {method} in canister {to}: {e}")
                     })
                 } else {
-                    match library.get(format!("canister_query${method}\0").as_bytes()) {
+                    match library.get(format!("canister_query.{method}\0").as_bytes()) {
                         Ok(sym) => *sym,
                         Err(e1) => *library
-                            .get(format!("canister_update${method}\0").as_bytes())
+                            .get(format!("canister_update.{method}\0").as_bytes())
                             .unwrap_or_else(|e2| {
                                 panic!("error looking up {method} in canister {to}: either '{e1}' or '{e2}'")
                             }),
@@ -207,4 +229,9 @@ fn run_one_message() -> bool {
         }
     }
     true
+}
+
+pub fn execute_all_instantly() {
+    // todo add timers
+    run_all_messages();
 }

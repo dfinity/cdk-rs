@@ -215,6 +215,10 @@ unsafe extern "C-unwind" fn ic0_is_controller(src: usize, size: usize) -> usize 
     (ic0().is_controller)(src, size)
 }
 #[no_mangle]
+unsafe extern "C-unwind" fn ic0_in_replicated_execution() -> u32 {
+    (ic0().in_replicated_execution)()
+}
+#[no_mangle]
 unsafe extern "C-unwind" fn ic0_debug_print(src: usize, size: usize) {
     (ic0().debug_print)(src, size)
 }
@@ -223,7 +227,6 @@ unsafe extern "C-unwind" fn ic0_trap(src: usize, size: usize) {
     (ic0().trap)(src, size)
 }
 
-// DO NOT change the order of fields. New fields should be APPENDED to end of struct.
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub(crate) struct Ic0Vtable {
@@ -292,12 +295,13 @@ pub(crate) struct Ic0Vtable {
     pub(crate) global_timer_set: unsafe extern "C-unwind" fn(timestamp: i64) -> i64,
     pub(crate) performance_counter: unsafe extern "C-unwind" fn(counter_type: u32) -> u64,
     pub(crate) is_controller: unsafe extern "C-unwind" fn(src: usize, size: usize) -> usize,
+    pub(crate) in_replicated_execution: unsafe extern "C-unwind" fn() -> u32,
     pub(crate) debug_print: unsafe extern "C-unwind" fn(src: usize, size: usize),
     pub(crate) trap: unsafe extern "C-unwind" fn(src: usize, size: usize),
 }
 
 // SAFETY: This must not be written to after any functions are called, and must contain only functions obeying the system spec's implied safety guarantees.
-#[export_name = "ic0_interface"]
+#[export_name = "ic0_testmock_interface"]
 static mut IC0_INTERFACE: Ic0Vtable = Ic0Vtable {
     size: std::mem::size_of::<Ic0Vtable>(),
     msg_arg_data_size,
@@ -348,6 +352,7 @@ static mut IC0_INTERFACE: Ic0Vtable = Ic0Vtable {
     global_timer_set,
     performance_counter,
     is_controller,
+    in_replicated_execution,
     debug_print,
     trap,
 };

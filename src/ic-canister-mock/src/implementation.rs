@@ -252,6 +252,9 @@ pub unsafe extern "C-unwind" fn performance_counter(counter_type: u32) -> u64 {
 pub unsafe extern "C-unwind" fn is_controller(src: usize, size: usize) -> usize {
     panic!("is_controller should only be called inside canisters.");
 }
+pub unsafe extern "C-unwind" fn in_replicated_execution() -> u32 {
+    panic!("in_replicated_execution should only be called inside canisters.");
+}
 pub unsafe extern "C-unwind" fn debug_print(src: usize, size: usize) {
     let current = with_active_message(|msg| msg.to);
     let s = String::from_utf8_lossy(std::slice::from_raw_parts(src as *const u8, size));
