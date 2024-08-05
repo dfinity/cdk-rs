@@ -31,6 +31,7 @@ ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.15.0" }
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }
+slotmap32 = { git = "https://github.com/lwshang/slotmap", branch = "key32", package = "slotmap" }
 
 [dev-dependencies]
 anyhow = "1"
