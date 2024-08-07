@@ -490,6 +490,9 @@ pub enum CanisterChangeDetails {
     /// See [CodeDeploymentRecord].
     #[serde(rename = "code_deployment")]
     CodeDeployment(CodeDeploymentRecord),
+    /// See [LoadSnapshotRecord].
+    #[serde(rename = "load_snapshot")]
+    LoadSnapshot(LoadSnapshotRecord),
     /// See [ControllersChangeRecord].
     #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
