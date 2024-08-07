@@ -554,7 +554,7 @@ pub struct Snapshot {
     pub total_size: u64,
 }
 
-/// TODO:
+/// Argument type of [take_canister_snapshot](super::take_canister_snapshot).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -567,7 +567,7 @@ pub struct TakeCanisterSnapshotArgs {
     pub replace_snapshot: Option<SnapshotId>,
 }
 
-/// TODO:
+/// Argument type of [load_canister_snapshot](super::load_canister_snapshot).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -580,16 +580,7 @@ pub struct LoadCanisterSnapshotArgs {
     pub sender_canister_version: Option<u64>,
 }
 
-/// TODO:
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct ListCanisterSnapshotsArgs {
-    /// Principal of the canister.
-    pub canister_id: CanisterId,
-}
-
-/// TODO:
+/// Argument type of [delete_canister_snapshot](super::delete_canister_snapshot).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
