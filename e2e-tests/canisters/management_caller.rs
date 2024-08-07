@@ -114,7 +114,7 @@ mod snapshot {
     use ic_cdk::api::management_canister::main::*;
 
     #[update]
-    async fn execute_snapshot_methods() {
+    async fn execute_snapshot_methods() -> CanisterInfoResponse {
         let arg = CreateCanisterArgument::default();
         let canister_id = create_canister(arg, 2_000_000_000_000u128)
             .await
@@ -157,6 +157,12 @@ mod snapshot {
             snapshot_id: snapshot1.id.clone(),
         };
         assert!(delete_canister_snapshot(arg).await.is_ok());
+
+        let arg = CanisterInfoRequest {
+            canister_id,
+            num_requested_changes: None,
+        };
+        canister_info(arg).await.unwrap().0
     }
 }
 
