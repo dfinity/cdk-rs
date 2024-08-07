@@ -459,8 +459,10 @@ pub struct CodeDeploymentRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct LoadSnapshotRecord {
-    /// TODO:
+    /// The version of the canister at the time that the snapshot was taken
     pub canister_version: u64,
+    /// The ID of the snapshot that was loaded.
+    pub snapshot_id: SnapshotId,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
 }
@@ -550,7 +552,7 @@ pub struct Snapshot {
     pub id: SnapshotId,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
-    /// TODO: The size of the snapshot in bytes.
+    /// The size of the snapshot in bytes.
     pub total_size: u64,
 }
 

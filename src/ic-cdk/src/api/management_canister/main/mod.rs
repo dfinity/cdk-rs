@@ -205,7 +205,7 @@ pub async fn take_canister_snapshot(arg: TakeCanisterSnapshotArgs) -> CallResult
 /// It fails if no snapshot with the specified `snapshot_id` can be found.
 ///
 /// See [IC method `load_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-load_canister_snapshot).
-pub async fn load_canister_snapshot(arg: CanisterIdRecord) -> CallResult<()> {
+pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgs) -> CallResult<()> {
     call(
         Principal::management_canister(),
         "load_canister_snapshot",
