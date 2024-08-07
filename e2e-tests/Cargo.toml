@@ -53,4 +53,4 @@ path = "canisters/chunk.rs"
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = "3"
+pocket-ic = "4"
