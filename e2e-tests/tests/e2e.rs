@@ -563,10 +563,8 @@ fn test_snapshot() {
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
-    let canister_info_response: (CanisterInfoResponse,) =
-        call_candid(&pic, canister_id, "execute_snapshot_methods", ())
-            .expect("Error calling execute_snapshot_methods");
-    println!("{canister_info_response:?}");
+    let () = call_candid(&pic, canister_id, "execute_snapshot_methods", ())
+        .expect("Error calling execute_snapshot_methods");
 }
 
 #[test]
