@@ -8,7 +8,7 @@ use ic_cdk::api::management_canister::main::{
 
 #[ic_cdk::update]
 async fn info(canister_id: Principal) -> CanisterInfoResponse {
-    let request = CanisterInfoRequest {
+    let request: CanisterInfoRequest = CanisterInfoRequest {
         canister_id,
         num_requested_changes: Some(20),
     };
