@@ -29,7 +29,7 @@ This repo provides libraries and tools to facilitate developing canisters in Rus
 - [`ic0`](src/ic0):
 Internet Computer System API binding.
 - [`ic-cdk`](src/ic-cdk):
-Internet Computer Canister Development Kit
+Internet Computer Canister Development Kit.
 - [`ic-cdk-bindgen`](src/ic-cdk-bindgen):
 Generate Rust bindings from Candid to make inter-canister calls.
 - [`ic-cdk-macros`](src/ic-cdk-macros):
@@ -53,8 +53,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ic-cdk = "0.15"
-# Only necessary if you want to define Candid data types
-candid = "0.10" 
+candid = "0.10" # required if you want to define Candid data types
 ```
 
 Then in Rust source code:
