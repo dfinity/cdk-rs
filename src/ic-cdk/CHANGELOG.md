@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.9.2] - 2023-06-22
+
+### Changed
+
+- Hardcodes the fee for `sign_with_ecdsa`. (#407)
+
+## [0.9.1] - 2023-06-21 (yanked)
+
+### Changed
+
+- Bitcoin API handles cycles cost under the hood. (#406)
+
+## [0.9.0] - 2023-06-20 (yanked)
+
+### Added
+
+- Set caller's canister version in the field `sender_canister_version` of management canister call payloads. (#401)
+- Add management canister types for `canister_info` management canister call (`CanisterInfoRequest` and `CanisterInfoResponse`). (#401)
+
+### Changed
+
+- No hard-coded fees for management canister calls. (#404)
+
 ## [0.8.0] - 2023-05-26
 
 ### Added
