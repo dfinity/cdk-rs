@@ -14,6 +14,8 @@ struct ExportAttributes {
     pub manual_reply: bool,
     #[serde(default)]
     pub composite: bool,
+    #[serde(default)]
+    pub hidden: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -198,18 +200,23 @@ fn dfn_macro(
         quote! {}
     };
 
-    let candid_method_attr = match method {
-        MethodType::Query if attrs.composite => {
-            quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
+    let candid_method_attr = if attrs.hidden {
+        quote! {}
+    } else {
+        match method {
+            MethodType::Query if attrs.composite => {
+                quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
+            }
+            MethodType::Query => {
+                quote! { #[::candid::candid_method(query, rename = #function_name)] }
+            }
+            MethodType::Update => {
+                quote! { #[::candid::candid_method(update, rename = #function_name)] }
+            }
+            MethodType::Init => quote! { #[::candid::candid_method(init)] },
+            _ => quote! {},
         }
-        MethodType::Query => quote! { #[::candid::candid_method(query, rename = #function_name)] },
-        MethodType::Update => {
-            quote! { #[::candid::candid_method(update, rename = #function_name)] }
-        }
-        MethodType::Init => quote! { #[::candid::candid_method(init)] },
-        _ => quote! {},
     };
-
     let item = quote! {
         #candid_method_attr
         #item

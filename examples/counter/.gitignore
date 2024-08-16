@@ -1,3 +1,5 @@
 .dfx/
 canisters/
 target/
+
+src/counter_rs/counter.did

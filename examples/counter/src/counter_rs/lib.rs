@@ -3,7 +3,7 @@ use ic_cdk::{api::call::ManualReply, init, query, update};
 use std::cell::{Cell, RefCell};
 
 thread_local! {
-    static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0));
+    static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0u8));
     static OWNER: Cell<Principal> = Cell::new(Principal::from_slice(&[]));
 }
 
@@ -27,5 +27,11 @@ fn read() -> ManualReply<candid::Nat> {
 fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
+
+#[update(hidden = true)]
+fn update_hidden() {}
+
+#[query(hidden = true)]
+fn query_hidden() {}
 
 ic_cdk::export_candid!();

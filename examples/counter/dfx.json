@@ -5,7 +5,10 @@
       "type": "custom",
       "candid": "src/counter_rs/counter.did",
       "wasm": "target/wasm32-unknown-unknown/release/counter_rs-opt.wasm",
-      "build": "sh ../build.sh counter counter_rs"
+      "build": [
+        "sh ../build.sh counter counter_rs",
+        "cp /tmp/a.did src/counter_rs/counter.did"
+      ]
     },
     "counter_mo": {
       "type": "motoko",

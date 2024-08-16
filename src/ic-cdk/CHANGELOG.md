@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.12.1] - 2024-01-12
+
+### Changed
+
+- Add "reserved cycles" fields to the management canister API: (#449)
+  - `reserved_cycles` to `CanisterStatusResponse`
+  - `reserved_cycles_limit` to `CanisterSettings` and `DefiniteCanisterSettings`
+
+### Fixed
+
+- The README file is now more informative and used as the front page of the doc site.
+- The `call*` methods are documented with examples and notes.
+
+## [0.12.0] - 2023-11-23
+
+### Changed
+
+- Upgrade `candid` to `0.10`. (#448)
+
 ## [0.11.4] - 2023-11-20
 
 ### Added
