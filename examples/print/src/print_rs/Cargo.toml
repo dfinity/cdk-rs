@@ -10,4 +10,5 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = { path = "../../../../src/ic-cdk" }
+ic-cdk.workspace = true
+candid.workspace = true
