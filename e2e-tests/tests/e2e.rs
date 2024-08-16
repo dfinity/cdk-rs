@@ -1,10 +1,11 @@
 use std::time::Duration;
+use std::time::SystemTime;
 
 use candid::{Encode, Principal};
 use ic_cdk::api::management_canister::main::{
     CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
-    CanisterInfoResponse,
-    CanisterInstallMode::{Install, Reinstall, Upgrade},
+    CanisterInfoResponse, CanisterInstallMode,
+    CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
@@ -13,7 +14,7 @@ use ic_test_state_machine_client::{
     call_candid, call_candid_as, query_candid, CallError, ErrorCode, StateMachine, WasmResult,
 };
 use serde_bytes::ByteBuf;
-use std::time::SystemTime;
+use sha2::Digest;
 
 pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 
@@ -181,6 +182,14 @@ fn test_api_call() {
         )
         .unwrap();
     assert_eq!(result, WasmResult::Reject("manual reject".to_string()));
+
+    let (result,): (bool,) = call_candid(&env, canister_id, "update_is_replicated", ())
+        .expect("Failed to call update_is_replicated");
+    assert!(result);
+
+    let (result,): (bool,) = query_candid(&env, canister_id, "query_is_not_replicated", ())
+        .expect("Failed to call query_is_not_replicated");
+    assert!(!result);
 }
 
 #[test]
@@ -270,6 +279,39 @@ fn advance_seconds(env: &StateMachine, seconds: u32) {
 }
 
 #[test]
+fn test_set_global_timers() {
+    // Must be more than the queue limit (500)
+    let env = env();
+    let system_time = std::time::SystemTime::now();
+
+    env.set_time(system_time);
+
+    let wasm = cargo_build_canister("timers");
+    let canister_id = env.create_canister(None);
+    env.install_canister(canister_id, wasm, vec![], None);
+
+    call_candid::<_, ()>(&env, canister_id, "schedule_long", ())
+        .expect("Failed to call schedule_long");
+    let ts0 = system_time
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64
+        + 9_000_000_000; // the long event is scheduled 9 seconds from ts0
+    advance_seconds(&env, 5);
+
+    // set the timer to 5 seconds from ts0
+    let ts1 = ts0 + 5_000_000_000;
+    let (previous,) = call_candid::<(u64,), (u64,)>(&env, canister_id, "set_global_timer", (ts1,))
+        .expect("Failed to call set_global_timer");
+    assert_eq!(previous, ts0);
+
+    // deactivate the timer
+    let (previous,) = call_candid::<(u64,), (u64,)>(&env, canister_id, "set_global_timer", (0,))
+        .expect("Failed to call set_global_timer");
+    assert_eq!(previous, ts1);
+}
+
+#[test]
 fn test_canister_info() {
     let env = env();
     let wasm = cargo_build_canister("canister_info");
@@ -296,7 +338,7 @@ fn test_canister_info() {
         Principal::anonymous(),
         "install_code",
         (InstallCodeArgument {
-            mode: Install,
+            mode: CanisterInstallMode::Install,
             arg: vec![],
             wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
             canister_id: new_canister.0,
@@ -484,4 +526,80 @@ fn call_management() {
         .expect("Error calling execute_main_methods");
     let () = call_candid(&env, canister_id, "execute_provisional_methods", ())
         .expect("Error calling execute_provisional_methods");
+}
+
+#[test]
+fn test_chunk() {
+    let env = env();
+    let wasm = cargo_build_canister("chunk");
+    let canister_id = env.create_canister(None);
+    env.add_cycles(canister_id, 100_000_000_000_000);
+    env.install_canister(canister_id, wasm, vec![], None);
+    let (target_canister_id,): (Principal,) =
+        call_candid(&env, canister_id, "call_create_canister", ())
+            .expect("Error calling call_create_canister");
+
+    let wasm_module = b"\x00asm\x01\x00\x00\x00".to_vec();
+    let wasm_module_hash = sha2::Sha256::digest(&wasm_module).to_vec();
+    let chunk1 = wasm_module[..4].to_vec();
+    let chunk2 = wasm_module[4..].to_vec();
+    let hash1_expected = sha2::Sha256::digest(&chunk1).to_vec();
+    let hash2_expected = sha2::Sha256::digest(&chunk2).to_vec();
+
+    let (hash1_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk1.clone()),
+    )
+    .expect("Error calling call_upload_chunk");
+    assert_eq!(&hash1_return, &hash1_expected);
+
+    let () = call_candid(
+        &env,
+        canister_id,
+        "call_clear_chunk_store",
+        (target_canister_id,),
+    )
+    .expect("Error calling call_clear_chunk_store");
+
+    let (_hash1_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk1),
+    )
+    .expect("Error calling call_upload_chunk");
+    let (_hash2_return,): (Vec<u8>,) = call_candid(
+        &env,
+        canister_id,
+        "call_upload_chunk",
+        (target_canister_id, chunk2),
+    )
+    .expect("Error calling call_upload_chunk");
+
+    let (hashes,): (Vec<Vec<u8>>,) = call_candid(
+        &env,
+        canister_id,
+        "call_stored_chunks",
+        (target_canister_id,),
+    )
+    .expect("Error calling call_stored_chunks");
+    // the hashes returned are not guaranteed to be in order
+    assert_eq!(hashes.len(), 2);
+    assert!(hashes.contains(&hash1_expected));
+    assert!(hashes.contains(&hash2_expected));
+
+    let () = call_candid(
+        &env,
+        canister_id,
+        "call_install_chunked_code",
+        (
+            target_canister_id,
+            // the order of the hashes matters
+            vec![hash1_expected, hash2_expected],
+            wasm_module_hash,
+        ),
+    )
+    .expect("Error calling call_install_chunked_code");
 }

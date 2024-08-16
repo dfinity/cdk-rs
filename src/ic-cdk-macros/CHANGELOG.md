@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.13.2] - 2024-04-08
+
+### Changed
+
+- `ic-cdk-macros` will have the same version as the `ic-cdk`.
+
+## [0.9.0] - 2024-03-01
+
+### Fixed
+
+- The change in yanked version v0.8.5 contains breaking change.
+
+## [0.8.5] - 2024-03-01 (yanked)
+
+### Added
+
+- Allow setting decoding quota for canister endpoints and inter-canister calls. (#465)
+
 ## [0.8.4] - 2024-01-12
 
 ### Fixed

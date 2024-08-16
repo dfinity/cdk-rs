@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -43,9 +43,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -61,17 +61,18 @@ jobs:
         run: |
           bash scripts/download_state_machine_binary.sh
       - name: Run tests
-        run: |
-          cargo test --workspace --exclude candid-extractor --all-targets
+        run: | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
+          cargo test --all-targets
+          cargo test --doc
 
   fmt:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -92,9 +93,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -110,10 +111,33 @@ jobs:
         run: |
           cargo clippy --tests --benches -- -D warnings
 
+  doc:
+    name: cargo doc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-doc-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-doc-
+            ${{ runner.os }}-
+      - name: Run doc
+        run: |
+          RUSTDOCFLAGS="-D warnings" cargo doc
+
   aggregate:
     name: ci:required
     if: ${{ always() }}
-    needs: [build, test, fmt, clippy]
+    needs: [build, test, fmt, clippy, doc]
     runs-on: ubuntu-latest
     steps:
       - name: check build result

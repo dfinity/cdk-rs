@@ -1,5 +1,6 @@
 [workspace]
 members = ["src/print_rs"]
+resolver = "2"
 
 [workspace.dependencies]
 ic-cdk = { path = "../../src/ic-cdk" }
