@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-macros"
-version = "0.6.10" # no need to sync with ic-cdk
+version = "0.7.0" # no need to sync with ic-cdk
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Canister Developer Kit macros."
@@ -8,7 +8,12 @@ homepage = "https://docs.rs/ic-cdk-macros"
 documentation = "https://docs.rs/ic-cdk-macros"
 license = "Apache-2.0"
 readme = "README.md"
-categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
+categories = [
+    "api-bindings",
+    "data-structures",
+    "no-std",
+    "development-tools::ffi",
+]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 repository = "https://github.com/dfinity/cdk-rs"
@@ -18,7 +23,7 @@ rust-version = "1.65.0"
 proc-macro = true
 
 [dependencies]
-candid = "0.8.0"
+candid = "0.9.0"
 syn = { version = "1.0.58", features = ["fold", "full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
@@ -27,4 +32,10 @@ serde = "1.0.111"
 
 [dev-dependencies]
 trybuild = "1.0"
-ic-cdk = { path = "../ic-cdk", version = "0.9" }
+ic-cdk = { path = "../ic-cdk", version = "0.10" }
+
+[features]
+# This feature is not additive as normal crate features.
+# Enable it may cause other dependent projects malfunctioning.
+# It is only to be used by `ic-cdk`.
+export_candid = []

@@ -86,11 +86,13 @@ mod http_request {
             Some(ref n) => *n as u128,
             None => 2 * 1024 * 1024u128, // default 2MiB
         };
-        let arg_raw = ic_cdk::export::candid::utils::encode_args((arg,))
-            .expect("Failed to encode arguments.");
-        400_000_000u128 / 13
-            + 100_000u128 / 13
-                * (arg_raw.len() as u128 + "http_request".len() as u128 + max_response_bytes)
+        let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
+        // The fee is for a 13-node subnet to demonstrate a typical usage.
+        (3_000_000u128
+            + 60_000u128 * 13
+            + (arg_raw.len() as u128 + "http_request".len() as u128) * 400
+            + max_response_bytes * 800)
+            * 13
     }
 
     #[update]
@@ -208,3 +210,5 @@ mod bitcoin {
         };
     }
 }
+
+ic_cdk::export_candid!();

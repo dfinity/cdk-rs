@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- `export_candid` macro. (#386)
+
+### Changed
+
+- Remove `import` macro. (#390)
+
 ## [0.6.10] - 2023-03-01
 
 ### Changed

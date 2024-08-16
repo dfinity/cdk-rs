@@ -1,6 +1,6 @@
 [package]
 name = "ic0"
-version = "0.18.10"
+version = "0.18.11"
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
 edition = "2021"
 description = "Internet Computer System API Binding."
@@ -15,6 +15,12 @@ rust-version = "1.60.0"
 [dev-dependencies]
 quote = { version = "1.0" }
 syn = { version = "1.0", features = ["parsing", "full", "extra-traits"] }
+
+[features]
+# This feature is not additive as normal crate features.
+# Enable it may cause other dependent projects malfunctioning.
+# It is only to be used by `ic-cdk`.
+wasi = []
 
 # This is not a real example but a utility for auto-generating ic0.rs
 [[example]]
