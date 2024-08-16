@@ -40,7 +40,10 @@ jobs:
 
   test:
     name: cargo test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-12]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,11 +60,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-      - name: Download ic-test-state-machine
+      - name: Download pocket-ic
         run: |
-          bash scripts/download_state_machine_binary.sh
+          bash scripts/download_pocket_ic.sh
       - name: Run tests
-        run: | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
+        run:
+          | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
           cargo test --all-targets
           cargo test --doc
 

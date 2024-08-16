@@ -10,7 +10,7 @@ use ic_cdk::update;
 async fn call_create_canister() -> Principal {
     let arg = CreateCanisterArgument::default();
 
-    create_canister(arg, 100_000_000_000u128)
+    create_canister(arg, 200_000_000_000u128)
         .await
         .unwrap()
         .0
