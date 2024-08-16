@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.14.0" # sync with ic-cdk-macros
+version = "0.14.1" # sync with ic-cdk-macros
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
