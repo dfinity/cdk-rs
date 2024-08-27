@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+* Add `AllowedViewers` to `LogVisibility` enum.
+
 ### Changed
 
 - BREAKING: Add the `LoadSnapshot` variant to `CanisterChangeDetails`. (#504)
