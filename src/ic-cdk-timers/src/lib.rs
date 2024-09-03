@@ -254,7 +254,7 @@ fn update_ic0_timer() {
         };
         if should_change {
             // SAFETY: ic0::global_timer_set is always a safe call
-            unsafe { ic0::global_timer_set(soonest_timer.unwrap() as i64) };
+            unsafe { ic0::global_timer_set(soonest_timer.unwrap()) };
             MOST_RECENT.with(|recent| recent.set(soonest_timer));
         }
     });
