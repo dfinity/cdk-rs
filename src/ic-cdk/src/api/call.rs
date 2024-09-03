@@ -541,8 +541,7 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
     // ic0.call_data_append:
     //   `args`, being a &[u8], is a readable sequence of bytes.
-    // ic0.call_with_best_effort_response:
-    //   `timeout_seconds` being a u32 is a valid timeout value.
+    // ic0.call_with_best_effort_response is always safe to call.
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
