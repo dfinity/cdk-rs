@@ -101,7 +101,7 @@ pub fn stable_bytes() -> Vec<u8> {
     // `vec`, being mutable and allocated to `size` bytes, is safe to pass to ic0.stable_read with no offset.
     // ic0.stable_read writes to all of `vec[0..size]`, so `set_len` is safe to call with the new size.
     unsafe {
-        ic0::stable64_read(vec.as_ptr() as i64, 0, size as i64);
+        ic0::stable64_read(vec.as_ptr() as u64, 0, size as u64);
         vec.set_len(size);
     }
     vec
