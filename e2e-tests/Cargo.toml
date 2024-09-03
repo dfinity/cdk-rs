@@ -57,4 +57,4 @@ path = "canisters/call_struct.rs"
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = "3"
+pocket-ic = "4"

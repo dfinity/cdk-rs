@@ -1,10 +1,19 @@
 # Changelog
+
+This file will no longer be updated.
+
+Please check [`ic-cdk` changelog](../ic-cdk/CHANGELOG.md).
+
+---
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+### Fixed
+
+- `cargo build` should no longer give a confusing linkage error on Linux.
 
 ## [0.13.2] - 2024-04-08
 

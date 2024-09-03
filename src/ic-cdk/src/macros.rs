@@ -177,12 +177,15 @@ pub use ic_cdk_macros::update;
 /// }
 /// ```
 ///
-/// The init function may accept an argument, if that argument is a `CandidType`:
+/// The init function may accept an argument.
+///
+/// The argument must implement the `CandidType` trait.
+///
+/// And it should match the initialization parameters of the service constructor in the Candid interface.
 ///
 /// ```rust
 /// # use ic_cdk::init;
 /// # use candid::*;
-///
 /// #[derive(Clone, Debug, CandidType, Deserialize)]
 /// struct InitArg {
 ///     foo: u8,
@@ -197,6 +200,8 @@ pub use ic_cdk_macros::update;
 ///
 /// In this case, the argument will be read from `ic0.msg_arg_data_size/copy` and passed to the
 /// init function upon successful deserialization.
+///
+///
 /// Refer to the [`canister_init` Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-init) for more information.
 pub use ic_cdk_macros::init;
 
@@ -240,6 +245,31 @@ pub use ic_cdk_macros::pre_upgrade;
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// The post_upgrade function may accept an argument.
+///
+/// The argument must implement the `CandidType` trait.
+///
+/// And it should match the initialization parameters of the service constructor in the Candid interface.
+/// Therefore, the init function and the post_upgrade function should take the same argument type.
+///
+/// ```rust
+/// # use ic_cdk::post_upgrade;
+/// # use candid::*;
+/// #[derive(Clone, Debug, CandidType, Deserialize)]
+/// struct InitArg {
+///     foo: u8,
+/// }
+///
+/// #[post_upgrade]
+/// fn post_upgrade_function(arg: InitArg) {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// In this case, the argument will be read from `ic0.msg_arg_data_size/copy` and passed to the
+/// post_upgrade function upon successful deserialization.
 pub use ic_cdk_macros::post_upgrade;
 
 /// Register the `canister_heartbeat` entry point of a canister.

@@ -87,7 +87,6 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
-        let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
         let mut state = self_ref.state.write().unwrap();
 
         if let Some(result) = state.result.take() {
@@ -96,6 +95,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
             if state.waker.is_none() {
                 let callee = state.id.as_slice();
                 let method = &state.method;
+                let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
