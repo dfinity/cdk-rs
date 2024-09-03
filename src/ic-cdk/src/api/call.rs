@@ -15,19 +15,30 @@ use std::usize;
 
 /// Rejection code from calling another canister.
 ///
-/// These can be obtained either using `reject_code()` or `reject_result()`.
-#[allow(missing_docs)]
+/// These can be obtained using [reject_code].
 #[repr(i32)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
+    /// No error.
     NoError = 0,
 
+    /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
+    /// Transient system error, retry might be possible.
     SysTransient = 2,
+    /// Invalid destination (e.g. canister/account does not exist)
     DestinationInvalid = 3,
+    /// Explicit reject by the canister.
     CanisterReject = 4,
+    /// Canister error (e.g., trap, no response)
     CanisterError = 5,
+    /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
+    SysUnknown = 6,
 
+    /// Unknown rejection code.
+    ///
+    /// Note that this variant is not part of the IC interface spec, and is used to represent
+    /// rejection codes that are not recognized by the library.
     Unknown,
 }
 
@@ -40,6 +51,7 @@ impl From<i32> for RejectionCode {
             3 => RejectionCode::DestinationInvalid,
             4 => RejectionCode::CanisterReject,
             5 => RejectionCode::CanisterError,
+            6 => RejectionCode::SysUnknown,
             _ => RejectionCode::Unknown,
         }
     }
@@ -62,8 +74,9 @@ struct CallFutureState<T: AsRef<[u8]>> {
     waker: Option<Waker>,
     id: Principal,
     method: String,
-    arg: T,
-    payment: u128,
+    arg: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 }
 
 struct CallFuture<T: AsRef<[u8]>> {
@@ -83,8 +96,6 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
             if state.waker.is_none() {
                 let callee = state.id.as_slice();
                 let method = &state.method;
-                let args = state.arg.as_ref();
-                let payment = state.payment;
                 let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -109,9 +120,15 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         callback::<T> as usize,
                         state_ptr as usize,
                     );
-
-                    ic0::call_data_append(args.as_ptr() as usize, args.len());
-                    add_payment(payment);
+                    if let Some(args) = &state.arg {
+                        ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
+                    }
+                    if let Some(payment) = state.payment {
+                        add_payment(payment);
+                    }
+                    if let Some(timeout_seconds) = state.timeout_seconds {
+                        ic0::call_with_best_effort_response(timeout_seconds);
+                    }
                     ic0::call_on_cleanup(cleanup::<T> as usize, state_ptr as usize);
                     ic0::call_perform()
                 };
@@ -190,6 +207,258 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
     }
 }
 
+/// Inter-Canister Call.
+#[derive(Debug)]
+pub struct Call<'a> {
+    canister_id: Principal,
+    method: &'a str,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
+}
+
+/// Inter-Canister Call with typed arguments.
+#[derive(Debug)]
+pub struct CallWithArgs<'a, T> {
+    call: Call<'a>,
+    args: T,
+}
+
+/// Inter-Canister Call with raw arguments.
+#[derive(Debug)]
+pub struct CallWithRawArgs<'a, A> {
+    call: Call<'a>,
+    raw_args: A,
+}
+
+impl<'a> Call<'a> {
+    /// Constructs a new call with the Canister id and method name.
+    ///
+    /// # Note
+    /// The `Call` default to set a 10 seconds timeout for Best-Effort Responses.
+    /// If you want to set a guaranteed response, you can use the `with_guaranteed_response` method.
+    pub fn new(canister_id: Principal, method: &'a str) -> Self {
+        Self {
+            canister_id,
+            method,
+            payment: None,
+            // Default to 10 seconds.
+            timeout_seconds: Some(10),
+        }
+    }
+
+    /// Sets the arguments for the call.
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are invoked, the last one is used.
+    pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
+        CallWithArgs { call: self, args }
+    }
+
+    /// Sets the arguments for the call as raw bytes.    
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are invoked, the last one is used.
+    pub fn with_raw_args<A>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
+        CallWithRawArgs {
+            call: self,
+            raw_args,
+        }
+    }
+}
+
+/// Methods to configure a call.
+pub trait ConfigurableCall {
+    /// Sets the cycles payment for the call.
+    ///
+    /// If invoked multiple times, the last value is used.
+    fn with_cycles(self, cycles: u128) -> Self;
+
+    /// Sets the call to have a guaranteed response.
+    ///
+    /// If [change_timeout](ConfigurableCall::change_timeout) is invoked after this method,
+    /// the call will instead be set with Best-Effort Responses.
+    fn with_guaranteed_response(self) -> Self;
+
+    /// Sets the timeout for the Best-Effort Responses.
+    ///
+    /// If not set, the call will default to a 10 seconds timeout.
+    /// If invoked multiple times, the last value is used.
+    /// If [with_guaranteed_response](ConfigurableCall::with_guaranteed_response) is invoked after this method,
+    /// the timeout will be ignored.
+    fn change_timeout(self, timeout_seconds: u32) -> Self;
+}
+
+impl<'a> ConfigurableCall for Call<'a> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
+        self.payment = Some(cycles);
+        self
+    }
+
+    fn with_guaranteed_response(mut self) -> Self {
+        self.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+        self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
+        self.call.payment = Some(cycles);
+        self
+    }
+
+    fn with_guaranteed_response(mut self) -> Self {
+        self.call.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+        self.call.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
+        self.call.payment = Some(cycles);
+        self
+    }
+
+    fn with_guaranteed_response(mut self) -> Self {
+        self.call.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+        self.call.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+/// Methods to send a call.
+pub trait SendableCall {
+    /// Sends the call and gets the reply as raw bytes.
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
+
+    /// Sends the call and decodes the reply to a Candid type.
+    fn call<R: for<'b> ArgumentDecoder<'b>>(
+        self,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync
+    where
+        Self: Sized,
+    {
+        let fut = self.call_raw();
+        async {
+            let bytes = fut.await?;
+            decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
+        }
+    }
+
+    /// Sends the call and decodes the reply to a Candid type with a decoding quota.
+    fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
+        self,
+        decoder_config: &ArgDecoderConfig,
+    ) -> impl Future<Output = CallResult<R>> + Send + Sync
+    where
+        Self: Sized,
+    {
+        let fut = self.call_raw();
+        async move {
+            let bytes = fut.await?;
+            let config = decoder_config.to_candid_config();
+            let pre_cycles = if decoder_config.debug {
+                Some(crate::api::performance_counter(0))
+            } else {
+                None
+            };
+            match decode_args_with_config_debug(&bytes, &config) {
+                Err(e) => Err(decoder_error_to_reject::<R>(e)),
+                Ok((r, cost)) => {
+                    if decoder_config.debug {
+                        print_decoding_debug_info(std::any::type_name::<R>(), &cost, pre_cycles);
+                    }
+                    Ok(r)
+                }
+            }
+        }
+    }
+
+    /// Sends the call and ignores the reply.
+    fn call_and_forget(self) -> Result<(), RejectionCode>;
+}
+
+impl SendableCall for Call<'_> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        call_raw_internal::<Vec<u8>>(
+            self.canister_id,
+            self.method,
+            None,
+            self.payment,
+            self.timeout_seconds,
+        )
+    }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        notify_raw_internal::<Vec<u8>>(
+            self.canister_id,
+            self.method,
+            None,
+            self.payment,
+            self.timeout_seconds,
+        )
+    }
+}
+
+impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        let args = encode_args(self.args).expect("failed to encode arguments");
+        call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        let args = encode_args(self.args).expect("failed to encode arguments");
+        notify_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+}
+
+impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
+    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(self.raw_args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+
+    fn call_and_forget(self) -> Result<(), RejectionCode> {
+        notify_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            Some(self.raw_args),
+            self.call.payment,
+            self.call.timeout_seconds,
+        )
+    }
+}
+
 fn add_payment(payment: u128) {
     if payment == 0 {
         return;
@@ -248,6 +517,16 @@ pub fn notify_raw(
     args_raw: &[u8],
     payment: u128,
 ) -> Result<(), RejectionCode> {
+    notify_raw_internal(id, method, Some(args_raw), Some(payment), None)
+}
+
+fn notify_raw_internal<T: AsRef<[u8]>>(
+    id: Principal,
+    method: &str,
+    args_raw: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
+) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
     // We set all callbacks to -1, which is guaranteed to be invalid callback index.
     // The system will still deliver the reply, but it will trap immediately because the callback
@@ -273,8 +552,15 @@ pub fn notify_raw(
             /* reject_fun = */ usize::MAX,
             /* reject_env = */ usize::MAX,
         );
-        add_payment(payment);
-        ic0::call_data_append(args_raw.as_ptr() as usize, args_raw.len());
+        if let Some(args) = args_raw {
+            ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
+        }
+        if let Some(payment) = payment {
+            add_payment(payment);
+        }
+        if let Some(timeout_seconds) = timeout_seconds {
+            ic0::call_with_best_effort_response(timeout_seconds);
+        }
         ic0::call_perform()
     };
     match err_code {
@@ -304,7 +590,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment.into())
+    call_raw_internal(id, method, Some(args_raw), Some(payment.into()), None)
 }
 
 /// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
@@ -327,14 +613,15 @@ pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, args_raw, payment)
+    call_raw_internal(id, method, Some(args_raw), Some(payment), None)
 }
 
 fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
-    args_raw: T,
-    payment: u128,
+    args_raw: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
@@ -343,6 +630,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
         method: method.to_string(),
         arg: args_raw,
         payment,
+        timeout_seconds,
     }));
     CallFuture { state }
 }
@@ -599,6 +887,11 @@ pub fn reject(message: &str) {
     unsafe {
         ic0::msg_reject(err_message.as_ptr() as usize, err_message.len());
     }
+}
+/// The deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
+pub fn msg_deadline() -> u64 {
+    // SAFETY: ic0.msg_deadline is always safe to call.
+    unsafe { ic0::msg_deadline() }
 }
 
 /// An io::Write for message replies.
