@@ -35,12 +35,17 @@ impl Parse for SystemAPI {
         let args: Vec<FnArg> = args.iter().cloned().collect();
         for arg in &args {
             match arg {
-                FnArg::Receiver(r) => return Err(Error::new(r.span(), "receiver not expected")),
+                FnArg::Receiver(r) => return Err(Error::new(r.span(), "arguments can't be self")),
                 FnArg::Typed(pat_type) => match &*pat_type.ty {
                     syn::Type::Path(ty) => {
                         type_supported(ty)?;
                     }
-                    _ => return Err(Error::new(pat_type.span(), "expected type as i32")),
+                    _ => {
+                        return Err(Error::new(
+                            pat_type.span(),
+                            "argument types can only be i32, i64 or isize",
+                        ))
+                    }
                 },
             }
         }
@@ -76,13 +81,17 @@ impl Parse for SystemAPI {
 }
 
 fn type_supported(ty: &TypePath) -> Result<()> {
-    let supported = match ty.path.get_ident() {
-        Some(i) => i == "i32" || i == "i64",
-        None => false,
-    };
-    match supported {
-        true => Ok(()),
-        false => Err(Error::new(ty.span(), "expected i32 or i64")),
+    let ty = ty
+        .path
+        .get_ident()
+        .ok_or(Error::new(ty.span(), "cannot get ident from: {ty:?}"))?;
+    if ty == "u32" || ty == "u64" || ty == "usize" {
+        Ok(())
+    } else {
+        Err(Error::new(
+            ty.span(),
+            "ic0.txt should only contain i32, i64 or I",
+        ))
     }
 }
 
@@ -107,7 +116,10 @@ impl Parse for IC0 {
 
 fn main() {
     let s = include_str!("../ic0.txt");
-    let ic0: IC0 = syn::parse_str(s).unwrap();
+    let s = s.replace('I', "usize");
+    let s = s.replace("i32", "u32");
+    let s = s.replace("i64", "u64");
+    let ic0: IC0 = syn::parse_str(&s).unwrap();
 
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     d.push("src/ic0.rs");
@@ -118,7 +130,7 @@ fn main() {
         f,
         r#"// This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(target_arch = "wasm32")]
+#[cfg(target_family = "wasm")]
 #[link(wasm_import_module = "ic0")]
 extern "C" {{"#,
     )
@@ -147,7 +159,7 @@ extern "C" {{"#,
     writeln!(
         f,
         r#"
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -182,7 +194,7 @@ mod non_wasm{{"#,
         f,
         r#"}}
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub use non_wasm::*;
 "#
     )
