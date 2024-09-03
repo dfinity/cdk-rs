@@ -11,7 +11,6 @@ use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
 use std::task::{Context, Poll, Waker};
-use std::usize;
 
 /// Rejection code from calling another canister.
 ///
@@ -100,10 +99,10 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
+                // `callback` is a function with signature (env : usize) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
                 // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
                 // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-                // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
+                // `cleanup` is a function with signature (env : usize) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
                 // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
                 // ic0.call_perform is always safe to call.
                 // callback and cleanup are safe to parameterize with T because:
@@ -535,11 +534,15 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     // for more context.
 
     // SAFETY:
-    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // -1, i.e. usize::MAX, is a function pointer the wasm module cannot possibly contain, and therefore can be passed as both reply and reject fn for ic0.call_new.
-    // Since the callback function will never be called, any value can be passed as its context parameter, and therefore -1 can be passed for those values.
-    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
+    // ic0.call_new:
+    //   `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+    //   `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+    //   `reply_fun` and `reject_fun`: In "notify" style call, we want these callback functions to not be called. So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
+    //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
+    // ic0.call_data_append:
+    //   `args`, being a &[u8], is a readable sequence of bytes.
+    // ic0.call_with_best_effort_response:
+    //   `timeout_seconds` being a u32 is a valid timeout value.
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
@@ -547,10 +550,10 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
             callee.len(),
             method.as_ptr() as usize,
             method.len(),
-            /* reply_fun = */ usize::MAX,
-            /* reply_env = */ usize::MAX,
-            /* reject_fun = */ usize::MAX,
-            /* reject_env = */ usize::MAX,
+            usize::MAX,
+            usize::MAX,
+            usize::MAX,
+            usize::MAX,
         );
         if let Some(args) = args_raw {
             ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
