@@ -12,7 +12,7 @@ use ic_cdk::api::management_canister::main::{
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
-use ic_cdk_e2e_tests::cargo_build_canister;
+use ic_cdk_e2e_tests::{cargo_build_canister, pocket_ic};
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::PocketIcBuilder;
 use pocket_ic::{call_candid_as, query_candid, CallError, ErrorCode, PocketIc, WasmResult};
@@ -42,7 +42,7 @@ where
 /// across upgrades.
 #[test]
 fn test_storage_roundtrip() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("simple-kv-store");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -61,7 +61,7 @@ fn test_storage_roundtrip() {
 
 #[test]
 fn test_panic_after_async_frees_resources() {
-    let pic: PocketIc = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -109,7 +109,7 @@ fn test_panic_after_async_frees_resources() {
 
 #[test]
 fn test_raw_api() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("reverse");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -138,7 +138,7 @@ fn test_raw_api() {
 
 #[test]
 fn test_notify_calls() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, INIT_CYCLES);
@@ -163,7 +163,7 @@ fn test_notify_calls() {
 #[test]
 #[ignore]
 fn test_composite_query() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, INIT_CYCLES);
@@ -179,7 +179,7 @@ fn test_composite_query() {
 
 #[test]
 fn test_api_call() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("api-call");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -209,7 +209,7 @@ fn test_api_call() {
 
 #[test]
 fn test_timers() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -241,7 +241,7 @@ fn test_timers() {
 
 #[test]
 fn test_timers_can_cancel_themselves() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -266,7 +266,7 @@ fn test_timers_can_cancel_themselves() {
 fn test_scheduling_many_timers() {
     // Must be more than the queue limit (500)
     let timers_to_schedule = 1_000;
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000u128);
@@ -300,7 +300,7 @@ fn advance_seconds(pic: &PocketIc, seconds: u32) {
 
 #[test]
 fn test_set_global_timers() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
 
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
@@ -334,7 +334,7 @@ fn test_set_global_timers() {
 
 #[test]
 fn test_canister_info() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("canister_info");
     // As of PocketIC server v5.0.0 and client v4.0.0, the first canister creation happens at (time0+4).
     // Each operation advances the Pic by 2 nanos, except for the last operation which advances only by 1 nano.
@@ -511,7 +511,7 @@ fn test_canister_info() {
 
 #[test]
 fn test_cycles_burn() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("api-call");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -542,7 +542,7 @@ fn test_cycles_burn() {
 
 #[test]
 fn test_call_management() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("management_caller");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
@@ -569,7 +569,7 @@ fn test_snapshot() {
 
 #[test]
 fn test_chunk() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("chunk");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
@@ -645,7 +645,7 @@ fn test_chunk() {
 
 #[test]
 fn call_struct() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("call_struct");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);

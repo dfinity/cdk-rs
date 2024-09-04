@@ -18,6 +18,7 @@ lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
 sha2.workspace = true
+pocket-ic = "4"
 
 [[bin]]
 name = "simple-kv-store"
@@ -57,4 +58,3 @@ path = "canisters/call_struct.rs"
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = "4"

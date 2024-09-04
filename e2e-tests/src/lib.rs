@@ -1,5 +1,6 @@
 use cargo_metadata::MetadataCommand;
 use escargot::CargoBuild;
+use pocket_ic::{PocketIc, PocketIcBuilder};
 use std::path::PathBuf;
 
 /// Builds a canister with the specified name from the current
@@ -38,4 +39,14 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
             e
         )
     })
+}
+
+pub fn pocket_ic() -> PocketIc {
+    match std::env::var("WASM64") {
+        Ok(_) => PocketIcBuilder::new()
+            .with_application_subnet()
+            .with_nonmainnet_features(true)
+            .build(),
+        Err(_) => PocketIc::new(),
+    }
 }
