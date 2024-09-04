@@ -12,7 +12,7 @@ use ic_cdk::api::management_canister::main::{
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
-use ic_cdk_e2e_tests::{cargo_build_canister, pocket_ic};
+use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::PocketIcBuilder;
 use pocket_ic::{call_candid_as, query_candid, CallError, ErrorCode, PocketIc, WasmResult};
@@ -35,6 +35,25 @@ where
     Output: for<'a> ArgumentDecoder<'a>,
 {
     pocket_ic::call_candid(env, canister_id, RawEffectivePrincipal::None, method, input)
+}
+
+pub fn pocket_ic() -> PocketIc {
+    match std::env::var("WASM64") {
+        Ok(_) => PocketIcBuilder::new()
+            .with_application_subnet()
+            .with_nonmainnet_features(true)
+            .build(),
+        Err(_) => PocketIc::new(),
+    }
+}
+
+#[test]
+fn test_empty_wasm64() {
+    let pic = pocket_ic();
+    let wasm = cargo_build_canister("empty");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(canister_id, wasm.clone(), vec![], None);
 }
 
 /// Checks that a canister that uses [`ic_cdk::storage::stable_store`]

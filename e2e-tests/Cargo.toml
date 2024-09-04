@@ -11,14 +11,12 @@ publish = false
 [dependencies]
 candid.workspace = true
 cargo_metadata = "0.18"
-escargot = { version = "0.5.7", features = ["print"] }
 ic-cdk.workspace = true
 ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
 sha2.workspace = true
-pocket-ic = "4"
 
 [[bin]]
 name = "simple-kv-store"
@@ -58,3 +56,4 @@ path = "canisters/call_struct.rs"
 
 [dev-dependencies]
 hex.workspace = true
+pocket-ic = "4"
