@@ -53,4 +53,4 @@ path = "canisters/chunk.rs"
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = "4"
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-08-29_01-30-base" }
