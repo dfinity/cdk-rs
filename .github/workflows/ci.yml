@@ -70,7 +70,7 @@ jobs:
           cargo test --doc
 
   wasm64:
-    name: cargo test
+    name: wasm64 e2e
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
