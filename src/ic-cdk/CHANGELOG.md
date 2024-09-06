@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+* Add `AllowedViewers` to `LogVisibility` enum.
+
 ## [0.16.0] - 2024-08-27
 
 ### Changed
