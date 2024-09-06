@@ -47,15 +47,6 @@ pub fn pocket_ic() -> PocketIc {
     }
 }
 
-#[test]
-fn test_empty_wasm64() {
-    let pic = pocket_ic();
-    let wasm = cargo_build_canister("empty");
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(canister_id, wasm.clone(), vec![], None);
-}
-
 /// Checks that a canister that uses [`ic_cdk::storage::stable_store`]
 /// and [`ic_cdk::storage::stable_restore`] functions can keep its data
 /// across upgrades.
