@@ -69,6 +69,39 @@ jobs:
           cargo test --all-targets
           cargo test --doc
 
+  wasm64:
+    name: cargo test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-12]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-wasm64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-wasm64-
+            ${{ runner.os }}-
+      - name: Download pocket-ic
+        run: |
+          bash scripts/download_pocket_ic.sh
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rust-src
+      - name: Run tests
+        run:
+          WASM64=1 cargo test --package ic-cdk-e2e-tests
+
   fmt:
     name: cargo fmt
     runs-on: ubuntu-latest
