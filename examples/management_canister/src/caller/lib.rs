@@ -85,6 +85,40 @@ mod ecdsa {
     }
 }
 
+mod schnorr {
+    use super::*;
+    use ic_cdk::api::management_canister::schnorr::*;
+
+    #[update]
+    async fn execute_schnorr_methods() {
+        let key_id = SchnorrKeyId {
+            algorithm: SchnorrAlgorithm::Bip340secp256k1,
+            name: "dfx_test_key".to_string(),
+        };
+        let derivation_path = vec![];
+        let arg = SchnorrPublicKeyArgument {
+            canister_id: None,
+            derivation_path: derivation_path.clone(),
+            key_id: key_id.clone(),
+        };
+        let SchnorrPublicKeyResponse {
+            public_key,
+            chain_code,
+        } = schnorr_public_key(arg).await.unwrap().0;
+        assert_eq!(public_key.len(), 33);
+        assert_eq!(chain_code.len(), 32);
+
+        let message = "hello world".into();
+        let arg = SignWithSchnorrArgument {
+            message,
+            derivation_path,
+            key_id,
+        };
+        let SignWithSchnorrResponse { signature } = sign_with_schnorr(arg).await.unwrap().0;
+        assert_eq!(signature.len(), 64);
+    }
+}
+
 mod bitcoin {
     use super::*;
     use ic_cdk::api::{call::RejectionCode, management_canister::bitcoin::*};
