@@ -6,7 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-* Add `AllowedViewers` to `LogVisibility` enum.
+### Changed
+
+- Add `AllowedViewers` variant to `LogVisibility` enum. (#512)
+
+### Added
+
+- Support Threshold Schnorr signing management canister API. (#518)
 
 ## [0.16.0] - 2024-08-27
 
