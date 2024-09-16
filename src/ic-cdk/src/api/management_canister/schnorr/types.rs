@@ -62,19 +62,25 @@ pub struct SchnorrKeyId {
 
 /// Schnorr Algorithm.
 #[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
 )]
 pub enum SchnorrAlgorithm {
     /// BIP-340 secp256k1.
     #[serde(rename = "bip340secp256k1")]
+    #[default]
     Bip340secp256k1,
     /// ed25519.
     #[serde(rename = "ed25519")]
     Ed25519,
-}
-
-impl Default for SchnorrAlgorithm {
-    fn default() -> Self {
-        SchnorrAlgorithm::Bip340secp256k1
-    }
 }
