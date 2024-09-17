@@ -6,6 +6,7 @@ use candid::Principal;
 mod types;
 pub use types::*;
 
+// Source: https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-production-key
 const SIGN_WITH_SCHNORR_FEE: u128 = 26_153_846_153;
 
 /// Return a SEC1 encoded Schnorr public key for the given canister using the given derivation path.
