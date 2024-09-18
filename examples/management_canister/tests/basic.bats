@@ -24,6 +24,13 @@ teardown() {
   assert_success
 }
 
+@test "schnorr methods succeed" {
+  dfx start --clean --background
+  dfx deploy
+  run dfx canister call caller execute_schnorr_methods
+  assert_success
+}
+
 @test "bitcoin methods succeed" {
   bitcoind -regtest -daemonwait
 
