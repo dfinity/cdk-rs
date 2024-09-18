@@ -9,7 +9,7 @@ cd "$SCRIPTS_DIR/../e2e-tests"
 uname_sys=$(uname -s | tr '[:upper:]' '[:lower:]')
 echo "uname_sys: $uname_sys"
 
-tag="release-2024-05-22_23-01-base"
+tag="release-2024-08-02_01-30-base"
 
 curl -sL "https://github.com/dfinity/ic/releases/download/$tag/pocket-ic-x86_64-$uname_sys.gz" --output pocket-ic.gz
 gzip -df pocket-ic.gz

@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Add `AllowedViewers` variant to `LogVisibility` enum. (#512)
+
+### Added
+
+- Support Threshold Schnorr signing management canister API. (#518)
+
+## [0.16.0] - 2024-08-27
+
+### Changed
+
+- BREAKING: Add the `LoadSnapshot` variant to `CanisterChangeDetails`. (#504)
+
+### Added
+
+- Support Canister State Snapshots. (#504)
+  - Add methods: `take_canister_snapshot`, `load_canister_snapshot`, `list_canister_snapshots`, `delete_canister_snapshot`
+  - Add types: `LoadSnapshotRecord`, `SnapshotId`, `Snapshot`, `TakeCanisterSnapshotArgs`, `LoadCanisterSnapshotArgs`, `DeleteCanisterSnapshotArgs`
+
 ## [0.15.0] - 2024-07-01
 
 ### Changed

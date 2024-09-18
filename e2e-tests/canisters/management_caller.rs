@@ -109,4 +109,72 @@ mod provisional {
     }
 }
 
+mod snapshot {
+    use super::*;
+    use ic_cdk::api::management_canister::main::*;
+
+    #[update]
+    async fn execute_snapshot_methods() {
+        let arg = CreateCanisterArgument::default();
+        let canister_id = create_canister(arg, 2_000_000_000_000u128)
+            .await
+            .unwrap()
+            .0
+            .canister_id;
+
+        // Cannot take a snapshot of a canister that is empty.
+        // So we install a minimal wasm module.
+        let arg = InstallCodeArgument {
+            mode: CanisterInstallMode::Install,
+            canister_id,
+            // A minimal valid wasm module
+            // wat2wasm "(module)"
+            wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
+            arg: vec![],
+        };
+        install_code(arg).await.unwrap();
+
+        let arg = TakeCanisterSnapshotArgs {
+            canister_id,
+            replace_snapshot: None,
+        };
+        let snapshot = take_canister_snapshot(arg).await.unwrap().0;
+
+        let arg = LoadCanisterSnapshotArgs {
+            canister_id,
+            snapshot_id: snapshot.id.clone(),
+            sender_canister_version: None,
+        };
+        assert!(load_canister_snapshot(arg).await.is_ok());
+
+        let canister_id_record = CanisterIdRecord { canister_id };
+        let snapshots = list_canister_snapshots(canister_id_record).await.unwrap().0;
+        assert_eq!(snapshots.len(), 1);
+        assert_eq!(snapshots[0].id, snapshot.id);
+
+        let arg = DeleteCanisterSnapshotArgs {
+            canister_id,
+            snapshot_id: snapshot.id.clone(),
+        };
+        assert!(delete_canister_snapshot(arg).await.is_ok());
+
+        let arg = CanisterInfoRequest {
+            canister_id,
+            num_requested_changes: Some(1),
+        };
+        let canister_info_response = canister_info(arg).await.unwrap().0;
+        assert_eq!(canister_info_response.total_num_changes, 3);
+        assert_eq!(canister_info_response.recent_changes.len(), 1);
+        if let CanisterChange {
+            details: CanisterChangeDetails::LoadSnapshot(load_snapshot_record),
+            ..
+        } = &canister_info_response.recent_changes[0]
+        {
+            assert_eq!(load_snapshot_record.snapshot_id, snapshot.id);
+        } else {
+            panic!("Expected the most recent change to be LoadSnapshot");
+        }
+    }
+}
+
 fn main() {}
