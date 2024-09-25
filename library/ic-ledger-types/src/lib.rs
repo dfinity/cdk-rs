@@ -218,6 +218,11 @@ impl AccountIdentifier {
         hex::encode(self.0)
     }
 
+    /// Provide the account identifier as bytes.
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+
     /// Returns the checksum of the account identifier.
     pub fn generate_checksum(&self) -> [u8; 4] {
         let mut hasher = crc32fast::Hasher::new();
@@ -883,8 +888,11 @@ mod tests {
         )
     }
 
+    /// Verifies that these conversions yield the same result:
+    /// * bytes -> AccountIdentifier -> hex -> AccountIdentifier
+    /// * bytes -> AccountIdentifier
     #[test]
-    fn check_round_trip() {
+    fn check_hex_round_trip() {
         let bytes: [u8; 32] = [
             237, 196, 46, 168, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
             7, 7, 7, 7, 7,
@@ -895,6 +903,23 @@ mod tests {
         assert_eq!(
             AccountIdentifier::from_hex(&res),
             Ok(ai),
+            "The account identifier doesn't change after going back and forth between a string"
+        )
+    }
+
+    /// Verifies that this convertion yields the original data:
+    /// * bytes -> AccountIdentifier -> bytes
+    #[test]
+    fn check_bytes_round_trip() {
+        let bytes: [u8; 32] = [
+            237, 196, 46, 168, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7,
+        ];
+        assert_eq!(
+            AccountIdentifier::from_slice(&bytes)
+                .expect("Failed to parse bytes as principal")
+                .as_bytes(),
+            &bytes,
             "The account identifier doesn't change after going back and forth between a string"
         )
     }
