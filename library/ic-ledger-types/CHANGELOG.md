@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+- as_bytes method to AccountIdentifier in ic-ledger-types
+
 ## [0.13.0] - 2024-08-27
 
 ### Changed
