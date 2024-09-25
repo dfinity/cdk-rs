@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 
 thread_local! {
     static COUNTER: RefCell<candid::Nat> = RefCell::new(candid::Nat::from(0u8));
-    static OWNER: Cell<Principal> = Cell::new(Principal::from_slice(&[]));
+    static OWNER: Cell<Principal> = const {Cell::new(Principal::from_slice(&[]))};
 }
 
 #[init]

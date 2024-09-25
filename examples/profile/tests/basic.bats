@@ -39,10 +39,8 @@ teardown() {
   assert_output '(opt record { name = "def"; description = "456"; keywords = vec {} })'
 }
 
-@test "ic-cdk-bindgen warns about deprecated env vars when running with dfx v0.13.1" {
-  dfxvm install 0.13.1
-  run dfx +0.13.1 build --check
+@test "profile_inter_rs build.rs can generate type bindings in specified dir" {
+  dfx build --check
+  run test -f src/profile_inter_rs/declarations/type/profile_inter_rs.rs
   assert_success
-  assert_regex "$output" "The environment variable CANISTER_CANDID_PATH_profile_rs is deprecated. Please set CANISTER_CANDID_PATH_PROFILE_RS instead. Upgrading dfx may fix this issue."
-  assert_regex "$output" "The environment variable CANISTER_ID_profile_rs is deprecated. Please set CANISTER_ID_PROFILE_RS instead. Upgrading dfx may fix this issue."
 }
