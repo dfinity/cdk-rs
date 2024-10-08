@@ -5,6 +5,7 @@ use std::time::UNIX_EPOCH;
 use candid::utils::ArgumentDecoder;
 use candid::utils::ArgumentEncoder;
 use candid::{Encode, Principal};
+use ic_cdk_e2e_tests::cargo_build_canister;
 use ic_cdk_management_canister::core::{
     CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
     CanisterInfoResponse, CanisterInstallMode,
@@ -12,7 +13,6 @@ use ic_cdk_management_canister::core::{
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
-use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::PocketIcBuilder;
 use pocket_ic::{call_candid_as, query_candid, CallError, ErrorCode, PocketIc, WasmResult};
