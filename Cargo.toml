@@ -1,6 +1,16 @@
 [workspace]
-members = ["src/*", "library/*", "e2e-tests"]
+members = [
+    "ic-cdk",
+    "ic-cdk-bindgen",
+    "ic-cdk-macros",
+    "ic-cdk-management-canister",
+    "ic-cdk-timers",
+    "ic0",
+    "library/*",
+    "e2e-tests",
+]
 resolver = "2"
+exclude = ["candid-extractor"]
 
 [workspace.package]
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
@@ -9,7 +19,7 @@ repository = "https://github.com/dfinity/cdk-rs"
 # MSRV
 # Avoid updating this field unless we use new Rust features
 # Sync with rust-toolchain.toml
-rust-version = "1.76.0"
+rust-version = "1.75.0"
 license = "Apache-2.0"
 
 [profile.canister-release]
@@ -20,10 +30,10 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "src/ic0", version = "0.23.0" }
-ic-cdk = { path = "src/ic-cdk", version = "0.16.0" }
-ic-cdk-management-canister = { path = "src/ic-cdk-management-canister", version = "0.1.0" }
-ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.10.0" }
+ic0 = { path = "ic0", version = "0.23.0" }
+ic-cdk = { path = "ic-cdk", version = "0.16.0" }
+ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.0" }
+ic-cdk-timers = { path = "ic-cdk-timers", version = "0.10.0" }
 
 candid = "0.10.4"
 candid_parser = "0.1.4"
