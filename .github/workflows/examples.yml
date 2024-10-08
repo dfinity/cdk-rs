@@ -30,19 +30,19 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+            candid-extractor/target/
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('candid-extractor/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-candid-extractor-
             ${{ runner.os }}-
 
       - name: Build candid-extractor
-        run: cargo build -p candid-extractor --release
+        run: cd candid-extractor && cargo build -p candid-extractor --release
 
       - uses: actions/upload-artifact@v4
         with:
           name: candid-extractor
-          path: target/release/candid-extractor
+          path: candid-extractor/target/release/candid-extractor
 
   test:
     runs-on: ubuntu-latest
@@ -68,9 +68,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             examples/${{ matrix.project-name }}/target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-${{ matrix.project-name }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.project-name }}-
             ${{ runner.os }}-
 
       - name: Install ic-wasm

@@ -30,18 +30,18 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+            candid-extractor/target/
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('candid-extractor/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-candid-extractor-
             ${{ runner.os }}-
+
       - name: Build
-        run: |
-          cargo build -p candid-extractor --release --locked
+        run: cd candid-extractor && cargo build -p candid-extractor --release --locked
 
       - name: Bundle
         run: |
-          cp target/release/candid-extractor .
+          cp candid-extractor/target/release/candid-extractor .
           chmod +x candid-extractor
           tar -cvzf ${{ matrix.binstall_pkg }} candid-extractor
 
