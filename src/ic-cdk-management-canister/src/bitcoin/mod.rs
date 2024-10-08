@@ -2,8 +2,8 @@
 //!
 //! Check [Bitcoin integration](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api) for more details.
 
-use crate::api::call::{call_with_payment128, CallResult};
 use candid::Principal;
+use ic_cdk::prelude::*;
 
 mod types;
 pub use types::*;
@@ -34,13 +34,11 @@ pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<(Satoshi,
         BitcoinNetwork::Testnet => GET_BALANCE_TESTNET,
         BitcoinNetwork::Regtest => 0,
     };
-    call_with_payment128(
-        Principal::management_canister(),
-        "bitcoin_get_balance",
-        (arg,),
-        cycles,
-    )
-    .await
+    Call::new(Principal::management_canister(), "bitcoin_get_balance")
+        .with_cycles(cycles)
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// See [IC method `bitcoin_get_utxos`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_utxos).
@@ -54,13 +52,11 @@ pub async fn bitcoin_get_utxos(arg: GetUtxosRequest) -> CallResult<(GetUtxosResp
         BitcoinNetwork::Testnet => GET_UTXO_TESTNET,
         BitcoinNetwork::Regtest => 0,
     };
-    call_with_payment128(
-        Principal::management_canister(),
-        "bitcoin_get_utxos",
-        (arg,),
-        cycles,
-    )
-    .await
+    Call::new(Principal::management_canister(), "bitcoin_get_utxos")
+        .with_cycles(cycles)
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
@@ -85,13 +81,11 @@ fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
 /// Check [API fees & Pricing](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api-fees--pricing) for more details.
 pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
     let cycles = send_transaction_fee(&arg);
-    call_with_payment128(
-        Principal::management_canister(),
-        "bitcoin_send_transaction",
-        (arg,),
-        cycles,
-    )
-    .await
+    Call::new(Principal::management_canister(), "bitcoin_send_transaction")
+        .with_cycles(cycles)
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// See [IC method `bitcoin_get_current_fee_percentiles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_current_fee_percentiles).
@@ -107,11 +101,12 @@ pub async fn bitcoin_get_current_fee_percentiles(
         BitcoinNetwork::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
         BitcoinNetwork::Regtest => 0,
     };
-    call_with_payment128(
+    Call::new(
         Principal::management_canister(),
         "bitcoin_get_current_fee_percentiles",
-        (arg,),
-        cycles,
     )
+    .with_cycles(cycles)
+    .with_args((arg,))
+    .call()
     .await
 }

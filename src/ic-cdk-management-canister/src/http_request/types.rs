@@ -1,4 +1,3 @@
-use crate::id;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +53,7 @@ impl TransformContext {
             context,
             function: TransformFunc(candid::Func {
                 method: candid_function_name,
-                principal: id(),
+                principal: ic_cdk::api::id(),
             }),
         }
     }

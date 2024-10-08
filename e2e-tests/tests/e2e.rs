@@ -5,7 +5,7 @@ use std::time::UNIX_EPOCH;
 use candid::utils::ArgumentDecoder;
 use candid::utils::ArgumentEncoder;
 use candid::{Encode, Principal};
-use ic_cdk::api::management_canister::main::{
+use ic_cdk_management_canister::core::{
     CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
     CanisterInfoResponse, CanisterInstallMode,
     CodeDeploymentMode::{Install, Reinstall, Upgrade},

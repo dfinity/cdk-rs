@@ -17,3 +17,7 @@ categories = [
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 
 [dependencies]
+candid.workspace = true
+ic-cdk.workspace = true
+serde.workspace = true
+serde_bytes.workspace = true

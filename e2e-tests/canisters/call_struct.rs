@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::api::management_canister::main::{CanisterIdRecord, CreateCanisterArgument};
+use ic_cdk_management_canister::core::{CanisterIdRecord, CreateCanisterArgument};
 use ic_cdk::prelude::*;
 
 #[update]

@@ -5,9 +5,9 @@
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
-use crate::api::call::{call, call_with_payment128, CallResult};
-use crate::api::canister_version;
 use candid::Principal;
+use ic_cdk::api::canister_version;
+use ic_cdk::prelude::*;
 
 mod types;
 pub use types::*;
@@ -26,13 +26,12 @@ pub async fn create_canister(
         settings: arg.settings,
         sender_canister_version: Some(canister_version()),
     };
-    call_with_payment128(
-        Principal::management_canister(),
-        "create_canister",
-        (extended_arg,),
-        cycles,
-    )
-    .await
+    Call::new(Principal::management_canister(), "create_canister")
+        .with_guaranteed_response()
+        .with_args((extended_arg,))
+        .with_cycles(cycles)
+        .call()
+        .await
 }
 
 /// Update the settings of a canister.
@@ -44,32 +43,38 @@ pub async fn update_settings(arg: UpdateSettingsArgument) -> CallResult<()> {
         settings: arg.settings,
         sender_canister_version: Some(canister_version()),
     };
-    call(
-        Principal::management_canister(),
-        "update_settings",
-        (extended_arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "update_settings")
+        .with_guaranteed_response()
+        .with_args((extended_arg,))
+        .call()
+        .await
 }
 
 /// See [IC method `upload_chunk`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_chunk).
 pub async fn upload_chunk(arg: UploadChunkArgument) -> CallResult<(ChunkHash,)> {
-    call(Principal::management_canister(), "upload_chunk", (arg,)).await
+    Call::new(Principal::management_canister(), "upload_chunk")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// See [IC method `clear_chunk_store`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-clear_chunk_store).
 pub async fn clear_chunk_store(arg: ClearChunkStoreArgument) -> CallResult<()> {
-    call(
-        Principal::management_canister(),
-        "clear_chunk_store",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "clear_chunk_store")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// See [IC method `stored_chunks`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stored_chunks).
 pub async fn stored_chunks(arg: StoredChunksArgument) -> CallResult<(Vec<ChunkHash>,)> {
-    call(Principal::management_canister(), "stored_chunks", (arg,)).await
+    Call::new(Principal::management_canister(), "stored_chunks")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Install code into a canister.
@@ -83,12 +88,11 @@ pub async fn install_code(arg: InstallCodeArgument) -> CallResult<()> {
         arg: arg.arg,
         sender_canister_version: Some(canister_version()),
     };
-    call(
-        Principal::management_canister(),
-        "install_code",
-        (extended_arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "install_code")
+        .with_guaranteed_response()
+        .with_args((extended_arg,))
+        .call()
+        .await
 }
 
 /// Install code into a canister where the code has previously been uploaded in chunks.
@@ -104,12 +108,11 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgument) -> CallResult
         arg: arg.arg,
         sender_canister_version: Some(canister_version()),
     };
-    call(
-        Principal::management_canister(),
-        "install_chunked_code",
-        (extended_arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "install_chunked_code")
+        .with_guaranteed_response()
+        .with_args((extended_arg,))
+        .call()
+        .await
 }
 
 /// Remove a canister's code and state, making the canister empty again.
@@ -120,40 +123,55 @@ pub async fn uninstall_code(arg: CanisterIdRecord) -> CallResult<()> {
         canister_id: arg.canister_id,
         sender_canister_version: Some(canister_version()),
     };
-    call(
-        Principal::management_canister(),
-        "uninstall_code",
-        (extended_arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "uninstall_code")
+        .with_guaranteed_response()
+        .with_args((extended_arg,))
+        .call()
+        .await
 }
 
 /// Start a canister if the canister status was `stopped` or `stopping`.
 ///
 /// See [IC method `start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
 pub async fn start_canister(arg: CanisterIdRecord) -> CallResult<()> {
-    call(Principal::management_canister(), "start_canister", (arg,)).await
+    Call::new(Principal::management_canister(), "start_canister")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Stop a canister.
 ///
 /// See [IC method `stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
 pub async fn stop_canister(arg: CanisterIdRecord) -> CallResult<()> {
-    call(Principal::management_canister(), "stop_canister", (arg,)).await
+    Call::new(Principal::management_canister(), "stop_canister")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Get status information about the canister.
 ///
 /// See [IC method `canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
 pub async fn canister_status(arg: CanisterIdRecord) -> CallResult<(CanisterStatusResponse,)> {
-    call(Principal::management_canister(), "canister_status", (arg,)).await
+    Call::new(Principal::management_canister(), "canister_status")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Delete a canister from the IC.
 ///
 /// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
 pub async fn delete_canister(arg: CanisterIdRecord) -> CallResult<()> {
-    call(Principal::management_canister(), "delete_canister", (arg,)).await
+    Call::new(Principal::management_canister(), "delete_canister")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Deposit cycles into the specified canister.
@@ -163,27 +181,34 @@ pub async fn delete_canister(arg: CanisterIdRecord) -> CallResult<()> {
 ///
 /// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
 pub async fn deposit_cycles(arg: CanisterIdRecord, cycles: u128) -> CallResult<()> {
-    call_with_payment128(
-        Principal::management_canister(),
-        "deposit_cycles",
-        (arg,),
-        cycles,
-    )
-    .await
+    Call::new(Principal::management_canister(), "deposit_cycles")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .with_cycles(cycles)
+        .call()
+        .await
 }
 
 /// Get 32 pseudo-random bytes.
 ///
 /// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
 pub async fn raw_rand() -> CallResult<(Vec<u8>,)> {
-    call(Principal::management_canister(), "raw_rand", ()).await
+    Call::new(Principal::management_canister(), "raw_rand")
+        .with_guaranteed_response()
+        .with_args(())
+        .call()
+        .await
 }
 
 /// Get public information about the canister.
 ///
 /// See [IC method `canister_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_info).
 pub async fn canister_info(arg: CanisterInfoRequest) -> CallResult<(CanisterInfoResponse,)> {
-    call(Principal::management_canister(), "canister_info", (arg,)).await
+    Call::new(Principal::management_canister(), "canister_info")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Take a snapshot of the specified canister.
@@ -192,12 +217,11 @@ pub async fn canister_info(arg: CanisterInfoRequest) -> CallResult<(CanisterInfo
 ///
 /// See [IC method `take_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-take_canister_snapshot).
 pub async fn take_canister_snapshot(arg: TakeCanisterSnapshotArgs) -> CallResult<(Snapshot,)> {
-    call(
-        Principal::management_canister(),
-        "take_canister_snapshot",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "take_canister_snapshot")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Load a snapshot onto the canister.
@@ -206,24 +230,22 @@ pub async fn take_canister_snapshot(arg: TakeCanisterSnapshotArgs) -> CallResult
 ///
 /// See [IC method `load_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-load_canister_snapshot).
 pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgs) -> CallResult<()> {
-    call(
-        Principal::management_canister(),
-        "load_canister_snapshot",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "load_canister_snapshot")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// List the snapshots of the canister.
 ///
 /// See [IC method `list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
 pub async fn list_canister_snapshots(arg: CanisterIdRecord) -> CallResult<(Vec<Snapshot>,)> {
-    call(
-        Principal::management_canister(),
-        "list_canister_snapshots",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "list_canister_snapshots")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Delete a specified snapshot that belongs to an existing canister.
@@ -232,10 +254,9 @@ pub async fn list_canister_snapshots(arg: CanisterIdRecord) -> CallResult<(Vec<S
 ///
 /// See [IC method `delete_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister_snapshot).
 pub async fn delete_canister_snapshot(arg: DeleteCanisterSnapshotArgs) -> CallResult<()> {
-    call(
-        Principal::management_canister(),
-        "delete_canister_snapshot",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "delete_canister_snapshot")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }

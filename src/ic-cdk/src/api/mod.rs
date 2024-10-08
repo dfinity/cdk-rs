@@ -3,7 +3,6 @@ use candid::Principal;
 use std::convert::TryFrom;
 
 pub mod call;
-pub mod management_canister;
 pub mod stable;
 
 /// Prints the given message.

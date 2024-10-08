@@ -1,11 +1,11 @@
-use ic_cdk::*;
+use ic_cdk::prelude::*;
 
 /// Some management canister "main" methods are tested with other e2e canisters:
 /// - canister_info.rs
 /// - chunk.rs
 mod main {
     use super::*;
-    use ic_cdk::api::management_canister::main::*;
+    use ic_cdk_management_canister::core::*;
     #[update]
     async fn execute_main_methods() {
         let arg = CreateCanisterArgument {
@@ -77,8 +77,7 @@ mod main {
 
 mod provisional {
     use super::*;
-    use api::management_canister::main::LogVisibility;
-    use ic_cdk::api::management_canister::provisional::*;
+    use ic_cdk_management_canister::{core::LogVisibility, provisional::*};
 
     #[update]
     async fn execute_provisional_methods() {
@@ -111,7 +110,7 @@ mod provisional {
 
 mod snapshot {
     use super::*;
-    use ic_cdk::api::management_canister::main::*;
+    use ic_cdk_management_canister::core::*;
 
     #[update]
     async fn execute_snapshot_methods() {

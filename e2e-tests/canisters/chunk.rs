@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::api::management_canister::main::{
+use ic_cdk_management_canister::core::{
     clear_chunk_store, create_canister, install_chunked_code, stored_chunks, upload_chunk,
     CanisterInstallMode, ChunkHash, ClearChunkStoreArgument, CreateCanisterArgument,
     InstallChunkedCodeArgument, StoredChunksArgument, UploadChunkArgument,

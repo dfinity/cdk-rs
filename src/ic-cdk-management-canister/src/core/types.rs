@@ -1,8 +1,7 @@
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
 
-/// Canister ID is Principal.
-pub type CanisterId = Principal;
+use crate::CanisterId;
 
 /// todo
 #[derive(

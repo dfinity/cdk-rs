@@ -1,7 +1,7 @@
 //! Threshold Schnorr signing API.
 
-use crate::api::call::{call, call_with_payment128, CallResult};
 use candid::Principal;
+use ic_cdk::prelude::*;
 
 mod types;
 pub use types::*;
@@ -15,12 +15,11 @@ const SIGN_WITH_SCHNORR_FEE: u128 = 26_153_846_153;
 pub async fn schnorr_public_key(
     arg: SchnorrPublicKeyArgument,
 ) -> CallResult<(SchnorrPublicKeyResponse,)> {
-    call(
-        Principal::management_canister(),
-        "schnorr_public_key",
-        (arg,),
-    )
-    .await
+    Call::new(Principal::management_canister(), "schnorr_public_key")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .call()
+        .await
 }
 
 /// Return a new Schnorr signature of the given message that can be separately verified against a derived Schnorr public key.
@@ -33,11 +32,10 @@ pub async fn schnorr_public_key(
 pub async fn sign_with_schnorr(
     arg: SignWithSchnorrArgument,
 ) -> CallResult<(SignWithSchnorrResponse,)> {
-    call_with_payment128(
-        Principal::management_canister(),
-        "sign_with_schnorr",
-        (arg,),
-        SIGN_WITH_SCHNORR_FEE,
-    )
-    .await
+    Call::new(Principal::management_canister(), "sign_with_schnorr")
+        .with_guaranteed_response()
+        .with_args((arg,))
+        .with_cycles(SIGN_WITH_SCHNORR_FEE)
+        .call()
+        .await
 }

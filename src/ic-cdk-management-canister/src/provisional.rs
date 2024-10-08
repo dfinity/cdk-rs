@@ -1,10 +1,12 @@
 //! Provisional functions only available in local development instances.
 
-use crate::api::call::{call, CallResult};
+use ic_cdk::prelude::*;
+
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
 
-pub use super::main::{CanisterId, CanisterIdRecord, CanisterSettings};
+pub use super::core::{CanisterIdRecord, CanisterSettings};
+use crate::CanisterId;
 
 /// Argument type of [provisional_create_canister_with_cycles].
 #[derive(
@@ -36,11 +38,13 @@ pub struct ProvisionalTopUpCanisterArgument {
 pub async fn provisional_create_canister_with_cycles(
     arg: ProvisionalCreateCanisterWithCyclesArgument,
 ) -> CallResult<(CanisterIdRecord,)> {
-    call(
+    Call::new(
         Principal::management_canister(),
         "provisional_create_canister_with_cycles",
-        (arg,),
     )
+    .with_guaranteed_response()
+    .with_args((arg,))
+    .call()
     .await
 }
 
@@ -50,10 +54,12 @@ pub async fn provisional_create_canister_with_cycles(
 ///
 /// See [IC method `provisional_top_up_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_top_up_canister).
 pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) -> CallResult<()> {
-    call(
+    Call::new(
         Principal::management_canister(),
         "provisional_top_up_canister",
-        (arg,),
     )
+    .with_guaranteed_response()
+    .with_args((arg,))
+    .call()
     .await
 }

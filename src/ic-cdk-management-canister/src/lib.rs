@@ -1,14 +1,21 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+//! Functions and types for calling [the IC management canister][1].
+//!
+//! This module is a direct translation from the [interface description][2].
+//!
+//! The functions and types defined in this module serves these purposes:
+//! * Make it easy to construct correct request data.
+//! * Handle the response ergonomically.
+//! * For those calls require cycles payments, the cycles amount is an explicit argument.
+//!
+//! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
+//! [2]: https://internetcomputer.org/assets/files/ic-a45d11feb0ba0494055083f9d2d21ddf.did
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod bitcoin;
+pub mod ecdsa;
+pub mod http_request;
+pub mod core;
+pub mod provisional;
+pub mod schnorr;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+/// Canister ID is Principal.
+pub type CanisterId = candid::Principal;
