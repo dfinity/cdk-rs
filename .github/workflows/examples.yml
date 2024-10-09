@@ -44,7 +44,7 @@ jobs:
         uses: cargo-bins/cargo-binstall@main
 
       - name: Install ic-wasm
-        uses: cargo binstall ic-wasm
+        run: cargo binstall ic-wasm
 
       - name: Install candid-extractor
         run: cargo binstall candid-extractor
