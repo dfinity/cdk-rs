@@ -1,0 +1,23 @@
+[package]
+name = "ic-cdk-management-canister"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Call IC Management Canister APIs."
+homepage = "https://docs.rs/ic-cdk-management-canister"
+documentation = "https://docs.rs/ic-cdk-management-canister"
+readme = "README.md"
+categories = [
+    "api-bindings",
+    "data-structures"
+]
+keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+
+[dependencies]
+candid.workspace = true
+ic-cdk.workspace = true
+serde.workspace = true
+serde_bytes.workspace = true
