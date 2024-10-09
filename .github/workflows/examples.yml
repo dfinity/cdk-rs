@@ -40,14 +40,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: Install ic-wasm
-        run: cargo binstall ic-wasm
-
-      - name: Install candid-extractor
-        run: cargo binstall candid-extractor
+      - name: Install ic-wasm and candid-extractor
+        uses: taiki-e/install-action@v2
+        with:
+          tool: ic-wasm,candid-extractor
 
       - name: Install DFX
         uses: dfinity/setup-dfx@main
