@@ -13,48 +13,13 @@ candid.workspace = true
 cargo_metadata = "0.18"
 escargot = { version = "0.5.7", features = ["print"] }
 ic-cdk.workspace = true
+ic-cdk-management-canister.workspace = true
 ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
 sha2.workspace = true
 
-[[bin]]
-name = "simple-kv-store"
-path = "canisters/simple_kv_store.rs"
-
-[[bin]]
-name = "async"
-path = "canisters/async.rs"
-
-[[bin]]
-name = "reverse"
-path = "canisters/reverse.rs"
-
-[[bin]]
-name = "api-call"
-path = "canisters/api_call.rs"
-
-[[bin]]
-name = "timers"
-path = "canisters/timers.rs"
-
-[[bin]]
-name = "canister_info"
-path = "canisters/canister_info.rs"
-
-[[bin]]
-name = "management_caller"
-path = "canisters/management_caller.rs"
-
-[[bin]]
-name = "chunk"
-path = "canisters/chunk.rs"
-
-[[bin]]
-name = "call_struct"
-path = "canisters/call_struct.rs"
-
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = "4"
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-09-26_01-31-base" }
