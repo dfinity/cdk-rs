@@ -30,10 +30,10 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "ic0", version = "0.23.0" }
-ic-cdk = { path = "ic-cdk", version = "0.16.0" }
-ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.0" }
-ic-cdk-timers = { path = "ic-cdk-timers", version = "0.10.0" }
+ic0 = { path = "ic0", version = "0.24.0-alpha.1" }
+ic-cdk = { path = "ic-cdk", version = "0.17.0-alpha.1" }
+ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.0-alpha.1" }
+ic-cdk-timers = { path = "ic-cdk-timers", version = "0.11.0-alpha.1" }
 
 candid = "0.10.4"
 candid_parser = "0.1.4"

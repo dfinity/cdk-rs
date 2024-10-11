@@ -115,7 +115,7 @@ impl Parse for IC0 {
 }
 
 fn main() {
-    let s = include_str!("../../ic0.txt");
+    let s = include_str!("../ic0.txt");
     let s = s.replace('I', "usize");
     let s = s.replace("i32", "u32");
     let s = s.replace("i64", "u64");
