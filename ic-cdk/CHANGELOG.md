@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Fix update/query macro could not handle function arguments with the same name as the function itself. (#525)
+
 ### Changed
 
 - Add `AllowedViewers` variant to `LogVisibility` enum. (#512)
