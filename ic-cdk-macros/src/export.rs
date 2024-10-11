@@ -81,14 +81,17 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
                 ));
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
-                if let Pat::Ident(PatIdent { ident, .. }) = pat.as_ref() {
-                    (ident.clone(), ty.clone())
+                let ident = if let Pat::Ident(PatIdent { ident, .. }) = pat.as_ref() {
+                    // If the argument is named the same as the function, we need to rename it.
+                    if ident == &signature.ident {
+                        format_ident!("__arg_{}", ident, span = pat.span())
+                    } else {
+                        ident.clone()
+                    }
                 } else {
-                    (
-                        format_ident!("__unnamed_arg_{i}", span = pat.span()),
-                        ty.clone(),
-                    )
-                }
+                    format_ident!("__unnamed_arg_{i}", span = pat.span())
+                };
+                (ident, ty.clone())
             }
         };
 
