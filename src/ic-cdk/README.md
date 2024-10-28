@@ -25,9 +25,8 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.12"
-# Only necessary if you want to define Candid data types
-candid = "0.10" 
+ic-cdk = "0.15"
+candid = "0.10" # required if you want to define Candid data types
 ```
 
 Then in Rust source code:
