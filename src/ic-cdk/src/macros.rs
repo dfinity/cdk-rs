@@ -313,3 +313,24 @@ pub use ic_cdk_macros::heartbeat;
 /// }
 /// ```
 pub use ic_cdk_macros::inspect_message;
+
+/// Register the `canister_on_low_wasm_memory` entry point of a canister.
+///
+/// This attribute macro will export the function `canister_on_low_wasm_memory`
+/// in the canister module.
+///
+/// The function under this attribute must have no return value.
+///
+/// Each canister can only have one `canister_on_low_wasm_memory` entry point.
+///
+/// # Example
+///
+/// ```rust
+/// # use ic_cdk::on_low_wasm_memory;
+/// #[on_low_wasm_memory]
+/// fn low_memory_handler() {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
+pub use ic_cdk_macros::on_low_wasm_memory;
