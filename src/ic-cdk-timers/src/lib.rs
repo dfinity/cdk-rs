@@ -260,12 +260,24 @@ fn update_ic0_timer() {
     });
 }
 
-#[export_name = "canister_update <ic-cdk internal> timer_executor"]
+#[cfg_attr(
+    target_family = "wasm",
+    export_name = "canister_update <ic-cdk internal> timer_executor"
+)]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    export_name = "canister_update_ic_cdk_internal.timer_executor"
+)]
 extern "C" fn timer_executor() {
     if ic_cdk::api::caller() != ic_cdk::api::id() {
         ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
     }
-    let (task_id,) = ic_cdk::api::call::arg_data();
+    let config = ic_cdk::api::call::ArgDecoderConfig {
+        decoding_quota: Some(10_000),
+        skipping_quota: Some(100),
+        debug: false,
+    };
+    let (task_id,) = ic_cdk::api::call::arg_data(config);
     let task_id = TimerId(KeyData::from_ffi(task_id));
     // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
     // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.

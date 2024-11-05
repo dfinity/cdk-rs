@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![warn(
     elided_lifetimes_in_paths,
     missing_debug_implementations,
@@ -8,28 +9,26 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! This crate provides building blocks for developing Internet Computer canisters.
-//!
-//! You can check the [Internet Computer Specification](
-//! https://smartcontracts.org/docs/interface-spec/index.html#system-api-imports)
-//! for a full list of the system API functions.
-
 #[cfg(target_feature = "atomics")]
 compile_error!("This version of the CDK does not support multithreading.");
 
-#[doc(inline)]
-pub use ic_cdk_macros::*;
-
 pub mod api;
 mod futures;
+mod macros;
 mod printer;
 pub mod storage;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[doc(inline)]
 pub use api::call::call;
+#[doc(inline)]
 pub use api::call::notify;
+#[doc(inline)]
 pub use api::{caller, id, print, trap};
+
+#[doc(inline)]
+pub use macros::*;
 
 static DONE: AtomicBool = AtomicBool::new(false);
 

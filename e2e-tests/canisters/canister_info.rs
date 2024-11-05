@@ -17,13 +17,10 @@ async fn info(canister_id: Principal) -> CanisterInfoResponse {
 
 #[ic_cdk::update]
 async fn canister_lifecycle() -> Principal {
-    let canister_id = create_canister(
-        CreateCanisterArgument { settings: None },
-        100_000_000_000 / 13,
-    )
-    .await
-    .unwrap()
-    .0;
+    let canister_id = create_canister(CreateCanisterArgument { settings: None }, 1_000_000_000_000)
+        .await
+        .unwrap()
+        .0;
     install_code(InstallCodeArgument {
         mode: Install,
         arg: vec![],
@@ -54,7 +51,7 @@ async fn canister_lifecycle() -> Principal {
     .await
     .unwrap();
     install_code(InstallCodeArgument {
-        mode: Upgrade,
+        mode: Upgrade(None),
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
         canister_id: canister_id.canister_id,
@@ -72,6 +69,8 @@ async fn canister_lifecycle() -> Principal {
             memory_allocation: None,
             freezing_threshold: None,
             reserved_cycles_limit: None,
+            log_visibility: None,
+            wasm_memory_limit: None,
         },
         canister_id: canister_id.canister_id,
     })

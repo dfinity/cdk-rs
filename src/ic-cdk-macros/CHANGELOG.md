@@ -1,12 +1,45 @@
 # Changelog
+
+This file will no longer be updated.
+
+Please check [`ic-cdk` changelog](../ic-cdk/CHANGELOG.md).
+
+---
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+### Fixed
 
-## [0.8.2] - 2023-12-13
+- `cargo build` should no longer give a confusing linkage error on Linux.
+
+## [0.13.2] - 2024-04-08
+
+### Changed
+
+- `ic-cdk-macros` will have the same version as the `ic-cdk`.
+
+## [0.9.0] - 2024-03-01
+
+### Fixed
+
+- The change in yanked version v0.8.5 contains breaking change.
+
+## [0.8.5] - 2024-03-01 (yanked)
+
+### Added
+
+- Allow setting decoding quota for canister endpoints and inter-canister calls. (#465)
+
+## [0.8.4] - 2024-01-12
+
+### Fixed
+
+- The README file is now more informative and used as the front page of the doc site.
+
+## [0.8.3] - 2023-12-13
 
 ### Added
 

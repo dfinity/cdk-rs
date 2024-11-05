@@ -60,6 +60,7 @@ extern "C" {
     pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn performance_counter(counter_type: i32) -> i64;
     pub fn is_controller(src: i32, size: i32) -> i32;
+    pub fn in_replicated_execution() -> i32;
     pub fn debug_print(src: i32, size: i32);
     pub fn trap(src: i32, size: i32);
 }
@@ -221,6 +222,9 @@ mod non_wasm {
     }
     pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
         panic!("is_controller should only be called inside canisters.");
+    }
+    pub unsafe fn in_replicated_execution() -> i32 {
+        panic!("in_replicated_execution should only be called inside canisters.");
     }
     pub unsafe fn debug_print(src: i32, size: i32) {
         panic!("debug_print should only be called inside canisters.");

@@ -1,7 +1,7 @@
 [package]
 name = "chess_rs"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,4 +14,6 @@ candid = "0.10"
 ic-cdk = { path = "../../../../src/ic-cdk" }
 serde = "1.0.111"
 tanton = "1.0.0"
-getrandom = { version = "0.2", features = ["custom"] } # tanton requires this to compile on wasm target
+getrandom = { version = "0.2", features = [
+    "custom",
+] } # tanton requires this to compile on wasm target
