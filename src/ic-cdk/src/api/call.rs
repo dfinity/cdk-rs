@@ -106,10 +106,10 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
                 // `callback` is a function with signature (env : i32) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
+                // `userdata_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
                 // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
                 // `cleanup` is a function with signature (env : i32) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
+                // `userdata_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
                 // ic0.call_perform is always safe to call.
                 // callback and cleanup are safe to parameterize with T because they will always be called in the
                 //   Executing or Trapped states which do not contain a T.

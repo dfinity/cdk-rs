@@ -1,10 +1,12 @@
 use cargo_metadata::MetadataCommand;
 use escargot::CargoBuild;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Once};
 
 /// Builds a canister with the specified name from the current
 /// package and returns the WebAssembly module.
 pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
+    static LOG_INIT: Once = Once::new();
+    LOG_INIT.call_once(env_logger::init);
     let dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
     let cargo_toml_path = dir.join("Cargo.toml");
