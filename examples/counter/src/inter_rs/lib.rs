@@ -1,7 +1,9 @@
 use ic_cdk::update;
 
-mod declarations;
-use declarations::counter_mo::counter_mo;
+mod counter_mo {
+    include!(concat!(env!("OUT_DIR"), "/consumer/counter_mo.rs"));
+}
+use counter_mo::counter_mo;
 
 #[update]
 async fn read() -> candid::Nat {
