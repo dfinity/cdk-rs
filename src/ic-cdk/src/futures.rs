@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::future::Future;
 use std::mem;
 use std::pin::Pin;
@@ -19,8 +19,17 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
         future: pinned_future,
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
-    let waker = Arc::new(TaskWaker { task_id });
-    waker.wake();
+    // let waker = Arc::new(TaskWaker { task_id });
+    // ACTUALLY_POLLING.set(false);
+    // waker.wake();
+    // ACTUALLY_POLLING.set(true);
+}
+///.
+pub fn poll_all() {
+    let tasks = TASKS.with(|tasks| tasks.borrow().keys().collect::<Vec<_>>());
+    for task in tasks {
+        Waker::from(Arc::new(TaskWaker { task_id: task })).wake();
+    }
 }
 
 pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
@@ -54,8 +63,15 @@ struct TaskWaker {
     task_id: TaskId,
 }
 
+thread_local! {
+    static ACTUALLY_POLLING: Cell<bool> = Cell::new(true);
+}
+
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
+        if ACTUALLY_POLLING.get() {
+            crate::println!("awoken");
+        }
         if CLEANUP.load(Ordering::Relaxed) {
             // This task is recovering from a trap. We cancel it to run destructors.
             TASKS.with_borrow_mut(|tasks| {
@@ -80,6 +96,9 @@ impl Wake for TaskWaker {
                 // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
             };
             let waker = Waker::from(self.clone());
+            if ACTUALLY_POLLING.get() {
+                crate::println!("polling");
+            }
             let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
             match poll {
                 Poll::Pending => {

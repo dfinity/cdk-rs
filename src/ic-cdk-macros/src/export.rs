@@ -272,6 +272,7 @@ fn dfn_macro(
                 let result = #function_call;
                 #return_encode
             });
+            ic_cdk::poll_all();
         }
 
         #item

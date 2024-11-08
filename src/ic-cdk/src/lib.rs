@@ -54,6 +54,8 @@ pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
     futures::spawn(future);
 }
 
+pub use futures::poll_all;
+
 /// Format and then print the formatted message
 #[cfg(target_arch = "wasm32")]
 #[macro_export]

@@ -128,8 +128,10 @@ extern "C" fn global_timer() {
                 break;
             }
         });
+        ic_cdk::println!("n scheduled = {}", call_futures.len());
         // run all the collected tasks, and clean up after them if necessary
         while let Some((timer, res)) = call_futures.next().await {
+            ic_cdk::println!("callfuture await");
             let task_id = timer.task;
             match res {
                 Ok(()) => {}
@@ -297,5 +299,6 @@ extern "C" fn timer_executor() {
             }
         }
     }
+    ic_cdk::println!("callfuture reply");
     ic_cdk::api::call::reply(());
 }
