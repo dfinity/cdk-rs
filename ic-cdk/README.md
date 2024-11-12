@@ -58,6 +58,7 @@ These macros are directly related to the [Internet Computer Specification](https
 * [`post_upgrade`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.post_upgrade.html)
 * [`inspect_message`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.inspect_message.html)
 * [`heartbeat`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.heartbeat.html)
+* [`on_low_wasm_memory`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.on_low_wasm_memory.html)
 * [`update`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.update.html)
 * [`query`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.query.html)
 

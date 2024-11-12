@@ -33,18 +33,20 @@ enum MethodType {
     Query,
     Heartbeat,
     InspectMessage,
+    OnLowWasmMemory,
 }
 
 impl MethodType {
     pub fn is_lifecycle(&self) -> bool {
-        matches!(
-            self,
+        match self {
             MethodType::Init
-                | MethodType::PreUpgrade
-                | MethodType::PostUpgrade
-                | MethodType::Heartbeat
-                | MethodType::InspectMessage
-        )
+            | MethodType::PreUpgrade
+            | MethodType::PostUpgrade
+            | MethodType::Heartbeat
+            | MethodType::InspectMessage
+            | MethodType::OnLowWasmMemory => true,
+            MethodType::Update | MethodType::Query => false,
+        }
     }
 }
 
@@ -58,6 +60,7 @@ impl std::fmt::Display for MethodType {
             MethodType::Update => f.write_str("update"),
             MethodType::Heartbeat => f.write_str("heartbeat"),
             MethodType::InspectMessage => f.write_str("inspect_message"),
+            MethodType::OnLowWasmMemory => f.write_str("on_low_wasm_memory"),
         }
     }
 }
@@ -310,6 +313,13 @@ pub(crate) fn ic_inspect_message(
     item: TokenStream,
 ) -> Result<TokenStream, Error> {
     dfn_macro(MethodType::InspectMessage, attr, item)
+}
+
+pub(crate) fn ic_on_low_wasm_memory(
+    attr: TokenStream,
+    item: TokenStream,
+) -> Result<TokenStream, Error> {
+    dfn_macro(MethodType::OnLowWasmMemory, attr, item)
 }
 
 #[cfg(test)]

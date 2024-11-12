@@ -1,4 +1,6 @@
-use ic_cdk::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade, query, update};
+use ic_cdk::{
+    heartbeat, init, inspect_message, on_low_wasm_memory, post_upgrade, pre_upgrade, query, update,
+};
 
 #[init]
 fn init() {}
@@ -29,5 +31,8 @@ fn heartbeat() {}
 
 #[inspect_message]
 fn inspect_message() {}
+
+#[on_low_wasm_memory]
+fn on_low_wasm_memory() {}
 
 fn main() {}
