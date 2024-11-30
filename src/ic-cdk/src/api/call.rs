@@ -155,6 +155,8 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
             // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
             waker.wake()
         }
+    } else {
+        crate::trap("Call already trapped");
     }
 }
 
