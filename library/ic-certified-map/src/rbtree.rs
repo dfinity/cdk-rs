@@ -1077,6 +1077,7 @@ fn is_balanced<K, V>(root: &NodeRef<K, V>) -> bool {
     go(root, num_black)
 }
 
+#[allow(dead_code)]
 struct DebugView<'a, K, V>(&'a NodeRef<K, V>);
 
 impl<'a, K: AsRef<[u8]>, V> fmt::Debug for DebugView<'a, K, V> {
