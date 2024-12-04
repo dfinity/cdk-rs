@@ -5,7 +5,7 @@ use ic_cdk::prelude::*;
 /// - chunk.rs
 mod main {
     use super::*;
-    use ic_cdk_management_canister::core::*;
+    use ic_cdk::api::management_canister::main::*;
     #[update]
     async fn execute_main_methods() {
         let arg = CreateCanisterArgument {
@@ -77,7 +77,7 @@ mod main {
 
 mod provisional {
     use super::*;
-    use ic_cdk_management_canister::{core::LogVisibility, provisional::*};
+    use ic_cdk::api::management_canister::{main::LogVisibility, provisional::*};
 
     #[update]
     async fn execute_provisional_methods() {
@@ -110,7 +110,7 @@ mod provisional {
 
 mod snapshot {
     use super::*;
-    use ic_cdk_management_canister::core::*;
+    use ic_cdk::api::management_canister::main::*;
 
     #[update]
     async fn execute_snapshot_methods() {

@@ -1,12 +1,12 @@
 use candid::Principal;
-use ic_cdk_e2e_tests::cargo_build_canister;
-use ic_cdk_management_canister::core::{
+use ic_cdk::api::management_canister::main::{
     CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
     CanisterInfoResponse, CanisterInstallMode,
     CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgument,
 };
+use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, call_candid_as, PocketIc};
 use std::time::UNIX_EPOCH;

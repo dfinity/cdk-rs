@@ -1,7 +1,7 @@
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-use crate::CanisterId;
+use super::super::main::CanisterId;
 
 /// Argument type of [ecdsa_public_key](super::ecdsa_public_key).
 #[derive(

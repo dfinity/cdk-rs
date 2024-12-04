@@ -1,7 +1,6 @@
 //! Canister HTTP request.
 
-use ic_cdk::prelude::*;
-
+use crate::api::call::{call_with_payment128, CallResult};
 use candid::Principal;
 #[cfg(feature = "transform-closure")]
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
@@ -21,11 +20,13 @@ pub async fn http_request(
     arg: CanisterHttpRequestArgument,
     cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
-    Call::new(Principal::management_canister(), "http_request")
-        .with_args((arg,))
-        .with_cycles(cycles)
-        .call()
-        .await
+    call_with_payment128(
+        Principal::management_canister(),
+        "http_request",
+        (arg,),
+        cycles,
+    )
+    .await
 }
 
 #[cfg(feature = "transform-closure")]

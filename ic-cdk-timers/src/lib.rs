@@ -38,7 +38,7 @@ use ic_cdk::api::call::RejectionCode;
 thread_local! {
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
-    static MOST_RECENT: Cell<Option<u64>> = Cell::new(None);
+    static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
 }
 
 enum Task {
