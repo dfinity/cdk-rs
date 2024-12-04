@@ -13,13 +13,12 @@ candid.workspace = true
 cargo_metadata = "0.18"
 escargot = { version = "0.5.7", features = ["print"] }
 ic-cdk.workspace = true
-ic-cdk-management-canister.workspace = true
 ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
 sha2.workspace = true
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-09-26_01-31-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-11-28_03-15-base" }
 
 [dev-dependencies]
 hex.workspace = true

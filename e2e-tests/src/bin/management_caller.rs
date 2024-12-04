@@ -5,7 +5,8 @@ use ic_cdk::prelude::*;
 /// - chunk.rs
 mod main {
     use super::*;
-    use ic_cdk_management_canister::core::*;
+    use candid::Principal;
+    use ic_cdk::api::management_canister::main::*;
     #[update]
     async fn execute_main_methods() {
         let arg = CreateCanisterArgument {
@@ -73,11 +74,18 @@ mod main {
         let response = raw_rand().await.unwrap().0;
         assert_eq!(response.len(), 32);
     }
+
+    #[update]
+    async fn execute_subnet_info(subnet_id: Principal) {
+        let arg = SubnetInfoArgs { subnet_id };
+        let response = subnet_info(arg).await.unwrap().0;
+        assert!(!response.replica_version.is_empty());
+    }
 }
 
 mod provisional {
     use super::*;
-    use ic_cdk_management_canister::{core::LogVisibility, provisional::*};
+    use ic_cdk::api::management_canister::{main::LogVisibility, provisional::*};
 
     #[update]
     async fn execute_provisional_methods() {
@@ -110,7 +118,7 @@ mod provisional {
 
 mod snapshot {
     use super::*;
-    use ic_cdk_management_canister::core::*;
+    use ic_cdk::api::management_canister::main::*;
 
     #[update]
     async fn execute_snapshot_methods() {

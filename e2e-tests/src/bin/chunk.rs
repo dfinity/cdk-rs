@@ -1,16 +1,16 @@
 use candid::Principal;
-use ic_cdk::update;
-use ic_cdk_management_canister::core::{
+use ic_cdk::api::management_canister::main::{
     clear_chunk_store, create_canister, install_chunked_code, stored_chunks, upload_chunk,
     CanisterInstallMode, ChunkHash, ClearChunkStoreArgument, CreateCanisterArgument,
     InstallChunkedCodeArgument, StoredChunksArgument, UploadChunkArgument,
 };
+use ic_cdk::update;
 
 #[update]
 async fn call_create_canister() -> Principal {
     let arg = CreateCanisterArgument::default();
 
-    create_canister(arg, 200_000_000_000u128)
+    create_canister(arg, 1_000_000_000_000u128)
         .await
         .unwrap()
         .0

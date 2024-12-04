@@ -1,7 +1,8 @@
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
 
-use crate::CanisterId;
+/// Canister ID is Principal.
+pub type CanisterId = Principal;
 
 /// todo
 #[derive(
@@ -626,4 +627,22 @@ pub struct DeleteCanisterSnapshotArgs {
     pub canister_id: CanisterId,
     /// ID of the snapshot to be deleted.
     pub snapshot_id: SnapshotId,
+}
+
+/// Argument type of [subnet_info](super::subnet_info).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct SubnetInfoArgs {
+    /// Principal of the subnet.
+    pub subnet_id: Principal,
+}
+
+/// Result type of [subnet_info](super::subnet_info).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct SubnetInfoResult {
+    /// Replica version of the subnet.
+    pub replica_version: String,
 }
