@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk_management_canister::core::{
+use ic_cdk::api::management_canister::main::{
     canister_info, create_canister, install_code, uninstall_code, update_settings,
     CanisterIdRecord, CanisterInfoRequest, CanisterInfoResponse,
     CanisterInstallMode::{Install, Reinstall, Upgrade},
