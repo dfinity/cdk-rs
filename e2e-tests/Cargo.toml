@@ -21,4 +21,4 @@ sha2.workspace = true
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-09-26_01-31-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-11-28_03-15-base" }

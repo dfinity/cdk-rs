@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Support management canister method: `subnet_info`. (#532)
+  - Add types: `SubnetInfoArgs` and `SubnetInfoResult`.
+
 ### Fixed
 
 - Fix update/query macro could not handle function arguments with the same name as the function itself. (#525)
