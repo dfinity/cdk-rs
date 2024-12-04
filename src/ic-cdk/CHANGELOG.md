@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Support management canister method: `subnet_info`. (#532)
+  - Add types: `SubnetInfoArgs` and `SubnetInfoResult`.
+
 ## [0.17.0] - 2024-11-04
 
 ### Changed

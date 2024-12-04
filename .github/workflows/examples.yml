@@ -17,7 +17,7 @@ env:
 
 jobs:
   build-candid-extractor:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
           path: target/release/candid-extractor
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-candid-extractor
     strategy:
       fail-fast: false
@@ -125,7 +125,7 @@ jobs:
     name: examples:required
     if: ${{ always() }}
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check step result directly
         if: ${{ needs.test.result != 'success' }}
