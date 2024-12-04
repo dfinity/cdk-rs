@@ -5,6 +5,7 @@ use ic_cdk::*;
 /// - chunk.rs
 mod main {
     use super::*;
+    use candid::Principal;
     use ic_cdk::api::management_canister::main::*;
     #[update]
     async fn execute_main_methods() {
@@ -72,6 +73,13 @@ mod main {
         delete_canister(canister_id_record).await.unwrap();
         let response = raw_rand().await.unwrap().0;
         assert_eq!(response.len(), 32);
+    }
+
+    #[update]
+    async fn execute_subnet_info(subnet_id: Principal) {
+        let arg = SubnetInfoArgs { subnet_id };
+        let response = subnet_info(arg).await.unwrap().0;
+        assert!(!response.replica_version.is_empty());
     }
 }
 

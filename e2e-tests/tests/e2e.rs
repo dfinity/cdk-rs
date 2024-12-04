@@ -547,6 +547,9 @@ fn test_call_management() {
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
+    let subnet_id = pic.topology().get_app_subnets()[0];
+    let () = call_candid(&pic, canister_id, "execute_subnet_info", (subnet_id,))
+        .expect("Error calling execute_subnet_info");
     let () = call_candid(&pic, canister_id, "execute_main_methods", ())
         .expect("Error calling execute_main_methods");
     let () = call_candid(&pic, canister_id, "execute_provisional_methods", ())
