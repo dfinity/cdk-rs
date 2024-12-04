@@ -1,11 +1,11 @@
 use candid::{Encode, Principal};
-use ic_cdk_e2e_tests::cargo_build_canister;
+use ic_cdk_e2e_tests::{cargo_build_canister,pocket_ic};
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, query_candid, PocketIc, WasmResult};
 
 #[test]
 fn call_apis() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("api_call");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);

@@ -19,7 +19,7 @@ lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
 sha2.workspace = true
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-09-26_01-31-base" }
 
 [dev-dependencies]
 hex.workspace = true
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-09-26_01-31-base" }

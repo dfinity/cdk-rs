@@ -1,6 +1,7 @@
 use cargo_metadata::MetadataCommand;
-use escargot::CargoBuild;
+use pocket_ic::{PocketIc, PocketIcBuilder};
 use std::path::PathBuf;
+use std::process::Command;
 
 /// Builds a canister with the specified name from the current
 /// package and returns the WebAssembly module.
@@ -20,22 +21,58 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
     // cache being invalidated every time we run this function
     let wasm_target_dir = target_dir.join("canister-build");
 
-    let cargo_build = CargoBuild::new()
-        .target("wasm32-unknown-unknown")
-        .bin(bin_name)
-        .args(["--profile", "canister-release"])
-        .manifest_path(&cargo_toml_path)
-        .target_dir(wasm_target_dir);
+    let mut cmd = Command::new("cargo");
+    let target = match std::env::var("WASM64") {
+        Ok(_) => {
+            cmd.args([
+                "+nightly",
+                "build",
+                "-Z",
+                "build-std=std,panic_abort",
+                "--target",
+                "wasm64-unknown-unknown",
+            ]);
+            "wasm64-unknown-unknown"
+        }
+        Err(_) => {
+            cmd.args(["build", "--target", "wasm32-unknown-unknown"]);
+            "wasm32-unknown-unknown"
+        }
+    };
 
-    let binary = cargo_build
-        .run()
-        .expect("Cargo failed to compile the wasm binary");
+    let cmd = cmd.args([
+        "--bin",
+        bin_name,
+        "--profile",
+        "canister-release",
+        "--manifest-path",
+        &cargo_toml_path.to_string_lossy(),
+        "--target-dir",
+        wasm_target_dir.as_ref(),
+    ]);
 
-    std::fs::read(binary.path()).unwrap_or_else(|e| {
+    cmd.output().expect("failed to compile the wasm binary");
+
+    let wasm_path = wasm_target_dir
+        .join(target)
+        .join("canister-release")
+        .join(bin_name)
+        .with_extension("wasm");
+
+    std::fs::read(&wasm_path).unwrap_or_else(|e| {
         panic!(
-            "failed to read compiled Wasm file from {}: {}",
-            binary.path().display(),
-            e
+            "failed to read compiled Wasm file from {:?}: {}",
+            &wasm_path, e
         )
     })
+}
+
+pub fn pocket_ic() -> PocketIc {
+    match std::env::var("WASM64") {
+        Ok(_) => PocketIcBuilder::new()
+            .with_application_subnet()
+            .with_nonmainnet_features(true)
+            .build(),
+        Err(_) => PocketIc::new(),
+    }
 }
