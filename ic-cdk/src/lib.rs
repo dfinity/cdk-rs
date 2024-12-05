@@ -57,7 +57,7 @@ pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
 }
 
 /// Format and then print the formatted message
-#[cfg(tarfet_family = "wasm")]
+#[cfg(target_family = "wasm")]
 #[macro_export]
 macro_rules! println {
     ($fmt:expr) => ($crate::print(format!($fmt)));
@@ -65,7 +65,7 @@ macro_rules! println {
 }
 
 /// Format and then print the formatted message
-#[cfg(not(tarfet_family = "wasm"))]
+#[cfg(not(target_family = "wasm"))]
 #[macro_export]
 macro_rules! println {
     ($fmt:expr) => (std::println!($fmt));
@@ -73,7 +73,7 @@ macro_rules! println {
 }
 
 /// Format and then print the formatted message
-#[cfg(tarfet_family = "wasm")]
+#[cfg(target_family = "wasm")]
 #[macro_export]
 macro_rules! eprintln {
     ($fmt:expr) => ($crate::print(format!($fmt)));
@@ -81,7 +81,7 @@ macro_rules! eprintln {
 }
 
 /// Format and then print the formatted message
-#[cfg(not(tarfet_family = "wasm"))]
+#[cfg(not(target_family = "wasm"))]
 #[macro_export]
 macro_rules! eprintln {
     ($fmt:expr) => (std::eprintln!($fmt));
