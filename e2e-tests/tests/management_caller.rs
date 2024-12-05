@@ -1,11 +1,13 @@
-use ic_cdk_e2e_tests::cargo_build_canister;
+use pocket_ic::call_candid;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::PocketIcBuilder;
-use pocket_ic::{call_candid, PocketIc};
+
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn test_call_management() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("management_caller");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
@@ -30,10 +32,11 @@ fn test_call_management() {
 
 #[test]
 fn test_snapshot() {
-    let pic = PocketIcBuilder::new()
-        .with_application_subnet()
-        .with_nonmainnet_features(true)
-        .build();
+    // let pic = PocketIcBuilder::new()
+    //     .with_application_subnet()
+    //     .with_nonmainnet_features(true)
+    //     .build();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("management_caller");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
