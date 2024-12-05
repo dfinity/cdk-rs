@@ -1,10 +1,12 @@
 use candid::Principal;
-use ic_cdk_e2e_tests::cargo_build_canister;
-use pocket_ic::{PocketIc, WasmResult};
+use pocket_ic::WasmResult;
+
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn test_raw_api() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("reverse");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);

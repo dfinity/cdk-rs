@@ -9,9 +9,9 @@ use self::waker::WakerState;
 
 /// Must be called on every top-level future corresponding to a method call of a
 /// canister by the IC, other than async functions marked `#[update]` or similar.
-#[cfg_attr(not(target_arch = "wasm32"), allow(unused_variables, unreachable_code))]
+#[cfg_attr(not(target_family = "wasm"), allow(unused_variables, unreachable_code))]
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     panic!("Cannot be run outside of wasm!"); // really, just cannot be run in a multi-threaded environment
     let pinned_future = Box::pin(future);
     let waker_state = Rc::new(WakerState {

@@ -1,12 +1,14 @@
-use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, query_candid, PocketIc};
 use std::time::Duration;
 use std::time::SystemTime;
 
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
+
 #[test]
 fn test_timers() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -70,7 +72,7 @@ fn test_timers() {
 
 #[test]
 fn test_timers_can_cancel_themselves() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -107,7 +109,7 @@ fn test_timers_can_cancel_themselves() {
 fn test_scheduling_many_timers() {
     // Must be more than the queue limit (500)
     let timers_to_schedule = 1_000;
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000u128);
@@ -142,7 +144,7 @@ fn advance_seconds(pic: &PocketIc, seconds: u32) {
 
 #[test]
 fn test_set_global_timers() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
 
     let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
