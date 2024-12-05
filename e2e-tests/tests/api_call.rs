@@ -1,9 +1,9 @@
 use candid::{Encode, Principal};
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, query_candid,  WasmResult};
+use pocket_ic::{call_candid, query_candid, WasmResult};
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister,pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn call_apis() {

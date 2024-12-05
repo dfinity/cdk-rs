@@ -1,6 +1,5 @@
 use pocket_ic::call_candid;
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::PocketIcBuilder;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pocket_ic};
@@ -32,10 +31,6 @@ fn test_call_management() {
 
 #[test]
 fn test_snapshot() {
-    // let pic = PocketIcBuilder::new()
-    //     .with_application_subnet()
-    //     .with_nonmainnet_features(true)
-    //     .build();
     let pic = pocket_ic();
     let wasm = cargo_build_canister("management_caller");
     let canister_id = pic.create_canister();
