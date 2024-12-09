@@ -15,6 +15,7 @@ compile_error!("This version of the CDK does not support multithreading.");
 pub mod prelude;
 
 pub mod api;
+pub mod call;
 mod futures;
 mod macros;
 mod printer;
