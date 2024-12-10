@@ -1,5 +1,5 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::{msg_arg_data, msg_reject_msg};
+use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, CandidType, DecoderConfig, Deserialize, Principal};
 use std::future::Future;
@@ -8,53 +8,76 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
 use std::task::{Context, Poll, Waker};
 
-/// Rejection code from calling another canister.
+/// Reject code explains why the inter-canister call is rejected.
 ///
-/// These can be obtained using [reject_code].
-#[repr(i32)]
+/// See [here](https://internetcomputer.org/docs/current/references/ic-interface-spec/#reject-codes) for more details.
+#[repr(u32)]
+#[non_exhaustive]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum RejectionCode {
-    /// No error.
-    NoError = 0,
-
+pub enum RejectCode {
     /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
     /// Transient system error, retry might be possible.
     SysTransient = 2,
-    /// Invalid destination (e.g. canister/account does not exist)
+    /// Invalid destination (e.g. canister/account does not exist).
     DestinationInvalid = 3,
     /// Explicit reject by the canister.
     CanisterReject = 4,
-    /// Canister error (e.g., trap, no response)
+    /// Canister error (e.g., trap, no response).
     CanisterError = 5,
     /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
     SysUnknown = 6,
 
-    /// Unknown rejection code.
+    /// Unrecognized reject code.
     ///
     /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// rejection codes that are not recognized by the library.
-    Unknown,
+    /// reject codes that are not recognized by the library.
+    Unrecognized,
 }
 
-impl From<i32> for RejectionCode {
-    fn from(code: i32) -> Self {
+impl TryFrom<u32> for RejectCode {
+    type Error = ();
+    fn try_from(code: u32) -> Result<Self, Self::Error> {
         match code {
-            0 => RejectionCode::NoError,
-            1 => RejectionCode::SysFatal,
-            2 => RejectionCode::SysTransient,
-            3 => RejectionCode::DestinationInvalid,
-            4 => RejectionCode::CanisterReject,
-            5 => RejectionCode::CanisterError,
-            6 => RejectionCode::SysUnknown,
-            _ => RejectionCode::Unknown,
+            // 0 is a special code meaning "no error"
+            0 => Err(()),
+            1 => Ok(RejectCode::SysFatal),
+            2 => Ok(RejectCode::SysTransient),
+            3 => Ok(RejectCode::DestinationInvalid),
+            4 => Ok(RejectCode::CanisterReject),
+            5 => Ok(RejectCode::CanisterError),
+            6 => Ok(RejectCode::SysUnknown),
+            _ => Ok(RejectCode::Unrecognized),
         }
     }
 }
 
-impl From<u32> for RejectionCode {
-    fn from(code: u32) -> Self {
-        RejectionCode::from(code as i32)
+/// Error codes from the ic0.call_perform system API.
+///
+/// See [here](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call) for more details.
+///
+/// The spec currently only states that: "If the function returns a non-zero value, the call cannot (and will not be) performed."
+/// It does not specify what the error codes are. So we only have a single variant (`Unrecognized`) for now.
+#[repr(u32)]
+#[non_exhaustive]
+#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CallPerformErrorCode {
+    /// Unrecognized error code.
+    ///
+    /// Note that this variant is not part of the IC interface spec, and is used to represent
+    /// rejection codes that are not recognized by the library.
+    Unrecognized,
+}
+
+impl TryFrom<u32> for CallPerformErrorCode {
+    type Error = ();
+    fn try_from(code: u32) -> Result<Self, Self::Error> {
+        match code {
+            // 0 is a special error code meaning call_perform succeeded.
+            0 => Err(()),
+            // all other non-zero codes are currently unrecognized errors.
+            _ => Ok(CallPerformErrorCode::Unrecognized),
+        }
     }
 }
 
@@ -62,14 +85,14 @@ impl From<u32> for RejectionCode {
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
     /// The call immediately failed when invoking the call_perform system API.
-    #[error("The IC was not able to enqueue the call")]
-    PerformFailed,
+    #[error("The IC was not able to enqueue the call with code {0:?}")]
+    PerformFailed(CallPerformErrorCode),
 
     /// The call was rejected.
     ///
     /// Please handle the error by matching on the rejection code.
     #[error("The call was rejected with code {0:?} and message: {1}")]
-    CallRejected(RejectionCode, String),
+    CallRejected(RejectCode, String),
 
     /// The cleanup callback was executed.
     //
@@ -82,9 +105,7 @@ pub enum CallError {
     CandidDecodeFailed(String),
 }
 
-/// The result of a Call.
-///
-/// Errors on the IC have two components; a Code and a message associated with it.
+/// Result of a inter-canister call.
 pub type CallResult<R> = Result<R, CallError>;
 
 // Internal state for the Future when sending a call.
@@ -152,9 +173,9 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     ic0::call_perform()
                 };
 
-                // 0 is a special error code meaning call succeeded.
-                if err_code != 0 {
-                    let result = Err(CallError::PerformFailed);
+                // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
+                if let Ok(c) = CallPerformErrorCode::try_from(err_code) {
+                    let result = Err(CallError::PerformFailed(c));
                     state.result = Some(result.clone());
                     return Poll::Ready(result);
                 }
@@ -178,9 +199,9 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
     if let Some(state) = state.upgrade() {
         // Make sure to un-borrow_mut the state.
         {
-            state.write().unwrap().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(msg_arg_data()),
-                n => Err(CallError::CallRejected(n, msg_reject_msg())),
+            state.write().unwrap().result = Some(match RejectCode::try_from(msg_reject_code()) {
+                Err(_) => Ok(msg_arg_data()),
+                Ok(n) => Err(CallError::CallRejected(n, msg_reject_msg())),
             });
         }
         let w = state.write().unwrap().waker.take();
@@ -405,7 +426,7 @@ pub trait SendableCall {
     }
 
     /// Sends the call and ignores the reply.
-    fn call_and_forget(self) -> Result<(), RejectionCode>;
+    fn call_and_forget(self) -> CallResult<()>;
 }
 
 impl SendableCall for Call<'_> {
@@ -419,7 +440,7 @@ impl SendableCall for Call<'_> {
         )
     }
 
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
+    fn call_and_forget(self) -> CallResult<()> {
         notify_raw_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
@@ -442,7 +463,7 @@ impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
         )
     }
 
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
+    fn call_and_forget(self) -> CallResult<()> {
         let args = encode_args(self.args).expect("failed to encode arguments");
         notify_raw_internal(
             self.call.canister_id,
@@ -465,7 +486,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         )
     }
 
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
+    fn call_and_forget(self) -> CallResult<()> {
         notify_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -501,9 +522,9 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     args_raw: Option<T>,
     payment: Option<u128>,
     timeout_seconds: Option<u32>,
-) -> Result<(), RejectionCode> {
+) -> CallResult<()> {
     let callee = id.as_slice();
-    // We set all callbacks to -1, which is guaranteed to be invalid callback index.
+    // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
     // The system will still deliver the reply, but it will trap immediately because the callback
     // is not a valid function. See
     // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
@@ -541,9 +562,10 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
         }
         ic0::call_perform()
     };
-    match err_code {
-        0 => Ok(()),
-        c => Err(RejectionCode::from(c)),
+    // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
+    match CallPerformErrorCode::try_from(err_code) {
+        Ok(c) => Err(CallError::PerformFailed(c)),
+        Err(_) => Ok(()),
     }
 }
 
@@ -607,13 +629,6 @@ impl Default for ArgDecoderConfig {
             debug: false,
         }
     }
-}
-
-/// Returns the rejection code for the call.
-fn reject_code() -> RejectionCode {
-    // SAFETY: ic0.msg_reject_code is always safe to call.
-    let code = unsafe { ic0::msg_reject_code() };
-    RejectionCode::from(code)
 }
 
 /// Converts a decoder error to a CallError.
