@@ -58,10 +58,34 @@ impl From<u32> for RejectionCode {
     }
 }
 
+/// The error type for inter-canister calls.
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum CallError {
+    /// The call immediately failed when invoking the call_perform system API.
+    #[error("The IC was not able to enqueue the call")]
+    PerformFailed,
+
+    /// The call was rejected.
+    ///
+    /// Please handle the error by matching on the rejection code.
+    #[error("The call was rejected with code {0:?} and message: {1}")]
+    CallRejected(RejectionCode, String),
+
+    /// The cleanup callback was executed.
+    //
+    // TODO: Is this really an error?
+    #[error("The cleanup callback was executed")]
+    CleanupExecuted,
+
+    /// The response could not be decoded.
+    #[error("Failed to decode the response as {0}")]
+    CandidDecodeFailed(String),
+}
+
 /// The result of a Call.
 ///
 /// Errors on the IC have two components; a Code and a message associated with it.
-pub type CallResult<R> = Result<R, (RejectionCode, String)>;
+pub type CallResult<R> = Result<R, CallError>;
 
 // Internal state for the Future when sending a call.
 struct CallFutureState<T: AsRef<[u8]>> {
@@ -130,10 +154,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 
                 // 0 is a special error code meaning call succeeded.
                 if err_code != 0 {
-                    let result = Err((
-                        RejectionCode::from(err_code),
-                        "Couldn't send message".to_string(),
-                    ));
+                    let result = Err(CallError::PerformFailed);
                     state.result = Some(result.clone());
                     return Poll::Ready(result);
                 }
@@ -159,7 +180,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
         {
             state.write().unwrap().result = Some(match reject_code() {
                 RejectionCode::NoError => Ok(msg_arg_data()),
-                n => Err((n, msg_reject_msg())),
+                n => Err(CallError::CallRejected(n, msg_reject_msg())),
             });
         }
         let w = state.write().unwrap().waker.take();
@@ -190,7 +211,8 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
         //
         // Borrowing does not trap - the rollback from the
         // previous trap ensures that the RwLock can be borrowed again.
-        state.write().unwrap().result = Some(Err((RejectionCode::NoError, "cleanup".to_string())));
+        // TODO: Should we have this?
+        state.write().unwrap().result = Some(Err(CallError::CleanupExecuted));
         let w = state.write().unwrap().waker.take();
         if let Some(waker) = w {
             // Flag that we do not want to actually wake the task - we
@@ -349,7 +371,7 @@ pub trait SendableCall {
         let fut = self.call_raw();
         async {
             let bytes = fut.await?;
-            decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
+            decode_args(&bytes).map_err(decoder_error_to_call_error::<R>)
         }
     }
 
@@ -371,7 +393,7 @@ pub trait SendableCall {
                 None
             };
             match decode_args_with_config_debug(&bytes, &config) {
-                Err(e) => Err(decoder_error_to_reject::<R>(e)),
+                Err(e) => Err(decoder_error_to_call_error::<R>(e)),
                 Ok((r, cost)) => {
                     if decoder_config.debug {
                         print_decoding_debug_info(std::any::type_name::<R>(), &cost, pre_cycles);
@@ -594,14 +616,7 @@ fn reject_code() -> RejectionCode {
     RejectionCode::from(code)
 }
 
-// TODO: Seems abusing the Rejection code, should be refactored.
-fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
-    (
-        RejectionCode::CanisterError,
-        format!(
-            "failed to decode canister response as {}: {}",
-            std::any::type_name::<T>(),
-            err
-        ),
-    )
+/// Converts a decoder error to a CallError.
+fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
+    CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
 }
