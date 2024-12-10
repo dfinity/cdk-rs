@@ -84,9 +84,13 @@ impl TryFrom<u32> for CallPerformErrorCode {
 /// The error type for inter-canister calls.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
+    /// The arguments could not be encoded.
+    #[error("Failed to encode the arguments")]
+    CandidEncodeFailed,
+
     /// The call immediately failed when invoking the call_perform system API.
     #[error("The IC was not able to enqueue the call with code {0:?}")]
-    PerformFailed(CallPerformErrorCode),
+    CallPerformFailed(CallPerformErrorCode),
 
     /// The call was rejected.
     ///
@@ -169,7 +173,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 
                 // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
                 if let Ok(c) = CallPerformErrorCode::try_from(err_code) {
-                    let result = Err(CallError::PerformFailed(c));
+                    let result = Err(CallError::CallPerformFailed(c));
                     state.result = Some(result.clone());
                     return Poll::Ready(result);
                 }
@@ -446,6 +450,7 @@ impl SendableCall for Call<'_> {
 impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
         let args = encode_args(self.args).expect("failed to encode arguments");
+        // let args =  encode_args(self.args).map_err(|_| CallError::CandidEncodeFailed)?;
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -556,7 +561,7 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     };
     // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
     match CallPerformErrorCode::try_from(err_code) {
-        Ok(c) => Err(CallError::PerformFailed(c)),
+        Ok(c) => Err(CallError::CallPerformFailed(c)),
         Err(_) => Ok(()),
     }
 }
