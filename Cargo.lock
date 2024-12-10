@@ -288,14 +288,15 @@ dependencies = [
 [[package]]
 name = "candid"
 version = "0.10.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c30ee7f886f296b6422c0ff017e89dd4f831521dfdcc76f3f71aae1ce817222"
 dependencies = [
  "anyhow",
  "binread",
  "byteorder",
- "candid_derive 0.6.6",
+ "candid_derive 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
- "ic0",
- "ic_principal 0.1.1",
+ "ic_principal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "leb128",
  "num-bigint",
  "num-traits",
@@ -310,15 +311,14 @@ dependencies = [
 [[package]]
 name = "candid"
 version = "0.10.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c30ee7f886f296b6422c0ff017e89dd4f831521dfdcc76f3f71aae1ce817222"
+source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
 dependencies = [
  "anyhow",
  "binread",
  "byteorder",
- "candid_derive 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "candid_derive 0.6.6 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "hex",
- "ic_principal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ic_principal 0.1.1 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "leb128",
  "num-bigint",
  "num-traits",
@@ -344,16 +344,6 @@ dependencies = [
 [[package]]
 name = "candid_derive"
 version = "0.6.6"
-dependencies = [
- "lazy_static",
- "proc-macro2",
- "quote",
- "syn 2.0.90",
-]
-
-[[package]]
-name = "candid_derive"
-version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3de398570c386726e7a59d9887b68763c481477f9a043fb998a2e09d428df1a9"
 dependencies = [
@@ -364,11 +354,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "candid_derive"
+version = "0.6.6"
+source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
+dependencies = [
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "candid_parser"
 version = "0.2.0-beta.4"
+source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
 dependencies = [
  "anyhow",
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "codespan-reporting",
  "convert_case",
  "handlebars",
@@ -1211,7 +1213,7 @@ name = "ic-cdk"
 version = "0.17.0"
 dependencies = [
  "anyhow",
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "ic-cdk-macros",
  "ic0",
  "rstest",
@@ -1225,7 +1227,7 @@ dependencies = [
 name = "ic-cdk-bindgen"
 version = "0.1.3"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "candid_parser",
  "convert_case",
  "pretty",
@@ -1235,7 +1237,7 @@ dependencies = [
 name = "ic-cdk-e2e-tests"
 version = "0.1.0"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "cargo_metadata",
  "escargot",
  "futures",
@@ -1252,7 +1254,7 @@ dependencies = [
 name = "ic-cdk-macros"
 version = "0.17.0"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "proc-macro2",
  "quote",
  "serde",
@@ -1289,7 +1291,7 @@ name = "ic-certified-map"
 version = "0.4.0"
 dependencies = [
  "bincode",
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "hex",
  "ic-cdk",
  "serde",
@@ -1302,7 +1304,7 @@ dependencies = [
 name = "ic-ledger-types"
 version = "0.14.0"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
  "crc32fast",
  "hex",
  "ic-cdk",
@@ -1339,8 +1341,9 @@ dependencies = [
 [[package]]
 name = "ic_principal"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1762deb6f7c8d8c2bdee4b6c5a47b60195b74e9b5280faa5ba29692f8e17429c"
 dependencies = [
- "arbitrary",
  "crc32fast",
  "data-encoding",
  "serde",
@@ -1351,9 +1354,9 @@ dependencies = [
 [[package]]
 name = "ic_principal"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1762deb6f7c8d8c2bdee4b6c5a47b60195b74e9b5280faa5ba29692f8e17429c"
+source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
 dependencies = [
+ "arbitrary",
  "crc32fast",
  "data-encoding",
  "serde",
