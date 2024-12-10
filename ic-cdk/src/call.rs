@@ -1,12 +1,8 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::trap;
+use crate::api::{msg_arg_data, msg_reject_msg};
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
-use candid::{
-    decode_args, encode_args, write_args, CandidType, DecoderConfig, Deserialize, Principal,
-};
-use serde::ser::Error;
+use candid::{decode_args, encode_args, CandidType, DecoderConfig, Deserialize, Principal};
 use std::future::Future;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
@@ -162,8 +158,8 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
         // Make sure to un-borrow_mut the state.
         {
             state.write().unwrap().result = Some(match reject_code() {
-                RejectionCode::NoError => Ok(arg_data_raw()),
-                n => Err((n, reject_message())),
+                RejectionCode::NoError => Ok(msg_arg_data()),
+                n => Err((n, msg_reject_msg())),
             });
         }
         let w = state.write().unwrap().waker.take();
@@ -458,65 +454,23 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
     }
 }
 
-fn add_payment(payment: u128) {
-    if payment == 0 {
-        return;
-    }
-    let high = (payment >> 64) as u64;
-    let low = (payment & u64::MAX as u128) as u64;
-    // SAFETY: ic0.call_cycles_add128 is always safe to call.
-    unsafe {
-        ic0::call_cycles_add128(high, low);
-    }
-}
-
-/// Sends a one-way message with `payment` cycles attached to it that invokes `method` with
-/// arguments `args` on the principal identified by `id`, ignoring the reply.
-///
-/// Returns `Ok(())` if the message was successfully enqueued, otherwise returns a reject code.
-///
-/// # Notes
-///
-///   * The caller has no way of checking whether the destination processed the notification.
-///     The system can drop the notification if the destination does not have resources to
-///     process the message (for example, if it's out of cycles or queue slots).
-///
-///   * The callee cannot tell whether the call is one-way or not.
-///     The callee must produce replies for all incoming messages.
-///
-///   * It is safe to upgrade a canister without stopping it first if it sends out *only*
-///     one-way messages.
-///
-///   * If the payment is non-zero and the system fails to deliver the notification, the behaviour
-///     is unspecified: the funds can be either reimbursed or consumed irrevocably by the IC depending
-///     on the underlying implementation of one-way calls.
-pub fn notify_with_payment128<T: ArgumentEncoder>(
+fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
-    args: T,
-    payment: u128,
-) -> Result<(), RejectionCode> {
-    let args_raw = encode_args(args).expect("failed to encode arguments");
-    notify_raw(id, method, &args_raw, payment)
-}
-
-/// Like [notify_with_payment128], but sets the payment to zero.
-pub fn notify<T: ArgumentEncoder>(
-    id: Principal,
-    method: &str,
-    args: T,
-) -> Result<(), RejectionCode> {
-    notify_with_payment128(id, method, args, 0)
-}
-
-/// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
-pub fn notify_raw(
-    id: Principal,
-    method: &str,
-    args_raw: &[u8],
-    payment: u128,
-) -> Result<(), RejectionCode> {
-    notify_raw_internal(id, method, Some(args_raw), Some(payment), None)
+    args_raw: Option<T>,
+    payment: Option<u128>,
+    timeout_seconds: Option<u32>,
+) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
+    let state = Arc::new(RwLock::new(CallFutureState {
+        result: None,
+        waker: None,
+        id,
+        method: method.to_string(),
+        arg: args_raw,
+        payment,
+        timeout_seconds,
+    }));
+    CallFuture { state }
 }
 
 fn notify_raw_internal<T: AsRef<[u8]>>(
@@ -571,269 +525,15 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     }
 }
 
-/// Performs an asynchronous call to another canister and pay cycles at the same time.
-///
-/// Treats arguments and returns as raw bytes. No data serialization and deserialization is performed.
-///
-/// # Example
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::call_raw;
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> Vec<u8>{
-///     call_raw(callee_canister(), "add_user", b"abcd", 1_000_000u64).await.unwrap()
-/// }
-/// ```
-pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
-    id: Principal,
-    method: &str,
-    args_raw: T,
-    payment: u64,
-) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, Some(args_raw), Some(payment.into()), None)
-}
-
-/// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
-///
-/// Treats arguments and returns as raw bytes. No data serialization and deserialization is performed.
-/// # Example
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::call_raw128;
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> Vec<u8>{
-///     call_raw128(callee_canister(), "add_user", b"abcd", 1_000_000u128).await.unwrap()
-/// }
-/// ```
-pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
-    id: Principal,
-    method: &str,
-    args_raw: T,
-    payment: u128,
-) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, Some(args_raw), Some(payment), None)
-}
-
-fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
-    id: Principal,
-    method: &str,
-    args_raw: Option<T>,
-    payment: Option<u128>,
-    timeout_seconds: Option<u32>,
-) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    let state = Arc::new(RwLock::new(CallFutureState {
-        result: None,
-        waker: None,
-        id,
-        method: method.to_string(),
-        arg: args_raw,
-        payment,
-        timeout_seconds,
-    }));
-    CallFuture { state }
-}
-
-fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
-    (
-        RejectionCode::CanisterError,
-        format!(
-            "failed to decode canister response as {}: {}",
-            std::any::type_name::<T>(),
-            err
-        ),
-    )
-}
-
-/// Performs an asynchronous call to another canister.
-///
-/// # Example
-///
-/// Assuming that the callee canister has following interface:
-///
-/// ```text
-/// service : {
-///     add_user: (name: text) -> (nat64);
-/// }
-/// ```
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::call;
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64 {
-///     let (user_id,) = call(callee_canister(), "add_user", ("Alice".to_string(),)).await.unwrap();
-///     user_id
-/// }
-/// ```
-///
-/// # Note
-///
-/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
-/// * The type annotation on return type is required. Or the return type can be inferred from the context.
-/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
-pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
-    id: Principal,
-    method: &str,
-    args: T,
-) -> impl Future<Output = CallResult<R>> + Send + Sync {
-    let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw(id, method, args_raw, 0);
-    async {
-        let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
+fn add_payment(payment: u128) {
+    if payment == 0 {
+        return;
     }
-}
-
-/// Performs an asynchronous call to another canister and pay cycles at the same time.
-///
-/// # Example
-///
-/// Assuming that the callee canister has following interface:
-///
-/// ```text
-/// service : {
-///     add_user: (name: text) -> (nat64);
-/// }
-/// ```
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::call_with_payment;
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64 {
-///     let (user_id,) = call_with_payment(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u64).await.unwrap();
-///     user_id
-/// }
-/// ```
-///
-/// # Note
-///
-/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
-/// * The type annotation on return type is required. Or the return type can be inferred from the context.
-/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
-pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
-    id: Principal,
-    method: &str,
-    args: T,
-    cycles: u64,
-) -> impl Future<Output = CallResult<R>> + Send + Sync {
-    let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw(id, method, args_raw, cycles);
-    async {
-        let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
-    }
-}
-
-/// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
-///
-/// # Example
-///
-/// Assuming that the callee canister has following interface:
-///
-/// ```text
-/// service : {
-///     add_user: (name: text) -> (nat64);
-/// }
-/// ```
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::call_with_payment128;
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64 {
-///     let (user_id,) = call_with_payment128(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u128).await.unwrap();
-///     user_id
-/// }
-/// ```
-///
-/// # Note
-///
-/// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
-/// * The type annotation on return type is required. Or the return type can be inferred from the context.
-/// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
-pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
-    id: Principal,
-    method: &str,
-    args: T,
-    cycles: u128,
-) -> impl Future<Output = CallResult<R>> + Send + Sync {
-    let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw128(id, method, args_raw, cycles);
-    async {
-        let bytes = fut.await?;
-        decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
-    }
-}
-
-/// Performs an asynchronous call to another canister and pay cycles (in `u128`).
-/// It also allows setting a quota for decoding the return values.
-/// The decoding quota is strongly recommended when calling third-party or untrusted canisters.
-///
-/// # Example
-///
-/// Assuming that the callee canister has following interface:
-///
-/// ```text
-/// service : {
-///     add_user: (name: text) -> (nat64);
-/// }
-/// ```
-///
-/// It can be called:
-///
-/// ```rust
-/// # use ic_cdk::api::call::{call_with_config, ArgDecoderConfig};
-/// # fn callee_canister() -> candid::Principal { unimplemented!() }
-/// async fn call_add_user() -> u64 {
-///     let config = ArgDecoderConfig {
-///         // The function only returns a nat64, to accomodate future upgrades, we set a larger decoding_quota.
-///         decoding_quota: Some(10_000),
-///         // To accomodate future upgrades, reserve some skipping_quota.
-///         skipping_quota: Some(100),
-///         // Enable debug mode to print decoding instructions and cost to the replica log.
-///         debug: true,
-///     };
-///     let (user_id,) = call_with_config(callee_canister(), "add_user", ("Alice".to_string(),), 1_000_000u128, &config).await.unwrap();
-///     user_id
-/// }
-/// ```
-pub fn call_with_config<'b, T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
-    id: Principal,
-    method: &'b str,
-    args: T,
-    cycles: u128,
-    arg_config: &'b ArgDecoderConfig,
-) -> impl Future<Output = CallResult<R>> + Send + Sync + 'b {
-    let args_raw = encode_args(args).expect("Failed to encode arguments.");
-    let fut = call_raw128(id, method, args_raw, cycles);
-    async move {
-        let bytes = fut.await?;
-        let config = arg_config.to_candid_config();
-        let pre_cycles = if arg_config.debug {
-            Some(crate::api::performance_counter(0))
-        } else {
-            None
-        };
-        match decode_args_with_config_debug(&bytes, &config) {
-            Err(e) => Err(decoder_error_to_reject::<R>(e)),
-            Ok((r, cost)) => {
-                if arg_config.debug {
-                    print_decoding_debug_info(&format!("{method} return"), &cost, pre_cycles);
-                }
-                Ok(r)
-            }
-        }
+    let high = (payment >> 64) as u64;
+    let low = (payment & u64::MAX as u128) as u64;
+    // SAFETY: ic0.call_cycles_add128 is always safe to call.
+    unsafe {
+        ic0::call_cycles_add128(high, low);
     }
 }
 
@@ -850,147 +550,6 @@ fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Opti
     }
 }
 
-/// Returns a result that maps over the call
-///
-/// It will be Ok(T) if the call succeeded (with T being the arg_data),
-/// and [reject_message()] if it failed.
-pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
-    match reject_code() {
-        RejectionCode::NoError => {
-            decode_args(&arg_data_raw()).map_err(|e| format!("Failed to decode arguments: {}", e))
-        }
-        _ => Err(reject_message()),
-    }
-}
-
-/// Returns the rejection code for the call.
-pub fn reject_code() -> RejectionCode {
-    // SAFETY: ic0.msg_reject_code is always safe to call.
-    let code = unsafe { ic0::msg_reject_code() };
-    RejectionCode::from(code)
-}
-
-/// Returns the rejection message.
-pub fn reject_message() -> String {
-    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len = unsafe { ic0::msg_reject_msg_size() };
-    let mut bytes = vec![0u8; len];
-    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
-    unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-/// Rejects the current call with the message.
-pub fn reject(message: &str) {
-    let err_message = message.as_bytes();
-    // SAFETY: `err_message`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
-    unsafe {
-        ic0::msg_reject(err_message.as_ptr() as usize, err_message.len());
-    }
-}
-/// The deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
-pub fn msg_deadline() -> u64 {
-    // SAFETY: ic0.msg_deadline is always safe to call.
-    unsafe { ic0::msg_deadline() }
-}
-
-/// An io::Write for message replies.
-#[derive(Debug, Copy, Clone)]
-pub struct CallReplyWriter;
-
-impl std::io::Write for CallReplyWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        // SAFETY: buf, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reply_data_append.
-        unsafe {
-            ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len());
-        }
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-
-/// Replies to the current call with a candid argument.
-pub fn reply<T: ArgumentEncoder>(reply: T) {
-    write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
-    // SAFETY: ic0.msg_reply is always safe to call.
-    unsafe {
-        ic0::msg_reply();
-    }
-}
-
-/// Returns the amount of cycles that were transferred by the caller
-/// of the current call, and is still available in this message.
-pub fn msg_cycles_available128() -> u128 {
-    let mut recv = 0u128;
-    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
-    unsafe {
-        ic0::msg_cycles_available128(&mut recv as *mut u128 as usize);
-    }
-    recv
-}
-
-/// Returns the amount of cycles that came back with the response as a refund.
-///
-/// The refund has already been added to the canister balance automatically.
-pub fn msg_cycles_refunded128() -> u128 {
-    let mut recv = 0u128;
-    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
-    unsafe {
-        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as usize);
-    }
-    recv
-}
-
-/// Moves cycles from the call to the canister balance.
-///
-/// The actual amount moved will be returned.
-pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
-    let high = (max_amount >> 64) as u64;
-    let low = (max_amount & u64::MAX as u128) as u64;
-    let mut recv = 0u128;
-    // SAFETY: `recv` is writable and sixteen bytes wide, and therefore safe to pass to ic0.msg_cycles_accept128
-    unsafe {
-        ic0::msg_cycles_accept128(high, low, &mut recv as *mut u128 as usize);
-    }
-    recv
-}
-
-/// Returns the argument data as bytes.
-pub fn arg_data_raw() -> Vec<u8> {
-    // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    let len = unsafe { ic0::msg_arg_data_size() };
-    let mut bytes = Vec::with_capacity(len);
-    // SAFETY:
-    // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
-    // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
-    unsafe {
-        ic0::msg_arg_data_copy(bytes.as_mut_ptr() as usize, 0, len);
-        bytes.set_len(len);
-    }
-    bytes
-}
-
-/// Gets the len of the raw-argument-data-bytes.
-pub fn arg_data_raw_size() -> usize {
-    // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    unsafe { ic0::msg_arg_data_size() }
-}
-
-/// Replies with the bytes passed
-pub fn reply_raw(buf: &[u8]) {
-    if !buf.is_empty() {
-        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
-        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len()) }
-    };
-    // SAFETY: ic0.msg_reply is always safe to call.
-    unsafe { ic0::msg_reply() };
-}
-
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
 pub struct ArgDecoderConfig {
@@ -1001,6 +560,7 @@ pub struct ArgDecoderConfig {
     /// When set to true, print instruction count and the decoding/skipping cost to the replica log.
     pub debug: bool,
 }
+
 impl ArgDecoderConfig {
     fn to_candid_config(&self) -> DecoderConfig {
         let mut config = DecoderConfig::new();
@@ -1016,6 +576,7 @@ impl ArgDecoderConfig {
         config
     }
 }
+
 impl Default for ArgDecoderConfig {
     fn default() -> Self {
         Self {
@@ -1026,125 +587,21 @@ impl Default for ArgDecoderConfig {
     }
 }
 
-/// Returns the argument data in the current call. Traps if the data cannot be
-/// decoded.
-pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) -> R {
-    let bytes = arg_data_raw();
-
-    let config = arg_config.to_candid_config();
-    let res = decode_args_with_config_debug(&bytes, &config);
-    match res {
-        Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
-        Ok((r, cost)) => {
-            if arg_config.debug {
-                print_decoding_debug_info("Argument", &cost, None);
-            }
-            r
-        }
-    }
+/// Returns the rejection code for the call.
+fn reject_code() -> RejectionCode {
+    // SAFETY: ic0.msg_reject_code is always safe to call.
+    let code = unsafe { ic0::msg_reject_code() };
+    RejectionCode::from(code)
 }
 
-/// Accepts the ingress message.
-pub fn accept_message() {
-    // SAFETY: ic0.accept_message is always safe to call.
-    unsafe {
-        ic0::accept_message();
-    }
-}
-
-/// Returns the name of current canister method.
-pub fn method_name() -> String {
-    // SAFETY: ic0.msg_method_name_size is always safe to call.
-    let len = unsafe { ic0::msg_method_name_size() };
-    let mut bytes = vec![0u8; len];
-    // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
-    unsafe {
-        ic0::msg_method_name_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-/// Gets the value of specified performance counter
-///
-/// See [`crate::api::performance_counter`].
-#[deprecated(
-    since = "0.11.3",
-    note = "This method conceptually doesn't belong to this module. Please use `ic_cdk::api::performance_counter` instead."
-)]
-pub fn performance_counter(counter_type: u32) -> u64 {
-    // SAFETY: ic0.performance_counter is always safe to call.
-    unsafe { ic0::performance_counter(counter_type) }
-}
-
-/// Pretends to have the Candid type `T`, but unconditionally errors
-/// when serialized.
-///
-/// Usable, but not required, as metadata when using `#[query(manual_reply = true)]`,
-/// so an accurate Candid file can still be generated.
-#[derive(Debug, Copy, Clone, Default)]
-pub struct ManualReply<T: ?Sized>(PhantomData<T>);
-
-impl<T: ?Sized> ManualReply<T> {
-    /// Constructs a new `ManualReply`.
-    #[allow(clippy::self_named_constructors)]
-    pub const fn empty() -> Self {
-        Self(PhantomData)
-    }
-    /// Replies with the given value and returns a new `ManualReply`,
-    /// for a useful reply-then-return shortcut.
-    pub fn all<U>(value: U) -> Self
-    where
-        U: ArgumentEncoder,
-    {
-        reply(value);
-        Self::empty()
-    }
-    /// Replies with a one-element tuple around the given value and returns
-    /// a new `ManualReply`, for a useful reply-then-return shortcut.
-    pub fn one<U>(value: U) -> Self
-    where
-        U: CandidType,
-    {
-        reply((value,));
-        Self::empty()
-    }
-
-    /// Rejects the call with the specified message and returns a new
-    /// `ManualReply`, for a useful reply-then-return shortcut.
-    pub fn reject(message: impl AsRef<str>) -> Self {
-        reject(message.as_ref());
-        Self::empty()
-    }
-}
-
-impl<T> CandidType for ManualReply<T>
-where
-    T: CandidType + ?Sized,
-{
-    fn _ty() -> candid::types::Type {
-        T::_ty()
-    }
-    /// Unconditionally errors.
-    fn idl_serialize<S>(&self, _: S) -> Result<(), S::Error>
-    where
-        S: candid::types::Serializer,
-    {
-        Err(S::Error::custom("`Empty` cannot be serialized"))
-    }
-}
-
-/// Tells you whether the current async fn is being canceled due to a trap/panic.
-///
-/// If a function traps/panics, then the canister state is rewound to the beginning of the function.
-/// However, due to the way async works, the beginning of the function as the IC understands it is actually
-/// the most recent `await` from an inter-canister-call. This means that part of the function will have executed,
-/// and part of it won't.
-///
-/// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
-/// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
-/// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
-/// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
-/// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
-pub fn is_recovering_from_trap() -> bool {
-    crate::futures::CLEANUP.load(Ordering::Relaxed)
+// TODO: Seems abusing the Rejection code, should be refactored.
+fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, String) {
+    (
+        RejectionCode::CanisterError,
+        format!(
+            "failed to decode canister response as {}: {}",
+            std::any::type_name::<T>(),
+            err
+        ),
+    )
 }
