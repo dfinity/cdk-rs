@@ -94,12 +94,6 @@ pub enum CallError {
     #[error("The call was rejected with code {0:?} and message: {1}")]
     CallRejected(RejectCode, String),
 
-    /// The cleanup callback was executed.
-    //
-    // TODO: Is this really an error?
-    #[error("The cleanup callback was executed")]
-    CleanupExecuted,
-
     /// The response could not be decoded.
     #[error("Failed to decode the response as {0}")]
     CandidDecodeFailed(String),
@@ -232,8 +226,6 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
         //
         // Borrowing does not trap - the rollback from the
         // previous trap ensures that the RwLock can be borrowed again.
-        // TODO: Should we have this?
-        state.write().unwrap().result = Some(Err(CallError::CleanupExecuted));
         let w = state.write().unwrap().waker.take();
         if let Some(waker) = w {
             // Flag that we do not want to actually wake the task - we
