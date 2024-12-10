@@ -311,14 +311,14 @@ dependencies = [
 [[package]]
 name = "candid"
 version = "0.10.10"
-source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
+source = "git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0#07d89ac41f6b84f515cafad4a7726bbfd4ab25c0"
 dependencies = [
  "anyhow",
  "binread",
  "byteorder",
- "candid_derive 0.6.6 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid_derive 0.6.6 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "hex",
- "ic_principal 0.1.1 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "ic_principal 0.1.1 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "leb128",
  "num-bigint",
  "num-traits",
@@ -356,7 +356,7 @@ dependencies = [
 [[package]]
 name = "candid_derive"
 version = "0.6.6"
-source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
+source = "git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0#07d89ac41f6b84f515cafad4a7726bbfd4ab25c0"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -367,10 +367,10 @@ dependencies = [
 [[package]]
 name = "candid_parser"
 version = "0.2.0-beta.4"
-source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
+source = "git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0#07d89ac41f6b84f515cafad4a7726bbfd4ab25c0"
 dependencies = [
  "anyhow",
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "codespan-reporting",
  "convert_case",
  "handlebars",
@@ -1213,7 +1213,7 @@ name = "ic-cdk"
 version = "0.17.0"
 dependencies = [
  "anyhow",
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "ic-cdk-macros",
  "ic0",
  "rstest",
@@ -1227,7 +1227,7 @@ dependencies = [
 name = "ic-cdk-bindgen"
 version = "0.1.3"
 dependencies = [
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "candid_parser",
  "convert_case",
  "pretty",
@@ -1237,7 +1237,7 @@ dependencies = [
 name = "ic-cdk-e2e-tests"
 version = "0.1.0"
 dependencies = [
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "cargo_metadata",
  "escargot",
  "futures",
@@ -1254,7 +1254,7 @@ dependencies = [
 name = "ic-cdk-macros"
 version = "0.17.0"
 dependencies = [
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "proc-macro2",
  "quote",
  "serde",
@@ -1291,7 +1291,7 @@ name = "ic-certified-map"
 version = "0.4.0"
 dependencies = [
  "bincode",
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "hex",
  "ic-cdk",
  "serde",
@@ -1304,7 +1304,7 @@ dependencies = [
 name = "ic-ledger-types"
 version = "0.14.0"
 dependencies = [
- "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3)",
+ "candid 0.10.10 (git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0)",
  "crc32fast",
  "hex",
  "ic-cdk",
@@ -1354,7 +1354,7 @@ dependencies = [
 [[package]]
 name = "ic_principal"
 version = "0.1.1"
-source = "git+https://github.com/dfinity/candid.git?rev=f3496ec348923fe59efd1e140a82587d5eafd1b3#f3496ec348923fe59efd1e140a82587d5eafd1b3"
+source = "git+https://github.com/dfinity/candid.git?rev=07d89ac41f6b84f515cafad4a7726bbfd4ab25c0#07d89ac41f6b84f515cafad4a7726bbfd4ab25c0"
 dependencies = [
  "arbitrary",
  "crc32fast",
