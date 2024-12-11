@@ -193,3 +193,42 @@ pub fn in_replicated_execution() -> bool {
         _ => unreachable!(),
     }
 }
+
+/// Returns the argument data as bytes.
+pub fn msg_arg_data() -> Vec<u8> {
+    // SAFETY: ic0.msg_arg_data_size is always safe to call.
+    let len = unsafe { ic0::msg_arg_data_size() };
+    let mut bytes = Vec::with_capacity(len);
+    // SAFETY:
+    // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
+    // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
+    unsafe {
+        ic0::msg_arg_data_copy(bytes.as_mut_ptr() as usize, 0, len);
+        bytes.set_len(len);
+    }
+    bytes
+}
+
+/// Gets the len of the raw-argument-data-bytes.
+pub fn msg_arg_data_size() -> usize {
+    // SAFETY: ic0.msg_arg_data_size is always safe to call.
+    unsafe { ic0::msg_arg_data_size() }
+}
+
+/// Returns the rejection code for the call.
+pub fn msg_reject_code() -> u32 {
+    // SAFETY: ic0.msg_reject_code is always safe to call.
+    unsafe { ic0::msg_reject_code() }
+}
+
+/// Returns the rejection message.
+pub fn msg_reject_msg() -> String {
+    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
+    let len = unsafe { ic0::msg_reject_msg_size() };
+    let mut bytes = vec![0u8; len];
+    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
+    unsafe {
+        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}

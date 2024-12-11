@@ -31,6 +31,7 @@ ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.18.0-alpha.1" }
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }
+thiserror = "2.0"
 
 [dev-dependencies]
 anyhow = "1"

@@ -148,7 +148,6 @@ extern "C" fn global_timer() {
                         | RejectionCode::DestinationInvalid
                         | RejectionCode::CanisterReject
                         | RejectionCode::CanisterError
-                        | RejectionCode::SysUnknown
                         | RejectionCode::Unknown => {}
                     }
                 }
