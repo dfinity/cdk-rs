@@ -1,21 +1,23 @@
-use candid::Principal;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, PocketIc};
+use pocket_ic::{call_candid, PocketIcBuilder};
 
 #[test]
 fn call_struct() {
-    let pic = PocketIc::new();
+    let pic = PocketIcBuilder::new()
+        .with_application_subnet()
+        .with_nonmainnet_features(true)
+        .build();
     let wasm = cargo_build_canister("call_struct");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
-    let _: (Principal,) = call_candid(
+    let _: () = call_candid(
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "create_canister_via_struct",
+        "call_struct",
         (),
     )
-    .expect("Error calling create_canister_via_struct");
+    .expect("Error calling call_struct");
 }
