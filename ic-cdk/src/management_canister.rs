@@ -690,7 +690,7 @@ pub enum CanisterStatusType {
     Stopped,
 }
 
-/// Query statistics, returned by [canister_status](super::canister_status).
+/// Query statistics, returned by [canister_status].
 #[derive(
     CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
@@ -706,3 +706,171 @@ pub struct QueryStats {
 }
 
 // canister_status END --------------------------------------------------------
+
+// canister_info --------------------------------------------------------------
+
+/// Get public information about the canister.
+///
+/// See [IC method `canister_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_info).
+pub async fn canister_info(arg: CanisterInfoArgs) -> CallResult<CanisterInfoResult> {
+    Call::new(Principal::management_canister(), "canister_info")
+        .with_args((arg,))
+        .call::<(CanisterInfoResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [canister_info].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterInfoArgs {
+    /// Principal of the canister.
+    pub canister_id: Principal,
+    /// Number of most recent changes requested to be retrieved from canister history.
+    /// No changes are retrieved if this field is null.
+    pub num_requested_changes: Option<u64>,
+}
+
+/// Return type of [canister_info].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterInfoResult {
+    /// Total number of changes ever recorded in canister history.
+    /// This might be higher than the number of canister changes in `recent_changes`
+    /// because the IC might drop old canister changes from its history
+    /// (with `20` most recent canister changes to always remain in the list).
+    pub total_num_changes: u64,
+    /// The canister changes stored in the order from the oldest to the most recent.
+    pub recent_changes: Vec<CanisterChange>,
+    /// A SHA256 hash of the module installed on the canister. This is null if the canister is empty.
+    pub module_hash: Option<Vec<u8>>,
+    /// Controllers of the canister.
+    pub controllers: Vec<Principal>,
+}
+
+/// Details about a canister change initiated by a user.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct FromUserRecord {
+    /// Principal of the user.
+    pub user_id: Principal,
+}
+
+/// Details about a canister change initiated by a canister (called _originator_).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct FromCanisterRecord {
+    /// Canister ID of the originator.
+    pub canister_id: Principal,
+    /// Canister version of the originator when the originator initiated the change.
+    /// This is null if the original does not include its canister version
+    /// in the field `sender_canister_version` of the management canister payload.
+    pub canister_version: Option<u64>,
+}
+
+/// Provides details on who initiated a canister change.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum CanisterChangeOrigin {
+    /// See [FromUserRecord].
+    FromUser(FromUserRecord),
+    /// See [FromCanisterRecord].
+    FromCanister(FromCanisterRecord),
+}
+
+/// Details about a canister creation.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CreationRecord {
+    /// Initial set of canister controllers.
+    pub controllers: Vec<Principal>,
+}
+
+/// The mode with which a canister is installed.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum CodeDeploymentMode {
+    /// A fresh install of a new canister.
+    Install,
+    /// Reinstalling a canister that was already installed.
+    Reinstall,
+    /// Upgrade an existing canister.
+    Upgrade,
+}
+
+/// Details about a canister code deployment.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CodeDeploymentRecord {
+    /// See [CodeDeploymentMode].
+    pub mode: CodeDeploymentMode,
+    /// A SHA256 hash of the new module installed on the canister.
+    pub module_hash: Vec<u8>,
+}
+
+/// Details about loading canister snapshot.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct LoadSnapshotRecord {
+    /// The version of the canister at the time that the snapshot was taken
+    pub canister_version: u64,
+    /// The ID of the snapshot that was loaded.
+    pub snapshot_id: SnapshotId,
+    /// The timestamp at which the snapshot was taken.
+    pub taken_at_timestamp: u64,
+}
+
+/// Details about updating canister controllers.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ControllersChangeRecord {
+    /// The full new set of canister controllers.
+    pub controllers: Vec<Principal>,
+}
+
+/// Provides details on the respective canister change.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum CanisterChangeDetails {
+    /// See [CreationRecord].
+    Creation(CreationRecord),
+    /// Uninstalling canister's module.
+    CodeUninstall,
+    /// See [CodeDeploymentRecord].
+    CodeDeployment(CodeDeploymentRecord),
+    /// See [LoadSnapshotRecord].
+    LoadSnapshot(LoadSnapshotRecord),
+    /// See [ControllersChangeRecord].
+    ControllersChange(ControllersChangeRecord),
+}
+
+/// Represents a canister change as stored in the canister history.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterChange {
+    /// The system timestamp (in nanoseconds since Unix Epoch) at which the change was performed.
+    pub timestamp_nanos: u64,
+    /// The canister version after performing the change.
+    pub canister_version: u64,
+    /// The change's origin (a user or a canister).
+    pub origin: CanisterChangeOrigin,
+    /// The change's details.
+    pub details: CanisterChangeDetails,
+}
+
+// canister_info END ----------------------------------------------------------
