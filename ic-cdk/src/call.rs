@@ -56,12 +56,18 @@ impl TryFrom<u32> for RejectCode {
 ///
 /// See [here](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call) for more details.
 ///
-/// The spec currently only states that: "If the function returns a non-zero value, the call cannot (and will not be) performed."
-/// It does not specify what the error codes are. So we only have a single variant (`Unrecognized`) for now.
+/// So far, the specified codes (1, 2, 3) share the same meaning as the corresponding [RejectCode]s.
 #[repr(u32)]
 #[non_exhaustive]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CallPerformErrorCode {
+    /// Fatal system error, retry unlikely to be useful.
+    SysFatal = 1,
+    /// Transient system error, retry might be possible.
+    SysTransient = 2,
+    /// Invalid destination (e.g. canister/account does not exist).
+    DestinationInvalid = 3,
+
     /// Unrecognized error code.
     ///
     /// Note that this variant is not part of the IC interface spec, and is used to represent
