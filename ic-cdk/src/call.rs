@@ -85,8 +85,12 @@ impl TryFrom<u32> for CallPerformErrorCode {
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
     /// The arguments could not be encoded.
-    #[error("Failed to encode the arguments")]
-    CandidEncodeFailed,
+    ///
+    /// This can only happen when the arguments are provided using [Call::with_args].
+    /// Though the type system guarantees that the arguments are valid Candid types,
+    /// it is possible that the encoding fails for reasons such as memory allocation failure.
+    #[error("Failed to encode the arguments: {0}")]
+    CandidEncodeFailed(String),
 
     /// The call immediately failed when invoking the call_perform system API.
     #[error("The IC was not able to enqueue the call with code {0:?}")]
@@ -99,6 +103,10 @@ pub enum CallError {
     CallRejected(RejectCode, String),
 
     /// The response could not be decoded.
+    ///
+    /// This can only happen when making the call using [call][SendableCall::call]
+    /// or [call_with_decoder_config][SendableCall::call_with_decoder_config].
+    /// Because they decode the response to a Candid type.
     #[error("Failed to decode the response as {0}")]
     CandidDecodeFailed(String),
 }
@@ -437,7 +445,7 @@ impl SendableCall for Call<'_> {
     }
 
     fn call_and_forget(self) -> CallResult<()> {
-        notify_raw_internal::<Vec<u8>>(
+        call_and_forget_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
             None,
@@ -447,10 +455,9 @@ impl SendableCall for Call<'_> {
     }
 }
 
-impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-        let args = encode_args(self.args).expect("failed to encode arguments");
-        // let args =  encode_args(self.args).map_err(|_| CallError::CandidEncodeFailed)?;
+impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
+    async fn call_raw(self) -> CallResult<Vec<u8>> {
+        let args = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -458,11 +465,12 @@ impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
             self.call.payment,
             self.call.timeout_seconds,
         )
+        .await
     }
 
     fn call_and_forget(self) -> CallResult<()> {
-        let args = encode_args(self.args).expect("failed to encode arguments");
-        notify_raw_internal(
+        let args = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+        call_and_forget_internal(
             self.call.canister_id,
             self.call.method,
             Some(args),
@@ -484,7 +492,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
     }
 
     fn call_and_forget(self) -> CallResult<()> {
-        notify_raw_internal(
+        call_and_forget_internal(
             self.call.canister_id,
             self.call.method,
             Some(self.raw_args),
@@ -513,7 +521,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     CallFuture { state }
 }
 
-fn notify_raw_internal<T: AsRef<[u8]>>(
+fn call_and_forget_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
     args_raw: Option<T>,
@@ -631,4 +639,9 @@ impl Default for ArgDecoderConfig {
 /// Converts a decoder error to a CallError.
 fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
     CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
+}
+
+/// Converts a encoder error to a CallError.
+fn encoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
+    CallError::CandidEncodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
 }
