@@ -874,3 +874,65 @@ pub struct CanisterChange {
 }
 
 // canister_info END ----------------------------------------------------------
+
+// delete_canister ------------------------------------------------------------
+
+/// Delete a canister.
+///
+/// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
+pub async fn delete_canister(arg: DeleteCanisterArgs) -> CallResult<()> {
+    Call::new(Principal::management_canister(), "delete_canister")
+        .with_args((arg,))
+        .call()
+        .await
+}
+
+/// Argument type of [delete_canister].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct DeleteCanisterArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+}
+
+// delete_canister END --------------------------------------------------------
+
+// deposit_cycles -------------------------------------------------------------
+
+/// Deposit cycles to a canister.
+///
+/// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
+pub async fn deposit_cycles(arg: DepositCyclesArgs, cycles: u128) -> CallResult<()> {
+    Call::new(Principal::management_canister(), "deposit_cycles")
+        .with_args((arg,))
+        .with_guaranteed_response()
+        .with_cycles(cycles)
+        .call()
+        .await
+}
+
+/// Argument type of [deposit_cycles].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct DepositCyclesArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+}
+
+// deposit_cycles END ---------------------------------------------------------
+
+// raw_rand -------------------------------------------------------------------
+
+// Get 32 pseudo-random bytes.
+///
+/// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
+pub async fn raw_rand() -> CallResult<Vec<u8>> {
+    Call::new(Principal::management_canister(), "raw_rand")
+        .call::<(Vec<u8>,)>()
+        .await
+        .map(|result| result.0)
+}
+
+// raw_rand END ---------------------------------------------------------------
