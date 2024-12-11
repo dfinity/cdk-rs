@@ -1,7 +1,7 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, CandidType, DecoderConfig, Deserialize, Principal};
+use candid::{decode_args, encode_args, CandidType, Deserialize, Principal};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -403,7 +403,7 @@ pub trait SendableCall {
     /// Sends the call and decodes the reply to a Candid type with a decoding quota.
     fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
         self,
-        decoder_config: &ArgDecoderConfig,
+        decoder_config: &DecoderConfig,
     ) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
         Self: Sized,
@@ -586,7 +586,11 @@ fn add_payment(payment: u128) {
     }
 }
 
-fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Option<u64>) {
+fn print_decoding_debug_info(
+    title: &str,
+    cost: &candid::de::DecoderConfig,
+    pre_cycles: Option<u64>,
+) {
     use crate::api::{performance_counter, print};
     let pre_cycles = pre_cycles.unwrap_or(0);
     let instrs = performance_counter(0) - pre_cycles;
@@ -601,7 +605,7 @@ fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Opti
 
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
-pub struct ArgDecoderConfig {
+pub struct DecoderConfig {
     /// Limit the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.
     pub decoding_quota: Option<usize>,
     /// Limit the total amount of work for skipping unneeded data on the wire. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_skipping_quota) to understand the skipping cost.
@@ -610,9 +614,9 @@ pub struct ArgDecoderConfig {
     pub debug: bool,
 }
 
-impl ArgDecoderConfig {
-    fn to_candid_config(&self) -> DecoderConfig {
-        let mut config = DecoderConfig::new();
+impl DecoderConfig {
+    fn to_candid_config(&self) -> candid::de::DecoderConfig {
+        let mut config = candid::de::DecoderConfig::new();
         if let Some(n) = self.decoding_quota {
             config.set_decoding_quota(n);
         }
@@ -626,7 +630,7 @@ impl ArgDecoderConfig {
     }
 }
 
-impl Default for ArgDecoderConfig {
+impl Default for DecoderConfig {
     fn default() -> Self {
         Self {
             decoding_quota: None,
