@@ -54,6 +54,18 @@ pub fn id() -> Principal {
     Principal::try_from(&bytes).unwrap()
 }
 
+/// Get the canister ID of the current canister.
+pub fn canister_self() -> Principal {
+    // SAFETY: ic0.canister_self_size is always safe to call.
+    let len = unsafe { ic0::canister_self_size() };
+    let mut bytes = vec![0u8; len];
+    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
+    unsafe {
+        ic0::canister_self_copy(bytes.as_mut_ptr() as usize, 0, len);
+    }
+    Principal::try_from(&bytes).unwrap()
+}
+
 /// Gets the amount of funds available in the canister.
 pub fn canister_balance128() -> u128 {
     let mut recv = 0u128;

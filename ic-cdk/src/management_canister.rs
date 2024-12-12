@@ -936,3 +936,223 @@ pub async fn raw_rand() -> CallResult<Vec<u8>> {
 }
 
 // raw_rand END ---------------------------------------------------------------
+
+// http_request ---------------------------------------------------------------
+
+/// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+///
+/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+///
+/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
+pub async fn http_request(arg: HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
+    Call::new(Principal::management_canister(), "http_request")
+        .with_args((arg,))
+        .with_guaranteed_response()
+        .with_cycles(cycles)
+        .call::<(HttpRequestResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [super::http_request].
+#[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
+pub struct HttpRequestArgs {
+    /// The requested URL.
+    pub url: String,
+    /// The maximal size of the response in bytes. If None, 2MiB will be the limit.
+    /// This value affects the cost of the http request and it is highly recommended
+    /// to set it as low as possible to avoid unnecessary extra costs.
+    /// See also the [pricing section of HTTP outcalls documentation](https://internetcomputer.org/docs/current/developer-docs/integrations/http_requests/http_requests-how-it-works#pricing).
+    pub max_response_bytes: Option<u64>,
+    /// The method of HTTP request.
+    pub method: HttpMethod,
+    /// List of HTTP request headers and their corresponding values.
+    pub headers: Vec<HttpHeader>,
+    /// Optionally provide request body.
+    pub body: Option<Vec<u8>>,
+    /// Name of the transform function which is `func (transform_args) -> (http_response) query`.
+    /// Set to `None` if you are using `http_request_with` or `http_request_with_cycles_with`.
+    pub transform: Option<TransformContext>,
+}
+
+/// The returned HTTP response.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct HttpRequestResult {
+    /// The response status (e.g., 200, 404).
+    pub status: candid::Nat,
+    /// List of HTTP response headers and their corresponding values.
+    pub headers: Vec<HttpHeader>,
+    /// The response’s body.
+    pub body: Vec<u8>,
+}
+
+/// HTTP method.
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum HttpMethod {
+    /// GET
+    #[default]
+    GET,
+    /// POST
+    POST,
+    /// HEAD
+    HEAD,
+}
+/// HTTP header.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct HttpHeader {
+    /// Name
+    pub name: String,
+    /// Value
+    pub value: String,
+}
+
+/// ```text
+/// record {
+///     function : func(record { response : http_request_result; context : blob }) -> (http_request_result) query;
+///     context : blob;
+/// };
+/// ```
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct TransformContext {
+    /// `func(record { response : http_request_result; context : blob }) -> (http_request_result) query;`.
+    pub function: TransformFunc,
+
+    /// Context to be passed to `transform` function to transform HTTP response for consensus
+    #[serde(with = "serde_bytes")]
+    pub context: Vec<u8>,
+}
+
+impl TransformContext {
+    /// Constructs a [TransformContext] from a query method name and context. The principal is assumed to be the [current canister's](id).
+    pub fn from_name(candid_function_name: String, context: Vec<u8>) -> Self {
+        Self {
+            context,
+            function: TransformFunc(candid::Func {
+                method: candid_function_name,
+                principal: crate::api::canister_self(),
+            }),
+        }
+    }
+}
+
+mod transform_func {
+    #![allow(missing_docs)]
+    use super::{HttpRequestResult, TransformArgs};
+    candid::define_function!(pub TransformFunc : (TransformArgs) -> (HttpRequestResult) query);
+}
+
+/// "transform" function of type: `func(record { response : http_request_result; context : blob }) -> (http_request_result) query`
+pub use transform_func::TransformFunc;
+
+/// Type used for encoding/decoding:
+/// `record {
+///     response : http_response;
+///     context : blob;
+/// }`
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TransformArgs {
+    /// Raw response from remote service, to be transformed
+    pub response: HttpRequestResult,
+
+    /// Context for response transformation
+    #[serde(with = "serde_bytes")]
+    pub context: Vec<u8>,
+}
+
+#[cfg(feature = "transform-closure")]
+mod transform_closure {
+    use super::{
+        http_request, CallResult, HttpRequestArgs, HttpRequestResult, Principal, TransformArgs,
+        TransformContext,
+    };
+    use slotmap::{DefaultKey, Key, KeyData, SlotMap};
+    use std::cell::RefCell;
+
+    thread_local! {
+        #[allow(clippy::type_complexity)]
+        static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpRequestResult) -> HttpRequestResult>>> = RefCell::default();
+    }
+
+    #[export_name = "canister_query <ic-cdk internal> http_transform"]
+    extern "C" fn http_transform() {
+        use crate::api::{
+            call::{arg_data, reply, ArgDecoderConfig},
+            caller,
+        };
+        if caller() != Principal::management_canister() {
+            crate::trap("This function is internal to ic-cdk and should not be called externally.");
+        }
+        crate::setup();
+        let (args,): (TransformArgs,) = arg_data(ArgDecoderConfig::default());
+        let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
+        let key = DefaultKey::from(KeyData::from_ffi(int));
+        let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
+        let Some(func) = func else {
+            crate::trap(&format!("Missing transform function for request {int}"));
+        };
+        let transformed = func(args.response);
+        reply((transformed,))
+    }
+
+    /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
+    ///
+    /// Do not set the `transform` field of `arg`. To use a Candid function, call [`http_request`] instead.
+    ///
+    /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+    ///
+    /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+    /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
+    #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
+    pub async fn http_request_with_closure(
+        arg: HttpRequestArgs,
+        cycles: u128,
+        transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
+    ) -> CallResult<HttpRequestResult> {
+        assert!(
+            arg.transform.is_none(),
+            "The `transform` field in `HttpRequestArgs` must be `None` when using a closure"
+        );
+        let transform_func = Box::new(transform_func) as _;
+        let key = TRANSFORMS.with(|transforms| transforms.borrow_mut().insert(transform_func));
+        struct DropGuard(DefaultKey);
+        impl Drop for DropGuard {
+            fn drop(&mut self) {
+                TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(self.0));
+            }
+        }
+        let key = DropGuard(key);
+        let context = key.0.data().as_ffi().to_be_bytes().to_vec();
+        let arg = HttpRequestArgs {
+            transform: Some(TransformContext::from_name(
+                "<ic-cdk internal> http_transform".to_string(),
+                context,
+            )),
+            ..arg
+        };
+        http_request(arg, cycles).await
+    }
+}
+
+#[cfg(feature = "transform-closure")]
+pub use transform_closure::http_request_with_closure;
+
+// http_request END -----------------------------------------------------------
