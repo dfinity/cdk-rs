@@ -1413,7 +1413,7 @@ pub struct SignWithSchnorrResult {
 // node_metrics_history -------------------------------------------------------
 
 /// Get a time series of node metrics of a subnet.
-/// 
+///
 /// See [IC method `node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node-metrics-history).
 pub async fn node_metrics_history(
     arg: NodeMetricsHistoryArgs,
@@ -1464,3 +1464,36 @@ pub struct NodeMetrics {
 }
 
 // node_metrics_history END ---------------------------------------------------
+
+// subnet_info ----------------------------------------------------------------
+
+/// Get subnet metadata.
+///
+/// See [IC method `subnet_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-subnet-info).
+pub async fn subnet_info(arg: SubnetInfoArgs) -> CallResult<SubnetInfoResult> {
+    Call::new(Principal::management_canister(), "subnet_info")
+        .with_args((arg,))
+        .call::<(SubnetInfoResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [subnet_info].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct SubnetInfoArgs {
+    /// Subnet ID.
+    pub subnet_id: Principal,
+}
+
+/// Result type of [subnet_info].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct SubnetInfoResult {
+    /// Replica version of the subnet.
+    pub replica_version: String,
+}
+
+// subnet_info END ------------------------------------------------------------
