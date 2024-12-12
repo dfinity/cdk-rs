@@ -1409,3 +1409,58 @@ pub struct SignWithSchnorrResult {
 // sign_with_schnorr END ------------------------------------------------------
 
 // # Threshold Schnorr signature END ==========================================
+
+// node_metrics_history -------------------------------------------------------
+
+/// Get a time series of node metrics of a subnet.
+/// 
+/// See [IC method `node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node-metrics-history).
+pub async fn node_metrics_history(
+    arg: NodeMetricsHistoryArgs,
+) -> CallResult<NodeMetricsHistoryResult> {
+    Call::new(Principal::management_canister(), "node_metrics_history")
+        .with_args((arg,))
+        .call::<(NodeMetricsHistoryResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [node_metrics_history].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct NodeMetricsHistoryArgs {
+    /// Subnet ID.
+    pub subnet_id: Principal,
+    /// The returned time series will start at this timestamp.
+    pub start_at_timestamp_nanos: u64,
+}
+
+/// Return type of [node_metrics_history].
+pub type NodeMetricsHistoryResult = Vec<NodeMetricsHistoryRecord>;
+
+/// A record in [NodeMetricsHistoryResult].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct NodeMetricsHistoryRecord {
+    /// The timestamp of the record.
+    pub timestamp_nanos: u64,
+    /// The metrics of the nodes.
+    pub node_metrics: Vec<NodeMetrics>,
+}
+
+/// Node metrics.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct NodeMetrics {
+    /// The principal characterizing a node.
+    pub node_id: Principal,
+    /// The number of blocks proposed by this node.
+    pub num_blocks_proposed_total: u64,
+    /// The number of failed block proposals by this node.
+    pub num_blocks_failures_total: u64,
+}
+
+// node_metrics_history END ---------------------------------------------------
