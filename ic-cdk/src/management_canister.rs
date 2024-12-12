@@ -17,12 +17,6 @@ use serde::{Deserialize, Serialize};
 /// Canister ID.
 pub type CanisterId = Principal;
 
-/// WASM module.
-pub type WasmModule = Vec<u8>;
-
-/// Snapshot ID.
-pub type SnapshotId = Vec<u8>;
-
 /// Chunk hash.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
@@ -418,6 +412,9 @@ pub enum WasmMemoryPersistence {
     #[default]
     Replace,
 }
+
+/// WASM module.
+pub type WasmModule = Vec<u8>;
 
 /// Argument type of [install_code].
 ///
@@ -1578,6 +1575,9 @@ pub struct ProvisionalTopUpCanisterArgument {
 
 // # Canister snapshots =======================================================
 
+/// Snapshot ID.
+pub type SnapshotId = Vec<u8>;
+
 /// A snapshot of the state of the canister at a given point in time.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
@@ -1736,3 +1736,5 @@ pub struct DeleteCanisterSnapshotArgs {
 }
 
 // delete_canister_snapshot END -----------------------------------------------
+
+// # Canister snapshots END ===================================================
