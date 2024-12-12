@@ -727,7 +727,7 @@ pub async fn canister_info(arg: CanisterInfoArgs) -> CallResult<CanisterInfoResu
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CanisterInfoArgs {
-    /// Principal of the canister.
+    /// Canister ID.
     pub canister_id: Principal,
     /// Number of most recent changes requested to be retrieved from canister history.
     /// No changes are retrieved if this field is null.
@@ -1575,3 +1575,164 @@ pub struct ProvisionalTopUpCanisterArgument {
 // provisional_top_up_canister END --------------------------------------------
 
 // # provisional interfaces for the pre-ledger world END ======================
+
+// # Canister snapshots =======================================================
+
+/// A snapshot of the state of the canister at a given point in time.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct Snapshot {
+    /// ID of the snapshot.
+    pub id: SnapshotId,
+    /// The timestamp at which the snapshot was taken.
+    pub taken_at_timestamp: u64,
+    /// The size of the snapshot in bytes.
+    pub total_size: u64,
+}
+
+// take_canister_snapshot -----------------------------------------------------
+
+/// Take a snapshot of the specified canister.
+///
+/// A snapshot consists of the wasm memory, stable memory, certified variables, wasm chunk store and wasm binary.
+///
+/// See [IC method `take_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-take_canister_snapshot).
+pub async fn take_canister_snapshot(
+    arg: TakeCanisterSnapshotArgs,
+) -> CallResult<TakeCanisterSnapshotReturn> {
+    Call::new(Principal::management_canister(), "take_canister_snapshot")
+        .with_args((arg,))
+        .with_guaranteed_response()
+        .call::<(TakeCanisterSnapshotReturn,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [take_canister_snapshot].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct TakeCanisterSnapshotArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// An optional snapshot ID to be replaced by the new snapshot.
+    ///
+    /// The snapshot identified by the specified ID will be deleted once a new snapshot has been successfully created.
+    pub replace_snapshot: Option<SnapshotId>,
+}
+
+/// Return type of [take_canister_snapshot].
+pub type TakeCanisterSnapshotReturn = Snapshot;
+
+// take_canister_snapshot END -------------------------------------------------
+
+// load_canister_snapshot -----------------------------------------------------
+
+/// Load a snapshot onto the canister.
+///
+/// It fails if no snapshot with the specified `snapshot_id` can be found.
+///
+/// See [IC method `load_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-load_canister_snapshot).
+pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgsReduced) -> CallResult<()> {
+    let complete_arg = LoadCanisterSnapshotArgs {
+        canister_id: arg.canister_id,
+        snapshot_id: arg.snapshot_id,
+        sender_canister_version: Some(canister_version()),
+    };
+    Call::new(Principal::management_canister(), "load_canister_snapshot")
+        .with_args((complete_arg,))
+        .with_guaranteed_response()
+        .call()
+        .await
+}
+
+/// Argument type of [load_canister_snapshot].
+///
+/// Please note that this type is a reduced version of [LoadCanisterSnapshotArgs].
+/// The `sender_canister_version` field is removed as it is set automatically in [load_canister_snapshot].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct LoadCanisterSnapshotArgsReduced {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be loaded.
+    pub snapshot_id: SnapshotId,
+}
+
+/// Complete argument type of [load_canister_snapshot].
+///
+/// Please note that this type is not used directly as the argument of [load_canister_snapshot].
+/// The function [load_canister_snapshot] takes [LoadCanisterSnapshotArgsReduced] instead.
+///
+/// If you want to manually call `load_canister_snapshot` (construct and invoke a [Call]), you should use this complete type.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct LoadCanisterSnapshotArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be loaded.
+    pub snapshot_id: SnapshotId,
+    /// sender_canister_version must be set to ic_cdk::api::canister_version().
+    pub sender_canister_version: Option<u64>,
+}
+
+// load_canister_snapshot END -------------------------------------------------
+
+// list_canister_snapshots ----------------------------------------------------
+
+/// List the snapshots of the canister.
+///
+/// See [IC method `list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
+pub async fn list_canister_snapshots(
+    arg: ListCanisterSnapshotsArgs,
+) -> CallResult<ListCanisterSnapshotsReturn> {
+    Call::new(Principal::management_canister(), "list_canister_snapshots")
+        .with_args((arg,))
+        .call::<(ListCanisterSnapshotsReturn,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [list_canister_snapshots].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ListCanisterSnapshotsArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+}
+
+/// Return type of [list_canister_snapshots].
+pub type ListCanisterSnapshotsReturn = Vec<Snapshot>;
+
+// list_canister_snapshots END ------------------------------------------------
+
+// delete_canister_snapshot ---------------------------------------------------
+
+/// Delete a specified snapshot that belongs to an existing canister.
+///
+/// An error will be returned if the snapshot is not found.
+///
+/// See [IC method `delete_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister_snapshot).
+pub async fn delete_canister_snapshot(arg: DeleteCanisterSnapshotArgs) -> CallResult<()> {
+    Call::new(Principal::management_canister(), "delete_canister_snapshot")
+        .with_args((arg,))
+        .call()
+        .await
+}
+
+/// Argument type of [delete_canister_snapshot].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct DeleteCanisterSnapshotArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be deleted.
+    pub snapshot_id: SnapshotId,
+}
+
+// delete_canister_snapshot END -----------------------------------------------
