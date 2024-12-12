@@ -1497,3 +1497,81 @@ pub struct SubnetInfoResult {
 }
 
 // subnet_info END ------------------------------------------------------------
+
+// # provisional interfaces for the pre-ledger world ==========================
+
+// provisional_create_canister_with_cycles ------------------------------------
+
+/// Create a new canister with specified amount of cycles balance.
+///
+/// This method is only available in local development instances.
+///
+/// See [IC method `provisional_create_canister_with_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_create_canister_with_cycles).
+pub async fn provisional_create_canister_with_cycles(
+    arg: ProvisionalCreateCanisterWithCyclesArgs,
+) -> CallResult<ProvisionalCreateCanisterWithCyclesResult> {
+    Call::new(
+        Principal::management_canister(),
+        "provisional_create_canister_with_cycles",
+    )
+    .with_args((arg,))
+    .with_guaranteed_response()
+    .call::<(ProvisionalCreateCanisterWithCyclesResult,)>()
+    .await
+    .map(|result| result.0)
+}
+
+/// Argument type of [provisional_create_canister_with_cycles].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct ProvisionalCreateCanisterWithCyclesArgs {
+    /// The created canister will have this amount of cycles.
+    pub amount: Option<Nat>,
+    /// See [CanisterSettings].
+    pub settings: Option<CanisterSettings>,
+}
+
+/// Result type of [provisional_create_canister_with_cycles].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ProvisionalCreateCanisterWithCyclesResult {
+    /// Canister ID of the created canister.
+    pub canister_id: CanisterId,
+}
+
+// provisional_delete_canister_with_cycles END --------------------------------
+
+// provisional_top_up_canister ------------------------------------------------
+
+/// Add cycles to a canister.
+///
+/// This method is only available in local development instances.
+///
+/// See [IC method `provisional_top_up_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_top_up_canister).
+pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) -> CallResult<()> {
+    Call::new(
+        Principal::management_canister(),
+        "provisional_top_up_canister",
+    )
+    .with_args((arg,))
+    .with_guaranteed_response()
+    .call()
+    .await
+}
+
+/// Argument type of [provisional_top_up_canister].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ProvisionalTopUpCanisterArgument {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// Amount of cycles to be added.
+    pub amount: Nat,
+}
+
+// provisional_top_up_canister END --------------------------------------------
+
+// # provisional interfaces for the pre-ledger world END ======================
