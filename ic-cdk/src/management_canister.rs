@@ -1156,3 +1156,119 @@ mod transform_closure {
 pub use transform_closure::http_request_with_closure;
 
 // http_request END -----------------------------------------------------------
+
+// # Threshold ECDSA signature
+
+/// ECDSA KeyId.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct EcdsaKeyId {
+    /// See [EcdsaCurve].
+    pub curve: EcdsaCurve,
+    /// Name.
+    pub name: String,
+}
+
+/// ECDSA Curve.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
+pub enum EcdsaCurve {
+    /// secp256k1
+    #[serde(rename = "secp256k1")]
+    Secp256k1,
+}
+
+impl Default for EcdsaCurve {
+    fn default() -> Self {
+        Self::Secp256k1
+    }
+}
+
+// ecdsa_public_key -----------------------------------------------------------
+
+/// Return a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
+///
+/// See [IC method `ecdsa_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-ecdsa_public_key).
+pub async fn ecdsa_public_key(arg: EcdsaPublicKeyArgs) -> CallResult<EcdsaPublicKeyResult> {
+    Call::new(Principal::management_canister(), "ecdsa_public_key")
+        .with_args((arg,))
+        .call::<(EcdsaPublicKeyResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument type of [ecdsa_public_key].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct EcdsaPublicKeyArgs {
+    /// Canister id, default to the canister id of the caller if None.
+    pub canister_id: Option<CanisterId>,
+    /// A vector of variable length byte strings.
+    pub derivation_path: Vec<Vec<u8>>,
+    /// See [EcdsaKeyId].
+    pub key_id: EcdsaKeyId,
+}
+
+/// Response Type of [ecdsa_public_key].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct EcdsaPublicKeyResult {
+    /// An ECDSA public key encoded in SEC1 compressed form.
+    pub public_key: Vec<u8>,
+    /// Can be used to deterministically derive child keys of the public_key.
+    pub chain_code: Vec<u8>,
+}
+
+// ecda_public_key END --------------------------------------------------------
+
+// sign_with_ecdsa ------------------------------------------------------------
+
+/// Return a new ECDSA signature of the given message_hash that can be separately verified against a derived ECDSA public key.
+///
+/// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
+///
+/// This call requires cycles payment.
+/// This method handles the cycles cost under the hood.
+/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
+pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgs) -> CallResult<SignWithEcdsaResult> {
+    Call::new(Principal::management_canister(), "sign_with_ecdsa")
+        .with_args((arg,))
+        .with_guaranteed_response()
+        .with_cycles(SIGN_WITH_ECDSA_FEE)
+        .call::<(SignWithEcdsaResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works#fees-for-the-t-ecdsa-production-key
+const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
+
+/// Argument type of [sign_with_ecdsa].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SignWithEcdsaArgs {
+    /// Hash of the message with length of 32 bytes.
+    pub message_hash: Vec<u8>,
+    /// A vector of variable length byte strings.
+    pub derivation_path: Vec<Vec<u8>>,
+    /// See [EcdsaKeyId].
+    pub key_id: EcdsaKeyId,
+}
+
+/// Response type of [sign_with_ecdsa].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SignWithEcdsaResult {
+    /// Encoded as the concatenation of the SEC1 encodings of the two values r and s.
+    pub signature: Vec<u8>,
+}
+
+// sign_with_ecdsa END --------------------------------------------------------
+
+// # Threshold ECDSA signature END ----------------------------------------------
