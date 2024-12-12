@@ -1157,7 +1157,7 @@ pub use transform_closure::http_request_with_closure;
 
 // http_request END -----------------------------------------------------------
 
-// # Threshold ECDSA signature
+// # Threshold ECDSA signature ================================================
 
 /// ECDSA KeyId.
 #[derive(
@@ -1271,4 +1271,133 @@ pub struct SignWithEcdsaResult {
 
 // sign_with_ecdsa END --------------------------------------------------------
 
-// # Threshold ECDSA signature END ----------------------------------------------
+// # Threshold ECDSA signature END ============================================
+
+// # Threshold Schnorr signature ==============================================
+
+/// Schnorr KeyId.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SchnorrKeyId {
+    /// See [SchnorrAlgorithm].
+    pub algorithm: SchnorrAlgorithm,
+    /// Name.
+    pub name: String,
+}
+
+/// Schnorr Algorithm.
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
+pub enum SchnorrAlgorithm {
+    /// BIP-340 secp256k1.
+    #[serde(rename = "bip340secp256k1")]
+    #[default]
+    Bip340secp256k1,
+    /// ed25519.
+    #[serde(rename = "ed25519")]
+    Ed25519,
+}
+
+// schnorr_public_key ----------------------------------------------------------
+
+/// Return a SEC1 encoded Schnorr public key for the given canister using the given derivation path.
+///
+/// See [IC method `schnorr_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-schnorr_public_key).
+pub async fn schnorr_public_key(arg: SchnorrPublicKeyArgs) -> CallResult<SchnorrPublicKeyResult> {
+    Call::new(Principal::management_canister(), "schnorr_public_key")
+        .with_args((arg,))
+        .call::<(SchnorrPublicKeyResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// Argument Type of [schnorr_public_key].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SchnorrPublicKeyArgs {
+    /// Canister id, default to the canister id of the caller if None.
+    pub canister_id: Option<CanisterId>,
+    /// A vector of variable length byte strings.
+    pub derivation_path: Vec<Vec<u8>>,
+    /// See [SchnorrKeyId].
+    pub key_id: SchnorrKeyId,
+}
+
+/// Response Type of [schnorr_public_key].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SchnorrPublicKeyResult {
+    /// An Schnorr public key encoded in SEC1 compressed form.
+    #[serde(with = "serde_bytes")]
+    pub public_key: Vec<u8>,
+    /// Can be used to deterministically derive child keys of the public_key.
+    #[serde(with = "serde_bytes")]
+    pub chain_code: Vec<u8>,
+}
+
+// schnorr_public_key END -----------------------------------------------------
+
+// sign_with_schnorr ----------------------------------------------------------
+
+/// Return a new Schnorr signature of the given message that can be separately verified against a derived Schnorr public key.
+///
+/// See [IC method `sign_with_schnorr`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_schnorr).
+///
+/// This call requires cycles payment.
+/// This method handles the cycles cost under the hood.
+/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
+pub async fn sign_with_schnorr(arg: SignWithSchnorrArgs) -> CallResult<SignWithSchnorrResult> {
+    Call::new(Principal::management_canister(), "sign_with_schnorr")
+        .with_args((arg,))
+        .with_guaranteed_response()
+        .with_cycles(SIGN_WITH_SCHNORR_FEE)
+        .call::<(SignWithSchnorrResult,)>()
+        .await
+        .map(|result| result.0)
+}
+
+/// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-production-key
+const SIGN_WITH_SCHNORR_FEE: u128 = 26_153_846_153;
+
+/// Argument Type of [sign_with_schnorr].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SignWithSchnorrArgs {
+    /// Message to be signed.
+    #[serde(with = "serde_bytes")]
+    pub message: Vec<u8>,
+    /// A vector of variable length byte strings.
+    pub derivation_path: Vec<Vec<u8>>,
+    /// See [SchnorrKeyId].
+    pub key_id: SchnorrKeyId,
+}
+
+/// Response Type of [sign_with_schnorr].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct SignWithSchnorrResult {
+    /// The encoding of the signature depends on the key ID's algorithm.
+    #[serde(with = "serde_bytes")]
+    pub signature: Vec<u8>,
+}
+
+// sign_with_schnorr END ------------------------------------------------------
+
+// # Threshold Schnorr signature END ==========================================
