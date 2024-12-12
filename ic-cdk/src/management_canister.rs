@@ -434,6 +434,7 @@ pub struct InstallCodeArgsReduced {
     /// Code to be installed.
     pub wasm_module: WasmModule,
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
+    #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
 }
 
@@ -454,6 +455,7 @@ pub struct InstallCodeArgs {
     /// Code to be installed.
     pub wasm_module: WasmModule,
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
+    #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
     /// sender_canister_version must be set to ic_cdk::api::canister_version()
     pub sender_canister_version: Option<u64>,
@@ -815,6 +817,7 @@ pub struct CodeDeploymentRecord {
     /// See [CodeDeploymentMode].
     pub mode: CodeDeploymentMode,
     /// A SHA256 hash of the new module installed on the canister.
+    #[serde(with = "serde_bytes")]
     pub module_hash: Vec<u8>,
 }
 
@@ -986,6 +989,7 @@ pub struct HttpRequestResult {
     /// List of HTTP response headers and their corresponding values.
     pub headers: Vec<HttpHeader>,
     /// The response’s body.
+    #[serde(with = "serde_bytes")]
     pub body: Vec<u8>,
 }
 
@@ -1218,8 +1222,10 @@ pub struct EcdsaPublicKeyArgs {
 )]
 pub struct EcdsaPublicKeyResult {
     /// An ECDSA public key encoded in SEC1 compressed form.
+    #[serde(with = "serde_bytes")]
     pub public_key: Vec<u8>,
     /// Can be used to deterministically derive child keys of the public_key.
+    #[serde(with = "serde_bytes")]
     pub chain_code: Vec<u8>,
 }
 
@@ -1253,6 +1259,7 @@ const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
 )]
 pub struct SignWithEcdsaArgs {
     /// Hash of the message with length of 32 bytes.
+    #[serde(with = "serde_bytes")]
     pub message_hash: Vec<u8>,
     /// A vector of variable length byte strings.
     pub derivation_path: Vec<Vec<u8>>,
@@ -1266,6 +1273,7 @@ pub struct SignWithEcdsaArgs {
 )]
 pub struct SignWithEcdsaResult {
     /// Encoded as the concatenation of the SEC1 encodings of the two values r and s.
+    #[serde(with = "serde_bytes")]
     pub signature: Vec<u8>,
 }
 
