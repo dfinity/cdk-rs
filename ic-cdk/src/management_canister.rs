@@ -31,14 +31,16 @@ pub struct ChunkHash {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum LogVisibility {
     /// Controllers.
     #[default]
+    #[serde(rename = "controllers")]
     Controllers,
     /// Public.
+    #[serde(rename = "public")]
     Public,
     /// Allowed viewers.
+    #[serde(rename = "allowed_viewers")]
     AllowedViewers(Vec<Principal>),
 }
 
@@ -132,10 +134,10 @@ pub struct DefiniteCanisterSettings {
 /// This call requires cycles payment. The required cycles varies according to the subnet size (number of nodes).
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn create_canister(
-    arg: CreateCanisterArgsReduced,
+    arg: CreateCanisterArgs,
     cycles: u128,
 ) -> CallResult<CreateCanisterResult> {
-    let complete_arg = CreateCanisterArgs {
+    let complete_arg = CreateCanisterArgsComplete {
         settings: arg.settings,
         sender_canister_version: Some(canister_version()),
     };
@@ -150,12 +152,12 @@ pub async fn create_canister(
 
 /// Argument type of [create_canister].
 ///
-/// Please note that this type is a reduced version of [CreateCanisterArgs].
+/// Please note that this type is a reduced version of [CreateCanisterArgsComplete].
 /// The `sender_canister_version` field is removed as it is set automatically in [create_canister].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-pub struct CreateCanisterArgsReduced {
+pub struct CreateCanisterArgs {
     /// See [CanisterSettings].
     pub settings: Option<CanisterSettings>,
 }
@@ -163,13 +165,13 @@ pub struct CreateCanisterArgsReduced {
 /// Complete argument type of `create_canister`.
 ///
 /// Please note that this type is not used directly as the argument of [create_canister].
-/// The function [create_canister] takes [CreateCanisterArgsReduced] instead.
+/// The function [create_canister] takes [CreateCanisterArgs] instead.
 ///
 /// If you want to manually call `create_canister` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-pub struct CreateCanisterArgs {
+pub struct CreateCanisterArgsComplete {
     /// See [CanisterSettings].
     pub settings: Option<CanisterSettings>,
     /// sender_canister_version must be set to ic_cdk::api::canister_version()
@@ -192,8 +194,8 @@ pub struct CreateCanisterResult {
 /// Update the settings of a canister.
 ///
 /// See [IC method `update_settings`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-update_settings).
-pub async fn update_settings(arg: UpdateSettingsArgsReduced) -> CallResult<()> {
-    let complete_arg = UpdateSettingsArgs {
+pub async fn update_settings(arg: UpdateSettingsArgs) -> CallResult<()> {
+    let complete_arg = UpdateSettingsArgsComplete {
         canister_id: arg.canister_id,
         settings: arg.settings,
         sender_canister_version: Some(canister_version()),
@@ -206,13 +208,13 @@ pub async fn update_settings(arg: UpdateSettingsArgsReduced) -> CallResult<()> {
 
 /// Argument type of [update_settings]
 ///
-/// Please note that this type is a reduced version of [UpdateSettingsArgs].
+/// Please note that this type is a reduced version of [UpdateSettingsArgsComplete].
 ///
 /// The `sender_canister_version` field is removed as it is set automatically in [update_settings].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct UpdateSettingsArgsReduced {
+pub struct UpdateSettingsArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
@@ -222,13 +224,13 @@ pub struct UpdateSettingsArgsReduced {
 /// Complete argument type of `update_settings`.
 ///
 /// Please note that this type is not used directly as the argument of [update_settings].
-/// The function [update_settings] takes [UpdateSettingsArgsReduced] instead.
+/// The function [update_settings] takes [UpdateSettingsArgs] instead.
 ///
 /// If you want to manually call `update_settings` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct UpdateSettingsArgs {
+pub struct UpdateSettingsArgsComplete {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
@@ -324,8 +326,8 @@ pub type StoredChunksResult = Vec<ChunkHash>;
 /// Install code into a canister.
 ///
 /// See [IC method `install_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-install_code).
-pub async fn install_code(arg: InstallCodeArgsReduced) -> CallResult<()> {
-    let complete_arg = InstallCodeArgs {
+pub async fn install_code(arg: InstallCodeArgs) -> CallResult<()> {
+    let complete_arg = InstallCodeArgsComplete {
         mode: arg.mode,
         canister_id: arg.canister_id,
         wasm_module: arg.wasm_module,
@@ -356,14 +358,16 @@ pub async fn install_code(arg: InstallCodeArgsReduced) -> CallResult<()> {
     Copy,
     Default,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum CanisterInstallMode {
     /// A fresh install of a new canister.
     #[default]
+    #[serde(rename = "install")]
     Install,
     /// Reinstalling a canister that was already installed.
+    #[serde(rename = "reinstall")]
     Reinstall,
     /// Upgrade an existing canister.
+    #[serde(rename = "upgrade")]
     Upgrade(Option<UpgradeFlags>),
 }
 
@@ -404,12 +408,13 @@ pub struct UpgradeFlags {
     Copy,
     Default,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum WasmMemoryPersistence {
     /// Preserve heap memory.
+    #[serde(rename = "keep")]
     Keep,
     /// Clear heap memory.
     #[default]
+    #[serde(rename = "replace")]
     Replace,
 }
 
@@ -418,12 +423,12 @@ pub type WasmModule = Vec<u8>;
 
 /// Argument type of [install_code].
 ///
-/// Please note that this type is a reduced version of [InstallCodeArgs].
+/// Please note that this type is a reduced version of [InstallCodeArgsComplete].
 /// The `sender_canister_version` field is removed as it is set automatically in [install_code].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct InstallCodeArgsReduced {
+pub struct InstallCodeArgs {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// Canister ID.
@@ -438,13 +443,13 @@ pub struct InstallCodeArgsReduced {
 /// Complete argument type of `install_code`.
 ///
 /// Please note that this type is not used directly as the argument of [install_code].
-/// The function [install_code] takes [InstallCodeArgsReduced] instead.
+/// The function [install_code] takes [InstallCodeArgs] instead.
 ///
 /// If you want to manually call `install_code` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct InstallCodeArgs {
+pub struct InstallCodeArgsComplete {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// Canister ID.
@@ -465,8 +470,8 @@ pub struct InstallCodeArgs {
 /// Install code into a canister where the code has previously been uploaded in chunks.
 ///
 /// See [IC method `install_chunked_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-install_chunked_code).
-pub async fn install_chunked_code(arg: InstallChunkedCodeArgsReduced) -> CallResult<()> {
-    let complete_arg = InstallChunkedCodeArgs {
+pub async fn install_chunked_code(arg: InstallChunkedCodeArgs) -> CallResult<()> {
+    let complete_arg = InstallChunkedCodeArgsComplete {
         mode: arg.mode,
         target_canister: arg.target_canister,
         store_canister: arg.store_canister,
@@ -483,12 +488,12 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgsReduced) -> CallRes
 
 /// Argument type of [install_chunked_code].
 ///
-/// Please note that this type is a reduced version of [InstallChunkedCodeArgs].
+/// Please note that this type is a reduced version of [InstallChunkedCodeArgsComplete].
 /// The `sender_canister_version` field is removed as it is set automatically in [install_chunked_code].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct InstallChunkedCodeArgsReduced {
+pub struct InstallChunkedCodeArgs {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
@@ -508,13 +513,13 @@ pub struct InstallChunkedCodeArgsReduced {
 /// Complete argument type of `install_chunked_code`.
 ///
 /// Please note that this type is not used directly as the argument of [install_chunked_code].
-/// The function [install_chunked_code] takes [InstallChunkedCodeArgsReduced] instead.
+/// The function [install_chunked_code] takes [InstallChunkedCodeArgs] instead.
 ///
 /// If you want to manually call `install_chunked_code` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct InstallChunkedCodeArgs {
+pub struct InstallChunkedCodeArgsComplete {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
@@ -540,8 +545,8 @@ pub struct InstallChunkedCodeArgs {
 /// Remove a canister's code and state, making the canister empty again.
 ///
 /// See [IC method `uninstall_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-uninstall_code).
-pub async fn uninstall_code(arg: UninstallCodeArgsReduced) -> CallResult<()> {
-    let complete_arg = UninstallCodeArgs {
+pub async fn uninstall_code(arg: UninstallCodeArgs) -> CallResult<()> {
+    let complete_arg = UninstallCodeArgsComplete {
         canister_id: arg.canister_id,
         sender_canister_version: Some(canister_version()),
     };
@@ -553,12 +558,12 @@ pub async fn uninstall_code(arg: UninstallCodeArgsReduced) -> CallResult<()> {
 
 /// Argument type of [uninstall_code].
 ///
-/// Please note that this type is a reduced version of [UninstallCodeArgs].
+/// Please note that this type is a reduced version of [UninstallCodeArgsComplete].
 /// The `sender_canister_version` field is removed as it is set automatically in [uninstall_code].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct UninstallCodeArgsReduced {
+pub struct UninstallCodeArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
 }
@@ -566,13 +571,13 @@ pub struct UninstallCodeArgsReduced {
 /// Complete argument type of `uninstall_code`.
 ///
 /// Please note that this type is not used directly as the argument of [uninstall_code].
-/// The function [uninstall_code] takes [UninstallCodeArgsReduced] instead.
+/// The function [uninstall_code] takes [UninstallCodeArgs] instead.
 ///
 /// If you want to manually call `uninstall_code` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct UninstallCodeArgs {
+pub struct UninstallCodeArgsComplete {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// sender_canister_version must be set to ic_cdk::api::canister_version()
@@ -664,13 +669,13 @@ pub struct CanisterStatusResult {
     pub memory_size: Nat,
     /// The cycle balance of the canister.
     pub cycles: Nat,
-    /// Amount of cycles burned per day.
-    pub idle_cycles_burned_per_day: Nat,
     /// The reserved cycles balance of the canister.
     /// These are cycles that are reserved by the resource reservation mechanism
     /// on storage allocation. See also the `reserved_cycles_limit` parameter in
     /// canister settings.
     pub reserved_cycles: Nat,
+    /// Amount of cycles burned per day.
+    pub idle_cycles_burned_per_day: Nat,
     /// Query statistics.
     pub query_stats: QueryStats,
 }
@@ -679,13 +684,15 @@ pub struct CanisterStatusResult {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum CanisterStatusType {
     /// The canister is running.
+    #[serde(rename = "running")]
     Running,
     /// The canister is stopping.
+    #[serde(rename = "stopping")]
     Stopping,
     /// The canister is stopped.
+    #[serde(rename = "stopped")]
     Stopped,
 }
 
@@ -775,11 +782,12 @@ pub struct FromCanisterRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum CanisterChangeOrigin {
     /// See [FromUserRecord].
+    #[serde(rename = "from_user")]
     FromUser(FromUserRecord),
     /// See [FromCanisterRecord].
+    #[serde(rename = "from_canister")]
     FromCanister(FromCanisterRecord),
 }
 
@@ -796,13 +804,15 @@ pub struct CreationRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
 )]
-#[serde(rename_all = "lowercase")]
 pub enum CodeDeploymentMode {
     /// A fresh install of a new canister.
+    #[serde(rename = "install")]
     Install,
     /// Reinstalling a canister that was already installed.
+    #[serde(rename = "reinstall")]
     Reinstall,
     /// Upgrade an existing canister.
+    #[serde(rename = "upgrade")]
     Upgrade,
 }
 
@@ -844,17 +854,21 @@ pub struct ControllersChangeRecord {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum CanisterChangeDetails {
     /// See [CreationRecord].
+    #[serde(rename = "creation")]
     Creation(CreationRecord),
     /// Uninstalling canister's module.
+    #[serde(rename = "code_uninstall")]
     CodeUninstall,
     /// See [CodeDeploymentRecord].
+    #[serde(rename = "code_deployment")]
     CodeDeployment(CodeDeploymentRecord),
     /// See [LoadSnapshotRecord].
+    #[serde(rename = "load_snapshot")]
     LoadSnapshot(LoadSnapshotRecord),
     /// See [ControllersChangeRecord].
+    #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
 }
 
@@ -1005,14 +1019,16 @@ pub struct HttpRequestResult {
     Copy,
     Default,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum HttpMethod {
     /// GET
     #[default]
+    #[serde(rename = "get")]
     GET,
     /// POST
+    #[serde(rename = "post")]
     POST,
     /// HEAD
+    #[serde(rename = "head")]
     HEAD,
 }
 /// HTTP header.
@@ -1635,8 +1651,8 @@ pub type TakeCanisterSnapshotReturn = Snapshot;
 /// It fails if no snapshot with the specified `snapshot_id` can be found.
 ///
 /// See [IC method `load_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-load_canister_snapshot).
-pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgsReduced) -> CallResult<()> {
-    let complete_arg = LoadCanisterSnapshotArgs {
+pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgs) -> CallResult<()> {
+    let complete_arg = LoadCanisterSnapshotArgsComplete {
         canister_id: arg.canister_id,
         snapshot_id: arg.snapshot_id,
         sender_canister_version: Some(canister_version()),
@@ -1650,12 +1666,12 @@ pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgsReduced) -> Cal
 
 /// Argument type of [load_canister_snapshot].
 ///
-/// Please note that this type is a reduced version of [LoadCanisterSnapshotArgs].
+/// Please note that this type is a reduced version of [LoadCanisterSnapshotArgsComplete].
 /// The `sender_canister_version` field is removed as it is set automatically in [load_canister_snapshot].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct LoadCanisterSnapshotArgsReduced {
+pub struct LoadCanisterSnapshotArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// ID of the snapshot to be loaded.
@@ -1665,13 +1681,13 @@ pub struct LoadCanisterSnapshotArgsReduced {
 /// Complete argument type of [load_canister_snapshot].
 ///
 /// Please note that this type is not used directly as the argument of [load_canister_snapshot].
-/// The function [load_canister_snapshot] takes [LoadCanisterSnapshotArgsReduced] instead.
+/// The function [load_canister_snapshot] takes [LoadCanisterSnapshotArgs] instead.
 ///
 /// If you want to manually call `load_canister_snapshot` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct LoadCanisterSnapshotArgs {
+pub struct LoadCanisterSnapshotArgsComplete {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// ID of the snapshot to be loaded.
