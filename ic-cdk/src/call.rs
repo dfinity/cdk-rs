@@ -126,7 +126,7 @@ struct CallFutureState<T: AsRef<[u8]>> {
     waker: Option<Waker>,
     id: Principal,
     method: String,
-    arg: Option<T>,
+    arg: T,
     payment: Option<u128>,
     timeout_seconds: Option<u32>,
 }
@@ -172,8 +172,9 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         callback::<T> as usize,
                         state_ptr as usize,
                     );
-                    if let Some(args) = &state.arg {
-                        ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
+                    let arg = state.arg.as_ref();
+                    if !arg.is_empty() {
+                        ic0::call_data_append(arg.as_ptr() as usize, arg.len());
                     }
                     if let Some(payment) = state.payment {
                         add_payment(payment);
@@ -441,20 +442,22 @@ pub trait SendableCall {
 
 impl SendableCall for Call<'_> {
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+        let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_raw_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
-            None,
+            args_raw,
             self.payment,
             self.timeout_seconds,
         )
     }
 
     fn call_and_forget(self) -> CallResult<()> {
+        let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_and_forget_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
-            None,
+            args_raw,
             self.payment,
             self.timeout_seconds,
         )
@@ -463,11 +466,11 @@ impl SendableCall for Call<'_> {
 
 impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
     async fn call_raw(self) -> CallResult<Vec<u8>> {
-        let args = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+        let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
-            Some(args),
+            args_raw,
             self.call.payment,
             self.call.timeout_seconds,
         )
@@ -475,11 +478,11 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
     }
 
     fn call_and_forget(self) -> CallResult<()> {
-        let args = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+        let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
             self.call.canister_id,
             self.call.method,
-            Some(args),
+            args_raw,
             self.call.payment,
             self.call.timeout_seconds,
         )
@@ -491,7 +494,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
-            Some(self.raw_args),
+            self.raw_args,
             self.call.payment,
             self.call.timeout_seconds,
         )
@@ -501,7 +504,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         call_and_forget_internal(
             self.call.canister_id,
             self.call.method,
-            Some(self.raw_args),
+            self.raw_args,
             self.call.payment,
             self.call.timeout_seconds,
         )
@@ -511,7 +514,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
 fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
-    args_raw: Option<T>,
+    args_raw: T,
     payment: Option<u128>,
     timeout_seconds: Option<u32>,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
@@ -530,7 +533,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
 fn call_and_forget_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
-    args_raw: Option<T>,
+    args_raw: T,
     payment: Option<u128>,
     timeout_seconds: Option<u32>,
 ) -> CallResult<()> {
@@ -562,8 +565,9 @@ fn call_and_forget_internal<T: AsRef<[u8]>>(
             usize::MAX,
             usize::MAX,
         );
-        if let Some(args) = args_raw {
-            ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
+        let arg = args_raw.as_ref();
+        if !arg.is_empty() {
+            ic0::call_data_append(arg.as_ptr() as usize, arg.len());
         }
         if let Some(payment) = payment {
             add_payment(payment);

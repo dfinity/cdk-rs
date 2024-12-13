@@ -1,89 +1,161 @@
 use candid::Encode;
-use ic_cdk::{call::DecoderConfig, prelude::*};
+use ic_cdk::api::id;
+use ic_cdk::call::{Call, ConfigurableCall, DecoderConfig, SendableCall};
+use ic_cdk::update;
 
-/// This endpoint is to be called by the following Call struct invocation.
+/// A simple endpoint that takes empty arguments.
+#[update]
+async fn foo() -> u32 {
+    0
+}
+
+/// `Call::new(...)` can be configured and called.
+#[update]
+async fn call_foo() {
+    let n = 0u32;
+    let bytes = Encode!(&n).unwrap();
+
+    let res: (u32,) = Call::new(id(), "foo").call().await.unwrap();
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "foo")
+        .call_with_decoder_config(&decoder_config)
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res = Call::new(id(), "foo").call_raw().await.unwrap();
+    assert_eq!(res, bytes);
+    Call::new(id(), "foo").call_and_forget().unwrap();
+
+    let res: (u32,) = Call::new(id(), "foo")
+        .with_guaranteed_response()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "foo")
+        .change_timeout(5)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "foo")
+        .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+}
+
+/// A simple endpoint that takes a single `u32` argument and returns it.
 #[update]
 async fn echo(arg: u32) -> u32 {
     arg
 }
 
+/// `Call::new(...).with_args(...)` can be configured and called.
 #[update]
-async fn call_echo() {
-    let num = 1u32;
-    let bytes: Vec<u8> = Encode!(&num).unwrap();
-
-    // 1. Various ways to call*
-    // 1.1 call()
+async fn call_echo_with_args() {
+    let n = 1u32;
+    let bytes = Encode!(&n).unwrap();
     let res: (u32,) = Call::new(id(), "echo")
-        .with_args((num,))
+        .with_args((n,))
         .call()
         .await
         .unwrap();
-    assert_eq!(res.0, num);
-    // 1.2 call_raw()
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_args((n,))
+        .call_with_decoder_config(&decoder_config)
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
     let res = Call::new(id(), "echo")
-        .with_args((num,))
+        .with_args((n,))
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
-    // 1.3 call_with_decoder_config()
-    let config = DecoderConfig::default();
-    let res: (u32,) = Call::new(id(), "echo")
-        .with_args((num,))
-        .call_with_decoder_config(&config)
-        .await
-        .unwrap();
-    assert_eq!(res.0, num);
-    // 1.4 call_raw_with_decoder_config()
     Call::new(id(), "echo")
-        .with_args((num,))
+        .with_args((n,))
         .call_and_forget()
         .unwrap();
 
-    // 2. Various ways to config the call
-    // 2.1 with_raw_args()
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_args((n,))
+        .with_guaranteed_response()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_args((n,))
+        .change_timeout(5)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_args((n,))
+        .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+}
+
+/// Test various Call::new(...).with_args(...) can be configured and called.
+#[update]
+async fn call_echo_with_raw_args() {
+    let n = 1u32;
+    let bytes: Vec<u8> = Encode!(&n).unwrap();
+
     let res: (u32,) = Call::new(id(), "echo")
         .with_raw_args(&bytes)
         .call()
         .await
         .unwrap();
-    assert_eq!(res.0, num);
-    // 2.2 with_guaranteed_response()
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
     let res: (u32,) = Call::new(id(), "echo")
-        .with_args((num,))
+        .with_raw_args(&bytes)
+        .call_with_decoder_config(&decoder_config)
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res = Call::new(id(), "echo")
+        .with_raw_args(&bytes)
+        .call_raw()
+        .await
+        .unwrap();
+    assert_eq!(res, bytes);
+    Call::new(id(), "echo")
+        .with_raw_args(&bytes)
+        .call_and_forget()
+        .unwrap();
+
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_raw_args(&bytes)
         .with_guaranteed_response()
         .call()
         .await
         .unwrap();
-    assert_eq!(res.0, num);
-    // 2.3 change_timeout()
+    assert_eq!(res.0, n);
     let res: (u32,) = Call::new(id(), "echo")
-        .with_args((num,))
+        .with_raw_args(&bytes)
         .change_timeout(5)
         .call()
         .await
         .unwrap();
-    assert_eq!(res.0, num);
-    // 2.4 with_cycles()
+    assert_eq!(res.0, n);
     let res: (u32,) = Call::new(id(), "echo")
-        .with_args((num,))
-        .with_cycles(100_000)
+        .with_raw_args(&bytes)
+        .with_cycles(1000)
         .call()
         .await
         .unwrap();
-    assert_eq!(res.0, num);
-}
-
-#[update]
-async fn foo() -> Vec<u8> {
-    vec![1, 2, 3]
-}
-
-#[update]
-async fn call_foo() {
-    let res: (Vec<u8>,) = Call::new(id(), "foo").call().await.unwrap();
-    assert_eq!(res.0, vec![1, 2, 3]);
+    assert_eq!(res.0, n);
 }
 
 fn main() {}
