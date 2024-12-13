@@ -8,7 +8,7 @@ async fn echo(arg: u32) -> u32 {
 }
 
 #[update]
-async fn call_struct() {
+async fn call_echo() {
     let num = 1u32;
     let bytes: Vec<u8> = Encode!(&num).unwrap();
 
@@ -73,6 +73,17 @@ async fn call_struct() {
         .await
         .unwrap();
     assert_eq!(res.0, num);
+}
+
+#[update]
+async fn foo() -> Vec<u8> {
+    vec![1, 2, 3]
+}
+
+#[update]
+async fn call_foo() {
+    let res: (Vec<u8>,) = Call::new(id(), "foo").call().await.unwrap();
+    assert_eq!(res.0, vec![1, 2, 3]);
 }
 
 fn main() {}
