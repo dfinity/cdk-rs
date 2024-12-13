@@ -125,7 +125,7 @@ pub type CallResult<R> = Result<R, CallError>;
 pub struct Call<'a> {
     canister_id: Principal,
     method: &'a str,
-    payment: Option<u128>,
+    cycles: Option<u128>,
     timeout_seconds: Option<u32>,
 }
 
@@ -153,7 +153,7 @@ impl<'a> Call<'a> {
         Self {
             canister_id,
             method,
-            payment: None,
+            cycles: None,
             // Default to 10 seconds.
             timeout_seconds: Some(10),
         }
@@ -203,7 +203,7 @@ pub trait ConfigurableCall {
 
 impl<'a> ConfigurableCall for Call<'a> {
     fn with_cycles(mut self, cycles: u128) -> Self {
-        self.payment = Some(cycles);
+        self.cycles = Some(cycles);
         self
     }
 
@@ -220,7 +220,7 @@ impl<'a> ConfigurableCall for Call<'a> {
 
 impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
     fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.payment = Some(cycles);
+        self.call.cycles = Some(cycles);
         self
     }
 
@@ -237,7 +237,7 @@ impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
 
 impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
     fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.payment = Some(cycles);
+        self.call.cycles = Some(cycles);
         self
     }
 
@@ -311,7 +311,7 @@ impl SendableCall for Call<'_> {
             self.canister_id,
             self.method,
             args_raw,
-            self.payment,
+            self.cycles,
             self.timeout_seconds,
         )
     }
@@ -322,7 +322,7 @@ impl SendableCall for Call<'_> {
             self.canister_id,
             self.method,
             args_raw,
-            self.payment,
+            self.cycles,
             self.timeout_seconds,
         )
     }
@@ -335,7 +335,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
             self.call.canister_id,
             self.call.method,
             args_raw,
-            self.call.payment,
+            self.call.cycles,
             self.call.timeout_seconds,
         )
         .await
@@ -347,7 +347,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
             self.call.canister_id,
             self.call.method,
             args_raw,
-            self.call.payment,
+            self.call.cycles,
             self.call.timeout_seconds,
         )
     }
@@ -359,7 +359,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
             self.call.canister_id,
             self.call.method,
             self.raw_args,
-            self.call.payment,
+            self.call.cycles,
             self.call.timeout_seconds,
         )
     }
@@ -369,7 +369,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
             self.call.canister_id,
             self.call.method,
             self.raw_args,
-            self.call.payment,
+            self.call.cycles,
             self.call.timeout_seconds,
         )
     }
@@ -384,7 +384,7 @@ struct CallFutureState<T: AsRef<[u8]>> {
     id: Principal,
     method: String,
     arg: T,
-    payment: Option<u128>,
+    cycles: Option<u128>,
     timeout_seconds: Option<u32>,
 }
 
@@ -433,8 +433,8 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     if !arg.is_empty() {
                         ic0::call_data_append(arg.as_ptr() as usize, arg.len());
                     }
-                    if let Some(payment) = state.payment {
-                        add_payment(payment);
+                    if let Some(cycles) = state.cycles {
+                        call_cycles_add(cycles);
                     }
                     if let Some(timeout_seconds) = state.timeout_seconds {
                         ic0::call_with_best_effort_response(timeout_seconds);
@@ -517,7 +517,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
     args_raw: T,
-    payment: Option<u128>,
+    cycles: Option<u128>,
     timeout_seconds: Option<u32>,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
@@ -526,7 +526,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
         id,
         method: method.to_string(),
         arg: args_raw,
-        payment,
+        cycles,
         timeout_seconds,
     }));
     CallFuture { state }
@@ -536,7 +536,7 @@ fn call_and_forget_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
     args_raw: T,
-    payment: Option<u128>,
+    cycles: Option<u128>,
     timeout_seconds: Option<u32>,
 ) -> CallResult<()> {
     let callee = id.as_slice();
@@ -571,8 +571,8 @@ fn call_and_forget_internal<T: AsRef<[u8]>>(
         if !arg.is_empty() {
             ic0::call_data_append(arg.as_ptr() as usize, arg.len());
         }
-        if let Some(payment) = payment {
-            add_payment(payment);
+        if let Some(cycles) = cycles {
+            call_cycles_add(cycles);
         }
         if let Some(timeout_seconds) = timeout_seconds {
             ic0::call_with_best_effort_response(timeout_seconds);
@@ -588,12 +588,12 @@ fn call_and_forget_internal<T: AsRef<[u8]>>(
 
 // # Internal END =============================================================
 
-fn add_payment(payment: u128) {
-    if payment == 0 {
+fn call_cycles_add(cycles: u128) {
+    if cycles == 0 {
         return;
     }
-    let high = (payment >> 64) as u64;
-    let low = (payment & u64::MAX as u128) as u64;
+    let high = (cycles >> 64) as u64;
+    let low = (cycles & u64::MAX as u128) as u64;
     // SAFETY: ic0.call_cycles_add128 is always safe to call.
     unsafe {
         ic0::call_cycles_add128(high, low);
