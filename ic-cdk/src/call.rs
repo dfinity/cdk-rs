@@ -111,7 +111,7 @@ pub enum CallError {
     /// The response could not be decoded.
     ///
     /// This can only happen when making the call using [call][SendableCall::call]
-    /// or [call_with_decoder_config][SendableCall::call_with_decoder_config].
+    /// or [call_tuple][SendableCall::call_tuple].
     /// Because they decode the response to a Candid type.
     #[error("Failed to decode the response as {0}")]
     CandidDecodeFailed(String),
@@ -326,11 +326,49 @@ pub trait SendableCall {
     fn get_decoder_config(&self) -> Option<DecoderConfig>;
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call_tuple<R: for<'b> ArgumentDecoder<'b>>(
-        self,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync
+    fn call<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
         Self: Sized,
+        R: CandidType + for<'b> Deserialize<'b>,
+    {
+        let decoder_config = self.get_decoder_config();
+        let fut = self.call_raw();
+        async {
+            let bytes = fut.await?;
+            match decoder_config {
+                Some(decoder_config) => {
+                    let pre_cycles = if decoder_config.debug {
+                        Some(crate::api::performance_counter(0))
+                    } else {
+                        None
+                    };
+                    let config = decoder_config.to_candid_config();
+                    match decode_args_with_config_debug::<(R,)>(&bytes, &config) {
+                        Err(e) => Err(decoder_error_to_call_error::<R>(e)),
+                        Ok((r, cost)) => {
+                            if decoder_config.debug {
+                                print_decoding_debug_info(
+                                    std::any::type_name::<R>(),
+                                    &cost,
+                                    pre_cycles,
+                                );
+                            }
+                            Ok(r.0)
+                        }
+                    }
+                }
+                None => decode_args::<(R,)>(&bytes)
+                    .map_err(decoder_error_to_call_error::<R>)
+                    .map(|r| r.0),
+            }
+        }
+    }
+
+    /// Sends the call and decodes the reply to a Candid type.
+    fn call_tuple<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
+    where
+        Self: Sized,
+        R: for<'b> ArgumentDecoder<'b>,
     {
         let decoder_config = self.get_decoder_config();
         let fut = self.call_raw();
@@ -385,7 +423,7 @@ impl SendableCall for Call<'_> {
 
     fn call_oneway(self) -> CallResult<()> {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
-        call_and_forget_internal::<Vec<u8>>(
+        call_oneway_internal::<Vec<u8>>(
             self.canister_id,
             self.method,
             args_raw,
@@ -414,7 +452,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 
     fn call_oneway(self) -> CallResult<()> {
         let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
-        call_and_forget_internal(
+        call_oneway_internal(
             self.call.canister_id,
             self.call.method,
             args_raw,
@@ -443,7 +481,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
 
     fn call_oneway(self) -> CallResult<()> {
         let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
-        call_and_forget_internal(
+        call_oneway_internal(
             self.call.canister_id,
             self.call.method,
             args_raw,
@@ -469,7 +507,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
     }
 
     fn call_oneway(self) -> CallResult<()> {
-        call_and_forget_internal(
+        call_oneway_internal(
             self.call.canister_id,
             self.call.method,
             self.raw_args,
@@ -636,7 +674,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     CallFuture { state }
 }
 
-fn call_and_forget_internal<T: AsRef<[u8]>>(
+fn call_oneway_internal<T: AsRef<[u8]>>(
     id: Principal,
     method: &str,
     args_raw: T,

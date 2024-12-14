@@ -15,6 +15,8 @@ async fn call_foo() {
     let n = 0u32;
     let bytes = Encode!(&n).unwrap();
 
+    let res: u32 = Call::new(id(), "foo").call().await.unwrap();
+    assert_eq!(res, n);
     let res: (u32,) = Call::new(id(), "foo").call_tuple().await.unwrap();
     assert_eq!(res.0, n);
     let res = Call::new(id(), "foo").call_raw().await.unwrap();
@@ -60,7 +62,14 @@ async fn echo(arg: u32) -> u32 {
 async fn call_echo_with_arg() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
-    let res: (u32,) = Call::new(id(), "echo").with_arg(n).call_tuple().await.unwrap();
+    // call*
+    let res: u32 = Call::new(id(), "echo").with_arg(n).call().await.unwrap();
+    assert_eq!(res, n);
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .call_tuple()
+        .await
+        .unwrap();
     assert_eq!(res.0, n);
     let res = Call::new(id(), "echo")
         .with_arg(n)
@@ -68,11 +77,8 @@ async fn call_echo_with_arg() {
         .await
         .unwrap();
     assert_eq!(res, bytes);
-    Call::new(id(), "echo")
-        .with_arg(n)
-        .call_oneway()
-        .unwrap();
-
+    Call::new(id(), "echo").with_arg(n).call_oneway().unwrap();
+    // with*
     let res: (u32,) = Call::new(id(), "echo")
         .with_arg(n)
         .with_guaranteed_response()
@@ -109,6 +115,13 @@ async fn call_echo_with_arg() {
 async fn call_echo_with_args() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
+    // call*
+    let res: u32 = Call::new(id(), "echo")
+        .with_args((n,))
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res, n);
     let res: (u32,) = Call::new(id(), "echo")
         .with_args((n,))
         .call_tuple()
@@ -125,7 +138,7 @@ async fn call_echo_with_args() {
         .with_args((n,))
         .call_oneway()
         .unwrap();
-
+    // with*
     let res: (u32,) = Call::new(id(), "echo")
         .with_args((n,))
         .with_guaranteed_response()
@@ -157,12 +170,18 @@ async fn call_echo_with_args() {
     assert_eq!(res.0, n);
 }
 
-/// Test various Call::new(...).with_args(...) can be configured and called.
+/// Call::new(...).with_raw_args(...) can be configured and called.
 #[update]
 async fn call_echo_with_raw_args() {
     let n = 1u32;
     let bytes: Vec<u8> = Encode!(&n).unwrap();
-
+    // call*
+    let res: u32 = Call::new(id(), "echo")
+        .with_raw_args(&bytes)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res, n);
     let res: (u32,) = Call::new(id(), "echo")
         .with_raw_args(&bytes)
         .call_tuple()
@@ -179,7 +198,7 @@ async fn call_echo_with_raw_args() {
         .with_raw_args(&bytes)
         .call_oneway()
         .unwrap();
-
+    // with*
     let res: (u32,) = Call::new(id(), "echo")
         .with_raw_args(&bytes)
         .with_guaranteed_response()
