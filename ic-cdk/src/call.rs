@@ -1,7 +1,7 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, encode_args, CandidType, Deserialize, Principal};
+use candid::{decode_args, encode_args, encode_one, CandidType, Deserialize, Principal};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -129,7 +129,18 @@ pub struct Call<'a> {
     timeout_seconds: Option<u32>,
 }
 
+/// Inter-Canister Call with typed argument.
+///
+/// The argument must impl [CandidType].
+#[derive(Debug)]
+pub struct CallWithArg<'a, T> {
+    call: Call<'a>,
+    arg: T,
+}
+
 /// Inter-Canister Call with typed arguments.
+///
+/// The arguments is a tuple of types each impl [CandidType].
 #[derive(Debug)]
 pub struct CallWithArgs<'a, T> {
     call: Call<'a>,
@@ -157,6 +168,14 @@ impl<'a> Call<'a> {
             // Default to 10 seconds.
             timeout_seconds: Some(10),
         }
+    }
+
+    /// Sets the arguments for the call.
+    ///
+    /// Another way to set the arguments is to use `with_raw_args`.
+    /// If both are invoked, the last one is used.
+    pub fn with_arg<T>(self, arg: T) -> CallWithArg<'a, T> {
+        CallWithArg { call: self, arg }
     }
 
     /// Sets the arguments for the call.
@@ -214,6 +233,23 @@ impl<'a> ConfigurableCall for Call<'a> {
 
     fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+}
+
+impl<'a, T> ConfigurableCall for CallWithArg<'a, T> {
+    fn with_cycles(mut self, cycles: u128) -> Self {
+        self.call.cycles = Some(cycles);
+        self
+    }
+
+    fn with_guaranteed_response(mut self) -> Self {
+        self.call.timeout_seconds = None;
+        self
+    }
+
+    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+        self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
 }
@@ -343,6 +379,31 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 
     fn call_and_forget(self) -> CallResult<()> {
         let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+        call_and_forget_internal(
+            self.call.canister_id,
+            self.call.method,
+            args_raw,
+            self.call.cycles,
+            self.call.timeout_seconds,
+        )
+    }
+}
+
+impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
+    async fn call_raw(self) -> CallResult<Vec<u8>> {
+        let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
+        call_raw_internal(
+            self.call.canister_id,
+            self.call.method,
+            args_raw,
+            self.call.cycles,
+            self.call.timeout_seconds,
+        )
+        .await
+    }
+
+    fn call_and_forget(self) -> CallResult<()> {
+        let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
             self.call.canister_id,
             self.call.method,

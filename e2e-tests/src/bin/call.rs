@@ -53,6 +53,54 @@ async fn echo(arg: u32) -> u32 {
     arg
 }
 
+/// `Call::new(...).with_arg(...)` can be configured and called.
+#[update]
+async fn call_echo_with_arg() {
+    let n = 1u32;
+    let bytes = Encode!(&n).unwrap();
+    let res: (u32,) = Call::new(id(), "echo").with_arg(n).call().await.unwrap();
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .call_with_decoder_config(&decoder_config)
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res = Call::new(id(), "echo")
+        .with_arg(n)
+        .call_raw()
+        .await
+        .unwrap();
+    assert_eq!(res, bytes);
+    Call::new(id(), "echo")
+        .with_arg(n)
+        .call_and_forget()
+        .unwrap();
+
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .with_guaranteed_response()
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .change_timeout(5)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+}
+
 /// `Call::new(...).with_args(...)` can be configured and called.
 #[update]
 async fn call_echo_with_args() {
