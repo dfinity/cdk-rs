@@ -121,6 +121,12 @@ pub enum CallError {
 pub type CallResult<R> = Result<R, CallError>;
 
 /// Inter-Canister Call.
+///
+/// # Note
+///
+/// The [Call] defaults to a 10-second timeout for Best-Effort Responses.
+/// To change the timeout, use the [change_timeout][ConfigurableCall::change_timeout] method.
+/// To get a guaranteed response, use the [with_guaranteed_response][ConfigurableCall::with_guaranteed_response] method.
 #[derive(Debug)]
 pub struct Call<'a> {
     canister_id: Principal,
@@ -140,7 +146,7 @@ pub struct CallWithArg<'a, T> {
 
 /// Inter-Canister Call with typed arguments.
 ///
-/// The arguments is a tuple of types each impl [CandidType].
+/// The arguments are a tuple of types each impl [CandidType].
 #[derive(Debug)]
 pub struct CallWithArgs<'a, T> {
     call: Call<'a>,
@@ -158,8 +164,10 @@ impl<'a> Call<'a> {
     /// Constructs a new call with the Canister id and method name.
     ///
     /// # Note
-    /// The `Call` default to set a 10 seconds timeout for Best-Effort Responses.
-    /// If you want to set a guaranteed response, you can use the `with_guaranteed_response` method.
+    ///
+    /// The [Call] defaults to a 10-second timeout for Best-Effort Responses.
+    /// To change the timeout, use the [change_timeout][ConfigurableCall::change_timeout] method.
+    /// To get a guaranteed response, use the [with_guaranteed_response][ConfigurableCall::with_guaranteed_response] method.
     pub fn new(canister_id: Principal, method: &'a str) -> Self {
         Self {
             canister_id,
@@ -170,26 +178,21 @@ impl<'a> Call<'a> {
         }
     }
 
-    /// Sets the arguments for the call.
+    /// Sets the argument for the call.
     ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
+    /// The argument must impl [CandidType].
     pub fn with_arg<T>(self, arg: T) -> CallWithArg<'a, T> {
         CallWithArg { call: self, arg }
     }
 
     /// Sets the arguments for the call.
     ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
+    /// The arguments are a tuple of types each impl [CandidType].
     pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
         CallWithArgs { call: self, args }
     }
 
-    /// Sets the arguments for the call as raw bytes.    
-    ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
+    /// Sets the arguments for the call as raw bytes.
     pub fn with_raw_args<A>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
         CallWithRawArgs {
             call: self,
@@ -202,7 +205,7 @@ impl<'a> Call<'a> {
 pub trait ConfigurableCall {
     /// Sets the cycles payment for the call.
     ///
-    /// If invoked multiple times, the last value is used.
+    /// If invoked multiple times, the last value takes effect.
     fn with_cycles(self, cycles: u128) -> Self;
 
     /// Sets the call to have a guaranteed response.
@@ -213,8 +216,8 @@ pub trait ConfigurableCall {
 
     /// Sets the timeout for the Best-Effort Responses.
     ///
-    /// If not set, the call will default to a 10 seconds timeout.
-    /// If invoked multiple times, the last value is used.
+    /// If not set, the call defaults to a 10-second timeout.
+    /// If invoked multiple times, the last value takes effect.
     /// If [with_guaranteed_response](ConfigurableCall::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
     fn change_timeout(self, timeout_seconds: u32) -> Self;
