@@ -133,6 +133,7 @@ pub struct Call<'a> {
     method: &'a str,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
+    decoder_config: Option<DecoderConfig>,
 }
 
 /// Inter-Canister Call with typed argument.
@@ -146,7 +147,7 @@ pub struct CallWithArg<'a, T> {
 
 /// Inter-Canister Call with typed arguments.
 ///
-/// The arguments are a tuple of types each impl [CandidType].
+/// The arguments are a tuple of types, each implementing [CandidType].
 #[derive(Debug)]
 pub struct CallWithArgs<'a, T> {
     call: Call<'a>,
@@ -175,19 +176,20 @@ impl<'a> Call<'a> {
             cycles: None,
             // Default to 10 seconds.
             timeout_seconds: Some(10),
+            decoder_config: None,
         }
     }
 
     /// Sets the argument for the call.
     ///
-    /// The argument must impl [CandidType].
+    /// The argument must implement [CandidType].
     pub fn with_arg<T>(self, arg: T) -> CallWithArg<'a, T> {
         CallWithArg { call: self, arg }
     }
 
     /// Sets the arguments for the call.
     ///
-    /// The arguments are a tuple of types each impl [CandidType].
+    /// The arguments are a tuple of types, each implementing [CandidType].
     pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
         CallWithArgs { call: self, args }
     }
@@ -221,6 +223,9 @@ pub trait ConfigurableCall {
     /// If [with_guaranteed_response](ConfigurableCall::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
     fn change_timeout(self, timeout_seconds: u32) -> Self;
+
+    /// Sets the [DecoderConfig] for decoding the call response.
+    fn with_decoder_config(self, decoder_config: DecoderConfig) -> Self;
 }
 
 impl<'a> ConfigurableCall for Call<'a> {
@@ -236,6 +241,11 @@ impl<'a> ConfigurableCall for Call<'a> {
 
     fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+
+    fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = Some(decoder_config);
         self
     }
 }
@@ -255,6 +265,11 @@ impl<'a, T> ConfigurableCall for CallWithArg<'a, T> {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
+
+    fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.call.decoder_config = Some(decoder_config);
+        self
+    }
 }
 
 impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
@@ -270,6 +285,11 @@ impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
 
     fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.call.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+
+    fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.call.decoder_config = Some(decoder_config);
         self
     }
 }
@@ -289,12 +309,21 @@ impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
         self.call.timeout_seconds = Some(timeout_seconds);
         self
     }
+
+    fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.call.decoder_config = Some(decoder_config);
+        self
+    }
 }
 
 /// Methods to send a call.
 pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
     fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
+
+    #[doc(hidden)]
+    /// For [SendableCall::call] internal use only.
+    fn get_decoder_config(&self) -> Option<DecoderConfig>;
 
     /// Sends the call and decodes the reply to a Candid type.
     fn call<R: for<'b> ArgumentDecoder<'b>>(
@@ -303,38 +332,33 @@ pub trait SendableCall {
     where
         Self: Sized,
     {
+        let decoder_config = self.get_decoder_config();
         let fut = self.call_raw();
         async {
             let bytes = fut.await?;
-            decode_args(&bytes).map_err(decoder_error_to_call_error::<R>)
-        }
-    }
-
-    /// Sends the call and decodes the reply to a Candid type with a decoding quota.
-    fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
-        self,
-        decoder_config: &DecoderConfig,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync
-    where
-        Self: Sized,
-    {
-        let fut = self.call_raw();
-        async move {
-            let bytes = fut.await?;
-            let config = decoder_config.to_candid_config();
-            let pre_cycles = if decoder_config.debug {
-                Some(crate::api::performance_counter(0))
-            } else {
-                None
-            };
-            match decode_args_with_config_debug(&bytes, &config) {
-                Err(e) => Err(decoder_error_to_call_error::<R>(e)),
-                Ok((r, cost)) => {
-                    if decoder_config.debug {
-                        print_decoding_debug_info(std::any::type_name::<R>(), &cost, pre_cycles);
+            match decoder_config {
+                Some(decoder_config) => {
+                    let pre_cycles = if decoder_config.debug {
+                        Some(crate::api::performance_counter(0))
+                    } else {
+                        None
+                    };
+                    let config = decoder_config.to_candid_config();
+                    match decode_args_with_config_debug(&bytes, &config) {
+                        Err(e) => Err(decoder_error_to_call_error::<R>(e)),
+                        Ok((r, cost)) => {
+                            if decoder_config.debug {
+                                print_decoding_debug_info(
+                                    std::any::type_name::<R>(),
+                                    &cost,
+                                    pre_cycles,
+                                );
+                            }
+                            Ok(r)
+                        }
                     }
-                    Ok(r)
                 }
+                None => decode_args(&bytes).map_err(decoder_error_to_call_error::<R>),
             }
         }
     }
@@ -353,6 +377,10 @@ impl SendableCall for Call<'_> {
             self.cycles,
             self.timeout_seconds,
         )
+    }
+
+    fn get_decoder_config(&self) -> Option<DecoderConfig> {
+        self.decoder_config.clone()
     }
 
     fn call_and_forget(self) -> CallResult<()> {
@@ -380,6 +408,10 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
         .await
     }
 
+    fn get_decoder_config(&self) -> Option<DecoderConfig> {
+        self.call.decoder_config.clone()
+    }
+
     fn call_and_forget(self) -> CallResult<()> {
         let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
@@ -405,6 +437,10 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
         .await
     }
 
+    fn get_decoder_config(&self) -> Option<DecoderConfig> {
+        self.call.decoder_config.clone()
+    }
+
     fn call_and_forget(self) -> CallResult<()> {
         let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
@@ -426,6 +462,10 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
             self.call.cycles,
             self.call.timeout_seconds,
         )
+    }
+
+    fn get_decoder_config(&self) -> Option<DecoderConfig> {
+        self.call.decoder_config.clone()
     }
 
     fn call_and_forget(self) -> CallResult<()> {
@@ -681,7 +721,7 @@ fn print_decoding_debug_info(
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Config to control the behavior of decoding canister endpoint arguments.
 pub struct DecoderConfig {
     /// Limit the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.

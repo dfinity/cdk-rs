@@ -17,12 +17,6 @@ async fn call_foo() {
 
     let res: (u32,) = Call::new(id(), "foo").call().await.unwrap();
     assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(id(), "foo")
-        .call_with_decoder_config(&decoder_config)
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res = Call::new(id(), "foo").call_raw().await.unwrap();
     assert_eq!(res, bytes);
     Call::new(id(), "foo").call_and_forget().unwrap();
@@ -45,6 +39,14 @@ async fn call_foo() {
         .await
         .unwrap();
     assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+
+    let res: (u32,) = Call::new(id(), "foo")
+        .with_decoder_config(decoder_config)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
 }
 
 /// A simple endpoint that takes a single `u32` argument and returns it.
@@ -59,13 +61,6 @@ async fn call_echo_with_arg() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
     let res: (u32,) = Call::new(id(), "echo").with_arg(n).call().await.unwrap();
-    assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(id(), "echo")
-        .with_arg(n)
-        .call_with_decoder_config(&decoder_config)
-        .await
-        .unwrap();
     assert_eq!(res.0, n);
     let res = Call::new(id(), "echo")
         .with_arg(n)
@@ -95,6 +90,14 @@ async fn call_echo_with_arg() {
     let res: (u32,) = Call::new(id(), "echo")
         .with_arg(n)
         .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_arg(n)
+        .with_decoder_config(decoder_config)
         .call()
         .await
         .unwrap();
@@ -112,13 +115,6 @@ async fn call_echo_with_args() {
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(id(), "echo")
-        .with_args((n,))
-        .call_with_decoder_config(&decoder_config)
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res = Call::new(id(), "echo")
         .with_args((n,))
         .call_raw()
@@ -147,6 +143,14 @@ async fn call_echo_with_args() {
     let res: (u32,) = Call::new(id(), "echo")
         .with_args((n,))
         .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_args((n,))
+        .with_decoder_config(decoder_config)
         .call()
         .await
         .unwrap();
@@ -165,13 +169,6 @@ async fn call_echo_with_raw_args() {
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(id(), "echo")
-        .with_raw_args(&bytes)
-        .call_with_decoder_config(&decoder_config)
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res = Call::new(id(), "echo")
         .with_raw_args(&bytes)
         .call_raw()
@@ -200,6 +197,14 @@ async fn call_echo_with_raw_args() {
     let res: (u32,) = Call::new(id(), "echo")
         .with_raw_args(&bytes)
         .with_cycles(1000)
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
+    let decoder_config = DecoderConfig::default();
+    let res: (u32,) = Call::new(id(), "echo")
+        .with_raw_args(&bytes)
+        .with_decoder_config(decoder_config)
         .call()
         .await
         .unwrap();
