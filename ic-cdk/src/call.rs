@@ -326,7 +326,7 @@ pub trait SendableCall {
     fn get_decoder_config(&self) -> Option<DecoderConfig>;
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call<R: for<'b> ArgumentDecoder<'b>>(
+    fn call_tuple<R: for<'b> ArgumentDecoder<'b>>(
         self,
     ) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
@@ -364,7 +364,7 @@ pub trait SendableCall {
     }
 
     /// Sends the call and ignores the reply.
-    fn call_and_forget(self) -> CallResult<()>;
+    fn call_oneway(self) -> CallResult<()>;
 }
 
 impl SendableCall for Call<'_> {
@@ -383,7 +383,7 @@ impl SendableCall for Call<'_> {
         self.decoder_config.clone()
     }
 
-    fn call_and_forget(self) -> CallResult<()> {
+    fn call_oneway(self) -> CallResult<()> {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_and_forget_internal::<Vec<u8>>(
             self.canister_id,
@@ -412,7 +412,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
         self.call.decoder_config.clone()
     }
 
-    fn call_and_forget(self) -> CallResult<()> {
+    fn call_oneway(self) -> CallResult<()> {
         let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
             self.call.canister_id,
@@ -441,7 +441,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
         self.call.decoder_config.clone()
     }
 
-    fn call_and_forget(self) -> CallResult<()> {
+    fn call_oneway(self) -> CallResult<()> {
         let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
         call_and_forget_internal(
             self.call.canister_id,
@@ -468,7 +468,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         self.call.decoder_config.clone()
     }
 
-    fn call_and_forget(self) -> CallResult<()> {
+    fn call_oneway(self) -> CallResult<()> {
         call_and_forget_internal(
             self.call.canister_id,
             self.call.method,
