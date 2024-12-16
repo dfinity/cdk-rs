@@ -86,7 +86,4 @@ async fn test_basic() {
     assert_eq!(bytes.len(), 32);
 }
 
-#[update]
-fn test_canister_info() {}
-
 fn main() {}
