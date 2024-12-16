@@ -104,7 +104,7 @@ pub struct CanisterSettings {
     pub wasm_memory_limit: Option<Nat>,
 }
 
-/// Like [CanisterSettings].
+/// Like [`CanisterSettings`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -149,35 +149,35 @@ pub async fn create_canister(
         .await
 }
 
-/// Argument type of [create_canister].
+/// Argument type of [`create_canister`].
 ///
-/// Please note that this type is a reduced version of [CreateCanisterArgsComplete].
-/// The `sender_canister_version` field is removed as it is set automatically in [create_canister].
+/// Please note that this type is a reduced version of [`CreateCanisterArgsComplete`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct CreateCanisterArgs {
-    /// See [CanisterSettings].
+    /// See [`CanisterSettings`].
     pub settings: Option<CanisterSettings>,
 }
 
 /// Complete argument type of `create_canister`.
 ///
-/// Please note that this type is not used directly as the argument of [create_canister].
-/// The function [create_canister] takes [CreateCanisterArgs] instead.
+/// Please note that this type is not used directly as the argument of [`create_canister`].
+/// The function [`create_canister`] takes [`CreateCanisterArgs`] instead.
 ///
-/// If you want to manually call `create_canister` (construct and invoke a [Call]), you should use this complete type.
+/// If you want to manually call `create_canister` (construct and invoke a [`Call`]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct CreateCanisterArgsComplete {
-    /// See [CanisterSettings].
+    /// See [`CanisterSettings`].
     pub settings: Option<CanisterSettings>,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
-/// Result type of [create_canister].
+/// Result type of [`create_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
 )]
@@ -205,11 +205,11 @@ pub async fn update_settings(arg: UpdateSettingsArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [update_settings]
+/// Argument type of [`update_settings`]
 ///
-/// Please note that this type is a reduced version of [UpdateSettingsArgsComplete].
+/// Please note that this type is a reduced version of [`UpdateSettingsArgsComplete`].
 ///
-/// The `sender_canister_version` field is removed as it is set automatically in [update_settings].
+/// The `sender_canister_version` field is removed as it is set automatically in [`update_settings`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -222,8 +222,8 @@ pub struct UpdateSettingsArgs {
 
 /// Complete argument type of `update_settings`.
 ///
-/// Please note that this type is not used directly as the argument of [update_settings].
-/// The function [update_settings] takes [UpdateSettingsArgs] instead.
+/// Please note that this type is not used directly as the argument of [`update_settings`].
+/// The function [`update_settings`] takes [`UpdateSettingsArgs`] instead.
 ///
 /// If you want to manually call `update_settings` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
@@ -234,7 +234,7 @@ pub struct UpdateSettingsArgsComplete {
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
     pub settings: CanisterSettings,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
@@ -252,7 +252,7 @@ pub async fn upload_chunk(arg: UploadChunkArgs) -> CallResult<UploadChunkResult>
         .await
 }
 
-/// Argument type of [upload_chunk].
+/// Argument type of [`upload_chunk`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -264,7 +264,7 @@ pub struct UploadChunkArgs {
     pub chunk: Vec<u8>,
 }
 
-/// Result type of [upload_chunk].
+/// Result type of [`upload_chunk`].
 pub type UploadChunkResult = ChunkHash;
 
 // upload_chunk END -----------------------------------------------------------
@@ -281,7 +281,7 @@ pub async fn clear_chunk_store(arg: ClearChunkStoreArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [clear_chunk_store].
+/// Argument type of [`clear_chunk_store`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -304,7 +304,7 @@ pub async fn stored_chunks(arg: StoredChunksArgs) -> CallResult<StoredChunksResu
         .await
 }
 
-/// Argument type of [stored_chunks].
+/// Argument type of [`stored_chunks`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -313,7 +313,7 @@ pub struct StoredChunksArgs {
     pub canister_id: CanisterId,
 }
 
-/// Result type of [stored_chunks].
+/// Result type of [`stored_chunks`].
 pub type StoredChunksResult = Vec<ChunkHash>;
 
 // stored_chunks END ----------------------------------------------------------
@@ -390,7 +390,7 @@ pub struct UpgradeFlags {
     pub wasm_memory_persistence: Option<WasmMemoryPersistence>,
 }
 
-/// Wasm memory persistence setting for [UpgradeFlags].
+/// Wasm memory persistence setting for [`UpgradeFlags`].
 #[derive(
     CandidType,
     Serialize,
@@ -418,10 +418,10 @@ pub enum WasmMemoryPersistence {
 /// WASM module.
 pub type WasmModule = Vec<u8>;
 
-/// Argument type of [install_code].
+/// Argument type of [`install_code`].
 ///
-/// Please note that this type is a reduced version of [InstallCodeArgsComplete].
-/// The `sender_canister_version` field is removed as it is set automatically in [install_code].
+/// Please note that this type is a reduced version of [`InstallCodeArgsComplete`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`install_code`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -439,15 +439,15 @@ pub struct InstallCodeArgs {
 
 /// Complete argument type of `install_code`.
 ///
-/// Please note that this type is not used directly as the argument of [install_code].
-/// The function [install_code] takes [InstallCodeArgs] instead.
+/// Please note that this type is not used directly as the argument of [`install_code`].
+/// The function [`install_code`] takes [`InstallCodeArgs`] instead.
 ///
-/// If you want to manually call `install_code` (construct and invoke a [Call]), you should use this complete type.
+/// If you want to manually call `install_code` (construct and invoke a [`Call`]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct InstallCodeArgsComplete {
-    /// See [CanisterInstallMode].
+    /// See [`CanisterInstallMode`].
     pub mode: CanisterInstallMode,
     /// Canister ID.
     pub canister_id: CanisterId,
@@ -456,7 +456,7 @@ pub struct InstallCodeArgsComplete {
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
     #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
@@ -483,15 +483,15 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgs) -> CallResult<()>
         .await
 }
 
-/// Argument type of [install_chunked_code].
+/// Argument type of [`install_chunked_code`].
 ///
-/// Please note that this type is a reduced version of [InstallChunkedCodeArgsComplete].
-/// The `sender_canister_version` field is removed as it is set automatically in [install_chunked_code].
+/// Please note that this type is a reduced version of [`InstallChunkedCodeArgsComplete`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`install_chunked_code`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct InstallChunkedCodeArgs {
-    /// See [CanisterInstallMode].
+    /// See [`CanisterInstallMode`].
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
     pub target_canister: CanisterId,
@@ -509,15 +509,15 @@ pub struct InstallChunkedCodeArgs {
 
 /// Complete argument type of `install_chunked_code`.
 ///
-/// Please note that this type is not used directly as the argument of [install_chunked_code].
-/// The function [install_chunked_code] takes [InstallChunkedCodeArgs] instead.
+/// Please note that this type is not used directly as the argument of [`install_chunked_code`].
+/// The function [`install_chunked_code`] takes [`InstallChunkedCodeArgs`] instead.
 ///
-/// If you want to manually call `install_chunked_code` (construct and invoke a [Call]), you should use this complete type.
+/// If you want to manually call `install_chunked_code` (construct and invoke a [`Call`]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct InstallChunkedCodeArgsComplete {
-    /// See [CanisterInstallMode].
+    /// See [`CanisterInstallMode`].
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
     pub target_canister: CanisterId,
@@ -531,7 +531,7 @@ pub struct InstallChunkedCodeArgsComplete {
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
     #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
@@ -553,10 +553,10 @@ pub async fn uninstall_code(arg: UninstallCodeArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [uninstall_code].
+/// Argument type of [`uninstall_code`].
 ///
-/// Please note that this type is a reduced version of [UninstallCodeArgsComplete].
-/// The `sender_canister_version` field is removed as it is set automatically in [uninstall_code].
+/// Please note that this type is a reduced version of [`UninstallCodeArgsComplete`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`uninstall_code`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -567,8 +567,8 @@ pub struct UninstallCodeArgs {
 
 /// Complete argument type of `uninstall_code`.
 ///
-/// Please note that this type is not used directly as the argument of [uninstall_code].
-/// The function [uninstall_code] takes [UninstallCodeArgs] instead.
+/// Please note that this type is not used directly as the argument of [`uninstall_code`].
+/// The function [`uninstall_code`] takes [`UninstallCodeArgs`] instead.
 ///
 /// If you want to manually call `uninstall_code` (construct and invoke a [Call]), you should use this complete type.
 #[derive(
@@ -577,7 +577,7 @@ pub struct UninstallCodeArgs {
 pub struct UninstallCodeArgsComplete {
     /// Canister ID.
     pub canister_id: CanisterId,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
@@ -595,7 +595,7 @@ pub async fn start_canister(arg: StartCanisterArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [start_canister].
+/// Argument type of [`start_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -618,7 +618,7 @@ pub async fn stop_canister(arg: StopCanisterArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [stop_canister].
+/// Argument type of [`stop_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -641,7 +641,7 @@ pub async fn canister_status(arg: CanisterStatusArgs) -> CallResult<CanisterStat
         .await
 }
 
-/// Argument type of [canister_status].
+/// Argument type of [`canister_status`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -650,7 +650,7 @@ pub struct CanisterStatusArgs {
     pub canister_id: CanisterId,
 }
 
-/// Return type of [canister_status].
+/// Return type of [`canister_status`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -692,7 +692,7 @@ pub enum CanisterStatusType {
     Stopped,
 }
 
-/// Query statistics, returned by [canister_status].
+/// Query statistics, returned by [`canister_status`].
 #[derive(
     CandidType, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
@@ -721,7 +721,7 @@ pub async fn canister_info(arg: CanisterInfoArgs) -> CallResult<CanisterInfoResu
         .await
 }
 
-/// Argument type of [canister_info].
+/// Argument type of [`canister_info`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -733,7 +733,7 @@ pub struct CanisterInfoArgs {
     pub num_requested_changes: Option<u64>,
 }
 
-/// Return type of [canister_info].
+/// Return type of [`canister_info`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -778,10 +778,10 @@ pub struct FromCanisterRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub enum CanisterChangeOrigin {
-    /// See [FromUserRecord].
+    /// See [`FromUserRecord`].
     #[serde(rename = "from_user")]
     FromUser(FromUserRecord),
-    /// See [FromCanisterRecord].
+    /// See [`FromCanisterRecord`].
     #[serde(rename = "from_canister")]
     FromCanister(FromCanisterRecord),
 }
@@ -816,7 +816,7 @@ pub enum CodeDeploymentMode {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CodeDeploymentRecord {
-    /// See [CodeDeploymentMode].
+    /// See [`CodeDeploymentMode`].
     pub mode: CodeDeploymentMode,
     /// A SHA256 hash of the new module installed on the canister.
     #[serde(with = "serde_bytes")]
@@ -850,19 +850,19 @@ pub struct ControllersChangeRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub enum CanisterChangeDetails {
-    /// See [CreationRecord].
+    /// See [`CreationRecord`].
     #[serde(rename = "creation")]
     Creation(CreationRecord),
     /// Uninstalling canister's module.
     #[serde(rename = "code_uninstall")]
     CodeUninstall,
-    /// See [CodeDeploymentRecord].
+    /// See [`CodeDeploymentRecord`].
     #[serde(rename = "code_deployment")]
     CodeDeployment(CodeDeploymentRecord),
-    /// See [LoadSnapshotRecord].
+    /// See [`LoadSnapshotRecord`].
     #[serde(rename = "load_snapshot")]
     LoadSnapshot(LoadSnapshotRecord),
-    /// See [ControllersChangeRecord].
+    /// See [`ControllersChangeRecord`].
     #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
 }
@@ -896,7 +896,7 @@ pub async fn delete_canister(arg: DeleteCanisterArgs) -> CallResult<()> {
         .await
 }
 
-/// Argument type of [delete_canister].
+/// Argument type of [`delete_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -921,7 +921,7 @@ pub async fn deposit_cycles(arg: DepositCyclesArgs, cycles: u128) -> CallResult<
         .await
 }
 
-/// Argument type of [deposit_cycles].
+/// Argument type of [`deposit_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -962,7 +962,7 @@ pub async fn http_request(arg: HttpRequestArgs, cycles: u128) -> CallResult<Http
         .await
 }
 
-/// Argument type of [http_request].
+/// Argument type of [`http_request`].
 #[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct HttpRequestArgs {
     /// The requested URL.
@@ -1052,7 +1052,7 @@ pub struct TransformContext {
 }
 
 impl TransformContext {
-    /// Constructs a [TransformContext] from a query method name and context.
+    /// Constructs a [`TransformContext`] from a query method name and context.
     /// The principal is assumed to be the ID of current canister.
     pub fn from_name(candid_function_name: String, context: Vec<u8>) -> Self {
         Self {
@@ -1175,7 +1175,7 @@ pub use transform_closure::http_request_with_closure;
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct EcdsaKeyId {
-    /// See [EcdsaCurve].
+    /// See [`EcdsaCurve`].
     pub curve: EcdsaCurve,
     /// Name.
     pub name: String,
@@ -1209,7 +1209,7 @@ pub async fn ecdsa_public_key(arg: EcdsaPublicKeyArgs) -> CallResult<EcdsaPublic
         .await
 }
 
-/// Argument type of [ecdsa_public_key].
+/// Argument type of [`ecdsa_public_key`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1222,7 +1222,7 @@ pub struct EcdsaPublicKeyArgs {
     pub key_id: EcdsaKeyId,
 }
 
-/// Response Type of [ecdsa_public_key].
+/// Response Type of [`ecdsa_public_key`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1258,7 +1258,7 @@ pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgs) -> CallResult<SignWithEcdsa
 /// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works#fees-for-the-t-ecdsa-production-key
 const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
 
-/// Argument type of [sign_with_ecdsa].
+/// Argument type of [`sign_with_ecdsa`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1272,7 +1272,7 @@ pub struct SignWithEcdsaArgs {
     pub key_id: EcdsaKeyId,
 }
 
-/// Response type of [sign_with_ecdsa].
+/// Response type of [`sign_with_ecdsa`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1293,7 +1293,7 @@ pub struct SignWithEcdsaResult {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct SchnorrKeyId {
-    /// See [SchnorrAlgorithm].
+    /// See [`SchnorrAlgorithm`].
     pub algorithm: SchnorrAlgorithm,
     /// Name.
     pub name: String,
@@ -1336,7 +1336,7 @@ pub async fn schnorr_public_key(arg: SchnorrPublicKeyArgs) -> CallResult<Schnorr
         .await
 }
 
-/// Argument Type of [schnorr_public_key].
+/// Argument Type of [`schnorr_public_key`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1349,7 +1349,7 @@ pub struct SchnorrPublicKeyArgs {
     pub key_id: SchnorrKeyId,
 }
 
-/// Response Type of [schnorr_public_key].
+/// Response Type of [`schnorr_public_key`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1385,7 +1385,7 @@ pub async fn sign_with_schnorr(arg: SignWithSchnorrArgs) -> CallResult<SignWithS
 /// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-production-key
 const SIGN_WITH_SCHNORR_FEE: u128 = 26_153_846_153;
 
-/// Argument Type of [sign_with_schnorr].
+/// Argument Type of [`sign_with_schnorr`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1399,7 +1399,7 @@ pub struct SignWithSchnorrArgs {
     pub key_id: SchnorrKeyId,
 }
 
-/// Response Type of [sign_with_schnorr].
+/// Response Type of [`sign_with_schnorr`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1427,7 +1427,7 @@ pub async fn node_metrics_history(
         .await
 }
 
-/// Argument type of [node_metrics_history].
+/// Argument type of [`node_metrics_history`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1438,10 +1438,10 @@ pub struct NodeMetricsHistoryArgs {
     pub start_at_timestamp_nanos: u64,
 }
 
-/// Return type of [node_metrics_history].
+/// Return type of [`node_metrics_history`].
 pub type NodeMetricsHistoryResult = Vec<NodeMetricsHistoryRecord>;
 
-/// A record in [NodeMetricsHistoryResult].
+/// A record in [`NodeMetricsHistoryResult`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1479,7 +1479,7 @@ pub async fn subnet_info(arg: SubnetInfoArgs) -> CallResult<SubnetInfoResult> {
         .await
 }
 
-/// Argument type of [subnet_info].
+/// Argument type of [`subnet_info`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1488,7 +1488,7 @@ pub struct SubnetInfoArgs {
     pub subnet_id: Principal,
 }
 
-/// Result type of [subnet_info].
+/// Result type of [`subnet_info`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1521,7 +1521,7 @@ pub async fn provisional_create_canister_with_cycles(
     .await
 }
 
-/// Argument type of [provisional_create_canister_with_cycles].
+/// Argument type of [`provisional_create_canister_with_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -1532,7 +1532,7 @@ pub struct ProvisionalCreateCanisterWithCyclesArgs {
     pub settings: Option<CanisterSettings>,
 }
 
-/// Result type of [provisional_create_canister_with_cycles].
+/// Result type of [`provisional_create_canister_with_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1561,7 +1561,7 @@ pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) 
     .await
 }
 
-/// Argument type of [provisional_top_up_canister].
+/// Argument type of [`provisional_top_up_canister`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1612,7 +1612,7 @@ pub async fn take_canister_snapshot(
         .map(|result| result.0)
 }
 
-/// Argument type of [take_canister_snapshot].
+/// Argument type of [`take_canister_snapshot`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1625,7 +1625,7 @@ pub struct TakeCanisterSnapshotArgs {
     pub replace_snapshot: Option<SnapshotId>,
 }
 
-/// Return type of [take_canister_snapshot].
+/// Return type of [`take_canister_snapshot`].
 pub type TakeCanisterSnapshotReturn = Snapshot;
 
 // take_canister_snapshot END -------------------------------------------------
@@ -1650,10 +1650,10 @@ pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgs) -> CallResult
         .await
 }
 
-/// Argument type of [load_canister_snapshot].
+/// Argument type of [`load_canister_snapshot`].
 ///
-/// Please note that this type is a reduced version of [LoadCanisterSnapshotArgsComplete].
-/// The `sender_canister_version` field is removed as it is set automatically in [load_canister_snapshot].
+/// Please note that this type is a reduced version of [`LoadCanisterSnapshotArgsComplete`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`load_canister_snapshot`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1664,12 +1664,12 @@ pub struct LoadCanisterSnapshotArgs {
     pub snapshot_id: SnapshotId,
 }
 
-/// Complete argument type of [load_canister_snapshot].
+/// Complete argument type of [`load_canister_snapshot`].
 ///
-/// Please note that this type is not used directly as the argument of [load_canister_snapshot].
-/// The function [load_canister_snapshot] takes [LoadCanisterSnapshotArgs] instead.
+/// Please note that this type is not used directly as the argument of [`load_canister_snapshot`].
+/// The function [`load_canister_snapshot`] takes [`LoadCanisterSnapshotArgs`] instead.
 ///
-/// If you want to manually call `load_canister_snapshot` (construct and invoke a [Call]), you should use this complete type.
+/// If you want to manually call `load_canister_snapshot` (construct and invoke a [`Call`]), you should use this complete type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1678,7 +1678,7 @@ pub struct LoadCanisterSnapshotArgsComplete {
     pub canister_id: CanisterId,
     /// ID of the snapshot to be loaded.
     pub snapshot_id: SnapshotId,
-    /// sender_canister_version must be set to ic_cdk::api::canister_version().
+    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
     pub sender_canister_version: Option<u64>,
 }
 
@@ -1698,7 +1698,7 @@ pub async fn list_canister_snapshots(
         .await
 }
 
-/// Argument type of [list_canister_snapshots].
+/// Argument type of [`list_canister_snapshots`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1707,7 +1707,7 @@ pub struct ListCanisterSnapshotsArgs {
     pub canister_id: CanisterId,
 }
 
-/// Return type of [list_canister_snapshots].
+/// Return type of [`list_canister_snapshots`].
 pub type ListCanisterSnapshotsReturn = Vec<Snapshot>;
 
 // list_canister_snapshots END ------------------------------------------------
@@ -1726,7 +1726,7 @@ pub async fn delete_canister_snapshot(arg: DeleteCanisterSnapshotArgs) -> CallRe
         .await
 }
 
-/// Argument type of [delete_canister_snapshot].
+/// Argument type of [`delete_canister_snapshot`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
