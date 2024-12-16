@@ -87,8 +87,6 @@ async fn test_basic() {
 }
 
 #[update]
-fn test_canister_info() {
-    
-}
+fn test_canister_info() {}
 
 fn main() {}

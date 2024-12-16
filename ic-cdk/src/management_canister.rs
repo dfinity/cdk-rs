@@ -142,12 +142,11 @@ pub async fn create_canister(
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "create_canister")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .with_guaranteed_response()
         .with_cycles(cycles)
-        .call::<(CreateCanisterResult,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [create_canister].
@@ -201,7 +200,7 @@ pub async fn update_settings(arg: UpdateSettingsArgs) -> CallResult<()> {
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "update_settings")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .call()
         .await
 }
@@ -248,10 +247,9 @@ pub struct UpdateSettingsArgsComplete {
 /// See [IC method `upload_chunk`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_chunk).
 pub async fn upload_chunk(arg: UploadChunkArgs) -> CallResult<UploadChunkResult> {
     Call::new(Principal::management_canister(), "upload_chunk")
-        .with_args((arg,))
-        .call::<(UploadChunkResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [upload_chunk].
@@ -278,7 +276,7 @@ pub type UploadChunkResult = ChunkHash;
 /// See [IC method `clear_chunk_store`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-clear_chunk_store).
 pub async fn clear_chunk_store(arg: ClearChunkStoreArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "clear_chunk_store")
-        .with_args((arg,))
+        .with_arg(arg)
         .call()
         .await
 }
@@ -301,10 +299,9 @@ pub struct ClearChunkStoreArgs {
 /// See [IC method `stored_chunks`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stored_chunks).
 pub async fn stored_chunks(arg: StoredChunksArgs) -> CallResult<StoredChunksResult> {
     Call::new(Principal::management_canister(), "stored_chunks")
-        .with_args((arg,))
-        .call::<(StoredChunksResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [stored_chunks].
@@ -335,7 +332,7 @@ pub async fn install_code(arg: InstallCodeArgs) -> CallResult<()> {
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "install_code")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .call()
         .await
 }
@@ -481,7 +478,7 @@ pub async fn install_chunked_code(arg: InstallChunkedCodeArgs) -> CallResult<()>
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "install_chunked_code")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .call()
         .await
 }
@@ -551,7 +548,7 @@ pub async fn uninstall_code(arg: UninstallCodeArgs) -> CallResult<()> {
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "uninstall_code")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .call()
         .await
 }
@@ -593,7 +590,7 @@ pub struct UninstallCodeArgsComplete {
 /// See [IC method `start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
 pub async fn start_canister(arg: StartCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "start_canister")
-        .with_args((arg,))
+        .with_arg(arg)
         .call()
         .await
 }
@@ -616,7 +613,7 @@ pub struct StartCanisterArgs {
 /// See [IC method `stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
 pub async fn stop_canister(arg: StopCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "stop_canister")
-        .with_args((arg,))
+        .with_arg(arg)
         .call()
         .await
 }
@@ -639,10 +636,9 @@ pub struct StopCanisterArgs {
 /// See [IC method `canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
 pub async fn canister_status(arg: CanisterStatusArgs) -> CallResult<CanisterStatusResult> {
     Call::new(Principal::management_canister(), "canister_status")
-        .with_args((arg,))
-        .call::<(CanisterStatusResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [canister_status].
@@ -720,10 +716,9 @@ pub struct QueryStats {
 /// See [IC method `canister_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_info).
 pub async fn canister_info(arg: CanisterInfoArgs) -> CallResult<CanisterInfoResult> {
     Call::new(Principal::management_canister(), "canister_info")
-        .with_args((arg,))
-        .call::<(CanisterInfoResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [canister_info].
@@ -896,7 +891,7 @@ pub struct CanisterChange {
 /// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
 pub async fn delete_canister(arg: DeleteCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "delete_canister")
-        .with_args((arg,))
+        .with_arg(arg)
         .call()
         .await
 }
@@ -919,7 +914,7 @@ pub struct DeleteCanisterArgs {
 /// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
 pub async fn deposit_cycles(arg: DepositCyclesArgs, cycles: u128) -> CallResult<()> {
     Call::new(Principal::management_canister(), "deposit_cycles")
-        .with_args((arg,))
+        .with_arg(arg)
         .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
@@ -944,9 +939,8 @@ pub struct DepositCyclesArgs {
 /// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
 pub async fn raw_rand() -> CallResult<Vec<u8>> {
     Call::new(Principal::management_canister(), "raw_rand")
-        .call::<(Vec<u8>,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 // raw_rand END ---------------------------------------------------------------
@@ -961,12 +955,11 @@ pub async fn raw_rand() -> CallResult<Vec<u8>> {
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn http_request(arg: HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
     Call::new(Principal::management_canister(), "http_request")
-        .with_args((arg,))
+        .with_arg(arg)
         .with_guaranteed_response()
         .with_cycles(cycles)
-        .call::<(HttpRequestResult,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [http_request].
@@ -1211,10 +1204,9 @@ impl Default for EcdsaCurve {
 /// See [IC method `ecdsa_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-ecdsa_public_key).
 pub async fn ecdsa_public_key(arg: EcdsaPublicKeyArgs) -> CallResult<EcdsaPublicKeyResult> {
     Call::new(Principal::management_canister(), "ecdsa_public_key")
-        .with_args((arg,))
-        .call::<(EcdsaPublicKeyResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [ecdsa_public_key].
@@ -1256,12 +1248,11 @@ pub struct EcdsaPublicKeyResult {
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
 pub async fn sign_with_ecdsa(arg: SignWithEcdsaArgs) -> CallResult<SignWithEcdsaResult> {
     Call::new(Principal::management_canister(), "sign_with_ecdsa")
-        .with_args((arg,))
+        .with_arg(arg)
         .with_guaranteed_response()
         .with_cycles(SIGN_WITH_ECDSA_FEE)
-        .call::<(SignWithEcdsaResult,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works#fees-for-the-t-ecdsa-production-key
@@ -1340,10 +1331,9 @@ pub enum SchnorrAlgorithm {
 /// See [IC method `schnorr_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-schnorr_public_key).
 pub async fn schnorr_public_key(arg: SchnorrPublicKeyArgs) -> CallResult<SchnorrPublicKeyResult> {
     Call::new(Principal::management_canister(), "schnorr_public_key")
-        .with_args((arg,))
-        .call::<(SchnorrPublicKeyResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument Type of [schnorr_public_key].
@@ -1385,12 +1375,11 @@ pub struct SchnorrPublicKeyResult {
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
 pub async fn sign_with_schnorr(arg: SignWithSchnorrArgs) -> CallResult<SignWithSchnorrResult> {
     Call::new(Principal::management_canister(), "sign_with_schnorr")
-        .with_args((arg,))
+        .with_arg(arg)
         .with_guaranteed_response()
         .with_cycles(SIGN_WITH_SCHNORR_FEE)
-        .call::<(SignWithSchnorrResult,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-production-key
@@ -1433,10 +1422,9 @@ pub async fn node_metrics_history(
     arg: NodeMetricsHistoryArgs,
 ) -> CallResult<NodeMetricsHistoryResult> {
     Call::new(Principal::management_canister(), "node_metrics_history")
-        .with_args((arg,))
-        .call::<(NodeMetricsHistoryResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [node_metrics_history].
@@ -1486,10 +1474,9 @@ pub struct NodeMetrics {
 /// See [IC method `subnet_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-subnet-info).
 pub async fn subnet_info(arg: SubnetInfoArgs) -> CallResult<SubnetInfoResult> {
     Call::new(Principal::management_canister(), "subnet_info")
-        .with_args((arg,))
-        .call::<(SubnetInfoResult,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [subnet_info].
@@ -1528,11 +1515,10 @@ pub async fn provisional_create_canister_with_cycles(
         Principal::management_canister(),
         "provisional_create_canister_with_cycles",
     )
-    .with_args((arg,))
+    .with_arg(arg)
     .with_guaranteed_response()
-    .call::<(ProvisionalCreateCanisterWithCyclesResult,)>()
+    .call()
     .await
-    .map(|result| result.0)
 }
 
 /// Argument type of [provisional_create_canister_with_cycles].
@@ -1569,7 +1555,7 @@ pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) 
         Principal::management_canister(),
         "provisional_top_up_canister",
     )
-    .with_args((arg,))
+    .with_arg(arg)
     .with_guaranteed_response()
     .call()
     .await
@@ -1619,7 +1605,7 @@ pub async fn take_canister_snapshot(
     arg: TakeCanisterSnapshotArgs,
 ) -> CallResult<TakeCanisterSnapshotReturn> {
     Call::new(Principal::management_canister(), "take_canister_snapshot")
-        .with_args((arg,))
+        .with_arg(arg)
         .with_guaranteed_response()
         .call::<(TakeCanisterSnapshotReturn,)>()
         .await
@@ -1658,7 +1644,7 @@ pub async fn load_canister_snapshot(arg: LoadCanisterSnapshotArgs) -> CallResult
         sender_canister_version: Some(canister_version()),
     };
     Call::new(Principal::management_canister(), "load_canister_snapshot")
-        .with_args((complete_arg,))
+        .with_arg(complete_arg)
         .with_guaranteed_response()
         .call()
         .await
@@ -1707,10 +1693,9 @@ pub async fn list_canister_snapshots(
     arg: ListCanisterSnapshotsArgs,
 ) -> CallResult<ListCanisterSnapshotsReturn> {
     Call::new(Principal::management_canister(), "list_canister_snapshots")
-        .with_args((arg,))
-        .call::<(ListCanisterSnapshotsReturn,)>()
+        .with_arg(arg)
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [list_canister_snapshots].
@@ -1736,7 +1721,7 @@ pub type ListCanisterSnapshotsReturn = Vec<Snapshot>;
 /// See [IC method `delete_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister_snapshot).
 pub async fn delete_canister_snapshot(arg: DeleteCanisterSnapshotArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "delete_canister_snapshot")
-        .with_args((arg,))
+        .with_arg(arg)
         .call()
         .await
 }
