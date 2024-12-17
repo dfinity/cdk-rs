@@ -173,7 +173,7 @@ pub struct CreateCanisterArgs {
 pub struct CreateCanisterArgsComplete {
     /// See [`CanisterSettings`].
     pub settings: Option<CanisterSettings>,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 
@@ -234,7 +234,7 @@ pub struct UpdateSettingsArgsComplete {
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
     pub settings: CanisterSettings,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 
@@ -456,7 +456,7 @@ pub struct InstallCodeArgsComplete {
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
     #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 
@@ -531,7 +531,7 @@ pub struct InstallChunkedCodeArgsComplete {
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
     #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 
@@ -577,7 +577,7 @@ pub struct UninstallCodeArgs {
 pub struct UninstallCodeArgsComplete {
     /// Canister ID.
     pub canister_id: CanisterId,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 
@@ -1677,7 +1677,7 @@ pub struct LoadCanisterSnapshotArgsComplete {
     pub canister_id: CanisterId,
     /// ID of the snapshot to be loaded.
     pub snapshot_id: SnapshotId,
-    /// sender_canister_version must be set to [`canister_version`](crate::api::canister_version).
+    /// sender_canister_version must be set to [`canister_version`].
     pub sender_canister_version: Option<u64>,
 }
 

@@ -176,7 +176,7 @@ async fn metrics(subnet_id: Principal) {
     let result = node_metrics_history(arg).await.unwrap();
     for record in result {
         assert!(record.timestamp_nanos > 0);
-        assert!(record.node_metrics.len() > 0);
+        assert!(!record.node_metrics.is_empty());
     }
 }
 
