@@ -1,12 +1,15 @@
 use candid::Principal;
 use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, PocketIc};
+use pocket_ic::{call_candid, PocketIcBuilder};
 use sha2::Digest;
 
 #[test]
 fn test_chunk() {
-    let pic = PocketIc::new();
+    let pic = PocketIcBuilder::new()
+        .with_application_subnet()
+        .with_nonmainnet_features(true)
+        .build();
     let wasm = cargo_build_canister("chunk");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
@@ -18,7 +21,7 @@ fn test_chunk() {
         "call_create_canister",
         (),
     )
-    .expect("Error calling call_create_canister");
+    .unwrap();
 
     let wasm_module = b"\x00asm\x01\x00\x00\x00".to_vec();
     let wasm_module_hash = sha2::Sha256::digest(&wasm_module).to_vec();
@@ -34,7 +37,7 @@ fn test_chunk() {
         "call_upload_chunk",
         (target_canister_id, chunk1.clone()),
     )
-    .expect("Error calling call_upload_chunk");
+    .unwrap();
     assert_eq!(&hash1_return, &hash1_expected);
 
     let () = call_candid(
@@ -44,7 +47,7 @@ fn test_chunk() {
         "call_clear_chunk_store",
         (target_canister_id,),
     )
-    .expect("Error calling call_clear_chunk_store");
+    .unwrap();
 
     let (_hash1_return,): (Vec<u8>,) = call_candid(
         &pic,
@@ -53,7 +56,7 @@ fn test_chunk() {
         "call_upload_chunk",
         (target_canister_id, chunk1),
     )
-    .expect("Error calling call_upload_chunk");
+    .unwrap();
     let (_hash2_return,): (Vec<u8>,) = call_candid(
         &pic,
         canister_id,
@@ -61,7 +64,7 @@ fn test_chunk() {
         "call_upload_chunk",
         (target_canister_id, chunk2),
     )
-    .expect("Error calling call_upload_chunk");
+    .unwrap();
 
     let (hashes,): (Vec<Vec<u8>>,) = call_candid(
         &pic,
@@ -70,7 +73,7 @@ fn test_chunk() {
         "call_stored_chunks",
         (target_canister_id,),
     )
-    .expect("Error calling call_stored_chunks");
+    .unwrap();
     // the hashes returned are not guaranteed to be in order
     assert_eq!(hashes.len(), 2);
     assert!(hashes.contains(&hash1_expected));
@@ -88,5 +91,5 @@ fn test_chunk() {
             wasm_module_hash,
         ),
     )
-    .expect("Error calling call_install_chunked_code");
+    .unwrap();
 }
