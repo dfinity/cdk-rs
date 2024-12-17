@@ -34,7 +34,7 @@ fn test_one_http_request(pic: &PocketIc, canister_id: Principal, method: &str) {
             Encode!(&()).unwrap(),
         )
         .unwrap();
-    let canister_http_requests = tick_until_next_request(&pic);
+    let canister_http_requests = tick_until_next_request(pic);
     assert_eq!(canister_http_requests.len(), 1);
     let request = &canister_http_requests[0];
     pic.mock_canister_http_response(MockCanisterHttpResponse {
