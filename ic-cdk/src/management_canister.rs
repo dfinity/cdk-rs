@@ -952,7 +952,7 @@ pub async fn raw_rand() -> CallResult<Vec<u8>> {
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
-/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
+/// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
 pub async fn http_request(arg: HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
     Call::new(Principal::management_canister(), "http_request")
         .with_arg(arg)
