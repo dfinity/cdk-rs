@@ -1,3 +1,4 @@
+use candid::Principal;
 use ic_cdk::api::canister_self;
 use ic_cdk::management_canister::*;
 use ic_cdk::update;
@@ -163,6 +164,28 @@ async fn schnorr() {
     };
     let SignWithSchnorrResult { signature } = sign_with_schnorr(arg).await.unwrap();
     assert_eq!(signature.len(), 64);
+}
+
+#[update]
+async fn metrics(subnet_id: Principal) {
+    // node_metrics_history
+    let arg = NodeMetricsHistoryArgs {
+        subnet_id,
+        start_at_timestamp_nanos: 0,
+    };
+    let result = node_metrics_history(arg).await.unwrap();
+    for record in result {
+        assert!(record.timestamp_nanos > 0);
+        assert!(record.node_metrics.len() > 0);
+    }
+}
+
+#[update]
+async fn subnet(subnet_id: Principal) {
+    // subnet_info
+    let arg = SubnetInfoArgs { subnet_id };
+    let result = subnet_info(arg).await.unwrap();
+    assert!(!result.replica_version.is_empty());
 }
 
 #[update]

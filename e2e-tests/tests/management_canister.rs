@@ -13,6 +13,7 @@ fn test_management_canister() {
 
     let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();
+    let subnet_id = pic.get_subnet(canister_id).unwrap();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
     pic.install_canister(canister_id, wasm, vec![], None);
     let () = call_candid(&pic, canister_id, RawEffectivePrincipal::None, "basic", ()).unwrap();
@@ -23,6 +24,22 @@ fn test_management_canister() {
         RawEffectivePrincipal::None,
         "schnorr",
         (),
+    )
+    .unwrap();
+    let () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "metrics",
+        (subnet_id,),
+    )
+    .unwrap();
+    let () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "subnet",
+        (subnet_id,),
     )
     .unwrap();
     let () = call_candid(
