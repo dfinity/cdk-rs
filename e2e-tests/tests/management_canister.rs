@@ -4,7 +4,7 @@ use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::PocketIcBuilder;
 
 #[test]
-fn test_call_management() {
+fn test_management_canister() {
     let pic = PocketIcBuilder::new()
         .with_application_subnet()
         .with_nonmainnet_features(true)
@@ -12,13 +12,22 @@ fn test_call_management() {
 
     let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, 300_000_000_000_000_000_000_000_000u128);
+    pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
     pic.install_canister(canister_id, wasm, vec![], None);
+    let () = call_candid(&pic, canister_id, RawEffectivePrincipal::None, "basic", ()).unwrap();
     let () = call_candid(
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "test_basic",
+        "provisional",
+        (),
+    )
+    .unwrap();
+    let () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "snapshots",
         (),
     )
     .unwrap();

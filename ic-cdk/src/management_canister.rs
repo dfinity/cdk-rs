@@ -1550,7 +1550,7 @@ pub struct ProvisionalCreateCanisterWithCyclesResult {
 /// This method is only available in local development instances.
 ///
 /// See [IC method `provisional_top_up_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_top_up_canister).
-pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) -> CallResult<()> {
+pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgs) -> CallResult<()> {
     Call::new(
         Principal::management_canister(),
         "provisional_top_up_canister",
@@ -1565,7 +1565,7 @@ pub async fn provisional_top_up_canister(arg: ProvisionalTopUpCanisterArgument) 
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct ProvisionalTopUpCanisterArgument {
+pub struct ProvisionalTopUpCanisterArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
     /// Amount of cycles to be added.
@@ -1607,9 +1607,8 @@ pub async fn take_canister_snapshot(
     Call::new(Principal::management_canister(), "take_canister_snapshot")
         .with_arg(arg)
         .with_guaranteed_response()
-        .call::<(TakeCanisterSnapshotReturn,)>()
+        .call()
         .await
-        .map(|result| result.0)
 }
 
 /// Argument type of [`take_canister_snapshot`].
