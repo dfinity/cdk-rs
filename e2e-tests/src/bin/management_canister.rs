@@ -1,6 +1,7 @@
 use ic_cdk::api::canister_self;
 use ic_cdk::management_canister::*;
 use ic_cdk::update;
+use sha2::Digest;
 
 #[update]
 async fn basic() {
@@ -86,6 +87,82 @@ async fn basic() {
     // raw_rand
     let bytes = raw_rand().await.unwrap();
     assert_eq!(bytes.len(), 32);
+}
+
+#[update]
+async fn ecdsa() {
+    // ecdsa_public_key
+    let key_id = EcdsaKeyId {
+        curve: EcdsaCurve::Secp256k1,
+        name: "test_key_1".to_string(),
+    };
+    let derivation_path = vec![];
+    let arg = EcdsaPublicKeyArgs {
+        canister_id: None,
+        derivation_path: derivation_path.clone(),
+        key_id: key_id.clone(),
+    };
+    let EcdsaPublicKeyResult {
+        public_key,
+        chain_code,
+    } = ecdsa_public_key(arg).await.unwrap();
+    assert_eq!(public_key.len(), 33);
+    assert_eq!(chain_code.len(), 32);
+
+    let message = "hello world";
+    let message_hash = sha2::Sha256::digest(message).to_vec();
+    let arg = SignWithEcdsaArgs {
+        message_hash,
+        derivation_path,
+        key_id,
+    };
+    let SignWithEcdsaResult { signature } = sign_with_ecdsa(arg).await.unwrap();
+    assert_eq!(signature.len(), 64);
+}
+
+#[update]
+async fn schnorr() {
+    // schnorr_public_key
+    let key_id = SchnorrKeyId {
+        algorithm: SchnorrAlgorithm::Bip340secp256k1,
+        name: "test_key_1".to_string(),
+    };
+    let derivation_path = vec![];
+    let arg = SchnorrPublicKeyArgs {
+        canister_id: None,
+        derivation_path: derivation_path.clone(),
+        key_id: key_id.clone(),
+    };
+    let SchnorrPublicKeyResult {
+        public_key,
+        chain_code,
+    } = schnorr_public_key(arg).await.unwrap();
+    assert_eq!(public_key.len(), 33);
+    assert_eq!(chain_code.len(), 32);
+    let arg = SchnorrPublicKeyArgs {
+        canister_id: None,
+        derivation_path: derivation_path.clone(),
+        key_id: SchnorrKeyId {
+            algorithm: SchnorrAlgorithm::Ed25519,
+            name: "test_key_1".to_string(),
+        },
+    };
+    let SchnorrPublicKeyResult {
+        public_key,
+        chain_code,
+    } = schnorr_public_key(arg).await.unwrap();
+    assert_eq!(public_key.len(), 32);
+    assert_eq!(chain_code.len(), 32);
+
+    // sign_with_schnorr
+    let message = "hello world".into();
+    let arg = SignWithSchnorrArgs {
+        message,
+        derivation_path,
+        key_id,
+    };
+    let SignWithSchnorrResult { signature } = sign_with_schnorr(arg).await.unwrap();
+    assert_eq!(signature.len(), 64);
 }
 
 #[update]
