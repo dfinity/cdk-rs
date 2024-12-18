@@ -66,7 +66,7 @@ fn on_notify() {
 #[update]
 fn notify(whom: Principal, method: String) {
     ic_cdk::notify(whom, method.as_str(), ()).unwrap_or_else(|reject| {
-        ic_cdk::api::trap(&format!(
+        ic_cdk::api::trap(format!(
             "failed to notify (callee={}, method={}): {:?}",
             whom, method, reject
         ))

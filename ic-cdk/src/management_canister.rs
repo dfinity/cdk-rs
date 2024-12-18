@@ -1118,7 +1118,7 @@ mod transform_closure {
         let key = DefaultKey::from(KeyData::from_ffi(int));
         let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
         let Some(func) = func else {
-            crate::trap(&format!("Missing transform function for request {int}"));
+            crate::trap(format!("Missing transform function for request {int}"));
         };
         let transformed = func(args.response);
         reply((transformed,))
