@@ -1,16 +1,10 @@
-//! System API and low level functions for it.
+//! System API bindings.
 use candid::Principal;
 use std::convert::TryFrom;
 
 pub mod call;
 pub mod management_canister;
 pub mod stable;
-
-/// Gets the byte length of the message argument data.
-pub fn msg_arg_data_size() -> usize {
-    // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    unsafe { ic0::msg_arg_data_size() }
-}
 
 /// Gets the message argument data.
 pub fn msg_arg_data() -> Vec<u8> {
@@ -25,14 +19,6 @@ pub fn msg_arg_data() -> Vec<u8> {
         bytes.set_len(len);
     }
     bytes
-}
-
-/// Gets the byte length of the message caller ID.
-///
-/// See [`msg_caller`] for more information.
-pub fn msg_caller_size() -> usize {
-    // SAFETY: ic0.msg_caller_size is always safe to call.
-    unsafe { ic0::msg_caller_size() }
 }
 
 /// Gets the identity of the caller, which may be a canister id or a user id.
