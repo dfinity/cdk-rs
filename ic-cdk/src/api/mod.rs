@@ -356,6 +356,7 @@ pub fn caller() -> Principal {
 }
 
 /// Returns the canister id as a blob.
+#[deprecated(note = "Use `canister_self` instead")]
 pub fn id() -> Principal {
     // SAFETY: ic0.canister_self_size is always safe to call.
     let len = unsafe { ic0::canister_self_size() };

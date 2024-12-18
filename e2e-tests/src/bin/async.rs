@@ -31,7 +31,7 @@ async fn panic_after_async() {
     let value = *lock;
     // Do not drop the lock before the await point.
 
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "inc", (value,))
+    let _: (u64,) = ic_cdk::call(ic_cdk::api::canister_self(), "inc", (value,))
         .await
         .expect("failed to call self");
     ic_cdk::api::trap("Goodbye, cruel world.")
@@ -47,7 +47,7 @@ async fn panic_twice() {
 }
 
 async fn async_then_panic() {
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::id(), "on_notify", ())
+    let _: (u64,) = ic_cdk::call(ic_cdk::api::canister_self(), "on_notify", ())
         .await
         .expect("Failed to call self");
     panic!();
@@ -89,8 +89,12 @@ async fn greet_self(greeter: Principal) -> String {
 #[update]
 async fn invalid_reply_payload_does_not_trap() -> String {
     // We're decoding an integer instead of a string, decoding must fail.
-    let result: Result<(u64,), _> =
-        ic_cdk::call(ic_cdk::api::id(), "greet", ("World".to_string(),)).await;
+    let result: Result<(u64,), _> = ic_cdk::call(
+        ic_cdk::api::canister_self(),
+        "greet",
+        ("World".to_string(),),
+    )
+    .await;
 
     match result {
         Ok((_n,)) => ic_cdk::api::trap("expected the decoding to fail"),
