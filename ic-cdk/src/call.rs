@@ -1,5 +1,5 @@
 //! APIs to make and manage calls in the canister.
-use crate::api::msg_arg_data;
+use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, encode_args, encode_one, CandidType, Deserialize, Principal};
 use std::future::Future;
@@ -804,22 +804,4 @@ fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
 /// Converts a encoder error to a CallError.
 fn encoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
     CallError::CandidEncodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
-}
-
-/// Returns the reject code, if the current function is invoked as a reject callback.
-fn msg_reject_code() -> u32 {
-    // SAFETY: ic0.msg_reject_code is always safe to call.
-    unsafe { ic0::msg_reject_code() }
-}
-
-/// Gets the reject message. Traps if there is no reject message (i.e. if reject_code is 0).
-fn msg_reject_msg() -> String {
-    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len = unsafe { ic0::msg_reject_msg_size() };
-    let mut bytes = vec![0u8; len];
-    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
-    unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
 }

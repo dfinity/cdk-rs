@@ -51,6 +51,28 @@ pub fn msg_caller() -> Principal {
     Principal::try_from(&bytes).unwrap()
 }
 
+/// Returns the reject code, if the current function is invoked as a reject callback.
+pub fn msg_reject_code() -> u32 {
+    // SAFETY: ic0.msg_reject_code is always safe to call.
+    unsafe { ic0::msg_reject_code() }
+}
+
+/// Gets the reject message.
+///
+/// This function can only be called in the reject callback.
+///
+/// Traps if there is no reject message (i.e. if reject_code is 0).
+pub fn msg_reject_msg() -> String {
+    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
+    let len = unsafe { ic0::msg_reject_msg_size() };
+    let mut bytes = vec![0u8; len];
+    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
+    unsafe {
+        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
 /// Replies to the sender with the data.
 pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
