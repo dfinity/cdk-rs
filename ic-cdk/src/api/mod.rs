@@ -181,7 +181,154 @@ pub fn accept_message() {
     unsafe { ic0::accept_message() }
 }
 
+/// Sets the certified data of this canister.
+///
+/// Canisters can store up to 32 bytes of data that is certified by
+/// the system on a regular basis.  One can call [data_certificate]
+/// function from a query call to get a certificate authenticating the
+/// value set by calling this function.
+///
+/// This function can only be called from the following contexts:
+///  * "canister_init", "canister_pre_upgrade" and "canister_post_upgrade"
+///    hooks.
+///  * "canister_update" calls.
+///  * reply or reject callbacks.
+///
+/// # Panics
+///
+/// * This function traps if data.len() > 32.
+/// * This function traps if it's called from an illegal context
+///   (e.g., from a query call).
+pub fn certified_data_set(data: &[u8]) {
+    // SAFETY: because data is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
+    unsafe { ic0::certified_data_set(data.as_ptr() as usize, data.len()) }
+}
+
+/// When called from a query call, returns the data certificate authenticating
+/// certified_data set by this canister.
+///
+/// Returns None if called not from a query call.
+pub fn data_certificate() -> Option<Vec<u8>> {
+    // SAFETY: ic0.data_certificate_present is always safe to call.
+    if unsafe { ic0::data_certificate_present() } == 0 {
+        return None;
+    }
+    // SAFETY: ic0.data_certificate_size is always safe to call.
+    let n = unsafe { ic0::data_certificate_size() };
+    let mut buf = vec![0u8; n];
+    // SAFETY: Because `buf` is mutable and allocated to `n` bytes, it is valid to receive from ic0.data_certificate_bytes with no offset
+    unsafe {
+        ic0::data_certificate_copy(buf.as_mut_ptr() as usize, 0, n);
+    }
+    Some(buf)
+}
+
+/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01)
+pub fn time() -> u64 {
+    // SAFETY: ic0.time is always safe to call.
+    unsafe { ic0::time() }
+}
+
+/// Sets global timer.
+///
+/// The canister can set a global timer to make the system
+/// schedule a call to the exported `canister_global_timer`
+/// Wasm method after the specified time.
+/// The time must be provided as nanoseconds since 1970-01-01.
+///
+/// The function returns the previous value of the timer.
+/// If no timer is set before invoking the function, then the function returns zero.
+///
+/// Passing zero as an argument to the function deactivates the timer and thus
+/// prevents the system from scheduling calls to the canister's `canister_global_timer` Wasm method.
+pub fn global_timer_set(timestamp: u64) -> u64 {
+    // SAFETY: ic0.global_timer_set is always safe to call.
+    unsafe { ic0::global_timer_set(timestamp) }
+}
+
+/// Gets the value of specified performance counter.
+///
+/// Supported counter types:
+/// * `0` : current execution instruction counter. The number of WebAssembly
+///         instructions the canister has executed since the beginning of the
+///         current Message execution.
+/// * `1` : call context instruction counter. The number of WebAssembly
+///         instructions the canister has executed within the call context
+///         of the current Message execution since Call context creation.
+///         The counter monotonically increases across all message executions
+///         in the call context until the corresponding call context is removed.
+#[inline]
+pub fn performance_counter(counter_type: u32) -> u64 {
+    // SAFETY: ic0.performance_counter is always safe to call.
+    unsafe { ic0::performance_counter(counter_type) }
+}
+
+/// Returns the number of instructions that the canister executed since the last [entry
+/// point](https://internetcomputer.org/docs/current/references/ic-interface-spec/#entry-points).
+#[inline]
+pub fn instruction_counter() -> u64 {
+    performance_counter(0)
+}
+
+/// Returns the number of WebAssembly instructions the canister has executed
+/// within the call context of the current Message execution since
+/// Call context creation.
+///
+/// The counter monotonically increases across all message executions
+/// in the call context until the corresponding call context is removed.
+#[inline]
+pub fn call_context_instruction_counter() -> u64 {
+    performance_counter(1)
+}
+
+/// Determines if a Principal is a controller of the canister.
+pub fn is_controller(principal: &Principal) -> bool {
+    let slice = principal.as_slice();
+    // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
+    unsafe { ic0::is_controller(slice.as_ptr() as usize, slice.len()) != 0 }
+}
+
+/// Checks if in replicated execution.
+///
+/// The canister can check whether it is currently running in replicated or non replicated execution.
+pub fn in_replicated_execution() -> bool {
+    // SAFETY: ic0.in_replicated_execution is always safe to call.
+    match unsafe { ic0::in_replicated_execution() } {
+        0 => false,
+        1 => true,
+        _ => unreachable!(),
+    }
+}
+
+/// Emits textual trace messages.
+///
+/// On the "real" network, these do not do anything.
+///
+/// When executing in an environment that supports debugging, this copies out the data
+/// and logs, prints or stores it in an environment-appropriate way.
+pub fn debug_print<T: AsRef<str>>(data: T) {
+    let buf = data.as_ref();
+    // SAFETY: `buf` is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
+    unsafe {
+        ic0::debug_print(buf.as_ptr() as usize, buf.len());
+    }
+}
+
+/// Traps with the given message.
+///
+/// The environment may copy out the data and log, print or store it in an environment-appropriate way,
+/// or include it in system-generated reject messages where appropriate.
+pub fn trap<T: AsRef<str>>(data: T) -> ! {
+    let buf = data.as_ref();
+    // SAFETY: `buf` is a readable sequence of bytes and therefore can be passed to ic0.trap.
+    unsafe {
+        ic0::trap(buf.as_ptr() as usize, buf.len());
+    }
+    unreachable!()
+}
+
 // # Deprecated API bindings
+//
 // The following functions are deprecated and will be removed in the future.
 // They are kept here for compatibility with existing code.
 
@@ -192,21 +339,6 @@ pub fn print<S: std::convert::AsRef<str>>(s: S) {
     unsafe {
         ic0::debug_print(s.as_ptr() as usize, s.len());
     }
-}
-
-/// Traps with the given message.
-pub fn trap(message: &str) -> ! {
-    // SAFETY: `message`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.trap.
-    unsafe {
-        ic0::trap(message.as_ptr() as usize, message.len());
-    }
-    unreachable!()
-}
-
-/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01)
-pub fn time() -> u64 {
-    // SAFETY: ic0.time is always safe to call.
-    unsafe { ic0::time() }
 }
 
 /// Returns the caller of the current call.
@@ -264,68 +396,6 @@ pub fn set_certified_data(data: &[u8]) {
     unsafe { ic0::certified_data_set(data.as_ptr() as usize, data.len()) }
 }
 
-/// When called from a query call, returns the data certificate authenticating
-/// certified_data set by this canister.
-///
-/// Returns None if called not from a query call.
-pub fn data_certificate() -> Option<Vec<u8>> {
-    // SAFETY: ic0.data_certificate_present is always safe to call.
-    if unsafe { ic0::data_certificate_present() } == 0 {
-        return None;
-    }
-
-    // SAFETY: ic0.data_certificate_size is always safe to call.
-    let n = unsafe { ic0::data_certificate_size() };
-    let mut buf = vec![0u8; n];
-    // SAFETY: Because `buf` is mutable and allocated to `n` bytes, it is valid to receive from ic0.data_certificate_bytes with no offset
-    unsafe {
-        ic0::data_certificate_copy(buf.as_mut_ptr() as usize, 0, n);
-    }
-    Some(buf)
-}
-
-/// Returns the number of instructions that the canister executed since the last [entry
-/// point](https://internetcomputer.org/docs/current/references/ic-interface-spec/#entry-points).
-#[inline]
-pub fn instruction_counter() -> u64 {
-    performance_counter(0)
-}
-
-/// Returns the number of WebAssembly instructions the canister has executed
-/// within the call context of the current Message execution since
-/// Call context creation.
-///
-/// The counter monotonically increases across all message executions
-/// in the call context until the corresponding call context is removed.
-#[inline]
-pub fn call_context_instruction_counter() -> u64 {
-    performance_counter(1)
-}
-
-/// Gets the value of specified performance counter.
-///
-/// Supported counter types:
-/// * `0` : current execution instruction counter. The number of WebAssembly
-///         instructions the canister has executed since the beginning of the
-///         current Message execution.
-/// * `1` : call context instruction counter. The number of WebAssembly
-///         instructions the canister has executed within the call context
-///         of the current Message execution since Call context creation.
-///         The counter monotonically increases across all message executions
-///         in the call context until the corresponding call context is removed.
-#[inline]
-pub fn performance_counter(counter_type: u32) -> u64 {
-    // SAFETY: ic0.performance_counter is always safe to call.
-    unsafe { ic0::performance_counter(counter_type) }
-}
-
-/// Determines if a Principal is a controller of the canister.
-pub fn is_controller(principal: &Principal) -> bool {
-    let slice = principal.as_slice();
-    // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
-    unsafe { ic0::is_controller(slice.as_ptr() as usize, slice.len()) != 0 }
-}
-
 /// Sets global timer.
 ///
 /// The canister can set a global timer to make the system
@@ -341,16 +411,4 @@ pub fn is_controller(principal: &Principal) -> bool {
 pub fn set_global_timer(timestamp: u64) -> u64 {
     // SAFETY: ic0.global_timer_set is always safe to call.
     unsafe { ic0::global_timer_set(timestamp) }
-}
-
-/// Checks if in replicated execution.
-///
-/// The canister can check whether it is currently running in replicated or non replicated execution.
-pub fn in_replicated_execution() -> bool {
-    // SAFETY: ic0.in_replicated_execution is always safe to call.
-    match unsafe { ic0::in_replicated_execution() } {
-        0 => false,
-        1 => true,
-        _ => unreachable!(),
-    }
 }
