@@ -6,6 +6,8 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
+// # Method arguments =========================================================
+
 /// Gets the byte length of the message argument data.
 pub fn msg_arg_data_size() -> usize {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
@@ -48,6 +50,28 @@ pub fn msg_caller() -> Principal {
         ic0::msg_caller_copy(bytes.as_mut_ptr() as usize, 0, len);
     }
     Principal::try_from(&bytes).unwrap()
+}
+
+// # Responding ===============================================================
+
+/// Replies to the sender with the data.
+pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
+    let buf = data.as_ref();
+    if !buf.is_empty() {
+        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reply.
+        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len()) }
+    };
+    // SAFETY: ic0.msg_reply is always safe to call.
+    unsafe { ic0::msg_reply() };
+}
+
+/// Rejects the call with a diagnostic message.
+pub fn msg_reject<T: AsRef<str>>(message: T) {
+    let buf = message.as_ref();
+    // SAFETY: `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to ic0.msg_reject.
+    unsafe {
+        ic0::msg_reject(buf.as_ptr() as usize, buf.len());
+    }
 }
 
 // # Deprecated API bindings
