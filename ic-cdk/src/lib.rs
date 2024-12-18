@@ -20,6 +20,7 @@ mod futures;
 mod macros;
 pub mod management_canister;
 mod printer;
+pub mod stable;
 pub mod storage;
 
 use std::sync::atomic::{AtomicBool, Ordering};
