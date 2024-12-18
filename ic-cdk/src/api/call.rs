@@ -1,4 +1,6 @@
 //! APIs to make and manage calls in the canister.
+
+#![allow(deprecated)]
 use crate::api::trap;
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{

@@ -333,6 +333,7 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
 // They are kept here for compatibility with existing code.
 
 /// Prints the given message.
+#[deprecated(note = "Use `debug_print` instead")]
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
     // SAFETY: `s`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
