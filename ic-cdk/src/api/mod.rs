@@ -27,6 +27,29 @@ pub fn msg_arg_data() -> Vec<u8> {
     bytes
 }
 
+/// Gets the byte length of the message caller ID.
+/// 
+/// See [`msg_caller`] for more information.
+pub fn msg_caller_size() -> usize {
+    // SAFETY: ic0.msg_caller_size is always safe to call.
+    unsafe { ic0::msg_caller_size() }
+}
+
+/// Gets the identity of the caller, which may be a canister id or a user id.
+/// 
+/// During canister installation or upgrade, this is the id of the user or canister requesting the installation or upgrade.
+/// During a system task (heartbeat or global timer), this is the id of the management canister.
+pub fn msg_caller() -> Principal {
+    // SAFETY: ic0.msg_caller_size is always safe to call.
+    let len = unsafe { ic0::msg_caller_size() };
+    let mut bytes = vec![0u8; len];
+    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.msg_caller_copy` with a 0-offset.
+    unsafe {
+        ic0::msg_caller_copy(bytes.as_mut_ptr() as usize, 0, len);
+    }
+    Principal::try_from(&bytes).unwrap()
+}
+
 // # Deprecated API bindings
 // The following functions are deprecated and will be removed in the future.
 // They are kept here for compatibility with existing code.
