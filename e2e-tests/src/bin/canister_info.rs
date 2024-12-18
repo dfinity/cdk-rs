@@ -1,70 +1,64 @@
 use candid::Principal;
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::{
     canister_info, create_canister, install_code, uninstall_code, update_settings,
-    CanisterIdRecord, CanisterInfoRequest, CanisterInfoResponse,
+    CanisterInfoArgs, CanisterInfoResult,
     CanisterInstallMode::{Install, Reinstall, Upgrade},
-    CanisterSettings, CreateCanisterArgument, InstallCodeArgument, UpdateSettingsArgument,
+    CanisterSettings, CreateCanisterArgs, InstallCodeArgs, UninstallCodeArgs, UpdateSettingsArgs,
 };
 
 #[ic_cdk::update]
-async fn info(canister_id: Principal) -> CanisterInfoResponse {
-    let request = CanisterInfoRequest {
+async fn info(canister_id: Principal) -> CanisterInfoResult {
+    let request = CanisterInfoArgs {
         canister_id,
         num_requested_changes: Some(20),
     };
-    canister_info(request).await.unwrap().0
+    canister_info(request).await.unwrap()
 }
 
 #[ic_cdk::update]
 async fn canister_lifecycle() -> Principal {
-    let canister_id = create_canister(CreateCanisterArgument { settings: None }, 1_000_000_000_000)
+    let canister_id = create_canister(CreateCanisterArgs { settings: None }, 1_000_000_000_000)
         .await
         .unwrap()
-        .0;
-    install_code(InstallCodeArgument {
+        .canister_id;
+    install_code(InstallCodeArgs {
         mode: Install,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
-        canister_id: canister_id.canister_id,
+        canister_id,
     })
     .await
     .unwrap();
-    uninstall_code(CanisterIdRecord {
-        canister_id: canister_id.canister_id,
-    })
-    .await
-    .unwrap();
-    install_code(InstallCodeArgument {
+    uninstall_code(UninstallCodeArgs { canister_id })
+        .await
+        .unwrap();
+    install_code(InstallCodeArgs {
         mode: Install,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
-        canister_id: canister_id.canister_id,
+        canister_id,
     })
     .await
     .unwrap();
-    install_code(InstallCodeArgument {
+    install_code(InstallCodeArgs {
         mode: Reinstall,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
-        canister_id: canister_id.canister_id,
+        canister_id,
     })
     .await
     .unwrap();
-    install_code(InstallCodeArgument {
+    install_code(InstallCodeArgs {
         mode: Upgrade(None),
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
-        canister_id: canister_id.canister_id,
+        canister_id,
     })
     .await
     .unwrap();
-    update_settings(UpdateSettingsArgument {
+    update_settings(UpdateSettingsArgs {
         settings: CanisterSettings {
-            controllers: Some(vec![
-                ic_cdk::id(),
-                canister_id.canister_id,
-                Principal::anonymous(),
-            ]),
+            controllers: Some(vec![ic_cdk::id(), canister_id, Principal::anonymous()]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,
@@ -72,11 +66,11 @@ async fn canister_lifecycle() -> Principal {
             log_visibility: None,
             wasm_memory_limit: None,
         },
-        canister_id: canister_id.canister_id,
+        canister_id,
     })
     .await
     .unwrap();
-    canister_id.canister_id
+    canister_id
 }
 
 fn main() {}

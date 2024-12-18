@@ -18,6 +18,7 @@ pub mod api;
 pub mod call;
 mod futures;
 mod macros;
+pub mod management_canister;
 mod printer;
 pub mod storage;
 

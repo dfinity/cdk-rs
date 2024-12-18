@@ -1,42 +1,41 @@
 use candid::Principal;
-use ic_cdk::api::management_canister::main::{
+use ic_cdk::management_canister::{
     clear_chunk_store, create_canister, install_chunked_code, stored_chunks, upload_chunk,
-    CanisterInstallMode, ChunkHash, ClearChunkStoreArgument, CreateCanisterArgument,
-    InstallChunkedCodeArgument, StoredChunksArgument, UploadChunkArgument,
+    CanisterInstallMode, ChunkHash, ClearChunkStoreArgs, CreateCanisterArgs,
+    InstallChunkedCodeArgs, StoredChunksArgs, UploadChunkArgs,
 };
 use ic_cdk::update;
 
 #[update]
 async fn call_create_canister() -> Principal {
-    let arg = CreateCanisterArgument::default();
+    let arg = CreateCanisterArgs::default();
 
     create_canister(arg, 1_000_000_000_000u128)
         .await
         .unwrap()
-        .0
         .canister_id
 }
 
 #[update]
 async fn call_upload_chunk(canister_id: Principal, chunk: Vec<u8>) -> Vec<u8> {
-    let arg = UploadChunkArgument {
+    let arg = UploadChunkArgs {
         canister_id,
         chunk: chunk.to_vec(),
     };
 
-    upload_chunk(arg).await.unwrap().0.hash
+    upload_chunk(arg).await.unwrap().hash
 }
 
 #[update]
 async fn call_stored_chunks(canister_id: Principal) -> Vec<Vec<u8>> {
-    let arg = StoredChunksArgument { canister_id };
-    let hashes = stored_chunks(arg).await.unwrap().0;
+    let arg = StoredChunksArgs { canister_id };
+    let hashes = stored_chunks(arg).await.unwrap();
     hashes.into_iter().map(|v| v.hash).collect()
 }
 
 #[update]
 async fn call_clear_chunk_store(canister_id: Principal) {
-    let arg = ClearChunkStoreArgument { canister_id };
+    let arg = ClearChunkStoreArgs { canister_id };
     clear_chunk_store(arg).await.unwrap();
 }
 
@@ -50,7 +49,7 @@ async fn call_install_chunked_code(
         .iter()
         .map(|v| ChunkHash { hash: v.clone() })
         .collect();
-    let arg = InstallChunkedCodeArgument {
+    let arg = InstallChunkedCodeArgs {
         mode: CanisterInstallMode::Install,
         target_canister: canister_id,
         store_canister: None,
