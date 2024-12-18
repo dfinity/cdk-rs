@@ -6,8 +6,6 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
-// # Method arguments =========================================================
-
 /// Gets the byte length of the message argument data.
 pub fn msg_arg_data_size() -> usize {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
@@ -49,10 +47,9 @@ pub fn msg_caller() -> Principal {
     unsafe {
         ic0::msg_caller_copy(bytes.as_mut_ptr() as usize, 0, len);
     }
+    // Trust that the system always returns a valid principal.
     Principal::try_from(&bytes).unwrap()
 }
-
-// # Responding ===============================================================
 
 /// Replies to the sender with the data.
 pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
@@ -72,6 +69,116 @@ pub fn msg_reject<T: AsRef<str>>(message: T) {
     unsafe {
         ic0::msg_reject(buf.as_ptr() as usize, buf.len());
     }
+}
+
+/// Gets the number of cycles transferred by the caller of the current call, still available in this message.
+pub fn msg_cycles_available() -> u128 {
+    let mut recv = 0u128;
+    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
+    unsafe {
+        ic0::msg_cycles_available128(&mut recv as *mut u128 as usize);
+    }
+    recv
+}
+
+/// Gets the amount of cycles that came back with the response as a refund
+///
+/// This function can only be used in a callback handler (reply or reject).
+/// The refund has already been added to the canister balance automatically.
+pub fn msg_cycles_refunded() -> u128 {
+    let mut recv = 0u128;
+    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
+    unsafe {
+        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as usize);
+    }
+    recv
+}
+
+/// Moves cycles from the call to the canister balance.
+///
+/// The actual amount moved will be returned.
+pub fn msg_cycles_accept(max_amount: u128) -> u128 {
+    let high = (max_amount >> 64) as u64;
+    let low = (max_amount & u64::MAX as u128) as u64;
+    let mut recv = 0u128;
+    // SAFETY: `recv` is writable and sixteen bytes wide, and therefore safe to pass to ic0.msg_cycles_accept128
+    unsafe {
+        ic0::msg_cycles_accept128(high, low, &mut recv as *mut u128 as usize);
+    }
+    recv
+}
+
+/// Burns cycles from the canister.
+///
+/// Returns the amount of cycles that were actually burned.
+pub fn cycles_burn(amount: u128) -> u128 {
+    let amount_high = (amount >> 64) as u64;
+    let amount_low = (amount & u64::MAX as u128) as u64;
+    let mut dst = 0u128;
+    // SAFETY: `dst` is writable and sixteen bytes wide, and therefore safe to pass to ic0.cycles_burn128
+    unsafe { ic0::cycles_burn128(amount_high, amount_low, &mut dst as *mut u128 as usize) }
+    dst
+}
+
+/// Gets canister's own identity.
+pub fn canister_self() -> Principal {
+    // SAFETY: ic0.canister_self_size is always safe to call.
+    let len = unsafe { ic0::canister_self_size() };
+    let mut bytes = vec![0u8; len];
+    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
+    unsafe {
+        ic0::canister_self_copy(bytes.as_mut_ptr() as usize, 0, len);
+    }
+    // Trust that the system always returns a valid principal.
+    Principal::try_from(&bytes).unwrap()
+}
+
+/// Gets the current cycle balance of the canister
+pub fn canister_cycle_balance() -> u128 {
+    let mut recv = 0u128;
+    // SAFETY: recv is writable and the size expected by ic0.canister_cycle_balance128.
+    unsafe { ic0::canister_cycle_balance128(&mut recv as *mut u128 as usize) }
+    recv
+}
+
+/// Gets the status of the canister.
+///
+/// The status is one of the following:
+/// * 1: Running
+/// * 2: Stopping
+/// * 3: Stopped
+pub fn canister_status() -> u32 {
+    // SAFETY: ic0.canister_status is always safe to call.
+    unsafe { ic0::canister_status() }
+}
+
+/// Gets the canister version.
+pub fn canister_version() -> u64 {
+    // SAFETY: ic0.canister_version is always safe to call.
+    unsafe { ic0::canister_version() }
+}
+
+/// Gets the name of the method to be inspected.
+///
+/// This function is only available in the `canister_inspect_message` context.
+pub fn msg_method_name() -> String {
+    // SAFETY: ic0.msg_method_name_size is always safe to call.
+    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
+    let mut bytes = vec![0u8; len as usize];
+    // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
+    unsafe {
+        ic0::msg_method_name_copy(bytes.as_mut_ptr() as usize, 0, len as usize);
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
+/// Accepts the message in `canister_inspect_message`.
+///
+/// This function is only available in the `canister_inspect_message` context.
+/// This function traps if invoked twice.
+pub fn accept_message() {
+    // SAFETY: ic0.accept_message is always safe to call.
+    unsafe { ic0::accept_message() }
 }
 
 // # Deprecated API bindings
@@ -116,18 +223,6 @@ pub fn caller() -> Principal {
 
 /// Returns the canister id as a blob.
 pub fn id() -> Principal {
-    // SAFETY: ic0.canister_self_size is always safe to call.
-    let len = unsafe { ic0::canister_self_size() };
-    let mut bytes = vec![0u8; len];
-    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
-    unsafe {
-        ic0::canister_self_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
-    Principal::try_from(&bytes).unwrap()
-}
-
-/// Get the canister ID of the current canister.
-pub fn canister_self() -> Principal {
     // SAFETY: ic0.canister_self_size is always safe to call.
     let len = unsafe { ic0::canister_self_size() };
     let mut bytes = vec![0u8; len];
@@ -224,29 +319,11 @@ pub fn performance_counter(counter_type: u32) -> u64 {
     unsafe { ic0::performance_counter(counter_type) }
 }
 
-/// Gets the value of canister version.
-pub fn canister_version() -> u64 {
-    // SAFETY: ic0.canister_version is always safe to call.
-    unsafe { ic0::canister_version() }
-}
-
 /// Determines if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
     // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
     unsafe { ic0::is_controller(slice.as_ptr() as usize, slice.len()) != 0 }
-}
-
-/// Burns cycles from the canister.
-///
-/// Returns the amount of cycles that were actually burned.
-pub fn cycles_burn(amount: u128) -> u128 {
-    let amount_high = (amount >> 64) as u64;
-    let amount_low = (amount & u64::MAX as u128) as u64;
-    let mut dst = 0u128;
-    // SAFETY: `dst` is writable and sixteen bytes wide, and therefore safe to pass to ic0.cycles_burn128
-    unsafe { ic0::cycles_burn128(amount_high, amount_low, &mut dst as *mut u128 as usize) }
-    dst
 }
 
 /// Sets global timer.
