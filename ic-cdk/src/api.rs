@@ -4,6 +4,8 @@ use std::convert::TryFrom;
 
 pub mod call;
 pub mod management_canister;
+#[doc(hidden)]
+#[deprecated(note = "The `api::stable` module has been moved to `stable` (crate root).")]
 pub mod stable;
 
 /// Gets the message argument data.

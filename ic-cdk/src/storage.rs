@@ -1,5 +1,5 @@
 //! Tools for managing stable storage of data in a canister.
-use crate::api::stable;
+use crate::stable;
 
 /// Saves the storage into the stable memory.
 ///
