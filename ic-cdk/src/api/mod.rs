@@ -28,7 +28,7 @@ pub fn msg_arg_data() -> Vec<u8> {
 }
 
 /// Gets the byte length of the message caller ID.
-/// 
+///
 /// See [`msg_caller`] for more information.
 pub fn msg_caller_size() -> usize {
     // SAFETY: ic0.msg_caller_size is always safe to call.
@@ -36,7 +36,7 @@ pub fn msg_caller_size() -> usize {
 }
 
 /// Gets the identity of the caller, which may be a canister id or a user id.
-/// 
+///
 /// During canister installation or upgrade, this is the id of the user or canister requesting the installation or upgrade.
 /// During a system task (heartbeat or global timer), this is the id of the management canister.
 pub fn msg_caller() -> Principal {
@@ -252,22 +252,4 @@ pub fn in_replicated_execution() -> bool {
         1 => true,
         _ => unreachable!(),
     }
-}
-
-/// Returns the rejection code for the call.
-pub fn msg_reject_code() -> u32 {
-    // SAFETY: ic0.msg_reject_code is always safe to call.
-    unsafe { ic0::msg_reject_code() }
-}
-
-/// Returns the rejection message.
-pub fn msg_reject_msg() -> String {
-    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len = unsafe { ic0::msg_reject_msg_size() };
-    let mut bytes = vec![0u8; len];
-    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
-    unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
 }
