@@ -37,11 +37,6 @@ pub trait StableMemory {
     fn stable_read(&self, offset: u64, buf: &mut [u8]);
 }
 
-/// Gets current size of the stable memory (in WASM pages).
-pub fn stable_size() -> u64 {
-    CANISTER_STABLE_MEMORY.stable_size()
-}
-
 /// A possible error value when dealing with stable memory.
 #[derive(Debug)]
 pub enum StableMemoryError {
@@ -61,6 +56,11 @@ impl fmt::Display for StableMemoryError {
 }
 
 impl error::Error for StableMemoryError {}
+
+/// Gets current size of the stable memory (in WASM pages).
+pub fn stable_size() -> u64 {
+    CANISTER_STABLE_MEMORY.stable_size()
+}
 
 /// Attempts to grow the stable memory by `new_pages` (added pages).
 ///
@@ -132,11 +132,6 @@ impl Default for StableIO {
         Self::with_memory(CanisterStableMemory::default(), 0)
     }
 }
-
-// Helper macro to implement StableIO for both 32-bit and 64-bit.
-//
-// We use a macro here since capturing all the traits required to add and manipulate memory
-// addresses with generics becomes cumbersome.
 
 impl<M: StableMemory> StableIO<M> {
     /// Creates a new `StableIO` which writes to the selected memory
