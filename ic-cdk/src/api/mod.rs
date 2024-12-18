@@ -6,6 +6,10 @@ pub mod call;
 pub mod management_canister;
 pub mod stable;
 
+// # Deprecated API bindings
+// The following functions are deprecated and will be removed in the future.
+// They are kept here for compatibility with existing code.
+
 /// Prints the given message.
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
