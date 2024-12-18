@@ -29,11 +29,11 @@ pub use api::call::call;
 #[doc(inline)]
 pub use api::call::notify;
 #[doc(inline)]
-pub use api::{caller, id, trap};
+pub use api::{id, trap};
 
 #[doc(inline)]
 #[allow(deprecated)]
-pub use api::print;
+pub use api::{caller, print};
 
 #[doc(inline)]
 pub use macros::*;

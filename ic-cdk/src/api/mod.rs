@@ -343,6 +343,7 @@ pub fn print<S: std::convert::AsRef<str>>(s: S) {
 }
 
 /// Returns the caller of the current call.
+#[deprecated(note = "Use `msg_caller` instead")]
 pub fn caller() -> Principal {
     // SAFETY: ic0.msg_caller_size is always safe to call.
     let len = unsafe { ic0::msg_caller_size() };

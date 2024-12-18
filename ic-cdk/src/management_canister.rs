@@ -1107,9 +1107,9 @@ mod transform_closure {
     extern "C" fn http_transform() {
         use crate::api::{
             call::{arg_data, reply, ArgDecoderConfig},
-            caller,
+            msg_caller,
         };
-        if caller() != Principal::management_canister() {
+        if msg_caller() != Principal::management_canister() {
             crate::trap("This function is internal to ic-cdk and should not be called externally.");
         }
         crate::setup();

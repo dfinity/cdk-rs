@@ -269,7 +269,7 @@ fn update_ic0_timer() {
     export_name = "canister_update_ic_cdk_internal.timer_executor"
 )]
 extern "C" fn timer_executor() {
-    if ic_cdk::api::caller() != ic_cdk::api::id() {
+    if ic_cdk::api::msg_caller() != ic_cdk::api::id() {
         ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
     }
     let config = ic_cdk::api::call::ArgDecoderConfig {
