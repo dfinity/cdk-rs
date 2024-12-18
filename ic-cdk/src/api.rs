@@ -1,18 +1,18 @@
 //! System API bindings.
-//! 
+//!
 //! This module provides Rust ergonomic bindings to the system APIs.
-//! 
+//!
 //! Some APIs require more advanced handling and are organized into separate modules:
-//! * For the inter-canister calls API, see the [`call`](crate::call) module.
+//! * For the inter-canister calls API, see the [`call`](mod@crate::call) module.
 //! * For the stable memory management API, see the [`stable`](crate::stable) module.
-//! 
+//!
 //! APIs that are only available for `wasm32` are not included.
 //! As a result, system APIs with a numeric postfix (indicating the data bit width) are bound to names without the postfix.
 //! For example, `ic0::msg_cycles_available128` is bound to [`msg_cycles_available`], while `ic0::msg_cycles_available` has no binding.
-//! 
+//!
 //! Functions that provide bindings for a single system API method share the same name as the system API.
 //! For example, `ic0::msg_reject_code` is bound to [`msg_reject_code`].
-//! 
+//!
 //! Functions that wrap multiple system API methods are named using the common prefix of the wrapped methods.
 //! For example, [`msg_arg_data`] wraps both `ic0::msg_arg_data_size` and `ic0::msg_arg_data_copy`.
 
@@ -180,7 +180,7 @@ pub fn canister_status() -> u32 {
 }
 
 /// Gets the canister version.
-/// 
+///
 /// See [Canister version](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-canister-version).
 pub fn canister_version() -> u64 {
     // SAFETY: ic0.canister_version is always safe to call.
