@@ -67,8 +67,8 @@ pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
 macro_rules! println {
-    ($fmt:expr) => ($crate::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message
@@ -83,8 +83,8 @@ macro_rules! println {
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
 macro_rules! eprintln {
-    ($fmt:expr) => ($crate::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message

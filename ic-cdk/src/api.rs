@@ -24,7 +24,10 @@ use std::convert::TryFrom;
 pub mod call;
 pub mod management_canister;
 #[doc(hidden)]
-#[deprecated(note = "The `api::stable` module has been moved to `stable` (crate root).")]
+#[deprecated(
+    since = "0.18.0",
+    note = "The `api::stable` module has been moved to `stable` (crate root)."
+)]
 pub mod stable;
 
 /// Gets the message argument data.
@@ -407,7 +410,7 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
 // They are kept here for compatibility with existing code.
 
 /// Prints the given message.
-#[deprecated(note = "Use `debug_print` instead")]
+#[deprecated(since = "0.18.0", note = "Use `debug_print` instead")]
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
     // SAFETY: `s`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
@@ -417,7 +420,7 @@ pub fn print<S: std::convert::AsRef<str>>(s: S) {
 }
 
 /// Returns the caller of the current call.
-#[deprecated(note = "Use `msg_caller` instead")]
+#[deprecated(since = "0.18.0", note = "Use `msg_caller` instead")]
 pub fn caller() -> Principal {
     // SAFETY: ic0.msg_caller_size is always safe to call.
     let len = unsafe { ic0::msg_caller_size() };
@@ -430,7 +433,7 @@ pub fn caller() -> Principal {
 }
 
 /// Returns the canister id as a blob.
-#[deprecated(note = "Use `canister_self` instead")]
+#[deprecated(since = "0.18.0", note = "Use `canister_self` instead")]
 pub fn id() -> Principal {
     // SAFETY: ic0.canister_self_size is always safe to call.
     let len = unsafe { ic0::canister_self_size() };
@@ -443,7 +446,7 @@ pub fn id() -> Principal {
 }
 
 /// Gets the amount of funds available in the canister.
-#[deprecated(note = "Use `canister_cycle_balance` instead")]
+#[deprecated(since = "0.18.0", note = "Use `canister_cycle_balance` instead")]
 pub fn canister_balance128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and the size expected by ic0.canister_cycle_balance128.
@@ -469,7 +472,7 @@ pub fn canister_balance128() -> u128 {
 /// * This function traps if data.len() > 32.
 /// * This function traps if it's called from an illegal context
 ///   (e.g., from a query call).
-#[deprecated(note = "Use `certified_data_set` instead")]
+#[deprecated(since = "0.18.0", note = "Use `certified_data_set` instead")]
 pub fn set_certified_data(data: &[u8]) {
     // SAFETY: because data is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
     unsafe { ic0::certified_data_set(data.as_ptr() as usize, data.len()) }
@@ -487,7 +490,7 @@ pub fn set_certified_data(data: &[u8]) {
 ///
 /// Passing zero as an argument to the function deactivates the timer and thus
 /// prevents the system from scheduling calls to the canister's canister_global_timer Wasm method.
-#[deprecated(note = "Use `global_timer_set` instead")]
+#[deprecated(since = "0.18.0", note = "Use `global_timer_set` instead")]
 pub fn set_global_timer(timestamp: u64) -> u64 {
     // SAFETY: ic0.global_timer_set is always safe to call.
     unsafe { ic0::global_timer_set(timestamp) }
