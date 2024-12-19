@@ -6,8 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.17.1] - 2024-12-19
+
 ### Added
 
+- Add method `bitcoin_get_block_headers`.
 - Support management canister method: `subnet_info`. (#532)
   - Add types: `SubnetInfoArgs` and `SubnetInfoResult`.
 
