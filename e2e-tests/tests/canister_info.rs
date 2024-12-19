@@ -6,17 +6,16 @@ use ic_cdk::management_canister::{
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgs, UninstallCodeArgs,
 };
-use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, call_candid_as, PocketIcBuilder};
+use pocket_ic::{call_candid, call_candid_as};
 use std::time::UNIX_EPOCH;
+
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn test_canister_info() {
-    let pic = PocketIcBuilder::new()
-        .with_application_subnet()
-        .with_nonmainnet_features(true)
-        .build();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("canister_info");
     // As of PocketIC server v5.0.0 and client v4.0.0, the first canister creation happens at (time0+4).
     // Each operation advances the Pic by 2 nanos, except for the last operation which advances only by 1 nano.
