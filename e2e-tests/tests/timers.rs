@@ -141,7 +141,7 @@ fn advance_seconds(pic: &PocketIc, seconds: u32) {
 }
 
 #[test]
-fn test_set_global_timers() {
+fn test_global_timers_set() {
     let pic = PocketIc::new();
 
     let wasm = cargo_build_canister("timers");
@@ -174,10 +174,10 @@ fn test_set_global_timers() {
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "set_global_timer",
+        "global_timer_set",
         (t2,),
     )
-    .expect("Failed to call set_global_timer");
+    .unwrap();
     assert!(previous.abs_diff(t1) < 2); // time error no more than 1 nanosecond
 
     // Deactivate the timer
@@ -185,9 +185,9 @@ fn test_set_global_timers() {
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "set_global_timer",
+        "global_timer_set",
         (0,),
     )
-    .expect("Failed to call set_global_timer");
+    .unwrap();
     assert!(previous.abs_diff(t2) < 2); // time error no more than 1 nanosecond
 }

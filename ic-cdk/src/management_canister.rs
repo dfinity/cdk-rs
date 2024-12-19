@@ -1107,9 +1107,9 @@ mod transform_closure {
     extern "C" fn http_transform() {
         use crate::api::{
             call::{arg_data, reply, ArgDecoderConfig},
-            caller,
+            msg_caller,
         };
-        if caller() != Principal::management_canister() {
+        if msg_caller() != Principal::management_canister() {
             crate::trap("This function is internal to ic-cdk and should not be called externally.");
         }
         crate::setup();
@@ -1118,7 +1118,7 @@ mod transform_closure {
         let key = DefaultKey::from(KeyData::from_ffi(int));
         let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
         let Some(func) = func else {
-            crate::trap(&format!("Missing transform function for request {int}"));
+            crate::trap(format!("Missing transform function for request {int}"));
         };
         let transformed = func(args.response);
         reply((transformed,))
