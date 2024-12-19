@@ -228,9 +228,10 @@ pub fn accept_message() {
 /// * This function traps if data.len() > 32.
 /// * This function traps if it's called from an illegal context
 ///   (e.g., from a query call).
-pub fn certified_data_set(data: &[u8]) {
-    // SAFETY: because data is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
-    unsafe { ic0::certified_data_set(data.as_ptr() as usize, data.len()) }
+pub fn certified_data_set<T: AsRef<[u8]>>(data: T) {
+    let buf = data.as_ref();
+    // SAFETY:  uf is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
+    unsafe { ic0::certified_data_set(buf.as_ptr() as usize, buf.len()) }
 }
 
 /// When called from a query call, returns the data certificate authenticating
