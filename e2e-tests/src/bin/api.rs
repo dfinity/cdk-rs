@@ -75,6 +75,18 @@ fn inspect_message() {
     accept_message();
 }
 
+#[export_name = "canister_update call_stable"]
+fn call_stable() {
+    assert_eq!(stable_size(), 0);
+    assert_eq!(stable_grow(1), 0);
+    let data = vec![42];
+    stable_write(0, &data);
+    let mut read_buf = vec![0];
+    stable_read(0, &mut read_buf);
+    assert_eq!(read_buf, data);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_certified_data_set"]
 fn call_certified_data_set() {
     certified_data_set(vec![42]);

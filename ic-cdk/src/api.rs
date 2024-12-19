@@ -4,7 +4,9 @@
 //!
 //! Some APIs require more advanced handling and are organized into separate modules:
 //! * For the inter-canister calls API, see the [`call`](mod@crate::call) module.
-//! * For the stable memory management API, see the [`stable`](crate::stable) module.
+//! * For the stable memory management API, see the .
+//!   * The basic bindings are provided in this module including [`stable_size`], [`stable_grow`], [`stable_read`] and [`stable_write`].
+//!   * The [`stable`](crate::stable) module provides more advanced functionalities, e.g. support for `std::io` traits.
 //!
 //! APIs that are only available for `wasm32` are not included.
 //! As a result, system APIs with a numeric postfix (indicating the data bit width) are bound to names without the postfix.
@@ -208,6 +210,48 @@ pub fn msg_method_name() -> String {
 pub fn accept_message() {
     // SAFETY: ic0.accept_message is always safe to call.
     unsafe { ic0::accept_message() }
+}
+
+/// Gets the current size of the stable memory (in WebAssembly pages).
+///
+/// One WebAssembly page is 64KiB.
+pub fn stable_size() -> u64 {
+    // SAFETY: ic0.stable64_size is always safe to call.
+    unsafe { ic0::stable64_size() }
+}
+
+/// Attempts to grow the stable memory by `new_pages` many pages containing zeroes.
+///
+/// One WebAssembly page is 64KiB.
+///
+/// If successful, returns the previous size of the memory (in pages).
+/// Otherwise, returns `u64::MAX`.
+pub fn stable_grow(new_pages: u64) -> u64 {
+    // SAFETY: ic0.stable64_grow is always safe to call.
+    unsafe { ic0::stable64_grow(new_pages) }
+}
+
+/// Writes data to the stable memory location specified by an offset.
+///
+/// # Warning
+/// This will panic if `offset + buf.len()` exceeds the current size of stable memory.
+/// Call [`stable_grow`] to request more stable memory if needed.
+pub fn stable_write(offset: u64, buf: &[u8]) {
+    // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.stable64_write.
+    unsafe {
+        ic0::stable64_write(offset, buf.as_ptr() as u64, buf.len() as u64);
+    }
+}
+
+/// Reads data from the stable memory location specified by an offset.
+///
+/// # Warning
+/// This will panic if `offset + buf.len()` exceeds the current size of stable memory.
+pub fn stable_read(offset: u64, buf: &mut [u8]) {
+    // SAFETY: `buf`, being &mut [u8], is a writable sequence of bytes, and therefore valid to pass to ic0.stable64_read.
+    unsafe {
+        ic0::stable64_read(buf.as_ptr() as u64, offset, buf.len() as u64);
+    }
 }
 
 /// Sets the certified data of this canister.

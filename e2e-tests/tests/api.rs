@@ -72,6 +72,10 @@ fn call_api() {
     // Every calls above/below execute the inspect_message entry point.
     // So these two API bindings are tested implicitly.
     let res = pic
+        .update_call(canister_id, sender, "call_stable", vec![])
+        .unwrap();
+    assert_eq!(res, WasmResult::Reply(vec![]));
+    let res = pic
         .update_call(canister_id, sender, "call_certified_data_set", vec![])
         .unwrap();
     assert_eq!(res, WasmResult::Reply(vec![]));
