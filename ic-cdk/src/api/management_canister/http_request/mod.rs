@@ -32,11 +32,11 @@ pub async fn http_request(
 #[cfg(feature = "transform-closure")]
 thread_local! {
     #[allow(clippy::type_complexity)]
-    static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpResponse) -> HttpResponse>>> = RefCell::default();
+    static TRANSFORMS_LEGACY: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpResponse) -> HttpResponse>>> = RefCell::default();
 }
 
 #[cfg(feature = "transform-closure")]
-#[export_name = "canister_query <ic-cdk internal> http_transform"]
+#[export_name = "canister_query <ic-cdk internal> http_transform_legacy"]
 extern "C" fn http_transform() {
     use crate::api::{
         call::{arg_data, reply, ArgDecoderConfig},
@@ -49,9 +49,9 @@ extern "C" fn http_transform() {
     let (args,): (TransformArgs,) = arg_data(ArgDecoderConfig::default());
     let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
     let key = DefaultKey::from(KeyData::from_ffi(int));
-    let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
+    let func = TRANSFORMS_LEGACY.with(|transforms| transforms.borrow_mut().remove(key));
     let Some(func) = func else {
-        crate::trap(&format!("Missing transform function for request {int}"));
+        crate::trap(format!("Missing transform function for request {int}"));
     };
     let transformed = func(args.response);
     reply((transformed,))
@@ -77,11 +77,11 @@ pub async fn http_request_with_closure(
         "`CanisterHttpRequestArgument`'s `transform` field must be `None` when using a closure"
     );
     let transform_func = Box::new(transform_func) as _;
-    let key = TRANSFORMS.with(|transforms| transforms.borrow_mut().insert(transform_func));
+    let key = TRANSFORMS_LEGACY.with(|transforms| transforms.borrow_mut().insert(transform_func));
     struct DropGuard(DefaultKey);
     impl Drop for DropGuard {
         fn drop(&mut self) {
-            TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(self.0));
+            TRANSFORMS_LEGACY.with(|transforms| transforms.borrow_mut().remove(self.0));
         }
     }
     let key = DropGuard(key);
@@ -89,7 +89,7 @@ pub async fn http_request_with_closure(
     let arg = CanisterHttpRequestArgument {
         transform: Some(TransformContext {
             function: TransformFunc(candid::Func {
-                method: "<ic-cdk internal> http_transform".into(),
+                method: "<ic-cdk internal> http_transform_legacy".into(),
                 principal: crate::id(),
             }),
             context,

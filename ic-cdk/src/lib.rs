@@ -15,9 +15,12 @@ compile_error!("This version of the CDK does not support multithreading.");
 pub mod prelude;
 
 pub mod api;
+pub mod call;
 mod futures;
 mod macros;
+pub mod management_canister;
 mod printer;
+pub mod stable;
 pub mod storage;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -27,7 +30,11 @@ pub use api::call::call;
 #[doc(inline)]
 pub use api::call::notify;
 #[doc(inline)]
-pub use api::{caller, id, print, trap};
+pub use api::trap;
+
+#[doc(inline)]
+#[allow(deprecated)]
+pub use api::{caller, id, print};
 
 #[doc(inline)]
 pub use macros::*;
@@ -60,8 +67,8 @@ pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
 #[cfg(target_family = "wasm")]
 #[macro_export]
 macro_rules! println {
-    ($fmt:expr) => ($crate::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message
@@ -76,8 +83,8 @@ macro_rules! println {
 #[cfg(target_family = "wasm")]
 #[macro_export]
 macro_rules! eprintln {
-    ($fmt:expr) => ($crate::print(format!($fmt)));
-    ($fmt:expr, $($arg:tt)*) => ($crate::print(format!($fmt, $($arg)*)));
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
 }
 
 /// Format and then print the formatted message

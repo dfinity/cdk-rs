@@ -1,4 +1,6 @@
 //! APIs to make and manage calls in the canister.
+
+#![allow(deprecated)]
 use crate::api::trap;
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{
@@ -14,35 +16,24 @@ use std::task::{Context, Poll, Waker};
 
 /// Rejection code from calling another canister.
 ///
-/// These can be obtained using [reject_code].
-#[repr(i32)]
+/// These can be obtained either using `reject_code()` or `reject_result()`.
+#[allow(missing_docs)]
+#[repr(usize)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
-    /// No error.
     NoError = 0,
 
-    /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
-    /// Transient system error, retry might be possible.
     SysTransient = 2,
-    /// Invalid destination (e.g. canister/account does not exist)
     DestinationInvalid = 3,
-    /// Explicit reject by the canister.
     CanisterReject = 4,
-    /// Canister error (e.g., trap, no response)
     CanisterError = 5,
-    /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
-    SysUnknown = 6,
 
-    /// Unknown rejection code.
-    ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// rejection codes that are not recognized by the library.
     Unknown,
 }
 
-impl From<i32> for RejectionCode {
-    fn from(code: i32) -> Self {
+impl From<usize> for RejectionCode {
+    fn from(code: usize) -> Self {
         match code {
             0 => RejectionCode::NoError,
             1 => RejectionCode::SysFatal,
@@ -50,7 +41,6 @@ impl From<i32> for RejectionCode {
             3 => RejectionCode::DestinationInvalid,
             4 => RejectionCode::CanisterReject,
             5 => RejectionCode::CanisterError,
-            6 => RejectionCode::SysUnknown,
             _ => RejectionCode::Unknown,
         }
     }
@@ -58,7 +48,7 @@ impl From<i32> for RejectionCode {
 
 impl From<u32> for RejectionCode {
     fn from(code: u32) -> Self {
-        RejectionCode::from(code as i32)
+        RejectionCode::from(code as usize)
     }
 }
 
@@ -73,9 +63,8 @@ struct CallFutureState<T: AsRef<[u8]>> {
     waker: Option<Waker>,
     id: Principal,
     method: String,
-    arg: Option<T>,
-    payment: Option<u128>,
-    timeout_seconds: Option<u32>,
+    arg: T,
+    payment: u128,
 }
 
 struct CallFuture<T: AsRef<[u8]>> {
@@ -95,6 +84,8 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
             if state.waker.is_none() {
                 let callee = state.id.as_slice();
                 let method = &state.method;
+                let args = state.arg.as_ref();
+                let payment = state.payment;
                 let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
                 // SAFETY:
                 // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
@@ -114,21 +105,15 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         callee.len(),
                         method.as_ptr() as usize,
                         method.len(),
-                        callback::<T> as usize,
+                        callback::<T> as usize as usize,
                         state_ptr as usize,
-                        callback::<T> as usize,
+                        callback::<T> as usize as usize,
                         state_ptr as usize,
                     );
-                    if let Some(args) = &state.arg {
-                        ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
-                    }
-                    if let Some(payment) = state.payment {
-                        add_payment(payment);
-                    }
-                    if let Some(timeout_seconds) = state.timeout_seconds {
-                        ic0::call_with_best_effort_response(timeout_seconds);
-                    }
-                    ic0::call_on_cleanup(cleanup::<T> as usize, state_ptr as usize);
+
+                    ic0::call_data_append(args.as_ptr() as usize, args.len());
+                    add_payment(payment);
+                    ic0::call_on_cleanup(cleanup::<T> as usize as usize, state_ptr as usize);
                     ic0::call_perform()
                 };
 
@@ -206,258 +191,6 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
     }
 }
 
-/// Inter-Canister Call.
-#[derive(Debug)]
-pub struct Call<'a> {
-    canister_id: Principal,
-    method: &'a str,
-    payment: Option<u128>,
-    timeout_seconds: Option<u32>,
-}
-
-/// Inter-Canister Call with typed arguments.
-#[derive(Debug)]
-pub struct CallWithArgs<'a, T> {
-    call: Call<'a>,
-    args: T,
-}
-
-/// Inter-Canister Call with raw arguments.
-#[derive(Debug)]
-pub struct CallWithRawArgs<'a, A> {
-    call: Call<'a>,
-    raw_args: A,
-}
-
-impl<'a> Call<'a> {
-    /// Constructs a new call with the Canister id and method name.
-    ///
-    /// # Note
-    /// The `Call` default to set a 10 seconds timeout for Best-Effort Responses.
-    /// If you want to set a guaranteed response, you can use the `with_guaranteed_response` method.
-    pub fn new(canister_id: Principal, method: &'a str) -> Self {
-        Self {
-            canister_id,
-            method,
-            payment: None,
-            // Default to 10 seconds.
-            timeout_seconds: Some(10),
-        }
-    }
-
-    /// Sets the arguments for the call.
-    ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
-    pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
-        CallWithArgs { call: self, args }
-    }
-
-    /// Sets the arguments for the call as raw bytes.    
-    ///
-    /// Another way to set the arguments is to use `with_raw_args`.
-    /// If both are invoked, the last one is used.
-    pub fn with_raw_args<A>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
-        CallWithRawArgs {
-            call: self,
-            raw_args,
-        }
-    }
-}
-
-/// Methods to configure a call.
-pub trait ConfigurableCall {
-    /// Sets the cycles payment for the call.
-    ///
-    /// If invoked multiple times, the last value is used.
-    fn with_cycles(self, cycles: u128) -> Self;
-
-    /// Sets the call to have a guaranteed response.
-    ///
-    /// If [change_timeout](ConfigurableCall::change_timeout) is invoked after this method,
-    /// the call will instead be set with Best-Effort Responses.
-    fn with_guaranteed_response(self) -> Self;
-
-    /// Sets the timeout for the Best-Effort Responses.
-    ///
-    /// If not set, the call will default to a 10 seconds timeout.
-    /// If invoked multiple times, the last value is used.
-    /// If [with_guaranteed_response](ConfigurableCall::with_guaranteed_response) is invoked after this method,
-    /// the timeout will be ignored.
-    fn change_timeout(self, timeout_seconds: u32) -> Self;
-}
-
-impl<'a> ConfigurableCall for Call<'a> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.payment = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.payment = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.call.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.call.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.payment = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.call.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.call.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-/// Methods to send a call.
-pub trait SendableCall {
-    /// Sends the call and gets the reply as raw bytes.
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
-
-    /// Sends the call and decodes the reply to a Candid type.
-    fn call<R: for<'b> ArgumentDecoder<'b>>(
-        self,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync
-    where
-        Self: Sized,
-    {
-        let fut = self.call_raw();
-        async {
-            let bytes = fut.await?;
-            decode_args(&bytes).map_err(decoder_error_to_reject::<R>)
-        }
-    }
-
-    /// Sends the call and decodes the reply to a Candid type with a decoding quota.
-    fn call_with_decoder_config<R: for<'b> ArgumentDecoder<'b>>(
-        self,
-        decoder_config: &ArgDecoderConfig,
-    ) -> impl Future<Output = CallResult<R>> + Send + Sync
-    where
-        Self: Sized,
-    {
-        let fut = self.call_raw();
-        async move {
-            let bytes = fut.await?;
-            let config = decoder_config.to_candid_config();
-            let pre_cycles = if decoder_config.debug {
-                Some(crate::api::performance_counter(0))
-            } else {
-                None
-            };
-            match decode_args_with_config_debug(&bytes, &config) {
-                Err(e) => Err(decoder_error_to_reject::<R>(e)),
-                Ok((r, cost)) => {
-                    if decoder_config.debug {
-                        print_decoding_debug_info(std::any::type_name::<R>(), &cost, pre_cycles);
-                    }
-                    Ok(r)
-                }
-            }
-        }
-    }
-
-    /// Sends the call and ignores the reply.
-    fn call_and_forget(self) -> Result<(), RejectionCode>;
-}
-
-impl SendableCall for Call<'_> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-        call_raw_internal::<Vec<u8>>(
-            self.canister_id,
-            self.method,
-            None,
-            self.payment,
-            self.timeout_seconds,
-        )
-    }
-
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
-        notify_raw_internal::<Vec<u8>>(
-            self.canister_id,
-            self.method,
-            None,
-            self.payment,
-            self.timeout_seconds,
-        )
-    }
-}
-
-impl<'a, T: ArgumentEncoder> SendableCall for CallWithArgs<'a, T> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-        let args = encode_args(self.args).expect("failed to encode arguments");
-        call_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            Some(args),
-            self.call.payment,
-            self.call.timeout_seconds,
-        )
-    }
-
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
-        let args = encode_args(self.args).expect("failed to encode arguments");
-        notify_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            Some(args),
-            self.call.payment,
-            self.call.timeout_seconds,
-        )
-    }
-}
-
-impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
-        call_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            Some(self.raw_args),
-            self.call.payment,
-            self.call.timeout_seconds,
-        )
-    }
-
-    fn call_and_forget(self) -> Result<(), RejectionCode> {
-        notify_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            Some(self.raw_args),
-            self.call.payment,
-            self.call.timeout_seconds,
-        )
-    }
-}
-
 fn add_payment(payment: u128) {
     if payment == 0 {
         return;
@@ -516,16 +249,6 @@ pub fn notify_raw(
     args_raw: &[u8],
     payment: u128,
 ) -> Result<(), RejectionCode> {
-    notify_raw_internal(id, method, Some(args_raw), Some(payment), None)
-}
-
-fn notify_raw_internal<T: AsRef<[u8]>>(
-    id: Principal,
-    method: &str,
-    args_raw: Option<T>,
-    payment: Option<u128>,
-    timeout_seconds: Option<u32>,
-) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
     // We set all callbacks to -1, which is guaranteed to be invalid callback index.
     // The system will still deliver the reply, but it will trap immediately because the callback
@@ -534,14 +257,11 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
     // for more context.
 
     // SAFETY:
-    // ic0.call_new:
-    //   `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-    //   `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-    //   `reply_fun` and `reject_fun`: In "notify" style call, we want these callback functions to not be called. So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
-    //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
-    // ic0.call_data_append:
-    //   `args`, being a &[u8], is a readable sequence of bytes.
-    // ic0.call_with_best_effort_response is always safe to call.
+    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
+    // -1, i.e. usize::MAX, is a function pointer the wasm module cannot possibly contain, and therefore can be passed as both reply and reject fn for ic0.call_new.
+    // Since the callback function will never be called, any value can be passed as its context parameter, and therefore -1 can be passed for those values.
+    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
     // ic0.call_perform is always safe to call.
     let err_code = unsafe {
         ic0::call_new(
@@ -549,20 +269,13 @@ fn notify_raw_internal<T: AsRef<[u8]>>(
             callee.len(),
             method.as_ptr() as usize,
             method.len(),
-            usize::MAX,
-            usize::MAX,
-            usize::MAX,
-            usize::MAX,
+            /* reply_fun = */ usize::MAX,
+            /* reply_env = */ usize::MAX,
+            /* reject_fun = */ usize::MAX,
+            /* reject_env = */ usize::MAX,
         );
-        if let Some(args) = args_raw {
-            ic0::call_data_append(args.as_ref().as_ptr() as usize, args.as_ref().len());
-        }
-        if let Some(payment) = payment {
-            add_payment(payment);
-        }
-        if let Some(timeout_seconds) = timeout_seconds {
-            ic0::call_with_best_effort_response(timeout_seconds);
-        }
+        add_payment(payment);
+        ic0::call_data_append(args_raw.as_ptr() as usize, args_raw.len());
         ic0::call_perform()
     };
     match err_code {
@@ -592,7 +305,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u64,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, Some(args_raw), Some(payment.into()), None)
+    call_raw_internal(id, method, args_raw, payment.into())
 }
 
 /// Performs an asynchronous call to another canister and pay cycles (in `u128`) at the same time.
@@ -615,15 +328,14 @@ pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
-    call_raw_internal(id, method, Some(args_raw), Some(payment), None)
+    call_raw_internal(id, method, args_raw, payment)
 }
 
 fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
-    args_raw: Option<T>,
-    payment: Option<u128>,
-    timeout_seconds: Option<u32>,
+    args_raw: T,
+    payment: u128,
 ) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
@@ -632,7 +344,6 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
         method: method.to_string(),
         arg: args_raw,
         payment,
-        timeout_seconds,
     }));
     CallFuture { state }
 }
@@ -873,11 +584,11 @@ pub fn reject_code() -> RejectionCode {
 /// Returns the rejection message.
 pub fn reject_message() -> String {
     // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len = unsafe { ic0::msg_reject_msg_size() };
-    let mut bytes = vec![0u8; len];
+    let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
+    let mut bytes = vec![0u8; len as usize];
     // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
     unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
+        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len as usize);
     }
     String::from_utf8_lossy(&bytes).into_owned()
 }
@@ -889,11 +600,6 @@ pub fn reject(message: &str) {
     unsafe {
         ic0::msg_reject(err_message.as_ptr() as usize, err_message.len());
     }
-}
-/// The deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
-pub fn msg_deadline() -> u64 {
-    // SAFETY: ic0.msg_deadline is always safe to call.
-    unsafe { ic0::msg_deadline() }
 }
 
 /// An io::Write for message replies.
@@ -925,6 +631,12 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
 
 /// Returns the amount of cycles that were transferred by the caller
 /// of the current call, and is still available in this message.
+pub fn msg_cycles_available() -> u64 {
+    msg_cycles_available128() as u64
+}
+
+/// Returns the amount of cycles that were transferred by the caller
+/// of the current call, and is still available in this message.
 pub fn msg_cycles_available128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
@@ -937,6 +649,13 @@ pub fn msg_cycles_available128() -> u128 {
 /// Returns the amount of cycles that came back with the response as a refund.
 ///
 /// The refund has already been added to the canister balance automatically.
+pub fn msg_cycles_refunded() -> u64 {
+    msg_cycles_refunded128() as u64
+}
+
+/// Returns the amount of cycles that came back with the response as a refund.
+///
+/// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
@@ -944,6 +663,13 @@ pub fn msg_cycles_refunded128() -> u128 {
         ic0::msg_cycles_refunded128(&mut recv as *mut u128 as usize);
     }
     recv
+}
+
+/// Moves cycles from the call to the canister balance.
+///
+/// The actual amount moved will be returned.
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    msg_cycles_accept128(max_amount as u128) as u64
 }
 
 /// Moves cycles from the call to the canister balance.
@@ -963,7 +689,7 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 /// Returns the argument data as bytes.
 pub fn arg_data_raw() -> Vec<u8> {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    let len = unsafe { ic0::msg_arg_data_size() };
+    let len: usize = unsafe { ic0::msg_arg_data_size() };
     let mut bytes = Vec::with_capacity(len);
     // SAFETY:
     // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
@@ -1034,7 +760,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) ->
     let config = arg_config.to_candid_config();
     let res = decode_args_with_config_debug(&bytes, &config);
     match res {
-        Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
+        Err(e) => trap(format!("failed to decode call arguments: {:?}", e)),
         Ok((r, cost)) => {
             if arg_config.debug {
                 print_decoding_debug_info("Argument", &cost, None);
@@ -1055,11 +781,11 @@ pub fn accept_message() {
 /// Returns the name of current canister method.
 pub fn method_name() -> String {
     // SAFETY: ic0.msg_method_name_size is always safe to call.
-    let len = unsafe { ic0::msg_method_name_size() };
-    let mut bytes = vec![0u8; len];
+    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
+    let mut bytes = vec![0u8; len as usize];
     // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
     unsafe {
-        ic0::msg_method_name_copy(bytes.as_mut_ptr() as usize, 0, len);
+        ic0::msg_method_name_copy(bytes.as_mut_ptr() as usize, 0, len as usize);
     }
     String::from_utf8_lossy(&bytes).into_owned()
 }

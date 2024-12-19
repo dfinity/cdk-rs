@@ -176,10 +176,10 @@ fn test_set_global_timers() {
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "set_global_timer",
+        "global_timer_set",
         (t2,),
     )
-    .expect("Failed to call set_global_timer");
+    .unwrap();
     assert!(previous.abs_diff(t1) < 2); // time error no more than 1 nanosecond
 
     // Deactivate the timer
@@ -187,9 +187,9 @@ fn test_set_global_timers() {
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "set_global_timer",
+        "global_timer_set",
         (0,),
     )
-    .expect("Failed to call set_global_timer");
+    .unwrap();
     assert!(previous.abs_diff(t2) < 2); // time error no more than 1 nanosecond
 }

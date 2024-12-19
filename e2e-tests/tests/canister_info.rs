@@ -1,10 +1,10 @@
 use candid::Principal;
-use ic_cdk::api::management_canister::main::{
-    CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterIdRecord,
-    CanisterInfoResponse, CanisterInstallMode,
+use ic_cdk::management_canister::{
+    CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterInfoResult,
+    CanisterInstallMode,
     CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
-    FromUserRecord, InstallCodeArgument,
+    FromUserRecord, InstallCodeArgs, UninstallCodeArgs,
 };
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, call_candid_as};
@@ -45,7 +45,7 @@ fn test_canister_info() {
         RawEffectivePrincipal::None,
         Principal::anonymous(),
         "uninstall_code",
-        (CanisterIdRecord {
+        (UninstallCodeArgs {
             canister_id: new_canister.0,
         },),
     )
@@ -56,7 +56,7 @@ fn test_canister_info() {
         RawEffectivePrincipal::None,
         Principal::anonymous(),
         "install_code",
-        (InstallCodeArgument {
+        (InstallCodeArgs {
             mode: CanisterInstallMode::Install,
             arg: vec![],
             wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
@@ -65,7 +65,7 @@ fn test_canister_info() {
     )
     .expect("Error calling install_code");
 
-    let info: (CanisterInfoResponse,) = call_candid(
+    let info: (CanisterInfoResult,) = call_candid(
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
@@ -76,7 +76,7 @@ fn test_canister_info() {
 
     assert_eq!(
         info.0,
-        CanisterInfoResponse {
+        CanisterInfoResult {
             total_num_changes: 9,
             recent_changes: vec![
                 CanisterChange {
