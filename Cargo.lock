@@ -1160,7 +1160,7 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "anyhow",
  "candid",
@@ -1202,7 +1202,7 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-macros"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "candid",
  "proc-macro2",
