@@ -747,15 +747,15 @@ fn print_decoding_debug_info(
     cost: &candid::de::DecoderConfig,
     pre_cycles: Option<u64>,
 ) {
-    use crate::api::{performance_counter, print};
+    use crate::api::{debug_print, performance_counter};
     let pre_cycles = pre_cycles.unwrap_or(0);
     let instrs = performance_counter(0) - pre_cycles;
-    print(format!("[Debug] {title} decoding instructions: {instrs}"));
+    debug_print(format!("[Debug] {title} decoding instructions: {instrs}"));
     if let Some(n) = cost.decoding_quota {
-        print(format!("[Debug] {title} decoding cost: {n}"));
+        debug_print(format!("[Debug] {title} decoding cost: {n}"));
     }
     if let Some(n) = cost.skipping_quota {
-        print(format!("[Debug] {title} skipping cost: {n}"));
+        debug_print(format!("[Debug] {title} skipping cost: {n}"));
     }
 }
 

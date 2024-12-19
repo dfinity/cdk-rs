@@ -58,7 +58,11 @@ async fn canister_lifecycle() -> Principal {
     .unwrap();
     update_settings(UpdateSettingsArgs {
         settings: CanisterSettings {
-            controllers: Some(vec![ic_cdk::id(), canister_id, Principal::anonymous()]),
+            controllers: Some(vec![
+                ic_cdk::api::canister_self(),
+                canister_id,
+                Principal::anonymous(),
+            ]),
             compute_allocation: None,
             memory_allocation: None,
             freezing_threshold: None,

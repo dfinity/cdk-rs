@@ -9,7 +9,7 @@
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 //! [2]: https://internetcomputer.org/assets/files/ic-a45d11feb0ba0494055083f9d2d21ddf.did
-
+#![allow(deprecated)]
 pub mod bitcoin;
 pub mod ecdsa;
 pub mod http_request;

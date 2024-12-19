@@ -1,4 +1,6 @@
 //! APIs to make and manage calls in the canister.
+
+#![allow(deprecated)]
 use crate::api::trap;
 use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
 use candid::{
@@ -758,7 +760,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) ->
     let config = arg_config.to_candid_config();
     let res = decode_args_with_config_debug(&bytes, &config);
     match res {
-        Err(e) => trap(&format!("failed to decode call arguments: {:?}", e)),
+        Err(e) => trap(format!("failed to decode call arguments: {:?}", e)),
         Ok((r, cost)) => {
             if arg_config.debug {
                 print_decoding_debug_info("Argument", &cost, None);

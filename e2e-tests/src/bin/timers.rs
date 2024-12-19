@@ -93,8 +93,8 @@ fn add_event(event: &'static str) {
 }
 
 #[update]
-fn set_global_timer(timestamp: u64) -> u64 {
-    ic_cdk::api::set_global_timer(timestamp)
+fn global_timer_set(timestamp: u64) -> u64 {
+    ic_cdk::api::global_timer_set(timestamp)
 }
 
 fn main() {}
