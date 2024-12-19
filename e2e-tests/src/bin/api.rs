@@ -107,14 +107,16 @@ fn call_time() {
 
 #[export_name = "canister_update call_performance_counter"]
 fn call_performance_counter() {
-    // do some work
-    let _ = msg_arg_data();
     let ic0 = performance_counter(0);
-    let ic1 = instruction_counter();
-    let ccic0 = performance_counter(1);
-    let ccic1 = call_context_instruction_counter();
+    let ic1 = performance_counter(PerformanceCounterType::InstructionCounter);
+    let ic2 = instruction_counter();
     assert!(ic0 < ic1);
+    assert!(ic1 < ic2);
+    let ccic0 = performance_counter(1);
+    let ccic1 = performance_counter(PerformanceCounterType::CallContextInstructionCounter);
+    let ccic2 = call_context_instruction_counter();
     assert!(ccic0 < ccic1);
+    assert!(ccic1 < ccic2);
     msg_reply(vec![]);
 }
 

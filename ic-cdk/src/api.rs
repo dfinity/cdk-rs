@@ -325,19 +325,52 @@ pub fn global_timer_set(timestamp: u64) -> u64 {
 
 /// Gets the value of specified performance counter.
 ///
-/// Supported counter types:
-/// * `0` : current execution instruction counter. The number of WebAssembly
-///         instructions the canister has executed since the beginning of the
-///         current Message execution.
-/// * `1` : call context instruction counter. The number of WebAssembly
-///         instructions the canister has executed within the call context
-///         of the current Message execution since Call context creation.
-///         The counter monotonically increases across all message executions
-///         in the call context until the corresponding call context is removed.
+/// See [`PerformanceCounterType`] for available counter types.
 #[inline]
-pub fn performance_counter(counter_type: u32) -> u64 {
+pub fn performance_counter(counter_type: impl Into<PerformanceCounterType>) -> u64 {
+    let counter_type: u32 = counter_type.into().into();
     // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type) }
+}
+
+/// The type of performance counter.
+#[derive(Debug, PartialEq, Eq)]
+pub enum PerformanceCounterType {
+    /// Current execution instruction counter.
+    ///
+    /// The number of WebAssembly instructions the canister has executed
+    /// since the beginning of the current Message execution.
+    InstructionCounter,
+    /// Call context instruction counter
+    ///
+    /// The number of WebAssembly instructions the canister has executed
+    /// within the call context of the current Message execution
+    /// since Call context creation.
+    /// The counter monotonically increases across all message executions
+    /// in the call context until the corresponding call context is removed.
+    CallContextInstructionCounter,
+    /// Unrecognized performance counter type.
+    Unrecognized(u32),
+}
+
+impl From<u32> for PerformanceCounterType {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => Self::InstructionCounter,
+            1 => Self::CallContextInstructionCounter,
+            _ => Self::Unrecognized(value),
+        }
+    }
+}
+
+impl From<PerformanceCounterType> for u32 {
+    fn from(value: PerformanceCounterType) -> Self {
+        match value {
+            PerformanceCounterType::InstructionCounter => 0,
+            PerformanceCounterType::CallContextInstructionCounter => 1,
+            PerformanceCounterType::Unrecognized(value) => value,
+        }
+    }
 }
 
 /// Returns the number of instructions that the canister executed since the last [entry
