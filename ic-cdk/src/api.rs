@@ -179,9 +179,54 @@ pub fn canister_cycle_balance() -> u128 {
 /// * 1: Running
 /// * 2: Stopping
 /// * 3: Stopped
-pub fn canister_status() -> u32 {
+pub fn canister_status() -> CanisterStatusCode {
     // SAFETY: ic0.canister_status is always safe to call.
-    unsafe { ic0::canister_status() }
+    unsafe { ic0::canister_status() }.into()
+}
+
+/// The status of a canister.
+///
+/// See [Canister status](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-canister-status).
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u32)]
+pub enum CanisterStatusCode {
+    /// Running.
+    Running = 1,
+    /// Stopping.
+    Stopping = 2,
+    /// Stopped.
+    Stopped = 3,
+    /// A status code that is not recognized by this library.
+    Unrecognized(u32),
+}
+
+impl From<u32> for CanisterStatusCode {
+    fn from(value: u32) -> Self {
+        match value {
+            1 => Self::Running,
+            2 => Self::Stopping,
+            3 => Self::Stopped,
+            _ => Self::Unrecognized(value),
+        }
+    }
+}
+
+impl From<CanisterStatusCode> for u32 {
+    fn from(value: CanisterStatusCode) -> Self {
+        match value {
+            CanisterStatusCode::Running => 1,
+            CanisterStatusCode::Stopping => 2,
+            CanisterStatusCode::Stopped => 3,
+            CanisterStatusCode::Unrecognized(value) => value,
+        }
+    }
+}
+
+impl PartialEq<u32> for CanisterStatusCode {
+    fn eq(&self, other: &u32) -> bool {
+        let self_as_u32: u32 = (*self).into();
+        self_as_u32 == *other
+    }
 }
 
 /// Gets the canister version.
@@ -334,7 +379,8 @@ pub fn performance_counter(counter_type: impl Into<PerformanceCounterType>) -> u
 }
 
 /// The type of performance counter.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(u32)]
 pub enum PerformanceCounterType {
     /// Current execution instruction counter.
     ///
@@ -349,7 +395,7 @@ pub enum PerformanceCounterType {
     /// The counter monotonically increases across all message executions
     /// in the call context until the corresponding call context is removed.
     CallContextInstructionCounter,
-    /// Unrecognized performance counter type.
+    /// A performance counter type that is not recognized by this library.
     Unrecognized(u32),
 }
 
@@ -370,6 +416,13 @@ impl From<PerformanceCounterType> for u32 {
             PerformanceCounterType::CallContextInstructionCounter => 1,
             PerformanceCounterType::Unrecognized(value) => value,
         }
+    }
+}
+
+impl PartialEq<u32> for PerformanceCounterType {
+    fn eq(&self, other: &u32) -> bool {
+        let self_as_u32: u32 = (*self).into();
+        self_as_u32 == *other
     }
 }
 

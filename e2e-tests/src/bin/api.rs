@@ -59,6 +59,7 @@ fn call_canister_cycle_balance() {
 
 #[export_name = "canister_update call_canister_status"]
 fn call_canister_status() {
+    assert_eq!(canister_status(), CanisterStatusCode::Running);
     assert_eq!(canister_status(), 1);
     msg_reply(vec![]);
 }
@@ -107,13 +108,18 @@ fn call_time() {
 
 #[export_name = "canister_update call_performance_counter"]
 fn call_performance_counter() {
+    let t0 = PerformanceCounterType::InstructionCounter;
+    assert_eq!(t0, 0);
     let ic0 = performance_counter(0);
-    let ic1 = performance_counter(PerformanceCounterType::InstructionCounter);
+    let ic1 = performance_counter(t0);
     let ic2 = instruction_counter();
     assert!(ic0 < ic1);
     assert!(ic1 < ic2);
+
+    let t1 = PerformanceCounterType::CallContextInstructionCounter;
+    assert_eq!(t1, 1);
     let ccic0 = performance_counter(1);
-    let ccic1 = performance_counter(PerformanceCounterType::CallContextInstructionCounter);
+    let ccic1 = performance_counter(t1);
     let ccic2 = call_context_instruction_counter();
     assert!(ccic0 < ccic1);
     assert!(ccic1 < ccic2);
