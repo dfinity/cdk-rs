@@ -26,15 +26,14 @@ pub mod storage;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[doc(inline)]
-pub use api::call::call;
-#[doc(inline)]
-pub use api::call::notify;
-#[doc(inline)]
 pub use api::trap;
 
 #[doc(inline)]
 #[allow(deprecated)]
-pub use api::{caller, id, print};
+pub use api::{
+    call::{call, notify},
+    caller, id, print,
+};
 
 #[doc(inline)]
 pub use macros::*;
