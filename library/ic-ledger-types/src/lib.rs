@@ -675,14 +675,14 @@ impl CandidType for QueryArchiveFn {
 ///
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID, account_balance};
 ///
 /// async fn check_callers_balance() -> Tokens {
 ///   account_balance(
 ///     MAINNET_LEDGER_CANISTER_ID,
 ///     AccountBalanceArgs {
-///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
+///       account: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT)
 ///     }
 ///   ).await.expect("call to ledger failed")
 /// }
@@ -700,7 +700,7 @@ pub async fn account_balance(
 /// Calls the "transfer" method on the specified canister.
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, BlockIndex, Memo, TransferArgs, Tokens, DEFAULT_SUBACCOUNT, DEFAULT_FEE, MAINNET_LEDGER_CANISTER_ID, transfer};
 ///
 /// async fn transfer_to_caller() -> BlockIndex {
@@ -711,7 +711,7 @@ pub async fn account_balance(
 ///       amount: Tokens::from_e8s(1_000_000),
 ///       fee: DEFAULT_FEE,
 ///       from_subaccount: None,
-///       to: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT),
+///       to: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT),
 ///       created_at_time: None,
 ///     }
 ///   ).await.expect("call to ledger failed").expect("transfer failed")
@@ -738,7 +738,6 @@ pub struct Symbol {
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::{caller, call::call};
 /// use ic_ledger_types::{Symbol, token_symbol};
 ///
 /// async fn symbol(ledger_canister_id: Principal) -> String {
@@ -753,7 +752,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
@@ -793,7 +792,7 @@ pub async fn query_blocks(
 ///
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
