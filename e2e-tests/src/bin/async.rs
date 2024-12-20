@@ -1,4 +1,5 @@
 use candid::Principal;
+use ic_cdk::call::{Call, CallError, CallResult, SendableCall};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
@@ -31,9 +32,11 @@ async fn panic_after_async() {
     let value = *lock;
     // Do not drop the lock before the await point.
 
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::canister_self(), "inc", (value,))
+    let _: u64 = Call::new(ic_cdk::api::canister_self(), "inc")
+        .with_arg(value)
+        .call()
         .await
-        .expect("failed to call self");
+        .unwrap();
     ic_cdk::api::trap("Goodbye, cruel world.")
 }
 
@@ -47,9 +50,10 @@ async fn panic_twice() {
 }
 
 async fn async_then_panic() {
-    let _: (u64,) = ic_cdk::call(ic_cdk::api::canister_self(), "on_notify", ())
+    let _: u64 = Call::new(ic_cdk::api::canister_self(), "on_notify")
+        .call()
         .await
-        .expect("Failed to call self");
+        .unwrap();
     panic!();
 }
 
@@ -65,12 +69,14 @@ fn on_notify() {
 
 #[update]
 fn notify(whom: Principal, method: String) {
-    ic_cdk::notify(whom, method.as_str(), ()).unwrap_or_else(|reject| {
-        ic_cdk::api::trap(format!(
-            "failed to notify (callee={}, method={}): {:?}",
-            whom, method, reject
-        ))
-    });
+    Call::new(whom, method.as_str())
+        .call_oneway()
+        .unwrap_or_else(|reject| {
+            ic_cdk::api::trap(format!(
+                "failed to notify (callee={}, method={}): {:?}",
+                whom, method, reject
+            ))
+        });
 }
 
 #[query]
@@ -80,28 +86,31 @@ fn greet(name: String) -> String {
 
 #[query(composite = true)]
 async fn greet_self(greeter: Principal) -> String {
-    let (greeting,) = ic_cdk::api::call::call(greeter, "greet", ("myself",))
+    Call::new(greeter, "greet")
+        .with_arg("myself")
+        .call()
         .await
-        .unwrap();
-    greeting
+        .unwrap()
 }
 
 #[update]
 async fn invalid_reply_payload_does_not_trap() -> String {
     // We're decoding an integer instead of a string, decoding must fail.
-    let result: Result<(u64,), _> = ic_cdk::call(
-        ic_cdk::api::canister_self(),
-        "greet",
-        ("World".to_string(),),
-    )
-    .await;
+    let result: CallResult<u64> = Call::new(ic_cdk::api::canister_self(), "greet")
+        .with_arg("World")
+        .call()
+        .await;
 
     match result {
-        Ok((_n,)) => ic_cdk::api::trap("expected the decoding to fail"),
-        Err((err_code, _)) => format!(
-            "handled decoding error gracefully with code {}",
-            err_code as i32
-        ),
+        Ok(_) => ic_cdk::api::trap("expected the decoding to fail"),
+        Err(e) => match e {
+            CallError::CandidDecodeFailed(candid_err) => {
+                format!("handled decoding error gracefully with candid error: {candid_err}")
+            }
+            other_err => ic_cdk::api::trap(format!(
+                "expected a CandidDecodeFailed error, got {other_err}"
+            )),
+        },
     }
 }
 

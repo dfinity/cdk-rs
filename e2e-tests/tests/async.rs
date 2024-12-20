@@ -1,12 +1,12 @@
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, query_candid, CallError, ErrorCode, PocketIc};
+use pocket_ic::{call_candid, query_candid, CallError, ErrorCode};
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn panic_after_async_frees_resources() {
-    let pic: PocketIc = pocket_ic();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -43,7 +43,7 @@ fn panic_after_async_frees_resources() {
             "invocation_count",
             (),
         )
-        .expect("failed to call invocation_count");
+        .unwrap();
 
         assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
     }
@@ -55,8 +55,8 @@ fn panic_after_async_frees_resources() {
         "invalid_reply_payload_does_not_trap",
         (),
     )
-    .expect("call failed");
-    assert_eq!(&message, "handled decoding error gracefully with code 5");
+    .unwrap();
+    assert!(message.contains("handled decoding error gracefully"));
 
     let err = call_candid::<_, ()>(
         &pic,
@@ -76,7 +76,7 @@ fn panic_after_async_frees_resources() {
         "notifications_received",
         (),
     )
-    .expect("failed to call unrelated function afterwards");
+    .unwrap();
     let _: (u64,) = call_candid(
         &pic,
         canister_id,
@@ -84,7 +84,7 @@ fn panic_after_async_frees_resources() {
         "invocation_count",
         (),
     )
-    .expect("failed to recover lock");
+    .unwrap();
 }
 
 #[test]
@@ -98,8 +98,7 @@ fn notify_calls() {
     pic.add_cycles(receiver_id, 2_000_000_000_000);
     pic.install_canister(receiver_id, wasm, vec![], None);
 
-    let (n,): (u64,) = query_candid(&pic, receiver_id, "notifications_received", ())
-        .expect("failed to query 'notifications_received'");
+    let (n,): (u64,) = query_candid(&pic, receiver_id, "notifications_received", ()).unwrap();
     assert_eq!(n, 0);
 
     let () = call_candid(
@@ -109,14 +108,12 @@ fn notify_calls() {
         "notify",
         (receiver_id, "on_notify"),
     )
-    .expect("failed to call 'notify'");
+    .unwrap();
 
-    let (n,): (u64,) = query_candid(&pic, receiver_id, "notifications_received", ())
-        .expect("failed to query 'notifications_received'");
+    let (n,): (u64,) = query_candid(&pic, receiver_id, "notifications_received", ()).unwrap();
     assert_eq!(n, 1);
 }
 
-// Composite queries are not enabled yet.
 #[test]
 fn test_composite_query() {
     let pic = pocket_ic();
@@ -128,7 +125,7 @@ fn test_composite_query() {
     pic.add_cycles(receiver_id, 2_000_000_000_000);
     pic.install_canister(receiver_id, wasm, vec![], None);
 
-    let (greeting,): (String,) = query_candid(&pic, sender_id, "greet_self", (receiver_id,))
-        .expect("failed to query 'greet_self'");
+    let (greeting,): (String,) =
+        query_candid(&pic, sender_id, "greet_self", (receiver_id,)).unwrap();
     assert_eq!(greeting, "Hello, myself");
 }
