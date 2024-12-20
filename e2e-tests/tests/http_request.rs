@@ -1,17 +1,16 @@
 use candid::{Encode, Principal};
-use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::{
     CanisterHttpHeader, CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse,
     MockCanisterHttpResponse,
 };
-use pocket_ic::{PocketIc, PocketIcBuilder, WasmResult};
+use pocket_ic::{PocketIc, WasmResult};
+
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
 
 #[test]
 fn test_http_request() {
-    let pic = PocketIcBuilder::new()
-        .with_application_subnet()
-        .with_nonmainnet_features(true)
-        .build();
+    let pic = pocket_ic();
 
     let wasm = cargo_build_canister("http_request");
     let canister_id = pic.create_canister();

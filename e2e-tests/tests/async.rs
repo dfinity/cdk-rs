@@ -1,10 +1,12 @@
-use ic_cdk_e2e_tests::cargo_build_canister;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, query_candid, CallError, ErrorCode, PocketIc};
 
+mod test_utilities;
+use test_utilities::{cargo_build_canister, pocket_ic};
+
 #[test]
 fn panic_after_async_frees_resources() {
-    let pic: PocketIc = PocketIc::new();
+    let pic: PocketIc = pocket_ic();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -87,7 +89,7 @@ fn panic_after_async_frees_resources() {
 
 #[test]
 fn notify_calls() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
@@ -117,7 +119,7 @@ fn notify_calls() {
 // Composite queries are not enabled yet.
 #[test]
 fn test_composite_query() {
-    let pic = PocketIc::new();
+    let pic = pocket_ic();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
