@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha2::Digest;
 
-use ic_cdk::api::call::CallResult;
+use ic_cdk::call::{Call, CallResult, SendableCall};
 
 /// The subaccount that is used by default.
 pub const DEFAULT_SUBACCOUNT: Subaccount = Subaccount([0; 32]);
@@ -675,14 +675,14 @@ impl CandidType for QueryArchiveFn {
 ///
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID, account_balance};
 ///
 /// async fn check_callers_balance() -> Tokens {
 ///   account_balance(
 ///     MAINNET_LEDGER_CANISTER_ID,
 ///     AccountBalanceArgs {
-///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
+///       account: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT)
 ///     }
 ///   ).await.expect("call to ledger failed")
 /// }
@@ -691,14 +691,16 @@ pub async fn account_balance(
     ledger_canister_id: Principal,
     args: AccountBalanceArgs,
 ) -> CallResult<Tokens> {
-    let (icp,) = ic_cdk::call(ledger_canister_id, "account_balance", (args,)).await?;
-    Ok(icp)
+    Call::new(ledger_canister_id, "account_balance")
+        .with_arg(args)
+        .call()
+        .await
 }
 
 /// Calls the "transfer" method on the specified canister.
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, BlockIndex, Memo, TransferArgs, Tokens, DEFAULT_SUBACCOUNT, DEFAULT_FEE, MAINNET_LEDGER_CANISTER_ID, transfer};
 ///
 /// async fn transfer_to_caller() -> BlockIndex {
@@ -709,7 +711,7 @@ pub async fn account_balance(
 ///       amount: Tokens::from_e8s(1_000_000),
 ///       fee: DEFAULT_FEE,
 ///       from_subaccount: None,
-///       to: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT),
+///       to: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT),
 ///       created_at_time: None,
 ///     }
 ///   ).await.expect("call to ledger failed").expect("transfer failed")
@@ -719,8 +721,10 @@ pub async fn transfer(
     ledger_canister_id: Principal,
     args: TransferArgs,
 ) -> CallResult<TransferResult> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
-    Ok(result)
+    Call::new(ledger_canister_id, "transfer")
+        .with_arg(args)
+        .call()
+        .await
 }
 
 /// Return type of the `token_symbol` function.
@@ -734,7 +738,6 @@ pub struct Symbol {
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::{caller, call::call};
 /// use ic_ledger_types::{Symbol, token_symbol};
 ///
 /// async fn symbol(ledger_canister_id: Principal) -> String {
@@ -742,15 +745,14 @@ pub struct Symbol {
 /// }
 /// ```
 pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "token_symbol", ()).await?;
-    Ok(result)
+    Call::new(ledger_canister_id, "token_symbol").call().await
 }
 
 /// Calls the "query_block" method on the specified canister.
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
@@ -778,8 +780,10 @@ pub async fn query_blocks(
     ledger_canister_id: Principal,
     args: GetBlocksArgs,
 ) -> CallResult<QueryBlocksResponse> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "query_blocks", (args,)).await?;
-    Ok(result)
+    Call::new(ledger_canister_id, "query_blocks")
+        .with_arg(args)
+        .call()
+        .await
 }
 
 /// Continues a query started in [`query_blocks`] by calling its returned archive function.
@@ -788,7 +792,7 @@ pub async fn query_blocks(
 ///
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
@@ -816,8 +820,10 @@ pub async fn query_archived_blocks(
     func: &QueryArchiveFn,
     args: GetBlocksArgs,
 ) -> CallResult<GetBlocksResult> {
-    let (result,) = ic_cdk::api::call::call(func.0.principal, &func.0.method, (args,)).await?;
-    Ok(result)
+    Call::new(func.0.principal, &func.0.method)
+        .with_arg(args)
+        .call()
+        .await
 }
 
 #[cfg(test)]

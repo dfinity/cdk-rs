@@ -1,0 +1,95 @@
+#![doc = include_str!("../README.md")]
+#![warn(
+    elided_lifetimes_in_paths,
+    missing_debug_implementations,
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
+)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
+#[cfg(target_feature = "atomics")]
+compile_error!("This version of the CDK does not support multithreading.");
+
+pub mod prelude;
+
+pub mod api;
+pub mod call;
+mod futures;
+mod macros;
+pub mod management_canister;
+mod printer;
+pub mod stable;
+pub mod storage;
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+#[doc(inline)]
+pub use api::trap;
+
+#[doc(inline)]
+#[allow(deprecated)]
+pub use api::{
+    call::{call, notify},
+    caller, id, print,
+};
+
+#[doc(inline)]
+pub use macros::*;
+
+static DONE: AtomicBool = AtomicBool::new(false);
+
+/// Setup the stdlib hooks.
+pub fn setup() {
+    if !DONE.swap(true, Ordering::SeqCst) {
+        printer::hook()
+    }
+}
+
+/// See documentation for [spawn].
+#[deprecated(
+    since = "0.3.4",
+    note = "Use the spawn() function instead, it does the same thing but is more appropriately named."
+)]
+pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
+    futures::spawn(future);
+}
+
+/// Spawn an asynchronous task that drives the provided future to
+/// completion.
+pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
+    futures::spawn(future);
+}
+
+/// Format and then print the formatted message
+#[cfg(target_family = "wasm")]
+#[macro_export]
+macro_rules! println {
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
+}
+
+/// Format and then print the formatted message
+#[cfg(not(target_family = "wasm"))]
+#[macro_export]
+macro_rules! println {
+    ($fmt:expr) => (std::println!($fmt));
+    ($fmt:expr, $($arg:tt)*) => (std::println!($fmt, $($arg)*));
+}
+
+/// Format and then print the formatted message
+#[cfg(target_family = "wasm")]
+#[macro_export]
+macro_rules! eprintln {
+    ($fmt:expr) => ($crate::api::debug_print(format!($fmt)));
+    ($fmt:expr, $($arg:tt)*) => ($crate::api::debug_print(format!($fmt, $($arg)*)));
+}
+
+/// Format and then print the formatted message
+#[cfg(not(target_family = "wasm"))]
+#[macro_export]
+macro_rules! eprintln {
+    ($fmt:expr) => (std::eprintln!($fmt));
+    ($fmt:expr, $($arg:tt)*) => (std::eprintln!($fmt, $($arg)*));
+}
