@@ -18,6 +18,10 @@ use std::task::{Context, Poll, Waker};
 ///
 /// These can be obtained either using `reject_code()` or `reject_result()`.
 #[allow(missing_docs)]
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::RejectCode` instead."
+)]
 #[repr(usize)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectionCode {
@@ -55,6 +59,10 @@ impl From<u32> for RejectionCode {
 /// The result of a Call.
 ///
 /// Errors on the IC have two components; a Code and a message associated with it.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::CallResult` instead."
+)]
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
 // Internal state for the Future when sending a call.
@@ -223,6 +231,10 @@ fn add_payment(payment: u128) {
 ///   * If the payment is non-zero and the system fails to deliver the notification, the behaviour
 ///     is unspecified: the funds can be either reimbursed or consumed irrevocably by the IC depending
 ///     on the underlying implementation of one-way calls.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(,,).with_cycles(..).call_oneway()` instead."
+)]
 pub fn notify_with_payment128<T: ArgumentEncoder>(
     id: Principal,
     method: &str,
@@ -234,6 +246,10 @@ pub fn notify_with_payment128<T: ArgumentEncoder>(
 }
 
 /// Like [notify_with_payment128], but sets the payment to zero.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(,,).with_cycles(..).call_oneway()` instead."
+)]
 pub fn notify<T: ArgumentEncoder>(
     id: Principal,
     method: &str,
@@ -243,6 +259,10 @@ pub fn notify<T: ArgumentEncoder>(
 }
 
 /// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call_oneway()` instead."
+)]
 pub fn notify_raw(
     id: Principal,
     method: &str,
@@ -299,6 +319,10 @@ pub fn notify_raw(
 ///     call_raw(callee_canister(), "add_user", b"abcd", 1_000_000u64).await.unwrap()
 /// }
 /// ```
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call()` instead."
+)]
 pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
@@ -322,6 +346,10 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
 ///     call_raw128(callee_canister(), "add_user", b"abcd", 1_000_000u128).await.unwrap()
 /// }
 /// ```
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call()` instead."
+)]
 pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
     method: &str,
@@ -388,6 +416,10 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(..).call()` instead."
+)]
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -430,6 +462,10 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).call()` instead."
+)]
 pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -473,6 +509,10 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).call()` instead."
+)]
 pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &str,
@@ -519,6 +559,10 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 ///     user_id
 /// }
 /// ```
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).with_decoder_config(..).call()` instead."
+)]
 pub fn call_with_config<'b, T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
     method: &'b str,

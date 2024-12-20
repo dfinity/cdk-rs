@@ -29,7 +29,7 @@ use std::{
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call::{Call, CallError, CallPerformErrorCode, RejectCode, SendableCall};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -113,11 +113,12 @@ extern "C" fn global_timer() {
                             call_futures.push(async move {
                                 (
                                     timer,
-                                    ic_cdk::call(
+                                    Call::new(
                                         ic_cdk::api::canister_self(),
                                         "<ic-cdk internal> timer_executor",
-                                        (task_id.0.as_ffi(),),
                                     )
+                                    .with_arg(task_id.0.as_ffi())
+                                    .call::<()>()
                                     .await,
                                 )
                             });
@@ -131,25 +132,30 @@ extern "C" fn global_timer() {
         // run all the collected tasks, and clean up after them if necessary
         while let Some((timer, res)) = call_futures.next().await {
             let task_id = timer.task;
-            match res {
-                Ok(()) => {}
-                Err((code, msg)) => {
-                    ic_cdk::println!("in canister_global_timer: {code:?}: {msg}");
-                    match code {
-                        RejectionCode::SysTransient => {
-                            // Try to execute the timer again later.
-                            TIMERS.with(|timers| {
-                                timers.borrow_mut().push(timer);
-                            });
-                            continue;
+            if let Err(e) = res {
+                ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
+                let mut retry_later = false;
+                match e {
+                    CallError::CallRejected(reject_code, _) => {
+                        if reject_code == RejectCode::SysTransient {
+                            retry_later = true;
                         }
-                        RejectionCode::NoError
-                        | RejectionCode::SysFatal
-                        | RejectionCode::DestinationInvalid
-                        | RejectionCode::CanisterReject
-                        | RejectionCode::CanisterError
-                        | RejectionCode::Unknown => {}
                     }
+                    CallError::CallPerformFailed(call_perform_error_code) => {
+                        if call_perform_error_code == CallPerformErrorCode::SysTransient {
+                            retry_later = true;
+                        }
+                    }
+                    CallError::CandidEncodeFailed(_) | CallError::CandidDecodeFailed(_) => {
+                        // These errors are not transient, and will not be retried.
+                    }
+                }
+                if retry_later {
+                    // Try to execute the timer again later.
+                    TIMERS.with(|timers| {
+                        timers.borrow_mut().push(timer);
+                    });
+                    continue;
                 }
             }
             TASKS.with(|tasks| {
