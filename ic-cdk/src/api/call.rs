@@ -609,6 +609,10 @@ fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Opti
 ///
 /// It will be Ok(T) if the call succeeded (with T being the arg_data),
 /// and [reject_message()] if it failed.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::{msg_reject_code, msg_reject_msg}` instead."
+)]
 pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
     match reject_code() {
         RejectionCode::NoError => {
@@ -619,6 +623,10 @@ pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
 }
 
 /// Returns the rejection code for the call.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reject_code` instead."
+)]
 pub fn reject_code() -> RejectionCode {
     // SAFETY: ic0.msg_reject_code is always safe to call.
     let code = unsafe { ic0::msg_reject_code() };
@@ -626,6 +634,10 @@ pub fn reject_code() -> RejectionCode {
 }
 
 /// Returns the rejection message.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reject_msg` instead."
+)]
 pub fn reject_message() -> String {
     // SAFETY: ic0.msg_reject_msg_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
@@ -638,6 +650,10 @@ pub fn reject_message() -> String {
 }
 
 /// Rejects the current call with the message.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reject` instead."
+)]
 pub fn reject(message: &str) {
     let err_message = message.as_bytes();
     // SAFETY: `err_message`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
@@ -648,6 +664,10 @@ pub fn reject(message: &str) {
 
 /// An io::Write for message replies.
 #[derive(Debug, Copy, Clone)]
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reply` instead."
+)]
 pub struct CallReplyWriter;
 
 impl std::io::Write for CallReplyWriter {
@@ -665,6 +685,10 @@ impl std::io::Write for CallReplyWriter {
 }
 
 /// Replies to the current call with a candid argument.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reply` instead."
+)]
 pub fn reply<T: ArgumentEncoder>(reply: T) {
     write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
     // SAFETY: ic0.msg_reply is always safe to call.
@@ -675,12 +699,20 @@ pub fn reply<T: ArgumentEncoder>(reply: T) {
 
 /// Returns the amount of cycles that were transferred by the caller
 /// of the current call, and is still available in this message.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_available` instead."
+)]
 pub fn msg_cycles_available() -> u64 {
     msg_cycles_available128() as u64
 }
 
 /// Returns the amount of cycles that were transferred by the caller
 /// of the current call, and is still available in this message.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_available` instead."
+)]
 pub fn msg_cycles_available128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
@@ -693,6 +725,10 @@ pub fn msg_cycles_available128() -> u128 {
 /// Returns the amount of cycles that came back with the response as a refund.
 ///
 /// The refund has already been added to the canister balance automatically.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_refunded` instead."
+)]
 pub fn msg_cycles_refunded() -> u64 {
     msg_cycles_refunded128() as u64
 }
@@ -700,6 +736,10 @@ pub fn msg_cycles_refunded() -> u64 {
 /// Returns the amount of cycles that came back with the response as a refund.
 ///
 /// The refund has already been added to the canister balance automatically.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_refunded` instead."
+)]
 pub fn msg_cycles_refunded128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
@@ -712,6 +752,10 @@ pub fn msg_cycles_refunded128() -> u128 {
 /// Moves cycles from the call to the canister balance.
 ///
 /// The actual amount moved will be returned.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_accept` instead."
+)]
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     msg_cycles_accept128(max_amount as u128) as u64
 }
@@ -719,6 +763,10 @@ pub fn msg_cycles_accept(max_amount: u64) -> u64 {
 /// Moves cycles from the call to the canister balance.
 ///
 /// The actual amount moved will be returned.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_cycles_accept` instead."
+)]
 pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
     let high = (max_amount >> 64) as u64;
     let low = (max_amount & u64::MAX as u128) as u64;
@@ -731,6 +779,10 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
 }
 
 /// Returns the argument data as bytes.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_arg_data` instead."
+)]
 pub fn arg_data_raw() -> Vec<u8> {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     let len: usize = unsafe { ic0::msg_arg_data_size() };
@@ -746,12 +798,20 @@ pub fn arg_data_raw() -> Vec<u8> {
 }
 
 /// Gets the len of the raw-argument-data-bytes.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_arg_data` instead."
+)]
 pub fn arg_data_raw_size() -> usize {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     unsafe { ic0::msg_arg_data_size() }
 }
 
 /// Replies with the bytes passed
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_reply` instead."
+)]
 pub fn reply_raw(buf: &[u8]) {
     if !buf.is_empty() {
         // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
@@ -761,6 +821,10 @@ pub fn reply_raw(buf: &[u8]) {
     unsafe { ic0::msg_reply() };
 }
 
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::DecoderConfig` instead."
+)]
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
 pub struct ArgDecoderConfig {
@@ -798,6 +862,10 @@ impl Default for ArgDecoderConfig {
 
 /// Returns the argument data in the current call. Traps if the data cannot be
 /// decoded.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::call::msg_arg_data` instead."
+)]
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) -> R {
     let bytes = arg_data_raw();
 
@@ -815,6 +883,10 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) ->
 }
 
 /// Accepts the ingress message.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::accept_message` instead."
+)]
 pub fn accept_message() {
     // SAFETY: ic0.accept_message is always safe to call.
     unsafe {
@@ -823,6 +895,10 @@ pub fn accept_message() {
 }
 
 /// Returns the name of current canister method.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::api::msg_method_name` instead."
+)]
 pub fn method_name() -> String {
     // SAFETY: ic0.msg_method_name_size is always safe to call.
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
