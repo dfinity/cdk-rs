@@ -1095,6 +1095,7 @@ mod transform_closure {
         http_request, CallResult, HttpRequestArgs, HttpRequestResult, Principal, TransformArgs,
         TransformContext,
     };
+    use candid::{decode_one, encode_one};
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
     use std::cell::RefCell;
 
@@ -1105,23 +1106,22 @@ mod transform_closure {
 
     #[export_name = "canister_query <ic-cdk internal> http_transform"]
     extern "C" fn http_transform() {
-        use crate::api::{
-            call::{arg_data, reply, ArgDecoderConfig},
-            msg_caller,
-        };
+        use crate::api::{msg_arg_data, msg_caller, msg_reply};
         if msg_caller() != Principal::management_canister() {
             crate::trap("This function is internal to ic-cdk and should not be called externally.");
         }
         crate::setup();
-        let (args,): (TransformArgs,) = arg_data(ArgDecoderConfig::default());
-        let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
+        let arg_bytes = msg_arg_data();
+        let transform_args: TransformArgs = decode_one(&arg_bytes).unwrap();
+        let int = u64::from_be_bytes(transform_args.context[..].try_into().unwrap());
         let key = DefaultKey::from(KeyData::from_ffi(int));
         let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
         let Some(func) = func else {
             crate::trap(format!("Missing transform function for request {int}"));
         };
-        let transformed = func(args.response);
-        reply((transformed,))
+        let transformed = func(transform_args.response);
+        let encoded = encode_one(&transformed).unwrap();
+        msg_reply(&encoded);
     }
 
     /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
