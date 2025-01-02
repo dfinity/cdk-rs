@@ -275,15 +275,16 @@ fn update_ic0_timer() {
     export_name = "canister_update_ic_cdk_internal.timer_executor"
 )]
 extern "C" fn timer_executor() {
+    use candid::utils::{decode_one, encode_one};
     if ic_cdk::api::msg_caller() != ic_cdk::api::canister_self() {
         ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
     }
-    let config = ic_cdk::api::call::ArgDecoderConfig {
-        decoding_quota: Some(10_000),
-        skipping_quota: Some(100),
-        debug: false,
-    };
-    let (task_id,) = ic_cdk::api::call::arg_data(config);
+    let arg_bytes = ic_cdk::api::msg_arg_data();
+    // timer_executor is only called by the canister itself (from global_timer),
+    // so we can safely assume that the argument is a valid TimerId (u64).
+    // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
+    let task_id: u64 = decode_one(&arg_bytes).unwrap();
+
     let task_id = TimerId(KeyData::from_ffi(task_id));
     // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
     // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
@@ -303,5 +304,5 @@ extern "C" fn timer_executor() {
             }
         }
     }
-    ic_cdk::api::call::reply(());
+    ic_cdk::api::msg_reply(&encode_one(&()).unwrap());
 }
