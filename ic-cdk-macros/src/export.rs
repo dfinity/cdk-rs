@@ -172,12 +172,12 @@ fn dfn_macro(
         quote! {}
     } else {
         let return_bytes = match return_length {
-            0 => quote! { ::candid::utils::encode_one(&()).unwrap() },
-            1 => quote! { ::candid::utils::encode_one(&result).unwrap() },
-            _ => quote! { ::candid::utils::encode_args(&result).unwrap() },
+            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
+            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
+            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
         };
         quote! {
-            ::ic_cdk::api::msg_reply(&#return_bytes);
+            ::ic_cdk::api::msg_reply(#return_bytes);
         }
     };
 
@@ -323,7 +323,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
             }
         };
@@ -362,7 +362,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&result).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
                 });
             }
         };
@@ -401,7 +401,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_args(&result).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_args(result).unwrap());
                 });
             }
         };
@@ -440,7 +440,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a);
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
             }
         };
@@ -479,7 +479,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
             }
         };
@@ -517,7 +517,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&result).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
                 });
             }
         };
@@ -556,7 +556,7 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
+                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
             }
         };
