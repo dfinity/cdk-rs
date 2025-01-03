@@ -16,12 +16,6 @@ struct ExportAttributes {
     pub composite: bool,
     #[serde(default)]
     pub hidden: bool,
-    #[serde(default)]
-    pub decoding_quota: Option<usize>,
-    #[serde(default = "default_skipping_quota")]
-    pub skipping_quota: Option<usize>,
-    #[serde(default)]
-    pub debug: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -63,10 +57,6 @@ impl std::fmt::Display for MethodType {
             MethodType::OnLowWasmMemory => f.write_str("on_low_wasm_memory"),
         }
     }
-}
-
-fn default_skipping_quota() -> Option<usize> {
-    Some(10_000)
 }
 
 fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box<Type>)>, Error> {
@@ -181,10 +171,13 @@ fn dfn_macro(
     let return_encode = if method.is_lifecycle() || attrs.manual_reply {
         quote! {}
     } else {
-        match return_length {
-            0 => quote! { ic_cdk::api::call::reply(()) },
-            1 => quote! { ic_cdk::api::call::reply((result,)) },
-            _ => quote! { ic_cdk::api::call::reply(result) },
+        let return_bytes = match return_length {
+            0 => quote! { ::candid::utils::encode_one(&()).unwrap() },
+            1 => quote! { ::candid::utils::encode_one(&result).unwrap() },
+            _ => quote! { ::candid::utils::encode_args(&result).unwrap() },
+        };
+        quote! {
+            ::ic_cdk::api::msg_reply(&#return_bytes);
         }
     };
 
@@ -194,29 +187,9 @@ fn dfn_macro(
     let arg_decode = if method.is_lifecycle() && arg_count == 0 {
         quote! {}
     } else {
-        let decoding_quota = if let Some(n) = attrs.decoding_quota {
-            quote! { Some(#n) }
-        } else {
-            quote! { None }
-        };
-        let skipping_quota = if let Some(n) = attrs.skipping_quota {
-            quote! { Some(#n) }
-        } else {
-            quote! { None }
-        };
-        let debug = if attrs.debug {
-            quote! { true }
-        } else {
-            quote! { false }
-        };
-        let config = quote! {
-            ic_cdk::api::call::ArgDecoderConfig {
-                decoding_quota: #decoding_quota,
-                skipping_quota: #skipping_quota,
-                debug: #debug,
-            }
-        };
-        quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(#config); }
+        quote! {
+        let arg_bytes = ::ic_cdk::api::msg_arg_data();
+        let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap(); }
     };
 
     let guard = if let Some(guard_name) = attrs.guard {
@@ -232,7 +205,7 @@ fn dfn_macro(
         quote! {
             let r: Result<(), String> = #guard_ident ();
             if let Err(e) = r {
-                ic_cdk::api::call::reject(&e);
+                ::ic_cdk::api::msg_reject(&e);
                 return;
             }
         }
@@ -266,11 +239,11 @@ fn dfn_macro(
         #[cfg_attr(target_family = "wasm", export_name = #export_name)]
         #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
         fn #outer_function_ident() {
-            ic_cdk::setup();
+            ::ic_cdk::setup();
 
             #guard
 
-            ic_cdk::spawn(async {
+            ::ic_cdk::spawn(async {
                 #arg_decode
                 let result = #function_call;
                 #return_encode
@@ -345,17 +318,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ic_cdk::api::call::reply(())
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
                 });
             }
         };
@@ -369,6 +337,7 @@ mod test {
             _ => panic!("not a function"),
         };
     }
+
     #[test]
     fn ic_query_return_one_value() {
         let generated = ic_query(
@@ -388,17 +357,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ic_cdk::api::call::reply((result,))
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&result).unwrap());
                 });
             }
         };
@@ -432,17 +396,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ic_cdk::api::call::reply(result)
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_args(&result).unwrap());
                 });
             }
         };
@@ -476,17 +435,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a);
-                    ic_cdk::api::call::reply(())
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
                 });
             }
         };
@@ -520,17 +474,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ic_cdk::api::call::reply(())
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
                 });
             }
         };
@@ -559,22 +508,16 @@ mod test {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
         };
-
         let expected = quote! {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ic_cdk::api::call::reply((result,))
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&result).unwrap());
                 });
             }
         };
@@ -608,17 +551,12 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
-                ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
+                ::ic_cdk::setup();
+                ::ic_cdk::spawn(async {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
-                    ic_cdk::api::call::reply(())
+                    ::ic_cdk::api::msg_reply(&::candid::utils::encode_one(&()).unwrap());
                 });
             }
         };
