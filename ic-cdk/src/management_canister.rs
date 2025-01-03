@@ -1120,8 +1120,8 @@ mod transform_closure {
             crate::trap(format!("Missing transform function for request {int}"));
         };
         let transformed = func(transform_args.response);
-        let encoded = encode_one(&transformed).unwrap();
-        msg_reply(&encoded);
+        let encoded = encode_one(transformed).unwrap();
+        msg_reply(encoded);
     }
 
     /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
