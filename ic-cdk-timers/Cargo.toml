@@ -20,6 +20,7 @@ keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
+candid.workspace = true
 ic0.workspace = true
 ic-cdk.workspace = true
 serde.workspace = true
