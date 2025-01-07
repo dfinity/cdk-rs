@@ -48,6 +48,19 @@ impl MethodType {
             MethodType::Update | MethodType::Query => false,
         }
     }
+
+    /// init, post_upgrade, update, query can have arguments.
+    pub fn can_have_args(&self) -> bool {
+        match self {
+            MethodType::Init | MethodType::PostUpgrade | MethodType::Update | MethodType::Query => {
+                true
+            }
+            MethodType::PreUpgrade
+            | MethodType::Heartbeat
+            | MethodType::InspectMessage
+            | MethodType::OnLowWasmMemory => false,
+        }
+    }
 }
 
 impl std::fmt::Display for MethodType {
@@ -171,7 +184,13 @@ fn dfn_macro(
     // 3. decode arguments
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
         get_args(method, signature)?.iter().cloned().unzip();
-    let arg_decode = if method.is_lifecycle() && arg_tuple.len() == 0 {
+    if !method.can_have_args() && !arg_tuple.is_empty() {
+        return Err(Error::new(
+            Span::call_site(),
+            format!("#[{}] function cannot have arguments.", method),
+        ));
+    }
+    let arg_decode = if arg_tuple.is_empty() {
         quote! {}
     } else {
         quote! {
@@ -318,8 +337,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
@@ -357,8 +374,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
                 });
@@ -396,8 +411,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_args(result).unwrap());
                 });
@@ -551,8 +564,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
