@@ -143,25 +143,35 @@ fn dfn_macro(
     // 1. function name(s)
     let name = &signature.ident;
     let outer_function_ident = format_ident!("__canister_method_{name}");
-    let function_name = attrs.name.unwrap_or_else(|| name.to_string());
+    let function_name = if let Some(custom_name) = attrs.name {
+        if method.is_lifecycle() {
+            return Err(Error::new(
+                attr.span(),
+                format!("#[{0}] cannot have a custom name.", method),
+            ));
+        }
+        if custom_name.starts_with("<ic-cdk internal>") {
+            return Err(Error::new(
+                attr.span(),
+                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
+            ));
+        }
+        custom_name
+    } else {
+        name.to_string()
+    };
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
     } else if method == MethodType::Query && attrs.composite {
         format!("canister_composite_query {function_name}",)
     } else {
-        if function_name.starts_with("<ic-cdk internal>") {
-            return Err(Error::new(
-                Span::call_site(),
-                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
-            ));
-        }
         format!("canister_{method} {function_name}")
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
     // 2. guard
     let guard = if let Some(guard_name) = attrs.guard {
-        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+        // ic0.msg_reject is only allowed in update/query
         if method.is_lifecycle() {
             return Err(Error::new(
                 attr.span(),
