@@ -31,6 +31,12 @@ enum MethodType {
 }
 
 impl MethodType {
+    /// A lifecycle method is a method that is called by the system and not by the user.
+    /// So far, `update` and `query` are the only methods that are not lifecycle methods.
+    ///
+    /// We have a few assumptions for lifecycle methods:
+    /// - They cannot have a return value.
+    /// - The export name is prefixed with `canister_`, e.g. `init` => `canister_init`.
     pub fn is_lifecycle(&self) -> bool {
         match self {
             MethodType::Init
@@ -121,29 +127,9 @@ fn dfn_macro(
         ));
     }
 
-    let is_async = signature.asyncness.is_some();
-
-    let return_length = match &signature.output {
-        ReturnType::Default => 0,
-        ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Tuple(tuple) => tuple.elems.len(),
-            _ => 1,
-        },
-    };
-
-    if method.is_lifecycle() && return_length > 0 {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("#[{}] function cannot have a return value.", method),
-        ));
-    }
-
-    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
-        get_args(method, signature)?.iter().cloned().unzip();
+    // 1. function name(s)
     let name = &signature.ident;
-
     let outer_function_ident = format_ident!("__canister_method_{name}");
-
     let function_name = attrs.name.unwrap_or_else(|| name.to_string());
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
@@ -160,38 +146,7 @@ fn dfn_macro(
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
-    let function_call = if is_async {
-        quote! { #name ( #(#arg_tuple),* ) .await }
-    } else {
-        quote! { #name ( #(#arg_tuple),* ) }
-    };
-
-    let arg_count = arg_tuple.len();
-
-    let return_encode = if method.is_lifecycle() || attrs.manual_reply {
-        quote! {}
-    } else {
-        let return_bytes = match return_length {
-            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
-            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
-            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
-        };
-        quote! {
-            ::ic_cdk::api::msg_reply(#return_bytes);
-        }
-    };
-
-    // On initialization we can actually not receive any input and it's okay, only if
-    // we don't have any arguments either.
-    // If the data we receive is not empty, then try to unwrap it as if it's DID.
-    let arg_decode = if method.is_lifecycle() && arg_count == 0 {
-        quote! {}
-    } else {
-        quote! {
-        let arg_bytes = ::ic_cdk::api::msg_arg_data();
-        let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap(); }
-    };
-
+    // 2. guard
     let guard = if let Some(guard_name) = attrs.guard {
         // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
         if method.is_lifecycle() {
@@ -213,6 +168,52 @@ fn dfn_macro(
         quote! {}
     };
 
+    // 3. decode arguments
+    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
+        get_args(method, signature)?.iter().cloned().unzip();
+    let arg_decode = if method.is_lifecycle() && arg_tuple.len() == 0 {
+        quote! {}
+    } else {
+        quote! {
+        let arg_bytes = ::ic_cdk::api::msg_arg_data();
+        let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap(); }
+    };
+
+    // 4. function call
+    let function_call = if signature.asyncness.is_some() {
+        quote! { #name ( #(#arg_tuple),* ) .await }
+    } else {
+        quote! { #name ( #(#arg_tuple),* ) }
+    };
+
+    // 5. return
+    let return_length = match &signature.output {
+        ReturnType::Default => 0,
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Tuple(tuple) => tuple.elems.len(),
+            _ => 1,
+        },
+    };
+    if method.is_lifecycle() && return_length > 0 {
+        return Err(Error::new(
+            Span::call_site(),
+            format!("#[{}] function cannot have a return value.", method),
+        ));
+    }
+    let return_encode = if method.is_lifecycle() || attrs.manual_reply {
+        quote! {}
+    } else {
+        let return_bytes = match return_length {
+            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
+            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
+            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
+        };
+        quote! {
+            ::ic_cdk::api::msg_reply(#return_bytes);
+        }
+    };
+
+    // 6. candid attributes for export_candid!()
     let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
@@ -261,9 +262,6 @@ pub(crate) fn ic_query(attr: TokenStream, item: TokenStream) -> Result<TokenStre
 pub(crate) fn ic_update(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     dfn_macro(MethodType::Update, attr, item)
 }
-
-#[derive(Default, Deserialize)]
-struct InitAttributes {}
 
 pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     dfn_macro(MethodType::Init, attr, item)
