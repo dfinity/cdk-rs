@@ -10,6 +10,7 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    pub decode_with: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
     #[serde(default)]
@@ -194,18 +195,38 @@ fn dfn_macro(
     // 3. decode arguments
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
         get_args(method, signature)?.iter().cloned().unzip();
-    if !method.can_have_args() && !arg_tuple.is_empty() {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("#[{}] function cannot have arguments.", method),
-        ));
+    if !method.can_have_args() {
+        if !arg_tuple.is_empty() {
+            return Err(Error::new(
+                Span::call_site(),
+                format!("#[{}] function cannot have arguments.", method),
+            ));
+        }
+        if attrs.decode_with.is_some() {
+            return Err(Error::new(
+                attr.span(),
+                format!(
+                    "#[{}] function cannot have a decode_with attribute.",
+                    method
+                ),
+            ));
+        }
     }
-    let arg_decode = if arg_tuple.is_empty() {
+    let arg_decode = if let Some(decode_with) = attrs.decode_with {
+        let decode_with_ident = syn::Ident::new(&decode_with, Span::call_site());
+        if arg_tuple.len() == 1 {
+            let arg_one = &arg_tuple[0];
+            quote! { let #arg_one = #decode_with_ident(); }
+        } else {
+            quote! { let ( #( #arg_tuple, )* ) = #decode_with_ident(); }
+        }
+    } else if arg_tuple.is_empty() {
         quote! {}
     } else {
         quote! {
-        let arg_bytes = ::ic_cdk::api::msg_arg_data();
-        let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap(); }
+            let arg_bytes = ::ic_cdk::api::msg_arg_data();
+            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+        }
     };
 
     // 4. function call
