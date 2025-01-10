@@ -10,6 +10,7 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    pub decode_with: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
     #[serde(default)]
@@ -31,6 +32,12 @@ enum MethodType {
 }
 
 impl MethodType {
+    /// A lifecycle method is a method that is called by the system and not by the user.
+    /// So far, `update` and `query` are the only methods that are not lifecycle methods.
+    ///
+    /// We have a few assumptions for lifecycle methods:
+    /// - They cannot have a return value.
+    /// - The export name is prefixed with `canister_`, e.g. `init` => `canister_init`.
     pub fn is_lifecycle(&self) -> bool {
         match self {
             MethodType::Init
@@ -40,6 +47,19 @@ impl MethodType {
             | MethodType::InspectMessage
             | MethodType::OnLowWasmMemory => true,
             MethodType::Update | MethodType::Query => false,
+        }
+    }
+
+    /// init, post_upgrade, update, query can have arguments.
+    pub fn can_have_args(&self) -> bool {
+        match self {
+            MethodType::Init | MethodType::PostUpgrade | MethodType::Update | MethodType::Query => {
+                true
+            }
+            MethodType::PreUpgrade
+            | MethodType::Heartbeat
+            | MethodType::InspectMessage
+            | MethodType::OnLowWasmMemory => false,
         }
     }
 }
@@ -121,79 +141,38 @@ fn dfn_macro(
         ));
     }
 
-    let is_async = signature.asyncness.is_some();
-
-    let return_length = match &signature.output {
-        ReturnType::Default => 0,
-        ReturnType::Type(_, ty) => match ty.as_ref() {
-            Type::Tuple(tuple) => tuple.elems.len(),
-            _ => 1,
-        },
-    };
-
-    if method.is_lifecycle() && return_length > 0 {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("#[{}] function cannot have a return value.", method),
-        ));
-    }
-
-    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
-        get_args(method, signature)?.iter().cloned().unzip();
+    // 1. function name(s)
     let name = &signature.ident;
-
     let outer_function_ident = format_ident!("__canister_method_{name}");
-
-    let function_name = attrs.name.unwrap_or_else(|| name.to_string());
+    let function_name = if let Some(custom_name) = attrs.name {
+        if method.is_lifecycle() {
+            return Err(Error::new(
+                attr.span(),
+                format!("#[{0}] cannot have a custom name.", method),
+            ));
+        }
+        if custom_name.starts_with("<ic-cdk internal>") {
+            return Err(Error::new(
+                attr.span(),
+                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
+            ));
+        }
+        custom_name
+    } else {
+        name.to_string()
+    };
     let export_name = if method.is_lifecycle() {
         format!("canister_{}", method)
     } else if method == MethodType::Query && attrs.composite {
         format!("canister_composite_query {function_name}",)
     } else {
-        if function_name.starts_with("<ic-cdk internal>") {
-            return Err(Error::new(
-                Span::call_site(),
-                "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
-            ));
-        }
         format!("canister_{method} {function_name}")
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
-    let function_call = if is_async {
-        quote! { #name ( #(#arg_tuple),* ) .await }
-    } else {
-        quote! { #name ( #(#arg_tuple),* ) }
-    };
-
-    let arg_count = arg_tuple.len();
-
-    let return_encode = if method.is_lifecycle() || attrs.manual_reply {
-        quote! {}
-    } else {
-        let return_bytes = match return_length {
-            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
-            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
-            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
-        };
-        quote! {
-            ::ic_cdk::api::msg_reply(#return_bytes);
-        }
-    };
-
-    // On initialization we can actually not receive any input and it's okay, only if
-    // we don't have any arguments either.
-    // If the data we receive is not empty, then try to unwrap it as if it's DID.
-    let arg_decode = if method.is_lifecycle() && arg_count == 0 {
-        quote! {}
-    } else {
-        quote! {
-        let arg_bytes = ::ic_cdk::api::msg_arg_data();
-        let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap(); }
-    };
-
+    // 2. guard
     let guard = if let Some(guard_name) = attrs.guard {
-        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+        // ic0.msg_reject is only allowed in update/query
         if method.is_lifecycle() {
             return Err(Error::new(
                 attr.span(),
@@ -213,6 +192,78 @@ fn dfn_macro(
         quote! {}
     };
 
+    // 3. decode arguments
+    let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
+        get_args(method, signature)?.iter().cloned().unzip();
+    if !method.can_have_args() {
+        if !arg_tuple.is_empty() {
+            return Err(Error::new(
+                Span::call_site(),
+                format!("#[{}] function cannot have arguments.", method),
+            ));
+        }
+        if attrs.decode_with.is_some() {
+            return Err(Error::new(
+                attr.span(),
+                format!(
+                    "#[{}] function cannot have a decode_with attribute.",
+                    method
+                ),
+            ));
+        }
+    }
+    let arg_decode = if let Some(decode_with) = attrs.decode_with {
+        let decode_with_ident = syn::Ident::new(&decode_with, Span::call_site());
+        if arg_tuple.len() == 1 {
+            let arg_one = &arg_tuple[0];
+            quote! { let #arg_one = #decode_with_ident(); }
+        } else {
+            quote! { let ( #( #arg_tuple, )* ) = #decode_with_ident(); }
+        }
+    } else if arg_tuple.is_empty() {
+        quote! {}
+    } else {
+        quote! {
+            let arg_bytes = ::ic_cdk::api::msg_arg_data();
+            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+        }
+    };
+
+    // 4. function call
+    let function_call = if signature.asyncness.is_some() {
+        quote! { #name ( #(#arg_tuple),* ) .await }
+    } else {
+        quote! { #name ( #(#arg_tuple),* ) }
+    };
+
+    // 5. return
+    let return_length = match &signature.output {
+        ReturnType::Default => 0,
+        ReturnType::Type(_, ty) => match ty.as_ref() {
+            Type::Tuple(tuple) => tuple.elems.len(),
+            _ => 1,
+        },
+    };
+    if method.is_lifecycle() && return_length > 0 {
+        return Err(Error::new(
+            Span::call_site(),
+            format!("#[{}] function cannot have a return value.", method),
+        ));
+    }
+    let return_encode = if method.is_lifecycle() || attrs.manual_reply {
+        quote! {}
+    } else {
+        let return_bytes = match return_length {
+            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
+            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
+            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
+        };
+        quote! {
+            ::ic_cdk::api::msg_reply(#return_bytes);
+        }
+    };
+
+    // 6. candid attributes for export_candid!()
     let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
@@ -261,9 +312,6 @@ pub(crate) fn ic_query(attr: TokenStream, item: TokenStream) -> Result<TokenStre
 pub(crate) fn ic_update(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     dfn_macro(MethodType::Update, attr, item)
 }
-
-#[derive(Default, Deserialize)]
-struct InitAttributes {}
 
 pub(crate) fn ic_init(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     dfn_macro(MethodType::Init, attr, item)
@@ -320,8 +368,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
@@ -359,8 +405,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
                 });
@@ -398,8 +442,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_args(result).unwrap());
                 });
@@ -553,8 +595,6 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::setup();
                 ::ic_cdk::spawn(async {
-                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let () = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
