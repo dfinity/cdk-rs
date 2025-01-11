@@ -20,6 +20,13 @@ fn call_api() {
         .update_call(canister_id, sender, "call_msg_caller", vec![])
         .unwrap();
     assert_eq!(res, WasmResult::Reply(vec![]));
+    let res = pic
+        .update_call(canister_id, sender, "call_msg_dealine_caller", vec![])
+        .unwrap();
+    // Unlike the other entry points, `call_msg_dealine_caller` was implemented with the `#[update]` macro.
+    // So it returns the bytes of the Candid value `()` which is not the vec![]`.
+    // The assertion below is to check if the call was successful.
+    assert!(matches!(res, WasmResult::Reply(_)));
     // `msg_reject_code` and `msg_reject_msg` can't be tested here.
     // They are invoked in the reply/reject callback of inter-canister calls.
     // So the `call.rs` test covers them.

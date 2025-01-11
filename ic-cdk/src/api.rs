@@ -83,6 +83,26 @@ pub fn msg_reject_msg() -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
+/// Gets the deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
+///
+/// For calls to update methods with best-effort responses and their callbacks,
+/// the deadline is computed based on the time the call was made,
+/// and the `timeout_seconds` parameter provided by the caller.
+/// In such cases, the deadline value wrapped in `Some` is returned.
+///
+/// For other calls (ingress messages and all calls to query and composite query methods,
+/// including calls in replicated mode), a `None` is returned.
+/// Please note that the raw `msg_deadline` system API returns 0 in such cases.
+/// This function is a wrapper around the raw system API that provides more semantic information through the return type.
+pub fn msg_deadline() -> Option<u64> {
+    // SAFETY: ic0.msg_deadline is always safe to call.
+    let nano_seconds = unsafe { ic0::msg_deadline() };
+    match nano_seconds {
+        0 => None,
+        _ => Some(nano_seconds),
+    }
+}
+
 /// Replies to the sender with the data.
 pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
