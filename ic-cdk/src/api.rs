@@ -19,7 +19,7 @@
 //! For example, [`msg_arg_data`] wraps both `ic0::msg_arg_data_size` and `ic0::msg_arg_data_copy`.
 
 use candid::Principal;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, num::NonZeroU64};
 
 pub mod call;
 pub mod management_canister;
@@ -81,6 +81,34 @@ pub fn msg_reject_msg() -> String {
         ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len);
     }
     String::from_utf8_lossy(&bytes).into_owned()
+}
+
+/// Gets the deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
+///
+/// For calls to update methods with best-effort responses and their callbacks,
+/// the deadline is computed based on the time the call was made,
+/// and the `timeout_seconds` parameter provided by the caller.
+/// In such cases, the deadline value will be converted to `NonZeroU64` and wrapped in `Some`.
+/// To get the deadline value as a `u64`, call `get()` on the `NonZeroU64` value.
+///
+/// ```rust,no_run
+/// use ic_cdk::api::msg_deadline;
+/// if let Some(deadline) = msg_deadline() {
+///     let deadline_value : u64 = deadline.get();
+/// }
+/// ```
+///
+/// For other calls (ingress messages and all calls to query and composite query methods,
+/// including calls in replicated mode), a `None` is returned.
+/// Please note that the raw `msg_deadline` system API returns 0 in such cases.
+/// This function is a wrapper around the raw system API that provides more semantic information through the return type.
+pub fn msg_deadline() -> Option<NonZeroU64> {
+    // SAFETY: ic0.msg_deadline is always safe to call.
+    let nano_seconds = unsafe { ic0::msg_deadline() };
+    match nano_seconds {
+        0 => None,
+        _ => Some(NonZeroU64::new(nano_seconds).unwrap()),
+    }
 }
 
 /// Replies to the sender with the data.
