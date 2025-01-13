@@ -18,7 +18,7 @@ fn call_msg_caller() {
 
 /// This entrypoint will call [`call_msg_deadline`] with both best-effort and guaranteed responses.
 #[ic_cdk::update]
-async fn call_msg_dealine_caller() {
+async fn call_msg_deadline_caller() {
     use ic_cdk::call::{Call, SendableCall};
     // Call with best-effort responses.
     let reply1 = Call::new(canister_self(), "call_msg_deadline")
@@ -35,13 +35,17 @@ async fn call_msg_dealine_caller() {
     assert_eq!(reply1, vec![0]);
 }
 
-/// This entrypoint is to be called by [`call_msg_dealine_caller`].
+/// This entrypoint is to be called by [`call_msg_deadline_caller`].
 /// If the call was made with best-effort responses, `msg_deadline` should be `Some`, then return 1.
 /// If the call was made with guaranteed responses, `msg_deadline` should be `None`, then return 0.
 #[export_name = "canister_update call_msg_deadline"]
 fn call_msg_deadline() {
     let reply = match msg_deadline() {
-        Some(_) => 1,
+        Some(v) => {
+            // `NonZeroU64::get()` converts the value to `u64`.
+            assert!(v.get() > 1);
+            1
+        }
         None => 0,
     };
     msg_reply(vec![reply]);

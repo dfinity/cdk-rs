@@ -21,7 +21,7 @@ fn call_api() {
         .unwrap();
     assert_eq!(res, WasmResult::Reply(vec![]));
     let res = pic
-        .update_call(canister_id, sender, "call_msg_dealine_caller", vec![])
+        .update_call(canister_id, sender, "call_msg_deadline_caller", vec![])
         .unwrap();
     // Unlike the other entry points, `call_msg_dealine_caller` was implemented with the `#[update]` macro.
     // So it returns the bytes of the Candid value `()` which is not the vec![]`.
