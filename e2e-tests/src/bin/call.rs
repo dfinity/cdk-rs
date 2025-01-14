@@ -1,6 +1,6 @@
 use candid::Encode;
 use ic_cdk::api::canister_self;
-use ic_cdk::call::{Call, ConfigurableCall, DecoderConfig, SendableCall};
+use ic_cdk::call::{Call, ConfigurableCall, SendableCall};
 use ic_cdk::update;
 
 /// A simple endpoint that takes empty arguments.
@@ -40,14 +40,6 @@ async fn call_foo() {
     assert_eq!(res.0, n);
     let res: (u32,) = Call::new(canister_self(), "foo")
         .with_cycles(1000)
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-
-    let res: (u32,) = Call::new(canister_self(), "foo")
-        .with_decoder_config(decoder_config)
         .call_tuple()
         .await
         .unwrap();
@@ -110,14 +102,6 @@ async fn call_echo_with_arg() {
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_arg(n)
-        .with_decoder_config(decoder_config)
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
 }
 
 /// `Call::new(...).with_args(...)` can be configured and called.
@@ -170,14 +154,6 @@ async fn call_echo_with_args() {
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_args((n,))
-        .with_decoder_config(decoder_config)
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
 }
 
 /// Call::new(...).with_raw_args(...) can be configured and called.
@@ -226,14 +202,6 @@ async fn call_echo_with_raw_args() {
     let res: (u32,) = Call::new(canister_self(), "echo")
         .with_raw_args(&bytes)
         .with_cycles(1000)
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
-    let decoder_config = DecoderConfig::default();
-    let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_raw_args(&bytes)
-        .with_decoder_config(decoder_config)
         .call_tuple()
         .await
         .unwrap();
