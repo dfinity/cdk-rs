@@ -927,6 +927,10 @@ pub fn performance_counter(counter_type: u32) -> u64 {
 ///
 /// Usable, but not required, as metadata when using `#[query(manual_reply = true)]`,
 /// so an accurate Candid file can still be generated.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `std::marker::PhantomData` with manual_reply instead."
+)]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct ManualReply<T: ?Sized>(PhantomData<T>);
 
