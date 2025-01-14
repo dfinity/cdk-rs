@@ -28,4 +28,12 @@ fn call_macros() {
         (1u32, 2u32),
     )
     .unwrap();
+    let _: (u32,) = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "u_manual_reply",
+        (),
+    )
+    .unwrap();
 }
