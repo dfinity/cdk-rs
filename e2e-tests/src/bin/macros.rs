@@ -29,8 +29,8 @@ fn decode_u2() -> (u32, u32) {
 #[update(manual_reply = true)]
 fn u_manual_reply() -> PhantomData<u32> {
     let v: u32 = 1;
-    let reply_bytes = candid::encode_one(&v).unwrap();
-    ic_cdk::api::msg_reply(&reply_bytes);
+    let reply_bytes = candid::encode_one(v).unwrap();
+    ic_cdk::api::msg_reply(reply_bytes);
     PhantomData
 }
 
