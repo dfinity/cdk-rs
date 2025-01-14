@@ -823,7 +823,7 @@ pub fn reply_raw(buf: &[u8]) {
 
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::DecoderConfig` instead."
+    note = "Please use `candid::de::DecoderConfig` instead."
 )]
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
