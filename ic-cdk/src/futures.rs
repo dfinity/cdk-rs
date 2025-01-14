@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::task::Context;
 
 use self::waker::WakerState;
@@ -27,6 +27,22 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 }
 
 pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
+
+/// Tells you whether the current async fn is being canceled due to a trap/panic.
+///
+/// If a function traps/panics, then the canister state is rewound to the beginning of the function.
+/// However, due to the way async works, the beginning of the function as the IC understands it is actually
+/// the most recent `await` from an inter-canister-call. This means that part of the function will have executed,
+/// and part of it won't.
+///
+/// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
+/// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
+/// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
+/// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
+/// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
+pub fn is_recovering_from_trap() -> bool {
+    crate::futures::CLEANUP.load(Ordering::Relaxed)
+}
 
 // This module contains the implementation of a waker we're using for waking
 // top-level futures (the ones returned by canister methods). Rc handles the

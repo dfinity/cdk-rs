@@ -995,6 +995,10 @@ where
 /// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
 /// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::is_recovering_from_trap` instead."
+)]
 pub fn is_recovering_from_trap() -> bool {
     crate::futures::CLEANUP.load(Ordering::Relaxed)
 }
