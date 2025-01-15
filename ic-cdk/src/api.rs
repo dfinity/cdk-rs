@@ -21,6 +21,11 @@
 use candid::Principal;
 use std::{convert::TryFrom, num::NonZeroU64};
 
+#[doc(hidden)]
+#[deprecated(
+    since = "0.18.0",
+    note = "The `api::call` module is deprecated. Individual items within this module have their own deprecation notices with specific migration guidance."
+)]
 pub mod call;
 pub mod management_canister;
 #[doc(hidden)]
