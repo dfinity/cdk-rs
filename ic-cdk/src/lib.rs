@@ -38,6 +38,8 @@ pub use api::{
 #[doc(inline)]
 pub use macros::*;
 
+pub use futures::is_recovering_from_trap;
+
 static DONE: AtomicBool = AtomicBool::new(false);
 
 /// Setup the stdlib hooks.

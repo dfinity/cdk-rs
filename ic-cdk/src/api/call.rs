@@ -823,7 +823,7 @@ pub fn reply_raw(buf: &[u8]) {
 
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::DecoderConfig` instead."
+    note = "Please use `candid::de::DecoderConfig` instead."
 )]
 #[derive(Debug)]
 /// Config to control the behavior of decoding canister endpoint arguments.
@@ -927,6 +927,10 @@ pub fn performance_counter(counter_type: u32) -> u64 {
 ///
 /// Usable, but not required, as metadata when using `#[query(manual_reply = true)]`,
 /// so an accurate Candid file can still be generated.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `std::marker::PhantomData` with manual_reply instead."
+)]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct ManualReply<T: ?Sized>(PhantomData<T>);
 
@@ -991,6 +995,10 @@ where
 /// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
 /// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
+#[deprecated(
+    since = "0.18.0",
+    note = "Please use `ic_cdk::is_recovering_from_trap` instead."
+)]
 pub fn is_recovering_from_trap() -> bool {
     crate::futures::CLEANUP.load(Ordering::Relaxed)
 }
