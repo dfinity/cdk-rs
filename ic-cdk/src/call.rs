@@ -412,6 +412,16 @@ pub trait ConfigurableCall {
     /// If invoked multiple times, the last value takes effect.
     /// If [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
+    ///
+    /// # Note
+    ///
+    /// A timeout of 0 second DOES NOT mean guranteed response.
+    /// The call would most likely time out (result in a `SysUnknown` reject).
+    /// Unless it's a call to the canister on the same subnet,
+    /// and the execution manages to schedule both the request and the response in the same round.
+    ///
+    /// To make the call with a guaranteed response,
+    /// use the [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) method.
     fn change_timeout(self, timeout_seconds: u32) -> Self;
 }
 
