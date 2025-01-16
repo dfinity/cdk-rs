@@ -85,7 +85,7 @@ impl PartialEq<u32> for RejectCode {
 pub enum CallError {
     /// The call immediately failed when invoking the call_perform system API.
     #[error("The IC was not able to enqueue the call with code {0:?}")]
-    CallPerformFailed(RejectCode),
+    CallPerformFailed(RejectCode, String),
 
     /// The call was rejected.
     ///
@@ -493,7 +493,10 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     }
                     _ => {
                         let reject_code = RejectCode::try_from(code).unwrap();
-                        let result = Err(CallError::CallPerformFailed(reject_code));
+                        let result = Err(CallError::CallPerformFailed(
+                            reject_code,
+                            "Couldn't send message".to_string(),
+                        ));
                         state.result = Some(result.clone());
                         return Poll::Ready(result);
                     }
@@ -636,7 +639,10 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         0 => Ok(()),
         _ => {
             let reject_code = RejectCode::try_from(code).unwrap();
-            Err(CallError::CallPerformFailed(reject_code))
+            Err(CallError::CallPerformFailed(
+                reject_code,
+                "Couldn't send message".to_string(),
+            ))
         }
     }
 }

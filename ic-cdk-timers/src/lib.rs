@@ -141,7 +141,7 @@ extern "C" fn global_timer() {
                             retry_later = true;
                         }
                     }
-                    CallError::CallPerformFailed(reject_code) => {
+                    CallError::CallPerformFailed(reject_code, _) => {
                         if reject_code == RejectCode::SysTransient {
                             retry_later = true;
                         }
