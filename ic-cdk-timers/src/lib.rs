@@ -292,5 +292,5 @@ extern "C" fn timer_executor() {
             }
         }
     }
-    ic_cdk::api::msg_reply(&[]);
+    ic_cdk::api::msg_reply([]);
 }
