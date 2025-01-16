@@ -146,8 +146,8 @@ extern "C" fn global_timer() {
                             retry_later = true;
                         }
                     }
-                    CallError::CandidEncodeFailed(_) | CallError::CandidDecodeFailed(_) => {
-                        // These errors are not transient, and will not be retried.
+                    CallError::CandidDecodeFailed(_) => {
+                        // This error is not transient, and will not be retried.
                     }
                 }
                 if retry_later {
