@@ -29,7 +29,7 @@ use std::{
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use ic_cdk::call::{Call, CallError, RejectCode, SendableCall};
+use ic_cdk::call::{Call, RejectCode, SendableCall};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -117,8 +117,8 @@ extern "C" fn global_timer() {
                                         ic_cdk::api::canister_self(),
                                         "<ic-cdk internal> timer_executor",
                                     )
-                                    .with_arg(task_id.0.as_ffi())
-                                    .call::<()>()
+                                    .with_raw_args(task_id.0.as_ffi().to_be_bytes().to_vec())
+                                    .call_raw()
                                     .await,
                                 )
                             });
@@ -135,15 +135,8 @@ extern "C" fn global_timer() {
             if let Err(e) = res {
                 ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
                 let mut retry_later = false;
-                match e {
-                    CallError::CallRejected(call_error) => {
-                        if call_error.reject_code == RejectCode::SysTransient {
-                            retry_later = true;
-                        }
-                    }
-                    CallError::CandidDecodeFailed(_) => {
-                        // This error is not transient, and will not be retried.
-                    }
+                if e.reject_code == RejectCode::SysTransient {
+                    retry_later = true;
                 }
                 if retry_later {
                     // Try to execute the timer again later.
@@ -270,7 +263,6 @@ fn update_ic0_timer() {
     export_name = "canister_update_ic_cdk_internal.timer_executor"
 )]
 extern "C" fn timer_executor() {
-    use candid::utils::{decode_one, encode_one};
     if ic_cdk::api::msg_caller() != ic_cdk::api::canister_self() {
         ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
     }
@@ -278,7 +270,8 @@ extern "C" fn timer_executor() {
     // timer_executor is only called by the canister itself (from global_timer),
     // so we can safely assume that the argument is a valid TimerId (u64).
     // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
-    let task_id: u64 = decode_one(&arg_bytes).unwrap();
+    assert!(arg_bytes.len() == 8);
+    let task_id = u64::from_be_bytes(arg_bytes.try_into().unwrap());
 
     let task_id = TimerId(KeyData::from_ffi(task_id));
     // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
@@ -299,5 +292,5 @@ extern "C" fn timer_executor() {
             }
         }
     }
-    ic_cdk::api::msg_reply(encode_one(()).unwrap());
+    ic_cdk::api::msg_reply(&[]);
 }
