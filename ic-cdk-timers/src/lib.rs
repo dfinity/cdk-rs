@@ -29,7 +29,7 @@ use std::{
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use ic_cdk::call::{Call, CallError, CallPerformErrorCode, RejectCode, SendableCall};
+use ic_cdk::call::{Call, CallError, RejectCode, SendableCall};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -141,8 +141,8 @@ extern "C" fn global_timer() {
                             retry_later = true;
                         }
                     }
-                    CallError::CallPerformFailed(call_perform_error_code) => {
-                        if call_perform_error_code == CallPerformErrorCode::SysTransient {
+                    CallError::CallPerformFailed(reject_code) => {
+                        if reject_code == RejectCode::SysTransient {
                             retry_later = true;
                         }
                     }

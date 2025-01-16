@@ -77,68 +77,12 @@ impl PartialEq<u32> for RejectCode {
     }
 }
 
-/// Error codes from the `ic0.call_perform` system API.
-///
-/// See [`ic0.call_perform`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call) for more details.
-///
-/// So far, the specified codes (1, 2, 3) share the same meaning as the corresponding [`RejectCode`]s.
-#[repr(u32)]
-#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CallPerformErrorCode {
-    /// No error.
-    NoError = 0,
-
-    /// Fatal system error, retry unlikely to be useful.
-    SysFatal = 1,
-    /// Transient system error, retry might be possible.
-    SysTransient = 2,
-    /// Invalid destination (e.g. canister/account does not exist).
-    DestinationInvalid = 3,
-
-    /// Unrecognized error code.
-    ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// rejection codes that are not recognized by the library.
-    Unrecognized(u32),
-}
-
-impl From<u32> for CallPerformErrorCode {
-    fn from(code: u32) -> Self {
-        match code {
-            0 => CallPerformErrorCode::NoError,
-            1 => CallPerformErrorCode::SysFatal,
-            2 => CallPerformErrorCode::SysTransient,
-            3 => CallPerformErrorCode::DestinationInvalid,
-            n => CallPerformErrorCode::Unrecognized(n),
-        }
-    }
-}
-
-impl From<CallPerformErrorCode> for u32 {
-    fn from(code: CallPerformErrorCode) -> u32 {
-        match code {
-            CallPerformErrorCode::NoError => 0,
-            CallPerformErrorCode::SysFatal => 1,
-            CallPerformErrorCode::SysTransient => 2,
-            CallPerformErrorCode::DestinationInvalid => 3,
-            CallPerformErrorCode::Unrecognized(n) => n,
-        }
-    }
-}
-
-impl PartialEq<u32> for CallPerformErrorCode {
-    fn eq(&self, other: &u32) -> bool {
-        let self_as_u32: u32 = (*self).into();
-        self_as_u32 == *other
-    }
-}
-
 /// The error type for inter-canister calls.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
     /// The call immediately failed when invoking the call_perform system API.
     #[error("The IC was not able to enqueue the call with code {0:?}")]
-    CallPerformFailed(CallPerformErrorCode),
+    CallPerformFailed(RejectCode),
 
     /// The call was rejected.
     ///
@@ -541,8 +485,8 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 };
 
                 // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-                match CallPerformErrorCode::from(err_code) {
-                    CallPerformErrorCode::NoError => {}
+                match RejectCode::from(err_code) {
+                    RejectCode::NoError => {}
                     c => {
                         let result = Err(CallError::CallPerformFailed(c));
                         state.result = Some(result.clone());
@@ -680,8 +624,8 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         ic0::call_perform()
     };
     // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-    match CallPerformErrorCode::from(err_code) {
-        CallPerformErrorCode::NoError => Ok(()),
+    match RejectCode::from(err_code) {
+        RejectCode::NoError => Ok(()),
         c => Err(CallError::CallPerformFailed(c)),
     }
 }
