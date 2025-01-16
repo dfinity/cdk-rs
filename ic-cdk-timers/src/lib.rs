@@ -136,13 +136,8 @@ extern "C" fn global_timer() {
                 ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
                 let mut retry_later = false;
                 match e {
-                    CallError::CallRejected(reject_code, _) => {
-                        if reject_code == RejectCode::SysTransient {
-                            retry_later = true;
-                        }
-                    }
-                    CallError::CallPerformFailed(reject_code, _) => {
-                        if reject_code == RejectCode::SysTransient {
+                    CallError::CallRejected(call_error) => {
+                        if call_error.reject_code == RejectCode::SysTransient {
                             retry_later = true;
                         }
                     }

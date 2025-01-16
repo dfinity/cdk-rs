@@ -80,18 +80,14 @@ impl PartialEq<u32> for RejectCode {
     }
 }
 
-/// The error type for inter-canister calls.
+/// The error type for inter-canister calls and decoding the response.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
-    /// The call immediately failed when invoking the call_perform system API.
-    #[error("The IC was not able to enqueue the call with code {0:?}")]
-    CallPerformFailed(RejectCode, String),
-
     /// The call was rejected.
     ///
     /// Please handle the error by matching on the rejection code.
-    #[error("The call was rejected with code {0:?} and message: {1}")]
-    CallRejected(RejectCode, String),
+    #[error("The call was rejected with code {0:?}")]
+    CallRejected(SystemError),
 
     /// The response could not be decoded.
     ///
@@ -102,7 +98,28 @@ pub enum CallError {
     CandidDecodeFailed(String),
 }
 
+/// The error type for inter-canister calls.
+#[derive(Debug, Clone)]
+pub struct SystemError {
+    /// See [`RejectCode`].
+    pub reject_code: RejectCode,
+    /// The reject message.
+    ///
+    /// When the call was rejected asynchronously (IC rejects the call after it was enqueued),
+    /// this message is set with [`msg_reject`](crate::api::msg_reject).
+    ///
+    /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
+    /// this message is set to a fixed string ("failed to enqueue the call").
+    pub reject_message: String,
+    /// Whether the call was rejected synchronously (`ic0.call_perform` returned non-zero code)
+    /// or asynchronously (IC rejects the call after it was enqueued).
+    pub sync: bool,
+}
+
 /// Result of a inter-canister call.
+pub type SystemResult<R> = Result<R, SystemError>;
+
+/// Result of a inter-canister call and decoding the response.
 pub type CallResult<R> = Result<R, CallError>;
 
 /// Inter-Canister Call.
@@ -279,7 +296,7 @@ impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
 /// Methods to send a call.
 pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync;
 
     /// Sends the call and decodes the reply to a Candid type.
     fn call<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
@@ -289,7 +306,7 @@ pub trait SendableCall {
     {
         let fut = self.call_raw();
         async {
-            let bytes = fut.await?;
+            let bytes = fut.await.map_err(CallError::CallRejected)?;
             decode_one(&bytes).map_err(decoder_error_to_call_error::<R>)
         }
     }
@@ -302,17 +319,17 @@ pub trait SendableCall {
     {
         let fut = self.call_raw();
         async {
-            let bytes = fut.await?;
+            let bytes = fut.await.map_err(CallError::CallRejected)?;
             decode_args(&bytes).map_err(decoder_error_to_call_error::<R>)
         }
     }
 
     /// Sends the call and ignores the reply.
-    fn call_oneway(self) -> CallResult<()>;
+    fn call_oneway(self) -> SystemResult<()>;
 }
 
 impl SendableCall for Call<'_> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_raw_internal::<Vec<u8>>(
             self.canister_id,
@@ -323,7 +340,7 @@ impl SendableCall for Call<'_> {
         )
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_oneway_internal::<Vec<u8>>(
             self.canister_id,
@@ -336,7 +353,7 @@ impl SendableCall for Call<'_> {
 }
 
 impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
-    async fn call_raw(self) -> CallResult<Vec<u8>> {
+    async fn call_raw(self) -> SystemResult<Vec<u8>> {
         // Candid Encoding can only fail if heap memory is exhausted.
         // That is not a recoverable error, so we panic.
         let args_raw =
@@ -351,7 +368,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
         .await
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         // Candid Encoding can only fail if heap memory is exhausted.
         // That is not a recoverable error, so we panic.
         let args_raw =
@@ -367,7 +384,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 }
 
 impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
-    async fn call_raw(self) -> CallResult<Vec<u8>> {
+    async fn call_raw(self) -> SystemResult<Vec<u8>> {
         // Candid Encoding can only fail if heap memory is exhausted.
         // That is not a recoverable error, so we panic.
         let args_raw =
@@ -382,7 +399,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
         .await
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         // Candid Encoding can only fail if heap memory is exhausted.
         // That is not a recoverable error, so we panic.
         let args_raw =
@@ -398,7 +415,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
 }
 
 impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -408,7 +425,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         )
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -423,7 +440,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
 
 // Internal state for the Future when sending a call.
 struct CallFutureState<T: AsRef<[u8]>> {
-    result: Option<CallResult<Vec<u8>>>,
+    result: Option<SystemResult<Vec<u8>>>,
     waker: Option<Waker>,
     id: Principal,
     method: String,
@@ -437,7 +454,7 @@ struct CallFuture<T: AsRef<[u8]>> {
 }
 
 impl<T: AsRef<[u8]>> Future for CallFuture<T> {
-    type Output = CallResult<Vec<u8>>;
+    type Output = SystemResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
@@ -493,10 +510,11 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     }
                     _ => {
                         let reject_code = RejectCode::try_from(code).unwrap();
-                        let result = Err(CallError::CallPerformFailed(
+                        let result = Err(SystemError {
                             reject_code,
-                            "Couldn't send message".to_string(),
-                        ));
+                            reject_message: "failed to enqueue the call".to_string(),
+                            sync: true,
+                        });
                         state.result = Some(result.clone());
                         return Poll::Ready(result);
                     }
@@ -525,7 +543,11 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
                 0 => Ok(msg_arg_data()),
                 code => {
                     let reject_code = RejectCode::try_from(code).unwrap();
-                    Err(CallError::CallRejected(reject_code, msg_reject_msg()))
+                    Err(SystemError {
+                        reject_code,
+                        reject_message: msg_reject_msg(),
+                        sync: false,
+                    })
                 }
             });
         }
@@ -574,7 +596,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
-) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
+) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
@@ -593,7 +615,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
     args_raw: T,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
-) -> CallResult<()> {
+) -> SystemResult<()> {
     let callee = id.as_slice();
     // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
     // The system will still deliver the reply, but it will trap immediately because the callback
@@ -639,10 +661,11 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         0 => Ok(()),
         _ => {
             let reject_code = RejectCode::try_from(code).unwrap();
-            Err(CallError::CallPerformFailed(
+            Err(SystemError {
                 reject_code,
-                "Couldn't send message".to_string(),
-            ))
+                reject_message: "failed to enqueue the call".to_string(),
+                sync: true,
+            })
         }
     }
 }
