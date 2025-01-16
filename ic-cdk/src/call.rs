@@ -4,6 +4,7 @@ use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{
     decode_args, decode_one, encode_args, encode_one, CandidType, Deserialize, Principal,
 };
+use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -13,12 +14,8 @@ use std::task::{Context, Poll, Waker};
 /// Reject code explains why the inter-canister call is rejected.
 ///
 /// See [Reject codes](https://internetcomputer.org/docs/current/references/ic-interface-spec/#reject-codes) for more details.
-#[repr(u32)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectCode {
-    /// No error.
-    NoError = 0,
-
     /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
     /// Transient system error, retry might be possible.
@@ -31,26 +28,34 @@ pub enum RejectCode {
     CanisterError = 5,
     /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
     SysUnknown = 6,
-
-    /// Unrecognized reject code.
-    ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// reject codes that are not recognized by the library.
-    Unrecognized(u32),
 }
 
-impl From<u32> for RejectCode {
-    fn from(code: u32) -> Self {
+/// Error type for [`RejectCode`] conversion.
+///
+/// A reject code is invalid if it is not one of the known reject codes.
+#[derive(Clone, Copy, Debug)]
+pub struct InvalidRejectCode(pub u32);
+
+impl std::fmt::Display for InvalidRejectCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid reject code: {}", self.0)
+    }
+}
+
+impl Error for InvalidRejectCode {}
+
+impl TryFrom<u32> for RejectCode {
+    type Error = InvalidRejectCode;
+
+    fn try_from(code: u32) -> Result<Self, Self::Error> {
         match code {
-            // 0 is a special code meaning "no error"
-            0 => RejectCode::NoError,
-            1 => RejectCode::SysFatal,
-            2 => RejectCode::SysTransient,
-            3 => RejectCode::DestinationInvalid,
-            4 => RejectCode::CanisterReject,
-            5 => RejectCode::CanisterError,
-            6 => RejectCode::SysUnknown,
-            n => RejectCode::Unrecognized(n),
+            1 => Ok(RejectCode::SysFatal),
+            2 => Ok(RejectCode::SysTransient),
+            3 => Ok(RejectCode::DestinationInvalid),
+            4 => Ok(RejectCode::CanisterReject),
+            5 => Ok(RejectCode::CanisterError),
+            6 => Ok(RejectCode::SysUnknown),
+            n => Err(InvalidRejectCode(n)),
         }
     }
 }
@@ -58,14 +63,12 @@ impl From<u32> for RejectCode {
 impl From<RejectCode> for u32 {
     fn from(code: RejectCode) -> u32 {
         match code {
-            RejectCode::NoError => 0,
             RejectCode::SysFatal => 1,
             RejectCode::SysTransient => 2,
             RejectCode::DestinationInvalid => 3,
             RejectCode::CanisterReject => 4,
             RejectCode::CanisterError => 5,
             RejectCode::SysUnknown => 6,
-            RejectCode::Unrecognized(n) => n,
         }
     }
 }
@@ -459,7 +462,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // callback and cleanup are safe to parameterize with T because:
                 // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
                 // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
-                let err_code = unsafe {
+                let code = unsafe {
                     ic0::call_new(
                         callee.as_ptr() as usize,
                         callee.len(),
@@ -484,11 +487,13 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     ic0::call_perform()
                 };
 
-                // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-                match RejectCode::from(err_code) {
-                    RejectCode::NoError => {}
-                    c => {
-                        let result = Err(CallError::CallPerformFailed(c));
+                match code {
+                    0 => {
+                        // call_perform returns 0 means the call was successfully enqueued.
+                    }
+                    _ => {
+                        let reject_code = RejectCode::try_from(code).unwrap();
+                        let result = Err(CallError::CallPerformFailed(reject_code));
                         state.result = Some(result.clone());
                         return Poll::Ready(result);
                     }
@@ -513,9 +518,12 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
     if let Some(state) = state.upgrade() {
         // Make sure to un-borrow_mut the state.
         {
-            state.write().unwrap().result = Some(match RejectCode::from(msg_reject_code()) {
-                RejectCode::NoError => Ok(msg_arg_data()),
-                c => Err(CallError::CallRejected(c, msg_reject_msg())),
+            state.write().unwrap().result = Some(match msg_reject_code() {
+                0 => Ok(msg_arg_data()),
+                code => {
+                    let reject_code = RejectCode::try_from(code).unwrap();
+                    Err(CallError::CallRejected(reject_code, msg_reject_msg()))
+                }
             });
         }
         let w = state.write().unwrap().waker.take();
@@ -600,7 +608,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
     //   `args`, being a &[u8], is a readable sequence of bytes.
     // ic0.call_with_best_effort_response is always safe to call.
     // ic0.call_perform is always safe to call.
-    let err_code = unsafe {
+    let code = unsafe {
         ic0::call_new(
             callee.as_ptr() as usize,
             callee.len(),
@@ -624,9 +632,12 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         ic0::call_perform()
     };
     // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-    match RejectCode::from(err_code) {
-        RejectCode::NoError => Ok(()),
-        c => Err(CallError::CallPerformFailed(c)),
+    match code {
+        0 => Ok(()),
+        _ => {
+            let reject_code = RejectCode::try_from(code).unwrap();
+            Err(CallError::CallPerformFailed(reject_code))
+        }
     }
 }
 
