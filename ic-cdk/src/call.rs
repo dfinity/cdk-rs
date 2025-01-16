@@ -104,7 +104,7 @@ pub struct CallRejected {
     // All fields are private so we will be able to change the implementation without breaking the API.
     // Once we have `ic0.msg_error_code` system API, we will only store the error_code in this struct.
     // It will still be possible to get the [`RejectCode`] using the public getter,
-    // becuase every error_code can map to a [`RejectCode`].
+    // because every error_code can map to a [`RejectCode`].
     reject_code: RejectCode,
     reject_message: String,
     sync: bool,
