@@ -80,189 +80,6 @@ impl PartialEq<u32> for RejectCode {
     }
 }
 
-/// The error codes provide additional details for rejected messages.
-///
-/// See [Error codes](https://internetcomputer.org/docs/current/references/ic-interface-spec/#error-codes) for more details.
-///
-/// # Note
-///
-/// As of the current version of the IC, the error codes are not available in the system API.
-/// There is a plan to add them in the short term.
-/// To avoid breaking changes at that time, the [`SystemError`] struct start to include the error code.
-/// Please DO NOT rely on the error codes until they are officially supported.
-//
-// The variants and their codes below are from [pocket-ic](https://docs.rs/pocket-ic/latest/pocket_ic/enum.ErrorCode.html).
-#[allow(missing_docs)]
-#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ErrorCode {
-    // 1xx -- `RejectCode::SysFatal`
-    SubnetOversubscribed = 101,
-    MaxNumberOfCanistersReached = 102,
-    // 2xx -- `RejectCode::SysTransient`
-    CanisterQueueFull = 201,
-    IngressMessageTimeout = 202,
-    CanisterQueueNotEmpty = 203,
-    IngressHistoryFull = 204,
-    CanisterIdAlreadyExists = 205,
-    StopCanisterRequestTimeout = 206,
-    CanisterOutOfCycles = 207,
-    CertifiedStateUnavailable = 208,
-    CanisterInstallCodeRateLimited = 209,
-    CanisterHeapDeltaRateLimited = 210,
-    // 3xx -- `RejectCode::DestinationInvalid`
-    CanisterNotFound = 301,
-    CanisterSnapshotNotFound = 305,
-    // 4xx -- `RejectCode::CanisterReject`
-    InsufficientMemoryAllocation = 402,
-    InsufficientCyclesForCreateCanister = 403,
-    SubnetNotFound = 404,
-    CanisterNotHostedBySubnet = 405,
-    CanisterRejectedMessage = 406,
-    UnknownManagementMessage = 407,
-    InvalidManagementPayload = 408,
-    // 5xx -- `RejectCode::CanisterError`
-    CanisterTrapped = 502,
-    CanisterCalledTrap = 503,
-    CanisterContractViolation = 504,
-    CanisterInvalidWasm = 505,
-    CanisterDidNotReply = 506,
-    CanisterOutOfMemory = 507,
-    CanisterStopped = 508,
-    CanisterStopping = 509,
-    CanisterNotStopped = 510,
-    CanisterStoppingCancelled = 511,
-    CanisterInvalidController = 512,
-    CanisterFunctionNotFound = 513,
-    CanisterNonEmpty = 514,
-    QueryCallGraphLoopDetected = 517,
-    InsufficientCyclesInCall = 520,
-    CanisterWasmEngineError = 521,
-    CanisterInstructionLimitExceeded = 522,
-    CanisterMemoryAccessLimitExceeded = 524,
-    QueryCallGraphTooDeep = 525,
-    QueryCallGraphTotalInstructionLimitExceeded = 526,
-    CompositeQueryCalledInReplicatedMode = 527,
-    QueryTimeLimitExceeded = 528,
-    QueryCallGraphInternal = 529,
-    InsufficientCyclesInComputeAllocation = 530,
-    InsufficientCyclesInMemoryAllocation = 531,
-    InsufficientCyclesInMemoryGrow = 532,
-    ReservedCyclesLimitExceededInMemoryAllocation = 533,
-    ReservedCyclesLimitExceededInMemoryGrow = 534,
-    InsufficientCyclesInMessageMemoryGrow = 535,
-    CanisterMethodNotFound = 536,
-    CanisterWasmModuleNotFound = 537,
-    CanisterAlreadyInstalled = 538,
-    CanisterWasmMemoryLimitExceeded = 539,
-    ReservedCyclesLimitIsTooLow = 540,
-    // 6xx -- `RejectCode::SysUnknown`
-    DeadlineExpired = 601,
-    ResponseDropped = 602,
-}
-
-/// Error type for [`ErrorCode`] conversion.
-///
-/// An error code is invalid if it is not one of the known error codes.
-#[derive(Clone, Copy, Debug)]
-pub struct InvalidErrorCode(pub u32);
-
-impl std::fmt::Display for InvalidErrorCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "invalid error code: {}", self.0)
-    }
-}
-
-impl Error for InvalidErrorCode {}
-
-impl TryFrom<u32> for ErrorCode {
-    type Error = InvalidErrorCode;
-    fn try_from(code: u32) -> Result<ErrorCode, Self::Error> {
-        match code {
-            // 1xx -- `RejectCode::SysFatal`
-            101 => Ok(ErrorCode::SubnetOversubscribed),
-            102 => Ok(ErrorCode::MaxNumberOfCanistersReached),
-            // 2xx -- `RejectCode::SysTransient`
-            201 => Ok(ErrorCode::CanisterQueueFull),
-            202 => Ok(ErrorCode::IngressMessageTimeout),
-            203 => Ok(ErrorCode::CanisterQueueNotEmpty),
-            204 => Ok(ErrorCode::IngressHistoryFull),
-            205 => Ok(ErrorCode::CanisterIdAlreadyExists),
-            206 => Ok(ErrorCode::StopCanisterRequestTimeout),
-            207 => Ok(ErrorCode::CanisterOutOfCycles),
-            208 => Ok(ErrorCode::CertifiedStateUnavailable),
-            209 => Ok(ErrorCode::CanisterInstallCodeRateLimited),
-            210 => Ok(ErrorCode::CanisterHeapDeltaRateLimited),
-            // 3xx -- `RejectCode::DestinationInvalid`
-            301 => Ok(ErrorCode::CanisterNotFound),
-            305 => Ok(ErrorCode::CanisterSnapshotNotFound),
-            // 4xx -- `RejectCode::CanisterReject`
-            402 => Ok(ErrorCode::InsufficientMemoryAllocation),
-            403 => Ok(ErrorCode::InsufficientCyclesForCreateCanister),
-            404 => Ok(ErrorCode::SubnetNotFound),
-            405 => Ok(ErrorCode::CanisterNotHostedBySubnet),
-            406 => Ok(ErrorCode::CanisterRejectedMessage),
-            407 => Ok(ErrorCode::UnknownManagementMessage),
-            408 => Ok(ErrorCode::InvalidManagementPayload),
-            // 5xx -- `RejectCode::CanisterError`
-            502 => Ok(ErrorCode::CanisterTrapped),
-            503 => Ok(ErrorCode::CanisterCalledTrap),
-            504 => Ok(ErrorCode::CanisterContractViolation),
-            505 => Ok(ErrorCode::CanisterInvalidWasm),
-            506 => Ok(ErrorCode::CanisterDidNotReply),
-            507 => Ok(ErrorCode::CanisterOutOfMemory),
-            508 => Ok(ErrorCode::CanisterStopped),
-            509 => Ok(ErrorCode::CanisterStopping),
-            510 => Ok(ErrorCode::CanisterNotStopped),
-            511 => Ok(ErrorCode::CanisterStoppingCancelled),
-            512 => Ok(ErrorCode::CanisterInvalidController),
-            513 => Ok(ErrorCode::CanisterFunctionNotFound),
-            514 => Ok(ErrorCode::CanisterNonEmpty),
-            517 => Ok(ErrorCode::QueryCallGraphLoopDetected),
-            520 => Ok(ErrorCode::InsufficientCyclesInCall),
-            521 => Ok(ErrorCode::CanisterWasmEngineError),
-            522 => Ok(ErrorCode::CanisterInstructionLimitExceeded),
-            524 => Ok(ErrorCode::CanisterMemoryAccessLimitExceeded),
-            525 => Ok(ErrorCode::QueryCallGraphTooDeep),
-            526 => Ok(ErrorCode::QueryCallGraphTotalInstructionLimitExceeded),
-            527 => Ok(ErrorCode::CompositeQueryCalledInReplicatedMode),
-            528 => Ok(ErrorCode::QueryTimeLimitExceeded),
-            529 => Ok(ErrorCode::QueryCallGraphInternal),
-            530 => Ok(ErrorCode::InsufficientCyclesInComputeAllocation),
-            531 => Ok(ErrorCode::InsufficientCyclesInMemoryAllocation),
-            532 => Ok(ErrorCode::InsufficientCyclesInMemoryGrow),
-            533 => Ok(ErrorCode::ReservedCyclesLimitExceededInMemoryAllocation),
-            534 => Ok(ErrorCode::ReservedCyclesLimitExceededInMemoryGrow),
-            535 => Ok(ErrorCode::InsufficientCyclesInMessageMemoryGrow),
-            536 => Ok(ErrorCode::CanisterMethodNotFound),
-            537 => Ok(ErrorCode::CanisterWasmModuleNotFound),
-            538 => Ok(ErrorCode::CanisterAlreadyInstalled),
-            539 => Ok(ErrorCode::CanisterWasmMemoryLimitExceeded),
-            540 => Ok(ErrorCode::ReservedCyclesLimitIsTooLow),
-            // 6xx -- `RejectCode::SysUnknown`
-            601 => Ok(ErrorCode::DeadlineExpired),
-            602 => Ok(ErrorCode::ResponseDropped),
-            _ => Err(InvalidErrorCode(code)),
-        }
-    }
-}
-
-/// Get an [`ErrorCode`] from a [`RejectCode`].
-///
-/// Currently, there is no system API to get the error code.
-/// This function is a temporary workaround.
-/// We set the error code to the first code in the corresponding reject code group.
-/// For example, the reject code `SysFatal` (1) is mapped to the error code `SubnetOversubscribed` (101).
-fn reject_to_error(reject_code: RejectCode) -> ErrorCode {
-    match reject_code {
-        RejectCode::SysFatal => ErrorCode::SubnetOversubscribed,
-        RejectCode::SysTransient => ErrorCode::CanisterQueueFull,
-        RejectCode::DestinationInvalid => ErrorCode::CanisterNotFound,
-        RejectCode::CanisterReject => ErrorCode::InsufficientMemoryAllocation,
-        RejectCode::CanisterError => ErrorCode::CanisterTrapped,
-        RejectCode::SysUnknown => ErrorCode::DeadlineExpired,
-    }
-}
-
 /// The error type for inter-canister calls and decoding the response.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
@@ -270,7 +87,7 @@ pub enum CallError {
     ///
     /// Please handle the error by matching on the rejection code.
     #[error("The call was rejected with code {0:?}")]
-    CallRejected(SystemError),
+    CallRejected(CallRejected),
 
     /// The response could not be decoded.
     ///
@@ -283,31 +100,42 @@ pub enum CallError {
 
 /// The error type for inter-canister calls.
 #[derive(Debug, Clone)]
-pub struct SystemError {
-    /// See [`RejectCode`].
-    pub reject_code: RejectCode,
-    /// The reject message.
+pub struct CallRejected {
+    // All fields are private so we will be able to change the implementation without breaking the API.
+    // Once we have `ic0.msg_error_code` system API, we will only store the error_code in this struct.
+    // It will still be possible to get the [`RejectCode`] using the public getter,
+    // becuase every error_code can map to a [`RejectCode`].
+    reject_code: RejectCode,
+    reject_message: String,
+    sync: bool,
+}
+
+impl CallRejected {
+    /// Returns the [`RejectCode`].
+    pub fn reject_code(&self) -> RejectCode {
+        self.reject_code
+    }
+
+    /// Returns the reject message.
     ///
     /// When the call was rejected asynchronously (IC rejects the call after it was enqueued),
     /// this message is set with [`msg_reject`](crate::api::msg_reject).
     ///
     /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
     /// this message is set to a fixed string ("failed to enqueue the call").
-    pub reject_message: String,
-    /// See [`ErrorCode`].
-    ///
-    /// # Note
-    ///
-    /// As of the current version of the IC, the error codes are not available in the system API.
-    /// Please DO NOT rely on the error codes until they are officially supported.
-    pub error_code: ErrorCode,
-    /// Whether the call was rejected synchronously (`ic0.call_perform` returned non-zero code)
+    pub fn reject_message(&self) -> &str {
+        &self.reject_message
+    }
+
+    /// Returns whether the call was rejected synchronously (`ic0.call_perform` returned non-zero code)
     /// or asynchronously (IC rejects the call after it was enqueued).
-    pub sync: bool,
+    pub fn is_sync(&self) -> bool {
+        self.sync
+    }
 }
 
 /// Result of a inter-canister call.
-pub type SystemResult<R> = Result<R, SystemError>;
+pub type SystemResult<R> = Result<R, CallRejected>;
 
 /// Result of a inter-canister call and decoding the response.
 pub type CallResult<R> = Result<R, CallError>;
@@ -710,10 +538,9 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     }
                     _ => {
                         let reject_code = RejectCode::try_from(code).unwrap();
-                        let result = Err(SystemError {
+                        let result = Err(CallRejected {
                             reject_code,
                             reject_message: "failed to enqueue the call".to_string(),
-                            error_code: reject_to_error(reject_code),
                             sync: true,
                         });
                         state.result = Some(result.clone());
@@ -744,10 +571,9 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
                 0 => Ok(msg_arg_data()),
                 code => {
                     let reject_code = RejectCode::try_from(code).unwrap();
-                    Err(SystemError {
+                    Err(CallRejected {
                         reject_code,
                         reject_message: msg_reject_msg(),
-                        error_code: reject_to_error(reject_code),
                         sync: false,
                     })
                 }
@@ -863,10 +689,9 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         0 => Ok(()),
         _ => {
             let reject_code = RejectCode::try_from(code).unwrap();
-            Err(SystemError {
+            Err(CallRejected {
                 reject_code,
                 reject_message: "failed to enqueue the call".to_string(),
-                error_code: reject_to_error(reject_code),
                 sync: true,
             })
         }
