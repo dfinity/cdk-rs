@@ -134,11 +134,7 @@ extern "C" fn global_timer() {
             let task_id = timer.task;
             if let Err(e) = res {
                 ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
-                let mut retry_later = false;
                 if e.reject_code == RejectCode::SysTransient {
-                    retry_later = true;
-                }
-                if retry_later {
                     // Try to execute the timer again later.
                     TIMERS.with(|timers| {
                         timers.borrow_mut().push(timer);
