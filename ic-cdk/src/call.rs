@@ -4,6 +4,7 @@ use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::{
     decode_args, decode_one, encode_args, encode_one, CandidType, Deserialize, Principal,
 };
+use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -13,12 +14,8 @@ use std::task::{Context, Poll, Waker};
 /// Reject code explains why the inter-canister call is rejected.
 ///
 /// See [Reject codes](https://internetcomputer.org/docs/current/references/ic-interface-spec/#reject-codes) for more details.
-#[repr(u32)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectCode {
-    /// No error.
-    NoError = 0,
-
     /// Fatal system error, retry unlikely to be useful.
     SysFatal = 1,
     /// Transient system error, retry might be possible.
@@ -31,26 +28,34 @@ pub enum RejectCode {
     CanisterError = 5,
     /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
     SysUnknown = 6,
-
-    /// Unrecognized reject code.
-    ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// reject codes that are not recognized by the library.
-    Unrecognized(u32),
 }
 
-impl From<u32> for RejectCode {
-    fn from(code: u32) -> Self {
+/// Error type for [`RejectCode`] conversion.
+///
+/// A reject code is invalid if it is not one of the known reject codes.
+#[derive(Clone, Copy, Debug)]
+pub struct InvalidRejectCode(pub u32);
+
+impl std::fmt::Display for InvalidRejectCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid reject code: {}", self.0)
+    }
+}
+
+impl Error for InvalidRejectCode {}
+
+impl TryFrom<u32> for RejectCode {
+    type Error = InvalidRejectCode;
+
+    fn try_from(code: u32) -> Result<Self, Self::Error> {
         match code {
-            // 0 is a special code meaning "no error"
-            0 => RejectCode::NoError,
-            1 => RejectCode::SysFatal,
-            2 => RejectCode::SysTransient,
-            3 => RejectCode::DestinationInvalid,
-            4 => RejectCode::CanisterReject,
-            5 => RejectCode::CanisterError,
-            6 => RejectCode::SysUnknown,
-            n => RejectCode::Unrecognized(n),
+            1 => Ok(RejectCode::SysFatal),
+            2 => Ok(RejectCode::SysTransient),
+            3 => Ok(RejectCode::DestinationInvalid),
+            4 => Ok(RejectCode::CanisterReject),
+            5 => Ok(RejectCode::CanisterError),
+            6 => Ok(RejectCode::SysUnknown),
+            n => Err(InvalidRejectCode(n)),
         }
     }
 }
@@ -58,14 +63,12 @@ impl From<u32> for RejectCode {
 impl From<RejectCode> for u32 {
     fn from(code: RejectCode) -> u32 {
         match code {
-            RejectCode::NoError => 0,
             RejectCode::SysFatal => 1,
             RejectCode::SysTransient => 2,
             RejectCode::DestinationInvalid => 3,
             RejectCode::CanisterReject => 4,
             RejectCode::CanisterError => 5,
             RejectCode::SysUnknown => 6,
-            RejectCode::Unrecognized(n) => n,
         }
     }
 }
@@ -77,82 +80,14 @@ impl PartialEq<u32> for RejectCode {
     }
 }
 
-/// Error codes from the `ic0.call_perform` system API.
-///
-/// See [`ic0.call_perform`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-call) for more details.
-///
-/// So far, the specified codes (1, 2, 3) share the same meaning as the corresponding [`RejectCode`]s.
-#[repr(u32)]
-#[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CallPerformErrorCode {
-    /// No error.
-    NoError = 0,
-
-    /// Fatal system error, retry unlikely to be useful.
-    SysFatal = 1,
-    /// Transient system error, retry might be possible.
-    SysTransient = 2,
-    /// Invalid destination (e.g. canister/account does not exist).
-    DestinationInvalid = 3,
-
-    /// Unrecognized error code.
-    ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
-    /// rejection codes that are not recognized by the library.
-    Unrecognized(u32),
-}
-
-impl From<u32> for CallPerformErrorCode {
-    fn from(code: u32) -> Self {
-        match code {
-            0 => CallPerformErrorCode::NoError,
-            1 => CallPerformErrorCode::SysFatal,
-            2 => CallPerformErrorCode::SysTransient,
-            3 => CallPerformErrorCode::DestinationInvalid,
-            n => CallPerformErrorCode::Unrecognized(n),
-        }
-    }
-}
-
-impl From<CallPerformErrorCode> for u32 {
-    fn from(code: CallPerformErrorCode) -> u32 {
-        match code {
-            CallPerformErrorCode::NoError => 0,
-            CallPerformErrorCode::SysFatal => 1,
-            CallPerformErrorCode::SysTransient => 2,
-            CallPerformErrorCode::DestinationInvalid => 3,
-            CallPerformErrorCode::Unrecognized(n) => n,
-        }
-    }
-}
-
-impl PartialEq<u32> for CallPerformErrorCode {
-    fn eq(&self, other: &u32) -> bool {
-        let self_as_u32: u32 = (*self).into();
-        self_as_u32 == *other
-    }
-}
-
-/// The error type for inter-canister calls.
+/// The error type for inter-canister calls and decoding the response.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
-    /// The arguments could not be encoded.
-    ///
-    /// This can only happen when the arguments are provided using [`Call::with_arg`] and [`Call::with_args`].
-    /// Though the type system guarantees that the arguments are valid Candid types,
-    /// it is possible that the encoding fails for reasons such as memory allocation failure.
-    #[error("Failed to encode the arguments: {0}")]
-    CandidEncodeFailed(String),
-
-    /// The call immediately failed when invoking the call_perform system API.
-    #[error("The IC was not able to enqueue the call with code {0:?}")]
-    CallPerformFailed(CallPerformErrorCode),
-
     /// The call was rejected.
     ///
     /// Please handle the error by matching on the rejection code.
-    #[error("The call was rejected with code {0:?} and message: {1}")]
-    CallRejected(RejectCode, String),
+    #[error("The call was rejected with code {0:?}")]
+    CallRejected(CallRejected),
 
     /// The response could not be decoded.
     ///
@@ -163,7 +98,46 @@ pub enum CallError {
     CandidDecodeFailed(String),
 }
 
+/// The error type for inter-canister calls.
+#[derive(Debug, Clone)]
+pub struct CallRejected {
+    // All fields are private so we will be able to change the implementation without breaking the API.
+    // Once we have `ic0.msg_error_code` system API, we will only store the error_code in this struct.
+    // It will still be possible to get the [`RejectCode`] using the public getter,
+    // because every error_code can map to a [`RejectCode`].
+    reject_code: RejectCode,
+    reject_message: String,
+    sync: bool,
+}
+
+impl CallRejected {
+    /// Returns the [`RejectCode`].
+    pub fn reject_code(&self) -> RejectCode {
+        self.reject_code
+    }
+
+    /// Returns the reject message.
+    ///
+    /// When the call was rejected asynchronously (IC rejects the call after it was enqueued),
+    /// this message is set with [`msg_reject`](crate::api::msg_reject).
+    ///
+    /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
+    /// this message is set to a fixed string ("failed to enqueue the call").
+    pub fn reject_message(&self) -> &str {
+        &self.reject_message
+    }
+
+    /// Returns whether the call was rejected synchronously (`ic0.call_perform` returned non-zero code)
+    /// or asynchronously (IC rejects the call after it was enqueued).
+    pub fn is_sync(&self) -> bool {
+        self.sync
+    }
+}
+
 /// Result of a inter-canister call.
+pub type SystemResult<R> = Result<R, CallRejected>;
+
+/// Result of a inter-canister call and decoding the response.
 pub type CallResult<R> = Result<R, CallError>;
 
 /// Inter-Canister Call.
@@ -266,6 +240,16 @@ pub trait ConfigurableCall {
     /// If invoked multiple times, the last value takes effect.
     /// If [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
+    ///
+    /// # Note
+    ///
+    /// A timeout of 0 second DOES NOT mean guranteed response.
+    /// The call would most likely time out (result in a `SysUnknown` reject).
+    /// Unless it's a call to the canister on the same subnet,
+    /// and the execution manages to schedule both the request and the response in the same round.
+    ///
+    /// To make the call with a guaranteed response,
+    /// use the [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) method.
     fn change_timeout(self, timeout_seconds: u32) -> Self;
 }
 
@@ -340,7 +324,7 @@ impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
 /// Methods to send a call.
 pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync;
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync;
 
     /// Sends the call and decodes the reply to a Candid type.
     fn call<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
@@ -350,7 +334,7 @@ pub trait SendableCall {
     {
         let fut = self.call_raw();
         async {
-            let bytes = fut.await?;
+            let bytes = fut.await.map_err(CallError::CallRejected)?;
             decode_one(&bytes).map_err(decoder_error_to_call_error::<R>)
         }
     }
@@ -363,17 +347,17 @@ pub trait SendableCall {
     {
         let fut = self.call_raw();
         async {
-            let bytes = fut.await?;
+            let bytes = fut.await.map_err(CallError::CallRejected)?;
             decode_args(&bytes).map_err(decoder_error_to_call_error::<R>)
         }
     }
 
     /// Sends the call and ignores the reply.
-    fn call_oneway(self) -> CallResult<()>;
+    fn call_oneway(self) -> SystemResult<()>;
 }
 
 impl SendableCall for Call<'_> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_raw_internal::<Vec<u8>>(
             self.canister_id,
@@ -384,7 +368,7 @@ impl SendableCall for Call<'_> {
         )
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_oneway_internal::<Vec<u8>>(
             self.canister_id,
@@ -397,8 +381,11 @@ impl SendableCall for Call<'_> {
 }
 
 impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
-    async fn call_raw(self) -> CallResult<Vec<u8>> {
-        let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+    async fn call_raw(self) -> SystemResult<Vec<u8>> {
+        // Candid Encoding can only fail if heap memory is exhausted.
+        // That is not a recoverable error, so we panic.
+        let args_raw =
+            encode_args(self.args).unwrap_or_else(|e| panic!("Failed to encode args: {}", e));
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -409,8 +396,11 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
         .await
     }
 
-    fn call_oneway(self) -> CallResult<()> {
-        let args_raw = encode_args(self.args).map_err(encoder_error_to_call_error::<T>)?;
+    fn call_oneway(self) -> SystemResult<()> {
+        // Candid Encoding can only fail if heap memory is exhausted.
+        // That is not a recoverable error, so we panic.
+        let args_raw =
+            encode_args(self.args).unwrap_or_else(|e| panic!("Failed to encode args: {}", e));
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -422,8 +412,11 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 }
 
 impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
-    async fn call_raw(self) -> CallResult<Vec<u8>> {
-        let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
+    async fn call_raw(self) -> SystemResult<Vec<u8>> {
+        // Candid Encoding can only fail if heap memory is exhausted.
+        // That is not a recoverable error, so we panic.
+        let args_raw =
+            encode_one(self.arg).unwrap_or_else(|e| panic!("Failed to encode arg: {}", e));
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -434,8 +427,11 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
         .await
     }
 
-    fn call_oneway(self) -> CallResult<()> {
-        let args_raw = encode_one(self.arg).map_err(encoder_error_to_call_error::<T>)?;
+    fn call_oneway(self) -> SystemResult<()> {
+        // Candid Encoding can only fail if heap memory is exhausted.
+        // That is not a recoverable error, so we panic.
+        let args_raw =
+            encode_one(self.arg).unwrap_or_else(|e| panic!("Failed to encode arg: {}", e));
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -447,7 +443,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
 }
 
 impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
-    fn call_raw(self) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync {
+    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -457,7 +453,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         )
     }
 
-    fn call_oneway(self) -> CallResult<()> {
+    fn call_oneway(self) -> SystemResult<()> {
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -472,7 +468,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
 
 // Internal state for the Future when sending a call.
 struct CallFutureState<T: AsRef<[u8]>> {
-    result: Option<CallResult<Vec<u8>>>,
+    result: Option<SystemResult<Vec<u8>>>,
     waker: Option<Waker>,
     id: Principal,
     method: String,
@@ -486,7 +482,7 @@ struct CallFuture<T: AsRef<[u8]>> {
 }
 
 impl<T: AsRef<[u8]>> Future for CallFuture<T> {
-    type Output = CallResult<Vec<u8>>;
+    type Output = SystemResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
@@ -511,7 +507,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // callback and cleanup are safe to parameterize with T because:
                 // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
                 // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
-                let err_code = unsafe {
+                let code = unsafe {
                     ic0::call_new(
                         callee.as_ptr() as usize,
                         callee.len(),
@@ -536,11 +532,17 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                     ic0::call_perform()
                 };
 
-                // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-                match CallPerformErrorCode::from(err_code) {
-                    CallPerformErrorCode::NoError => {}
-                    c => {
-                        let result = Err(CallError::CallPerformFailed(c));
+                match code {
+                    0 => {
+                        // call_perform returns 0 means the call was successfully enqueued.
+                    }
+                    _ => {
+                        let reject_code = RejectCode::try_from(code).unwrap();
+                        let result = Err(CallRejected {
+                            reject_code,
+                            reject_message: "failed to enqueue the call".to_string(),
+                            sync: true,
+                        });
                         state.result = Some(result.clone());
                         return Poll::Ready(result);
                     }
@@ -565,9 +567,16 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
     if let Some(state) = state.upgrade() {
         // Make sure to un-borrow_mut the state.
         {
-            state.write().unwrap().result = Some(match RejectCode::from(msg_reject_code()) {
-                RejectCode::NoError => Ok(msg_arg_data()),
-                c => Err(CallError::CallRejected(c, msg_reject_msg())),
+            state.write().unwrap().result = Some(match msg_reject_code() {
+                0 => Ok(msg_arg_data()),
+                code => {
+                    let reject_code = RejectCode::try_from(code).unwrap();
+                    Err(CallRejected {
+                        reject_code,
+                        reject_message: msg_reject_msg(),
+                        sync: false,
+                    })
+                }
             });
         }
         let w = state.write().unwrap().waker.take();
@@ -615,7 +624,7 @@ fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     args_raw: T,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
-) -> impl Future<Output = CallResult<Vec<u8>>> + Send + Sync + 'a {
+) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + 'a {
     let state = Arc::new(RwLock::new(CallFutureState {
         result: None,
         waker: None,
@@ -634,7 +643,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
     args_raw: T,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
-) -> CallResult<()> {
+) -> SystemResult<()> {
     let callee = id.as_slice();
     // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
     // The system will still deliver the reply, but it will trap immediately because the callback
@@ -652,7 +661,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
     //   `args`, being a &[u8], is a readable sequence of bytes.
     // ic0.call_with_best_effort_response is always safe to call.
     // ic0.call_perform is always safe to call.
-    let err_code = unsafe {
+    let code = unsafe {
         ic0::call_new(
             callee.as_ptr() as usize,
             callee.len(),
@@ -676,9 +685,16 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
         ic0::call_perform()
     };
     // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-    match CallPerformErrorCode::from(err_code) {
-        CallPerformErrorCode::NoError => Ok(()),
-        c => Err(CallError::CallPerformFailed(c)),
+    match code {
+        0 => Ok(()),
+        _ => {
+            let reject_code = RejectCode::try_from(code).unwrap();
+            Err(CallRejected {
+                reject_code,
+                reject_message: "failed to enqueue the call".to_string(),
+                sync: true,
+            })
+        }
     }
 }
 
@@ -699,9 +715,4 @@ fn call_cycles_add(cycles: u128) {
 /// Converts a decoder error to a CallError.
 fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
     CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
-}
-
-/// Converts a encoder error to a CallError.
-fn encoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
-    CallError::CandidEncodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
 }
