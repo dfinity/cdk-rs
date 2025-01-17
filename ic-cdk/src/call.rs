@@ -14,6 +14,7 @@ use std::task::{Context, Poll, Waker};
 /// Reject code explains why the inter-canister call is rejected.
 ///
 /// See [Reject codes](https://internetcomputer.org/docs/current/references/ic-interface-spec/#reject-codes) for more details.
+#[repr(u32)]
 #[derive(CandidType, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RejectCode {
     /// Fatal system error, retry unlikely to be useful.
@@ -28,34 +29,41 @@ pub enum RejectCode {
     CanisterError = 5,
     /// Response unknown; system stopped waiting for it (e.g., timed out, or system under high load).
     SysUnknown = 6,
+
+    /// Unrecognized reject code.
+    ///
+    /// Note that this variant is not part of the IC interface spec, and is used to represent
+    /// reject codes that are not recognized by the library.
+    Unrecognized(u32),
 }
 
 /// Error type for [`RejectCode`] conversion.
 ///
-/// A reject code is invalid if it is not one of the known reject codes.
+/// The only case where this error can occur is when trying to convert a 0 to a [`RejectCode`].
 #[derive(Clone, Copy, Debug)]
-pub struct InvalidRejectCode(pub u32);
+pub struct ZeroIsInvalidRejectCode;
 
-impl std::fmt::Display for InvalidRejectCode {
+impl std::fmt::Display for ZeroIsInvalidRejectCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "invalid reject code: {}", self.0)
+        write!(f, "zero is invalid reject code")
     }
 }
 
-impl Error for InvalidRejectCode {}
+impl Error for ZeroIsInvalidRejectCode {}
 
 impl TryFrom<u32> for RejectCode {
-    type Error = InvalidRejectCode;
+    type Error = ZeroIsInvalidRejectCode;
 
     fn try_from(code: u32) -> Result<Self, Self::Error> {
         match code {
+            0 => Err(ZeroIsInvalidRejectCode),
             1 => Ok(RejectCode::SysFatal),
             2 => Ok(RejectCode::SysTransient),
             3 => Ok(RejectCode::DestinationInvalid),
             4 => Ok(RejectCode::CanisterReject),
             5 => Ok(RejectCode::CanisterError),
             6 => Ok(RejectCode::SysUnknown),
-            n => Err(InvalidRejectCode(n)),
+            _ => Ok(RejectCode::Unrecognized(code)),
         }
     }
 }
@@ -69,6 +77,7 @@ impl From<RejectCode> for u32 {
             RejectCode::CanisterReject => 4,
             RejectCode::CanisterError => 5,
             RejectCode::SysUnknown => 6,
+            RejectCode::Unrecognized(code) => code,
         }
     }
 }
@@ -537,6 +546,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         // call_perform returns 0 means the call was successfully enqueued.
                     }
                     _ => {
+                        // SAFETY: The conversion is safe because the code is not 0.
                         let reject_code = RejectCode::try_from(code).unwrap();
                         let result = Err(CallRejected {
                             reject_code,
@@ -570,6 +580,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
             state.write().unwrap().result = Some(match msg_reject_code() {
                 0 => Ok(msg_arg_data()),
                 code => {
+                    // SAFETY: The conversion is safe because the code is not 0.
                     let reject_code = RejectCode::try_from(code).unwrap();
                     Err(CallRejected {
                         reject_code,
@@ -688,6 +699,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
     match code {
         0 => Ok(()),
         _ => {
+            // SAFETY: The conversion is safe because the code is not 0.
             let reject_code = RejectCode::try_from(code).unwrap();
             Err(CallRejected {
                 reject_code,
