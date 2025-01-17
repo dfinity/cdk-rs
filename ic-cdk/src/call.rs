@@ -32,8 +32,14 @@ pub enum RejectCode {
 
     /// Unrecognized reject code.
     ///
-    /// Note that this variant is not part of the IC interface spec, and is used to represent
+    /// # Note
+    ///
+    /// This variant is not part of the IC interface spec, and is used to represent
     /// reject codes that are not recognized by the library.
+    ///
+    /// This variant is needed just in case the IC introduces new reject codes in the future.
+    /// If that happens, a Canister using existing library versions will still be able to convert
+    /// the new reject codes to this variant without panicking.
     Unrecognized(u32),
 }
 
@@ -391,10 +397,7 @@ impl SendableCall for Call<'_> {
 
 impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
     async fn call_raw(self) -> SystemResult<Vec<u8>> {
-        // Candid Encoding can only fail if heap memory is exhausted.
-        // That is not a recoverable error, so we panic.
-        let args_raw =
-            encode_args(self.args).unwrap_or_else(|e| panic!("Failed to encode args: {}", e));
+        let args_raw = encode_args(self.args).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -406,10 +409,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
     }
 
     fn call_oneway(self) -> SystemResult<()> {
-        // Candid Encoding can only fail if heap memory is exhausted.
-        // That is not a recoverable error, so we panic.
-        let args_raw =
-            encode_args(self.args).unwrap_or_else(|e| panic!("Failed to encode args: {}", e));
+        let args_raw = encode_args(self.args).unwrap_or_else(panic_when_encode_fails);
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -422,10 +422,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 
 impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
     async fn call_raw(self) -> SystemResult<Vec<u8>> {
-        // Candid Encoding can only fail if heap memory is exhausted.
-        // That is not a recoverable error, so we panic.
-        let args_raw =
-            encode_one(self.arg).unwrap_or_else(|e| panic!("Failed to encode arg: {}", e));
+        let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -437,10 +434,7 @@ impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
     }
 
     fn call_oneway(self) -> SystemResult<()> {
-        // Candid Encoding can only fail if heap memory is exhausted.
-        // That is not a recoverable error, so we panic.
-        let args_raw =
-            encode_one(self.arg).unwrap_or_else(|e| panic!("Failed to encode arg: {}", e));
+        let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -727,4 +721,15 @@ fn call_cycles_add(cycles: u128) {
 /// Converts a decoder error to a CallError.
 fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
     CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
+}
+
+/// When args encoding fails, we panic with an informative message.
+///
+/// Currently, Candid encoding only fails when heap memory is exhausted,
+/// in which case execution would trap before reaching the unwrap.
+///
+/// However, since future implementations might introduce other failure cases,
+/// we provide an informative panic message for better debuggability.
+fn panic_when_encode_fails(err: candid::error::Error) -> Vec<u8> {
+    panic!("failed to encode args: {}", err)
 }
