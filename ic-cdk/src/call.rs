@@ -136,7 +136,7 @@ impl CallRejected {
     /// Returns the reject message.
     ///
     /// When the call was rejected asynchronously (IC rejects the call after it was enqueued),
-    /// this message is get from [`msg_reject_msg`](crate::api::msg_reject_msg).
+    /// this message is get from [`msg_reject_msg`].
     ///
     /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
     /// this message is set to a fixed string ("call_perform failed").
