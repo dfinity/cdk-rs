@@ -11,6 +11,8 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
 use std::task::{Context, Poll, Waker};
 
+const CALL_PERFORM_REJECT_MESSAGE: &str = "call_perform failed";
+
 /// Reject code explains why the inter-canister call is rejected.
 ///
 /// See [Reject codes](https://internetcomputer.org/docs/current/references/ic-interface-spec/#reject-codes) for more details.
@@ -137,7 +139,7 @@ impl CallRejected {
     /// this message is set with [`msg_reject`](crate::api::msg_reject).
     ///
     /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
-    /// this message is set to a fixed string ("failed to enqueue the call").
+    /// this message is set to a fixed string ("call_perform failed").
     pub fn reject_message(&self) -> &str {
         &self.reject_message
     }
@@ -544,7 +546,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                         let reject_code = RejectCode::try_from(code).unwrap();
                         let result = Err(CallRejected {
                             reject_code,
-                            reject_message: "failed to enqueue the call".to_string(),
+                            reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
                             sync: true,
                         });
                         state.result = Some(result.clone());
@@ -697,7 +699,7 @@ fn call_oneway_internal<T: AsRef<[u8]>>(
             let reject_code = RejectCode::try_from(code).unwrap();
             Err(CallRejected {
                 reject_code,
-                reject_message: "failed to enqueue the call".to_string(),
+                reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
                 sync: true,
             })
         }
