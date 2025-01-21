@@ -1,0 +1,16 @@
+[package]
+name = "ic-response-codes"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage = "https://docs.rs/ic-response-codes"
+documentation = "https://docs.rs/ic-response-codes"
+readme = "README.md"
+categories = ["api-bindings", "data-structures"]
+keywords = ["internet-computer", "types", "dfinity"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+
+[dependencies]
