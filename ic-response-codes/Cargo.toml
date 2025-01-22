@@ -6,6 +6,7 @@ edition.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Internet Computer Response Codes"
 homepage = "https://docs.rs/ic-response-codes"
 documentation = "https://docs.rs/ic-response-codes"
 readme = "README.md"
