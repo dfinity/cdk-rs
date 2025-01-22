@@ -198,6 +198,9 @@ async fn provisional() {
     let arg = ProvisionalCreateCanisterWithCyclesArgs {
         amount: Some(10_000_000_000_000u64.into()),
         settings: Some(settings),
+        specified_id: Some(Principal::from_slice(&[
+            255, 255, 255, 255, 255, 209, 0, 0, 1, 1,
+        ])),
     };
     let canister_id = provisional_create_canister_with_cycles(arg)
         .await
@@ -267,8 +270,8 @@ async fn snapshots() {
     let canister_info_result = canister_info(arg).await.unwrap();
     assert_eq!(canister_info_result.total_num_changes, 3);
     assert_eq!(canister_info_result.recent_changes.len(), 1);
-    if let CanisterChange {
-        details: CanisterChangeDetails::LoadSnapshot(load_snapshot_record),
+    if let Change {
+        details: ChangeDetails::LoadSnapshot(load_snapshot_record),
         ..
     } = &canister_info_result.recent_changes[0]
     {

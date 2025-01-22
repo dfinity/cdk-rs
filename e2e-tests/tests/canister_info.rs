@@ -1,7 +1,6 @@
 use candid::Principal;
 use ic_cdk::management_canister::{
-    CanisterChange, CanisterChangeDetails, CanisterChangeOrigin, CanisterInfoResult,
-    CanisterInstallMode,
+    CanisterInfoResult, CanisterInstallMode, Change, ChangeDetails, ChangeOrigin,
     CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgs, UninstallCodeArgs,
@@ -79,25 +78,25 @@ fn test_canister_info() {
         CanisterInfoResult {
             total_num_changes: 9,
             recent_changes: vec![
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 4,
                     canister_version: 0,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(1)
                     }),
-                    details: CanisterChangeDetails::Creation(CreationRecord {
+                    details: ChangeDetails::Creation(CreationRecord {
                         controllers: vec![canister_id]
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 6,
                     canister_version: 1,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(2)
                     }),
-                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
@@ -105,23 +104,23 @@ fn test_canister_info() {
                         .unwrap(),
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 8,
                     canister_version: 2,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(3)
                     }),
-                    details: CanisterChangeDetails::CodeUninstall,
+                    details: ChangeDetails::CodeUninstall,
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 10,
                     canister_version: 3,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(4)
                     }),
-                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
@@ -129,14 +128,14 @@ fn test_canister_info() {
                         .unwrap(),
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 12,
                     canister_version: 4,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(5)
                     }),
-                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Reinstall,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
@@ -144,14 +143,14 @@ fn test_canister_info() {
                         .unwrap(),
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 14,
                     canister_version: 5,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(6)
                     }),
-                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Upgrade,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
@@ -159,32 +158,32 @@ fn test_canister_info() {
                         .unwrap(),
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 16,
                     canister_version: 6,
-                    origin: CanisterChangeOrigin::FromCanister(FromCanisterRecord {
+                    origin: ChangeOrigin::FromCanister(FromCanisterRecord {
                         canister_id,
                         canister_version: Some(7)
                     }),
-                    details: CanisterChangeDetails::ControllersChange(ControllersChangeRecord {
+                    details: ChangeDetails::ControllersChange(ControllersChangeRecord {
                         controllers: vec![Principal::anonymous(), canister_id, new_canister.0]
                     }),
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 18,
                     canister_version: 7,
-                    origin: CanisterChangeOrigin::FromUser(FromUserRecord {
+                    origin: ChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
                     }),
-                    details: CanisterChangeDetails::CodeUninstall,
+                    details: ChangeDetails::CodeUninstall,
                 },
-                CanisterChange {
+                Change {
                     timestamp_nanos: time0 + 19,
                     canister_version: 8,
-                    origin: CanisterChangeOrigin::FromUser(FromUserRecord {
+                    origin: ChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
                     }),
-                    details: CanisterChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"

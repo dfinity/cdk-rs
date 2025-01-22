@@ -28,6 +28,8 @@ ic0.workspace = true
 # ic-cdk-macros is a hidden dependency, re-exported by ic-cdk.
 # It should not be included by users direcly.
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.18.0-alpha.1" }
+ic-management-canister-types.workspace = true
+ic-response-codes.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap = { workspace = true, optional = true }

@@ -1,6 +1,6 @@
 use ic_cdk::management_canister::{
-    http_request, http_request_with_closure, HttpHeader, HttpMethod, HttpRequestArgs,
-    HttpRequestResult, TransformArgs, TransformContext,
+    http_request, http_request_with_closure, transform_context_from_query, HttpHeader, HttpMethod,
+    HttpRequestArgs, HttpRequestResult, TransformArgs,
 };
 use ic_cdk::{query, update};
 
@@ -94,7 +94,7 @@ async fn get_with_transform() {
     let args = HttpRequestArgs {
         url: "https://example.com".to_string(),
         method: HttpMethod::GET,
-        transform: Some(TransformContext::from_name(
+        transform: Some(transform_context_from_query(
             "transform".to_string(),
             vec![42],
         )),
