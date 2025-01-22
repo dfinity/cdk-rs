@@ -288,31 +288,34 @@ pub trait SendableCall {
     fn call_oneway(&self) -> SystemResult<()>;
 }
 
+/// Bytes for empty arguments.
+///
+/// `candid::Encode!(&()).unwrap()`
+const EMPTY_BYTES: &[u8] = &[0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
+
 impl SendableCall for Call<'_> {
     fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
-        let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
-        call_raw_internal::<Vec<u8>>(
+        call_raw_internal(
             self.canister_id,
             self.method,
-            args_raw,
+            EMPTY_BYTES,
             self.cycles,
             self.timeout_seconds,
         )
     }
 
     fn call_oneway(&self) -> SystemResult<()> {
-        let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
-        call_oneway_internal::<Vec<u8>>(
+        call_oneway_internal(
             self.canister_id,
             self.method,
-            args_raw,
+            EMPTY_BYTES,
             self.cycles,
             self.timeout_seconds,
         )
     }
 }
 
-impl<'a,'b, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a,'b, T> {
+impl<'a, 'b, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, 'b, T> {
     async fn call_raw(&self) -> SystemResult<Vec<u8>> {
         let args_raw = encode_args_ref(self.args).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
