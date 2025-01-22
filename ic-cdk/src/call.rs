@@ -1,9 +1,7 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
-use candid::utils::{ArgumentDecoder, ArgumentEncoder};
-use candid::{
-    decode_args, decode_one, encode_args, encode_one, CandidType, Deserialize, Principal,
-};
+use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
+use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -102,16 +100,16 @@ pub struct CallWithArg<'a, 'b, T> {
 ///
 /// The arguments are a tuple of types, each implementing [`CandidType`].
 #[derive(Debug)]
-pub struct CallWithArgs<'a, T> {
+pub struct CallWithArgs<'a, 'b, T> {
     call: Call<'a>,
-    args: T,
+    args: &'b T,
 }
 
 /// Inter-Canister Call with raw arguments.
 #[derive(Debug)]
-pub struct CallWithRawArgs<'a, A> {
+pub struct CallWithRawArgs<'a, 'b, A> {
     call: Call<'a>,
-    raw_args: A,
+    raw_args: &'b A,
 }
 
 impl<'a> Call<'a> {
@@ -142,12 +140,12 @@ impl<'a> Call<'a> {
     /// Sets the arguments for the call.
     ///
     /// The arguments are a tuple of types, each implementing [`CandidType`].
-    pub fn with_args<T>(self, args: T) -> CallWithArgs<'a, T> {
+    pub fn with_args<'b, T>(self, args: &'b T) -> CallWithArgs<'a, 'b, T> {
         CallWithArgs { call: self, args }
     }
 
     /// Sets the arguments for the call as raw bytes.
-    pub fn with_raw_args<A>(self, raw_args: A) -> CallWithRawArgs<'a, A> {
+    pub fn with_raw_args<'b, A>(self, raw_args: &'b A) -> CallWithRawArgs<'a, 'b, A> {
         CallWithRawArgs {
             call: self,
             raw_args,
@@ -221,7 +219,7 @@ impl<'a, 'b, T> ConfigurableCall for CallWithArg<'a, 'b, T> {
     }
 }
 
-impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
+impl<'a, 'b, T> ConfigurableCall for CallWithArgs<'a, 'b, T> {
     fn with_cycles(mut self, cycles: u128) -> Self {
         self.call.cycles = Some(cycles);
         self
@@ -238,7 +236,7 @@ impl<'a, T> ConfigurableCall for CallWithArgs<'a, T> {
     }
 }
 
-impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
+impl<'a, 'b, A> ConfigurableCall for CallWithRawArgs<'a, 'b, A> {
     fn with_cycles(mut self, cycles: u128) -> Self {
         self.call.cycles = Some(cycles);
         self
@@ -258,10 +256,10 @@ impl<'a, A> ConfigurableCall for CallWithRawArgs<'a, A> {
 /// Methods to send a call.
 pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
-    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync;
+    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync;
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
+    fn call<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
         Self: Sized,
         R: CandidType + for<'b> Deserialize<'b>,
@@ -274,7 +272,7 @@ pub trait SendableCall {
     }
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call_tuple<R>(self) -> impl Future<Output = CallResult<R>> + Send + Sync
+    fn call_tuple<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync
     where
         Self: Sized,
         R: for<'b> ArgumentDecoder<'b>,
@@ -287,11 +285,11 @@ pub trait SendableCall {
     }
 
     /// Sends the call and ignores the reply.
-    fn call_oneway(self) -> SystemResult<()>;
+    fn call_oneway(&self) -> SystemResult<()>;
 }
 
 impl SendableCall for Call<'_> {
-    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
+    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_raw_internal::<Vec<u8>>(
             self.canister_id,
@@ -302,7 +300,7 @@ impl SendableCall for Call<'_> {
         )
     }
 
-    fn call_oneway(self) -> SystemResult<()> {
+    fn call_oneway(&self) -> SystemResult<()> {
         let args_raw = vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
         call_oneway_internal::<Vec<u8>>(
             self.canister_id,
@@ -314,9 +312,9 @@ impl SendableCall for Call<'_> {
     }
 }
 
-impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> {
-    async fn call_raw(self) -> SystemResult<Vec<u8>> {
-        let args_raw = encode_args(self.args).unwrap_or_else(panic_when_encode_fails);
+impl<'a,'b, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a,'b, T> {
+    async fn call_raw(&self) -> SystemResult<Vec<u8>> {
+        let args_raw = encode_args_ref(self.args).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -327,8 +325,8 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
         .await
     }
 
-    fn call_oneway(self) -> SystemResult<()> {
-        let args_raw = encode_args(self.args).unwrap_or_else(panic_when_encode_fails);
+    fn call_oneway(&self) -> SystemResult<()> {
+        let args_raw = encode_args_ref(self.args).unwrap_or_else(panic_when_encode_fails);
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
@@ -340,7 +338,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
 }
 
 impl<'a, 'b, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, 'b, T> {
-    async fn call_raw(self) -> SystemResult<Vec<u8>> {
+    async fn call_raw(&self) -> SystemResult<Vec<u8>> {
         let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
             self.call.canister_id,
@@ -352,7 +350,7 @@ impl<'a, 'b, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, 'b, T
         .await
     }
 
-    fn call_oneway(self) -> SystemResult<()> {
+    fn call_oneway(&self) -> SystemResult<()> {
         let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
         call_oneway_internal(
             self.call.canister_id,
@@ -364,8 +362,8 @@ impl<'a, 'b, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, 'b, T
     }
 }
 
-impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a, A> {
-    fn call_raw(self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
+impl<'a, 'b, A: AsRef<[u8]> + Send + Sync + 'b> SendableCall for CallWithRawArgs<'a, 'b, A> {
+    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
         call_raw_internal(
             self.call.canister_id,
             self.call.method,
@@ -375,7 +373,7 @@ impl<'a, A: AsRef<[u8]> + Send + Sync + 'a> SendableCall for CallWithRawArgs<'a,
         )
     }
 
-    fn call_oneway(self) -> SystemResult<()> {
+    fn call_oneway(&self) -> SystemResult<()> {
         call_oneway_internal(
             self.call.canister_id,
             self.call.method,
