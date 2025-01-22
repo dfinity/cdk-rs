@@ -21,14 +21,14 @@ async fn basic() {
     };
     // 500 B is the minimum cycles required to create a canister.
     // Here we set 1 T cycles for other operations below.
-    let canister_id = create_canister(arg, 1_000_000_000_000u128)
+    let canister_id = create_canister(&arg, 1_000_000_000_000u128)
         .await
         .unwrap()
         .canister_id;
 
     // canister_status
     let arg = CanisterStatusArgs { canister_id };
-    let result = canister_status(arg).await.unwrap();
+    let result = canister_status(&arg).await.unwrap();
     assert_eq!(result.status, CanisterStatusType::Running);
     assert_eq!(result.reserved_cycles.0, 0u128.into());
     let definite_canister_setting = result.settings;
@@ -52,7 +52,7 @@ async fn basic() {
             ..Default::default()
         },
     };
-    update_settings(arg).await.unwrap();
+    update_settings(&arg).await.unwrap();
 
     // install_code
     let arg = InstallCodeArgs {
@@ -63,27 +63,27 @@ async fn basic() {
         wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
         arg: vec![],
     };
-    install_code(arg).await.unwrap();
+    install_code(&arg).await.unwrap();
 
     // uninstall_code
     let arg = UninstallCodeArgs { canister_id };
-    uninstall_code(arg).await.unwrap();
+    uninstall_code(&arg).await.unwrap();
 
     // start_canister
     let arg = StartCanisterArgs { canister_id };
-    start_canister(arg).await.unwrap();
+    start_canister(&arg).await.unwrap();
 
     // stop_canister
     let arg = StopCanisterArgs { canister_id };
-    stop_canister(arg).await.unwrap();
+    stop_canister(&arg).await.unwrap();
 
     // deposit_cycles
     let arg = DepositCyclesArgs { canister_id };
-    deposit_cycles(arg, 1_000_000_000_000u128).await.unwrap();
+    deposit_cycles(&arg, 1_000_000_000_000u128).await.unwrap();
 
     // delete_canister
     let arg = DeleteCanisterArgs { canister_id };
-    delete_canister(arg).await.unwrap();
+    delete_canister(&arg).await.unwrap();
 
     // raw_rand
     let bytes = raw_rand().await.unwrap();
@@ -106,7 +106,7 @@ async fn ecdsa() {
     let EcdsaPublicKeyResult {
         public_key,
         chain_code,
-    } = ecdsa_public_key(arg).await.unwrap();
+    } = ecdsa_public_key(&arg).await.unwrap();
     assert_eq!(public_key.len(), 33);
     assert_eq!(chain_code.len(), 32);
 
@@ -117,7 +117,7 @@ async fn ecdsa() {
         derivation_path,
         key_id,
     };
-    let SignWithEcdsaResult { signature } = sign_with_ecdsa(arg).await.unwrap();
+    let SignWithEcdsaResult { signature } = sign_with_ecdsa(&arg).await.unwrap();
     assert_eq!(signature.len(), 64);
 }
 
@@ -137,7 +137,7 @@ async fn schnorr() {
     let SchnorrPublicKeyResult {
         public_key,
         chain_code,
-    } = schnorr_public_key(arg).await.unwrap();
+    } = schnorr_public_key(&arg).await.unwrap();
     assert_eq!(public_key.len(), 33);
     assert_eq!(chain_code.len(), 32);
     let arg = SchnorrPublicKeyArgs {
@@ -151,7 +151,7 @@ async fn schnorr() {
     let SchnorrPublicKeyResult {
         public_key,
         chain_code,
-    } = schnorr_public_key(arg).await.unwrap();
+    } = schnorr_public_key(&arg).await.unwrap();
     assert_eq!(public_key.len(), 32);
     assert_eq!(chain_code.len(), 32);
 
@@ -162,7 +162,7 @@ async fn schnorr() {
         derivation_path,
         key_id,
     };
-    let SignWithSchnorrResult { signature } = sign_with_schnorr(arg).await.unwrap();
+    let SignWithSchnorrResult { signature } = sign_with_schnorr(&arg).await.unwrap();
     assert_eq!(signature.len(), 64);
 }
 
@@ -173,7 +173,7 @@ async fn metrics(subnet_id: Principal) {
         subnet_id,
         start_at_timestamp_nanos: 0,
     };
-    let result = node_metrics_history(arg).await.unwrap();
+    let result = node_metrics_history(&arg).await.unwrap();
     for record in result {
         assert!(record.timestamp_nanos > 0);
         assert!(!record.node_metrics.is_empty());
@@ -184,7 +184,7 @@ async fn metrics(subnet_id: Principal) {
 async fn subnet(subnet_id: Principal) {
     // subnet_info
     let arg = SubnetInfoArgs { subnet_id };
-    let result = subnet_info(arg).await.unwrap();
+    let result = subnet_info(&arg).await.unwrap();
     assert!(!result.replica_version.is_empty());
 }
 
@@ -202,7 +202,7 @@ async fn provisional() {
             255, 255, 255, 255, 255, 209, 0, 0, 1, 1,
         ])),
     };
-    let canister_id = provisional_create_canister_with_cycles(arg)
+    let canister_id = provisional_create_canister_with_cycles(&arg)
         .await
         .unwrap()
         .canister_id;
@@ -212,13 +212,13 @@ async fn provisional() {
         canister_id,
         amount: 1_000_000_000u64.into(),
     };
-    provisional_top_up_canister(arg).await.unwrap();
+    provisional_top_up_canister(&arg).await.unwrap();
 }
 
 #[update]
 async fn snapshots() {
     let arg = CreateCanisterArgs::default();
-    let canister_id = create_canister(arg, 2_000_000_000_000u128)
+    let canister_id = create_canister(&arg, 2_000_000_000_000u128)
         .await
         .unwrap()
         .canister_id;
@@ -233,25 +233,25 @@ async fn snapshots() {
         wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
         arg: vec![],
     };
-    install_code(arg).await.unwrap();
+    install_code(&arg).await.unwrap();
 
     // take_canister_snapshot
     let arg = TakeCanisterSnapshotArgs {
         canister_id,
         replace_snapshot: None,
     };
-    let snapshot = take_canister_snapshot(arg).await.unwrap();
+    let snapshot = take_canister_snapshot(&arg).await.unwrap();
 
     // load_canister_snapshot
     let arg = LoadCanisterSnapshotArgs {
         canister_id,
         snapshot_id: snapshot.id.clone(),
     };
-    assert!(load_canister_snapshot(arg).await.is_ok());
+    assert!(load_canister_snapshot(&arg).await.is_ok());
 
     // list_canister_snapshots
     let args = ListCanisterSnapshotsArgs { canister_id };
-    let snapshots = list_canister_snapshots(args).await.unwrap();
+    let snapshots = list_canister_snapshots(&args).await.unwrap();
     assert_eq!(snapshots.len(), 1);
     assert_eq!(snapshots[0].id, snapshot.id);
 
@@ -260,14 +260,14 @@ async fn snapshots() {
         canister_id,
         snapshot_id: snapshot.id.clone(),
     };
-    assert!(delete_canister_snapshot(arg).await.is_ok());
+    assert!(delete_canister_snapshot(&arg).await.is_ok());
 
     // check the above snapshot operations are recorded in the canister's history.
     let arg = CanisterInfoArgs {
         canister_id,
         num_requested_changes: Some(1),
     };
-    let canister_info_result = canister_info(arg).await.unwrap();
+    let canister_info_result = canister_info(&arg).await.unwrap();
     assert_eq!(canister_info_result.total_num_changes, 3);
     assert_eq!(canister_info_result.recent_changes.len(), 1);
     if let Change {

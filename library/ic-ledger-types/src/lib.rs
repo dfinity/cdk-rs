@@ -681,7 +681,7 @@ impl CandidType for QueryArchiveFn {
 /// async fn check_callers_balance() -> Tokens {
 ///   account_balance(
 ///     MAINNET_LEDGER_CANISTER_ID,
-///     AccountBalanceArgs {
+///     &AccountBalanceArgs {
 ///       account: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT)
 ///     }
 ///   ).await.expect("call to ledger failed")
@@ -689,7 +689,7 @@ impl CandidType for QueryArchiveFn {
 /// ```
 pub async fn account_balance(
     ledger_canister_id: Principal,
-    args: AccountBalanceArgs,
+    args: &AccountBalanceArgs,
 ) -> CallResult<Tokens> {
     Call::new(ledger_canister_id, "account_balance")
         .with_arg(args)
@@ -719,10 +719,10 @@ pub async fn account_balance(
 /// ```
 pub async fn transfer(
     ledger_canister_id: Principal,
-    args: TransferArgs,
+    args: &TransferArgs,
 ) -> CallResult<TransferResult> {
     Call::new(ledger_canister_id, "transfer")
-        .with_arg(args)
+        .with_arg(&args)
         .call()
         .await
 }
@@ -758,7 +758,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
 ///   let args = GetBlocksArgs { start: block_index, length: 1 };
 ///
-///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///   let blocks_result = query_blocks(ledger, &args).await?;
 ///
 ///   if blocks_result.blocks.len() >= 1 {
 ///       debug_assert_eq!(blocks_result.first_block_index, block_index);
@@ -769,7 +769,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 ///       .archived_blocks
 ///       .into_iter()
 ///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
-///       match query_archived_blocks(&func, args).await? {
+///       match query_archived_blocks(&func, &args).await? {
 ///           Ok(range) => return Ok(range.blocks.into_iter().next()),
 ///           _ => (),
 ///       }
@@ -778,7 +778,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 /// }
 pub async fn query_blocks(
     ledger_canister_id: Principal,
-    args: GetBlocksArgs,
+    args: &GetBlocksArgs,
 ) -> CallResult<QueryBlocksResponse> {
     Call::new(ledger_canister_id, "query_blocks")
         .with_arg(args)
@@ -798,7 +798,7 @@ pub async fn query_blocks(
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
 ///   let args = GetBlocksArgs { start: block_index, length: 1 };
 ///
-///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///   let blocks_result = query_blocks(ledger, &args).await?;
 ///
 ///   if blocks_result.blocks.len() >= 1 {
 ///       debug_assert_eq!(blocks_result.first_block_index, block_index);
@@ -809,7 +809,7 @@ pub async fn query_blocks(
 ///       .archived_blocks
 ///       .into_iter()
 ///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
-///       match query_archived_blocks(&func, args).await? {
+///       match query_archived_blocks(&func, &args).await? {
 ///           Ok(range) => return Ok(range.blocks.into_iter().next()),
 ///           _ => (),
 ///       }
@@ -818,7 +818,7 @@ pub async fn query_blocks(
 /// }
 pub async fn query_archived_blocks(
     func: &QueryArchiveFn,
-    args: GetBlocksArgs,
+    args: &GetBlocksArgs,
 ) -> CallResult<GetBlocksResult> {
     Call::new(func.0.principal, &func.0.method)
         .with_arg(args)

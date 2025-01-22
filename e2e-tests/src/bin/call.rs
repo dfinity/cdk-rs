@@ -59,44 +59,44 @@ async fn call_echo_with_arg() {
     let bytes = Encode!(&n).unwrap();
     // call*
     let res: u32 = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .call()
         .await
         .unwrap();
     assert_eq!(res, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
     Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .call_oneway()
         .unwrap();
     // with*
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .with_guaranteed_response()
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_arg(n)
+        .with_arg(&n)
         .with_cycles(1000)
         .call_tuple()
         .await

@@ -93,9 +93,9 @@ pub struct Call<'a> {
 ///
 /// The argument must impl [`CandidType`].
 #[derive(Debug)]
-pub struct CallWithArg<'a, T> {
+pub struct CallWithArg<'a, 'b, T> {
     call: Call<'a>,
-    arg: T,
+    arg: &'b T,
 }
 
 /// Inter-Canister Call with typed arguments.
@@ -135,7 +135,7 @@ impl<'a> Call<'a> {
     /// Sets the argument for the call.
     ///
     /// The argument must implement [`CandidType`].
-    pub fn with_arg<T>(self, arg: T) -> CallWithArg<'a, T> {
+    pub fn with_arg<'b, T>(self, arg: &'b T) -> CallWithArg<'a, 'b, T> {
         CallWithArg { call: self, arg }
     }
 
@@ -204,7 +204,7 @@ impl<'a> ConfigurableCall for Call<'a> {
     }
 }
 
-impl<'a, T> ConfigurableCall for CallWithArg<'a, T> {
+impl<'a, 'b, T> ConfigurableCall for CallWithArg<'a, 'b, T> {
     fn with_cycles(mut self, cycles: u128) -> Self {
         self.call.cycles = Some(cycles);
         self
@@ -339,7 +339,7 @@ impl<'a, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, T> 
     }
 }
 
-impl<'a, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, T> {
+impl<'a, 'b, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, 'b, T> {
     async fn call_raw(self) -> SystemResult<Vec<u8>> {
         let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
         call_raw_internal(
