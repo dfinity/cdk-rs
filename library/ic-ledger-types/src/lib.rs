@@ -706,7 +706,7 @@ pub async fn account_balance(
 /// async fn transfer_to_caller() -> BlockIndex {
 ///   transfer(
 ///     MAINNET_LEDGER_CANISTER_ID,
-///     TransferArgs {
+///     &TransferArgs {
 ///       memo: Memo(0),
 ///       amount: Tokens::from_e8s(1_000_000),
 ///       fee: DEFAULT_FEE,
