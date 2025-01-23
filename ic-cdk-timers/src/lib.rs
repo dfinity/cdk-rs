@@ -117,7 +117,7 @@ extern "C" fn global_timer() {
                                         ic_cdk::api::canister_self(),
                                         "<ic-cdk internal> timer_executor",
                                     )
-                                    .with_raw_args(&task_id.0.as_ffi().to_be_bytes().to_vec())
+                                    .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
                                     .call_raw()
                                     .await,
                                 )

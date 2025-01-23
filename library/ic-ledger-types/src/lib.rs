@@ -722,7 +722,7 @@ pub async fn transfer(
     args: &TransferArgs,
 ) -> CallResult<TransferResult> {
     Call::new(ledger_canister_id, "transfer")
-        .with_arg(&args)
+        .with_arg(args)
         .call()
         .await
 }

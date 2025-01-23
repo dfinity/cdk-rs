@@ -107,12 +107,12 @@ pub type CallResult<R> = Result<R, CallError>;
 ///
 /// ```rust, no_run
 /// # use ic_cdk::call::Call;
-/// # fn main() {
+/// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
 /// let call = Call::new(canister_id, method)
 ///     .with_raw_args(&[1,0])
-///     .guaranteed_response()
+///     .with_guaranteed_response()
 ///     .with_cycles(1000)
 ///     .change_timeout(5)
 ///     .with_arg(42)
@@ -137,7 +137,7 @@ pub type CallResult<R> = Result<R, CallError>;
 ///
 /// ```rust, no_run
 /// # use ic_cdk::call::Call;
-/// # fn main() {
+/// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
 /// let call = Call::new(canister_id, method)
@@ -177,9 +177,9 @@ impl<'m, 'a> Call<'m, 'a> {
     ///
     /// # Note
     ///
-    /// The [`Call`] defaults to a 10-second timeout for best-Effort Responses.
-    /// To change the timeout, use the [`change_timeout`][Self::change_timeout] method.
-    /// To get a guaranteed response, use the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
+    /// The [`Call`] defaults to a 10-second timeout for best-effort Responses.
+    /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
+    /// To get a guaranteed response, invoke the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
     pub fn new(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
@@ -273,14 +273,7 @@ impl<'m, 'a> Call<'m, 'a> {
         let state = Arc::new(RwLock::new(CallFutureState {
             result: None,
             waker: None,
-            id: self.canister_id,
-            method: self.method,
-            arg: match &self.encoded_args {
-                EncodedArgs::Owned(vec) => vec,
-                EncodedArgs::Ref(r) => *r,
-            },
-            cycles: self.cycles,
-            timeout_seconds: self.timeout_seconds,
+            call: self,
         }));
         CallFuture { state }
     }
@@ -313,55 +306,10 @@ impl<'m, 'a> Call<'m, 'a> {
 
     /// Sends the call and ignores the reply.
     pub fn call_oneway(&self) -> SystemResult<()> {
-        let callee = self.canister_id.as_slice();
-        let method = self.method;
-        let arg = match &self.encoded_args {
-            EncodedArgs::Owned(vec) => vec,
-            EncodedArgs::Ref(r) => *r,
-        };
-
-        // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
-        // The system will still deliver the reply, but it will trap immediately because the callback
-        // is not a valid function. See
-        // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
-        // for more context.
-
-        // SAFETY:
-        // ic0.call_new:
-        //   `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-        //   `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-        //   `reply_fun` and `reject_fun`: In "notify" style call, we want these callback functions to not be called. So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
-        //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
-        // ic0.call_data_append:
-        //   `args`, being a &[u8], is a readable sequence of bytes.
-        // ic0.call_with_best_effort_response is always safe to call.
-        // ic0.call_perform is always safe to call.
-        let code = unsafe {
-            ic0::call_new(
-                callee.as_ptr() as usize,
-                callee.len(),
-                method.as_ptr() as usize,
-                method.len(),
-                usize::MAX,
-                usize::MAX,
-                usize::MAX,
-                usize::MAX,
-            );
-            if !arg.is_empty() {
-                ic0::call_data_append(arg.as_ptr() as usize, arg.len());
-            }
-            if let Some(cycles) = self.cycles {
-                call_cycles_add(cycles);
-            }
-            if let Some(timeout_seconds) = self.timeout_seconds {
-                ic0::call_with_best_effort_response(timeout_seconds);
-            }
-            ic0::call_perform()
-        };
         // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-        match code {
+        match self.perform(None) {
             0 => Ok(()),
-            _ => {
+            code => {
                 // SAFETY: The conversion is safe because the code is not 0.
                 let reject_code = RejectCode::try_from(code).unwrap();
                 Err(CallRejected {
@@ -372,26 +320,115 @@ impl<'m, 'a> Call<'m, 'a> {
             }
         }
     }
+
+    /// Performs the call.
+    ///
+    /// This is an internal helper function only for [`Self::call_oneway`] and [`CallFuture::poll`].
+    ///
+    /// # Arguments
+    ///
+    /// * `state_ptr`: An optional pointer to the internal state of the [`CallFuture`].
+    ///   * If `Some`, the call will be prepared for asynchronous execution:
+    ///     * `ic0.call_new` will be invoked with [`callback`] and state pointer.
+    ///     * `ic0.call_on_cleanup` will be invoked with [`cleanup`].
+    ///   * If `None`, the call will be prepared for oneway execution:
+    ///     * `ic0.call_new` will be invoked with invalid callback functions.
+    ///     * `ic0.call_on_cleanup` won't be invoked.
+    ///
+    /// # Returns
+    ///
+    /// The return value of `ic0.call_perform`.
+    fn perform(&self, state_ptr_opt: Option<*const RwLock<CallFutureState<'_, '_>>>) -> u32 {
+        let callee = self.canister_id.as_slice();
+        let method = self.method;
+        let arg = match &self.encoded_args {
+            EncodedArgs::Owned(vec) => vec,
+            EncodedArgs::Ref(r) => *r,
+        };
+
+        let (reply_fun, reply_env, reject_fun, reject_env) = match state_ptr_opt {
+            // asynchronous execution
+            //
+            // # SAFETY:
+            // ic0.call_new
+            // * `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as both reply and reject fn for ic0.call_new.
+            // * `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
+            Some(state_ptr) => (
+                callback as usize,
+                state_ptr as usize,
+                cleanup as usize,
+                state_ptr as usize,
+            ),
+            // oneway execution
+            //
+            // # SAFETY:
+            // ic0.call_new
+            // * `reply_fun` and `reject_fun`: In "oneway" style call, we want these callback functions to not be called.
+            //    So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
+            // * `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
+            //
+            // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
+            None => (usize::MAX, usize::MAX, usize::MAX, usize::MAX),
+        };
+        // SAFETY:
+        // `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+        // `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+        // reply and reject callbacks are discussed above.
+        unsafe {
+            ic0::call_new(
+                callee.as_ptr() as usize,
+                callee.len(),
+                method.as_ptr() as usize,
+                method.len(),
+                reply_fun,
+                reply_env,
+                reject_fun,
+                reject_env,
+            );
+        }
+        if !arg.is_empty() {
+            // SAFETY: `args`, being a &[u8], is a readable sequence of bytes.
+            unsafe { ic0::call_data_append(arg.as_ptr() as usize, arg.len()) };
+        }
+        if let Some(cycles) = self.cycles {
+            let high = (cycles >> 64) as u64;
+            let low = (cycles & u64::MAX as u128) as u64;
+            // SAFETY: ic0.call_cycles_add128 is always safe to call.
+            unsafe { ic0::call_cycles_add128(high, low) };
+        }
+        if let Some(timeout_seconds) = self.timeout_seconds {
+            // SAFETY: ic0.call_with_best_effort_response is always safe to call.
+            unsafe { ic0::call_with_best_effort_response(timeout_seconds) };
+        }
+        if let Some(state_ptr) = state_ptr_opt {
+            // Only invoke `ic0.call_on_cleanup` for asynchronous (non-oneway) calls.
+            // For oneway calls, since the reply/reject callback always traps (the callbacks were set to `usize::MAX`),
+            // the cleanup callback must not be set to ensure the "oneway" semantics.
+            //
+            // SAFETY:
+            // `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be passed as a cleanup callback ptr.
+            // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
+            unsafe { ic0::call_on_cleanup(cleanup as usize, state_ptr as usize) };
+        }
+        // SAFETY: ic0.call_perform is always safe to call
+        unsafe { ic0::call_perform() }
+    }
 }
 
 // # Internal =================================================================
 
-// Internal state for the Future when sending a call.
-struct CallFutureState<'m, T: AsRef<[u8]>> {
+/// Internal state for the Future when sending a call.
+struct CallFutureState<'m, 'a> {
     result: Option<SystemResult<Vec<u8>>>,
     waker: Option<Waker>,
-    id: Principal,
-    method: &'m str,
-    arg: T,
-    cycles: Option<u128>,
-    timeout_seconds: Option<u32>,
+    call: &'m Call<'m, 'a>,
 }
 
-struct CallFuture<'m, T: AsRef<[u8]>> {
-    state: Arc<RwLock<CallFutureState<'m, T>>>,
+struct CallFuture<'m, 'a> {
+    state: Arc<RwLock<CallFutureState<'m, 'a>>>,
 }
 
-impl<'m, T: AsRef<[u8]>> Future for CallFuture<'m, T> {
+impl<'m, 'a> Future for CallFuture<'m, 'a> {
     type Output = SystemResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
@@ -402,51 +439,13 @@ impl<'m, T: AsRef<[u8]>> Future for CallFuture<'m, T> {
             Poll::Ready(result)
         } else {
             if state.waker.is_none() {
-                let callee = state.id.as_slice();
-                let method = &state.method;
                 let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
-                // SAFETY:
-                // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                // `callback` is a function with signature (env : usize) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
-                // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-                // `cleanup` is a function with signature (env : usize) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-                // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
-                // ic0.call_perform is always safe to call.
-                // callback and cleanup are safe to parameterize with T because:
-                // - if the future is dropped before the callback is called, there will be no more strong references and the weak reference will fail to upgrade
-                // - if the future is *not* dropped before the callback is called, the compiler will mandate that any data borrowed by T is still alive
-                let code = unsafe {
-                    ic0::call_new(
-                        callee.as_ptr() as usize,
-                        callee.len(),
-                        method.as_ptr() as usize,
-                        method.len(),
-                        callback::<T> as usize,
-                        state_ptr as usize,
-                        callback::<T> as usize,
-                        state_ptr as usize,
-                    );
-                    let arg = state.arg.as_ref();
-                    if !arg.is_empty() {
-                        ic0::call_data_append(arg.as_ptr() as usize, arg.len());
-                    }
-                    if let Some(cycles) = state.cycles {
-                        call_cycles_add(cycles);
-                    }
-                    if let Some(timeout_seconds) = state.timeout_seconds {
-                        ic0::call_with_best_effort_response(timeout_seconds);
-                    }
-                    ic0::call_on_cleanup(cleanup::<T> as usize, state_ptr as usize);
-                    ic0::call_perform()
-                };
 
-                match code {
+                match state.call.perform(Some(state_ptr)) {
                     0 => {
                         // call_perform returns 0 means the call was successfully enqueued.
                     }
-                    _ => {
+                    code => {
                         // SAFETY: The conversion is safe because the code is not 0.
                         let reject_code = RejectCode::try_from(code).unwrap();
                         let result = Err(CallRejected {
@@ -465,14 +464,15 @@ impl<'m, T: AsRef<[u8]>> Future for CallFuture<'m, T> {
     }
 }
 
-/// The callback from IC dereferences the future from a raw pointer, assigns the
-/// result and calls the waker. We cannot use a closure here because we pass raw
-/// pointers to the System and back.
+/// The reply/reject callback for `ic0.call_new`.
+///
+/// It dereferences the future from a raw pointer, assigns the result and calls the waker.
+/// We cannot use a closure here because we pass raw pointers to the System and back.
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<'_, T>>) {
+/// This function must only be passed to the IC with a pointer from `Weak::into_raw` as userdata.
+unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
@@ -500,6 +500,8 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
     }
 }
 
+/// The cleanup callback for `ic0.call_on_cleanup`.
+///
 /// This function is called when [`callback`] was just called with the same parameter, and trapped.
 /// We can't guarantee internal consistency at this point, but we can at least e.g. drop mutex guards.
 /// Waker is a very opaque API, so the best we can do is set a global flag and proceed normally.
@@ -507,7 +509,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
 /// # Safety
 ///
 /// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<'_, T>>) {
+unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
@@ -531,17 +533,6 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
 }
 
 // # Internal END =============================================================
-
-fn call_cycles_add(cycles: u128) {
-    if cycles > 0 {
-        let high = (cycles >> 64) as u64;
-        let low = (cycles & u64::MAX as u128) as u64;
-        // SAFETY: ic0.call_cycles_add128 is always safe to call.
-        unsafe {
-            ic0::call_cycles_add128(high, low);
-        }
-    }
-}
 
 /// Converts a decoder error to a [`CallError`].
 fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {

@@ -33,7 +33,7 @@ async fn panic_after_async() {
     // Do not drop the lock before the await point.
 
     let _: u64 = Call::new(ic_cdk::api::canister_self(), "inc")
-        .with_arg(&value)
+        .with_arg(value)
         .call()
         .await
         .unwrap();
@@ -87,7 +87,7 @@ fn greet(name: String) -> String {
 #[query(composite = true)]
 async fn greet_self(greeter: Principal) -> String {
     Call::new(greeter, "greet")
-        .with_arg(&"myself")
+        .with_arg("myself")
         .call()
         .await
         .unwrap()
@@ -97,7 +97,7 @@ async fn greet_self(greeter: Principal) -> String {
 async fn invalid_reply_payload_does_not_trap() -> String {
     // We're decoding an integer instead of a string, decoding must fail.
     let result: CallResult<u64> = Call::new(ic_cdk::api::canister_self(), "greet")
-        .with_arg(&"World")
+        .with_arg("World")
         .call()
         .await;
 
