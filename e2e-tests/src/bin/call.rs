@@ -1,6 +1,6 @@
 use candid::Encode;
 use ic_cdk::api::canister_self;
-use ic_cdk::call::{Call, ConfigurableCall, SendableCall};
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 /// A simple endpoint that takes empty arguments.
@@ -211,7 +211,7 @@ async fn call_echo_with_raw_args() {
 /// Retries the call until it succeeds.
 ///
 /// Returns the number of retries.
-async fn retry<C: SendableCall>(call_to_retry: C) -> u32 {
+async fn retry(call_to_retry: Call<'_, '_>) -> u32 {
     let mut retry = 0;
     loop {
         match call_to_retry.call_raw().await {

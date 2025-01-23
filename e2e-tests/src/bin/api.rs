@@ -2,7 +2,7 @@
 //! The [`inspect_message`] function defined below mandates that all the update/query entrypoints must start with "call_".
 
 use candid::Principal;
-use ic_cdk::{api::*, call::ConfigurableCall};
+use ic_cdk::api::*;
 
 #[export_name = "canister_update call_msg_arg_data"]
 fn call_msg_arg_data() {
@@ -19,7 +19,7 @@ fn call_msg_caller() {
 /// This entrypoint will call [`call_msg_deadline`] with both best-effort and guaranteed responses.
 #[ic_cdk::update]
 async fn call_msg_deadline_caller() {
-    use ic_cdk::call::{Call, SendableCall};
+    use ic_cdk::call::Call;
     // Call with best-effort responses.
     let reply1 = Call::new(canister_self(), "call_msg_deadline")
         .call_raw()

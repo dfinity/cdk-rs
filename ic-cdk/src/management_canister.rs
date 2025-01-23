@@ -10,7 +10,7 @@
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
 use crate::api::canister_version;
-use crate::call::{Call, CallResult, ConfigurableCall, SendableCall};
+use crate::call::{Call, CallResult};
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
 

@@ -3,6 +3,7 @@ use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
 use std::future::Future;
+
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
@@ -13,6 +14,8 @@ pub use ic_response_codes::RejectCode;
 const CALL_PERFORM_REJECT_MESSAGE: &str = "call_perform failed";
 
 /// The error type for inter-canister calls and decoding the response.
+///
+/// See [`Call::call`] or [`Call::call_tuple`].
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum CallError {
     /// The call was rejected.
@@ -22,45 +25,50 @@ pub enum CallError {
     CallRejected(CallRejected),
 
     /// The response could not be decoded.
-    ///
-    /// This can only happen when making the call using [`call`][SendableCall::call]
-    /// or [`call_tuple`][SendableCall::call_tuple].
-    /// Because they decode the response to a Candid type.
     #[error("Failed to decode the response as {0}")]
     CandidDecodeFailed(String),
 }
 
 /// The error type for inter-canister calls.
+///
+/// See [`Call::call_raw`] and [`Call::call_oneway`].
+///
+/// This type is also the inner error type of [`CallError::CallRejected`].
 #[derive(Debug, Clone)]
 pub struct CallRejected {
-    // All fields are private so we will be able to change the implementation without breaking the API.
-    // Once we have `ic0.msg_error_code` system API, we will only store the error_code in this struct.
-    // It will still be possible to get the [`RejectCode`] using the public getter,
-    // because every error_code can map to a [`RejectCode`].
+    /// All fields are private so we will be able to change the implementation without breaking the API.
+    /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
+    /// It will still be possible to get the [`RejectCode`] using the public getter,
+    /// because every `error_code` can map to a [`RejectCode`].
     reject_code: RejectCode,
     reject_message: String,
     sync: bool,
 }
 
 impl CallRejected {
-    /// Returns the [`RejectCode`].
+    /// Gets the [`RejectCode`].
     pub fn reject_code(&self) -> RejectCode {
         self.reject_code
     }
 
-    /// Returns the reject message.
+    /// Retrieves the reject message associated with the call.
     ///
-    /// When the call was rejected asynchronously (IC rejects the call after it was enqueued),
-    /// this message is get from [`msg_reject_msg`].
-    ///
-    /// When the call was rejected synchronously (`ic0.call_preform` returns non-zero code),
-    /// this message is set to a fixed string ("call_perform failed").
+    /// - For an asynchronous rejection (when the IC rejects the call after it was enqueued),
+    ///   the message is obtained from [`api::msg_reject_msg`](`msg_reject_msg`).
+    /// - For a synchronous rejection (when `ic0.call_perform` returns a non-zero code),
+    ///   the message is set to a fixed string: `"call_perform failed"`.
     pub fn reject_message(&self) -> &str {
         &self.reject_message
     }
 
-    /// Returns whether the call was rejected synchronously (`ic0.call_perform` returned non-zero code)
-    /// or asynchronously (IC rejects the call after it was enqueued).
+    /// Checks if the call was rejected synchronously or asynchronously.
+    ///
+    /// A synchronous rejection occurs when `ic0.call_perform` returns a non-zero code immediately.
+    /// An asynchronous rejection happens when the call is enqueued but later rejected by the IC.
+    ///
+    /// # Returns
+    /// - `true` if the call was rejected synchronously.
+    /// - `false` if the call was rejected asynchronously.
     pub fn is_sync(&self) -> bool {
         self.sync
     }
@@ -72,197 +80,216 @@ pub type SystemResult<R> = Result<R, CallRejected>;
 /// Result of a inter-canister call and decoding the response.
 pub type CallResult<R> = Result<R, CallError>;
 
-/// Inter-Canister Call.
+/// Inter-canister Call.
 ///
-/// # Note
+/// This type enables the configuration and execution of inter-canister calls using a builder pattern.
 ///
-/// The [`Call`] defaults to a 10-second timeout for Best-Effort Responses.
-/// To change the timeout, use the [`change_timeout`][ConfigurableCall::change_timeout] method.
-/// To get a guaranteed response, use the [`with_guaranteed_response`][ConfigurableCall::with_guaranteed_response] method.
+/// # Configuration
+///
+/// Before sending the call, users can configure following aspects of the call:
+///
+/// * Arguments:
+///   * Single `CandidType` value: [`with_arg`][Self::with_arg].
+///   * Tuple of multiple `CandidType` values: [`with_args`][Self::with_args].
+///   * Raw bytes without Candid encoding: [`with_raw_args`][Self::with_raw_args].
+///   * *Note*: If no methods in this category are invoked, the `Call` defaults to sending a **Candid empty tuple `()`**.
+/// * Cycles:
+///   * [`with_cycles`][Self::with_cycles].
+/// * Response delivery:
+///   * Guaranteed response: [`with_guaranteed_response`][Self::with_guaranteed_response].
+///   * Best-effort response with a timeout: [`change_timeout`][Self::change_timeout].
+///   * *Note*: If no methods in this category are invoked, the `Call` defaults to a **10-second timeout for Best-effort responses**.
+///
+/// Please note that all the configuration methods are chainable and can be called multiple times.
+/// For each **aspect** of the call, the **last** configuration takes effect.
+///
+/// ## Example
+///
+/// ```rust, no_run
+/// # use ic_cdk::call::Call;
+/// # fn main() {
+/// # let canister_id = ic_cdk::api::canister_self();
+/// # let method = "foo";
+/// let call = Call::new(canister_id, method)
+///     .with_raw_args(&[1,0])
+///     .guaranteed_response()
+///     .with_cycles(1000)
+///     .change_timeout(5)
+///     .with_arg(42)
+///     .with_cycles(2000);
+/// # }
+/// ```
+///
+/// The `call` above will have the following configuration in effect:
+/// * Arguments: `42` encoded as Candid bytes.
+/// * Cycles: 2000 cycles.
+/// * Response delivery: best-effort response with a 5-second timeout.
+///
+/// # Execution
+///
+/// The `Call` can be executed using the following methods:
+/// * [`call`][Self::call]: Decodes the response to a single `CandidType` value.
+/// * [`call_tuple`][Self::call_tuple]: Decodes the response to a tuple of `CandidType` values.
+/// * [`call_raw`][Self::call_raw]: Returns the raw bytes of the response.
+/// * [`call_oneway`][Self::call_oneway]: Ignores the response.
+///
+/// ## Example
+///
+/// ```rust, no_run
+/// # use ic_cdk::call::Call;
+/// # fn main() {
+/// # let canister_id = ic_cdk::api::canister_self();
+/// # let method = "foo";
+/// let call = Call::new(canister_id, method)
+///     .change_timeout(5)
+///     .with_arg(42)
+///     .with_cycles(2000);
+/// let result: u32 = call.call().await.unwrap();
+/// let result_tuple: (u32,) = call.call_tuple().await.unwrap();
+/// let result_bytes: Vec<u8> = call.call_raw().await.unwrap();
+/// call.call_oneway().unwrap();
+/// # }
+/// ```
 #[derive(Debug)]
-pub struct Call<'a> {
+pub struct Call<'m, 'a> {
     canister_id: Principal,
-    method: &'a str,
+    method: &'m str,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
+    encoded_args: EncodedArgs<'a>,
 }
 
-/// Inter-Canister Call with typed argument.
-///
-/// The argument must impl [`CandidType`].
+/// Encoded arguments for the call.
 #[derive(Debug)]
-pub struct CallWithArg<'a, 'b, T> {
-    call: Call<'a>,
-    arg: &'b T,
+enum EncodedArgs<'a> {
+    /// Owned bytes.
+    ///
+    /// For "no arg", [`Call::with_arg`] and [`Call::with_args`].
+    Owned(Vec<u8>),
+    /// Reference to raw bytes.
+    ///
+    /// For [`Call::with_raw_args`].
+    Ref(&'a [u8]),
 }
 
-/// Inter-Canister Call with typed arguments.
-///
-/// The arguments are a tuple of types, each implementing [`CandidType`].
-#[derive(Debug)]
-pub struct CallWithArgs<'a, 'b, T> {
-    call: Call<'a>,
-    args: &'b T,
-}
-
-/// Inter-Canister Call with raw arguments.
-#[derive(Debug)]
-pub struct CallWithRawArgs<'a, 'b, A> {
-    call: Call<'a>,
-    raw_args: &'b A,
-}
-
-impl<'a> Call<'a> {
-    /// Constructs a new call with the Canister id and method name.
+impl<'m, 'a> Call<'m, 'a> {
+    /// Constructs a new [`Call`] with the Canister ID and method name.
     ///
     /// # Note
     ///
-    /// The [`Call`] defaults to a 10-second timeout for Best-Effort Responses.
-    /// To change the timeout, use the [`change_timeout`][ConfigurableCall::change_timeout] method.
-    /// To get a guaranteed response, use the [`with_guaranteed_response`][ConfigurableCall::with_guaranteed_response] method.
-    pub fn new(canister_id: Principal, method: &'a str) -> Self {
+    /// The [`Call`] defaults to a 10-second timeout for best-Effort Responses.
+    /// To change the timeout, use the [`change_timeout`][Self::change_timeout] method.
+    /// To get a guaranteed response, use the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
+    pub fn new(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
             method,
             cycles: None,
             // Default to 10 seconds.
             timeout_seconds: Some(10),
+            // Bytes for empty arguments.
+            // `candid::Encode!(&()).unwrap()`
+            encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
         }
     }
 
     /// Sets the argument for the call.
     ///
     /// The argument must implement [`CandidType`].
-    pub fn with_arg<'b, T>(self, arg: &'b T) -> CallWithArg<'a, 'b, T> {
-        CallWithArg { call: self, arg }
+    pub fn with_arg<A: CandidType>(self, arg: A) -> Self {
+        Self {
+            encoded_args: EncodedArgs::Owned(
+                encode_one(&arg).unwrap_or_else(panic_when_encode_fails),
+            ),
+            ..self
+        }
     }
 
     /// Sets the arguments for the call.
     ///
     /// The arguments are a tuple of types, each implementing [`CandidType`].
-    pub fn with_args<'b, T>(self, args: &'b T) -> CallWithArgs<'a, 'b, T> {
-        CallWithArgs { call: self, args }
+    pub fn with_args<A: ArgumentEncoder>(self, args: &A) -> Self {
+        Self {
+            encoded_args: EncodedArgs::Owned(
+                encode_args_ref(args).unwrap_or_else(panic_when_encode_fails),
+            ),
+            ..self
+        }
     }
 
     /// Sets the arguments for the call as raw bytes.
-    pub fn with_raw_args<'b, A>(self, raw_args: &'b A) -> CallWithRawArgs<'a, 'b, A> {
-        CallWithRawArgs {
-            call: self,
-            raw_args,
+    pub fn with_raw_args(self, raw_args: &'a [u8]) -> Self {
+        Self {
+            encoded_args: EncodedArgs::Ref(raw_args),
+            ..self
         }
     }
-}
 
-/// Methods to configure a call.
-pub trait ConfigurableCall {
     /// Sets the cycles payment for the call.
     ///
-    /// If invoked multiple times, the last value takes effect.
-    fn with_cycles(self, cycles: u128) -> Self;
+    /// # Note
+    ///
+    /// The behavior of this method when invoked multiple times is as follows:
+    /// - Overrides any previously set cycle value
+    /// - Last invocation determines the final cycles amount
+    /// - Does not accumulate cycles across multiple invocations
+    pub fn with_cycles(mut self, cycles: u128) -> Self {
+        self.cycles = Some(cycles);
+        self
+    }
 
     /// Sets the call to have a guaranteed response.
     ///
-    /// If [`change_timeout`](ConfigurableCall::change_timeout) is invoked after this method,
-    /// the call will instead be set with Best-Effort Responses.
-    fn with_guaranteed_response(self) -> Self;
+    /// If [`change_timeout`](Self::change_timeout) is invoked after this method,
+    /// the call will instead be set with best-effort responses.
+    pub fn with_guaranteed_response(mut self) -> Self {
+        self.timeout_seconds = None;
+        self
+    }
 
-    /// Sets the timeout for the Best-Effort Responses.
+    /// Sets the timeout for best-effort responses.
     ///
     /// If not set, the call defaults to a 10-second timeout.
     /// If invoked multiple times, the last value takes effect.
-    /// If [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) is invoked after this method,
+    /// If [`with_guaranteed_response`](Self::with_guaranteed_response) is invoked after this method,
     /// the timeout will be ignored.
     ///
     /// # Note
     ///
-    /// A timeout of 0 second DOES NOT mean guranteed response.
+    /// A timeout of 0 second **DOES NOT** mean guranteed response.
     /// The call would most likely time out (result in a `SysUnknown` reject).
     /// Unless it's a call to the canister on the same subnet,
     /// and the execution manages to schedule both the request and the response in the same round.
     ///
     /// To make the call with a guaranteed response,
-    /// use the [`with_guaranteed_response`](ConfigurableCall::with_guaranteed_response) method.
-    fn change_timeout(self, timeout_seconds: u32) -> Self;
-}
-
-impl<'a> ConfigurableCall for Call<'a> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.cycles = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+    /// use the [`with_guaranteed_response`](Self::with_guaranteed_response) method.
+    pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
-}
 
-impl<'a, 'b, T> ConfigurableCall for CallWithArg<'a, 'b, T> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.cycles = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.call.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.call.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-impl<'a, 'b, T> ConfigurableCall for CallWithArgs<'a, 'b, T> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.cycles = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.call.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.call.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-impl<'a, 'b, A> ConfigurableCall for CallWithRawArgs<'a, 'b, A> {
-    fn with_cycles(mut self, cycles: u128) -> Self {
-        self.call.cycles = Some(cycles);
-        self
-    }
-
-    fn with_guaranteed_response(mut self) -> Self {
-        self.call.timeout_seconds = None;
-        self
-    }
-
-    fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.call.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-}
-
-/// Methods to send a call.
-pub trait SendableCall {
     /// Sends the call and gets the reply as raw bytes.
-    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync;
+    pub fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + '_ {
+        let state = Arc::new(RwLock::new(CallFutureState {
+            result: None,
+            waker: None,
+            id: self.canister_id,
+            method: self.method,
+            arg: match &self.encoded_args {
+                EncodedArgs::Owned(vec) => vec,
+                EncodedArgs::Ref(r) => *r,
+            },
+            cycles: self.cycles,
+            timeout_seconds: self.timeout_seconds,
+        }));
+        CallFuture { state }
+    }
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync
+    pub fn call<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync + '_
     where
         Self: Sized,
-        R: CandidType + for<'b> Deserialize<'b>,
+        R: CandidType + for<'d> Deserialize<'d>,
     {
         let fut = self.call_raw();
         async {
@@ -272,10 +299,10 @@ pub trait SendableCall {
     }
 
     /// Sends the call and decodes the reply to a Candid type.
-    fn call_tuple<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync
+    pub fn call_tuple<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync + '_
     where
         Self: Sized,
-        R: for<'b> ArgumentDecoder<'b>,
+        R: for<'d> ArgumentDecoder<'d>,
     {
         let fut = self.call_raw();
         async {
@@ -285,126 +312,86 @@ pub trait SendableCall {
     }
 
     /// Sends the call and ignores the reply.
-    fn call_oneway(&self) -> SystemResult<()>;
-}
+    pub fn call_oneway(&self) -> SystemResult<()> {
+        let callee = self.canister_id.as_slice();
+        let method = self.method;
+        let arg = match &self.encoded_args {
+            EncodedArgs::Owned(vec) => vec,
+            EncodedArgs::Ref(r) => *r,
+        };
 
-/// Bytes for empty arguments.
-///
-/// `candid::Encode!(&()).unwrap()`
-const EMPTY_BYTES: &[u8] = &[0x44, 0x49, 0x44, 0x4c, 0x00, 0x00];
+        // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
+        // The system will still deliver the reply, but it will trap immediately because the callback
+        // is not a valid function. See
+        // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
+        // for more context.
 
-impl SendableCall for Call<'_> {
-    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
-        call_raw_internal(
-            self.canister_id,
-            self.method,
-            EMPTY_BYTES,
-            self.cycles,
-            self.timeout_seconds,
-        )
-    }
-
-    fn call_oneway(&self) -> SystemResult<()> {
-        call_oneway_internal(
-            self.canister_id,
-            self.method,
-            EMPTY_BYTES,
-            self.cycles,
-            self.timeout_seconds,
-        )
-    }
-}
-
-impl<'a, 'b, T: ArgumentEncoder + Send + Sync> SendableCall for CallWithArgs<'a, 'b, T> {
-    async fn call_raw(&self) -> SystemResult<Vec<u8>> {
-        let args_raw = encode_args_ref(self.args).unwrap_or_else(panic_when_encode_fails);
-        call_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            args_raw,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
-        .await
-    }
-
-    fn call_oneway(&self) -> SystemResult<()> {
-        let args_raw = encode_args_ref(self.args).unwrap_or_else(panic_when_encode_fails);
-        call_oneway_internal(
-            self.call.canister_id,
-            self.call.method,
-            args_raw,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
-    }
-}
-
-impl<'a, 'b, T: CandidType + Send + Sync> SendableCall for CallWithArg<'a, 'b, T> {
-    async fn call_raw(&self) -> SystemResult<Vec<u8>> {
-        let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
-        call_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            args_raw,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
-        .await
-    }
-
-    fn call_oneway(&self) -> SystemResult<()> {
-        let args_raw = encode_one(self.arg).unwrap_or_else(panic_when_encode_fails);
-        call_oneway_internal(
-            self.call.canister_id,
-            self.call.method,
-            args_raw,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
-    }
-}
-
-impl<'a, 'b, A: AsRef<[u8]> + Send + Sync + 'b> SendableCall for CallWithRawArgs<'a, 'b, A> {
-    fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync {
-        call_raw_internal(
-            self.call.canister_id,
-            self.call.method,
-            self.raw_args,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
-    }
-
-    fn call_oneway(&self) -> SystemResult<()> {
-        call_oneway_internal(
-            self.call.canister_id,
-            self.call.method,
-            self.raw_args,
-            self.call.cycles,
-            self.call.timeout_seconds,
-        )
+        // SAFETY:
+        // ic0.call_new:
+        //   `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+        //   `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+        //   `reply_fun` and `reject_fun`: In "notify" style call, we want these callback functions to not be called. So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
+        //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
+        // ic0.call_data_append:
+        //   `args`, being a &[u8], is a readable sequence of bytes.
+        // ic0.call_with_best_effort_response is always safe to call.
+        // ic0.call_perform is always safe to call.
+        let code = unsafe {
+            ic0::call_new(
+                callee.as_ptr() as usize,
+                callee.len(),
+                method.as_ptr() as usize,
+                method.len(),
+                usize::MAX,
+                usize::MAX,
+                usize::MAX,
+                usize::MAX,
+            );
+            if !arg.is_empty() {
+                ic0::call_data_append(arg.as_ptr() as usize, arg.len());
+            }
+            if let Some(cycles) = self.cycles {
+                call_cycles_add(cycles);
+            }
+            if let Some(timeout_seconds) = self.timeout_seconds {
+                ic0::call_with_best_effort_response(timeout_seconds);
+            }
+            ic0::call_perform()
+        };
+        // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
+        match code {
+            0 => Ok(()),
+            _ => {
+                // SAFETY: The conversion is safe because the code is not 0.
+                let reject_code = RejectCode::try_from(code).unwrap();
+                Err(CallRejected {
+                    reject_code,
+                    reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
+                    sync: true,
+                })
+            }
+        }
     }
 }
 
 // # Internal =================================================================
 
 // Internal state for the Future when sending a call.
-struct CallFutureState<T: AsRef<[u8]>> {
+struct CallFutureState<'m, T: AsRef<[u8]>> {
     result: Option<SystemResult<Vec<u8>>>,
     waker: Option<Waker>,
     id: Principal,
-    method: String,
+    method: &'m str,
     arg: T,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
 }
 
-struct CallFuture<T: AsRef<[u8]>> {
-    state: Arc<RwLock<CallFutureState<T>>>,
+struct CallFuture<'m, T: AsRef<[u8]>> {
+    state: Arc<RwLock<CallFutureState<'m, T>>>,
 }
 
-impl<T: AsRef<[u8]>> Future for CallFuture<T> {
+impl<'m, T: AsRef<[u8]>> Future for CallFuture<'m, T> {
     type Output = SystemResult<Vec<u8>>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
@@ -485,7 +472,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
 /// # Safety
 ///
 /// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<'_, T>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
@@ -520,7 +507,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
 /// # Safety
 ///
 /// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
-unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<'_, T>>) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
     let state = unsafe { Weak::from_raw(state_ptr) };
     if let Some(state) = state.upgrade() {
@@ -543,107 +530,25 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
     }
 }
 
-fn call_raw_internal<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
-    id: Principal,
-    method: &str,
-    args_raw: T,
-    cycles: Option<u128>,
-    timeout_seconds: Option<u32>,
-) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + 'a {
-    let state = Arc::new(RwLock::new(CallFutureState {
-        result: None,
-        waker: None,
-        id,
-        method: method.to_string(),
-        arg: args_raw,
-        cycles,
-        timeout_seconds,
-    }));
-    CallFuture { state }
-}
-
-fn call_oneway_internal<T: AsRef<[u8]>>(
-    id: Principal,
-    method: &str,
-    args_raw: T,
-    cycles: Option<u128>,
-    timeout_seconds: Option<u32>,
-) -> SystemResult<()> {
-    let callee = id.as_slice();
-    // We set all callbacks to usize::MAX, which is guaranteed to be invalid callback index.
-    // The system will still deliver the reply, but it will trap immediately because the callback
-    // is not a valid function. See
-    // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
-    // for more context.
-
-    // SAFETY:
-    // ic0.call_new:
-    //   `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-    //   `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-    //   `reply_fun` and `reject_fun`: In "notify" style call, we want these callback functions to not be called. So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
-    //   `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
-    // ic0.call_data_append:
-    //   `args`, being a &[u8], is a readable sequence of bytes.
-    // ic0.call_with_best_effort_response is always safe to call.
-    // ic0.call_perform is always safe to call.
-    let code = unsafe {
-        ic0::call_new(
-            callee.as_ptr() as usize,
-            callee.len(),
-            method.as_ptr() as usize,
-            method.len(),
-            usize::MAX,
-            usize::MAX,
-            usize::MAX,
-            usize::MAX,
-        );
-        let arg = args_raw.as_ref();
-        if !arg.is_empty() {
-            ic0::call_data_append(arg.as_ptr() as usize, arg.len());
-        }
-        if let Some(cycles) = cycles {
-            call_cycles_add(cycles);
-        }
-        if let Some(timeout_seconds) = timeout_seconds {
-            ic0::call_with_best_effort_response(timeout_seconds);
-        }
-        ic0::call_perform()
-    };
-    // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
-    match code {
-        0 => Ok(()),
-        _ => {
-            // SAFETY: The conversion is safe because the code is not 0.
-            let reject_code = RejectCode::try_from(code).unwrap();
-            Err(CallRejected {
-                reject_code,
-                reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
-                sync: true,
-            })
-        }
-    }
-}
-
 // # Internal END =============================================================
 
 fn call_cycles_add(cycles: u128) {
-    if cycles == 0 {
-        return;
-    }
-    let high = (cycles >> 64) as u64;
-    let low = (cycles & u64::MAX as u128) as u64;
-    // SAFETY: ic0.call_cycles_add128 is always safe to call.
-    unsafe {
-        ic0::call_cycles_add128(high, low);
+    if cycles > 0 {
+        let high = (cycles >> 64) as u64;
+        let low = (cycles & u64::MAX as u128) as u64;
+        // SAFETY: ic0.call_cycles_add128 is always safe to call.
+        unsafe {
+            ic0::call_cycles_add128(high, low);
+        }
     }
 }
 
-/// Converts a decoder error to a CallError.
+/// Converts a decoder error to a [`CallError`].
 fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
     CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
 }
 
-/// When args encoding fails, we panic with an informative message.
+/// Panics with an informative message when argument encoding fails.
 ///
 /// Currently, Candid encoding only fails when heap memory is exhausted,
 /// in which case execution would trap before reaching the unwrap.

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha2::Digest;
 
-use ic_cdk::call::{Call, CallResult, SendableCall};
+use ic_cdk::call::{Call, CallResult};
 
 /// The subaccount that is used by default.
 pub const DEFAULT_SUBACCOUNT: Subaccount = Subaccount([0; 32]);
