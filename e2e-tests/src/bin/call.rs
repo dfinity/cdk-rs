@@ -1,6 +1,6 @@
 use candid::Encode;
 use ic_cdk::api::canister_self;
-use ic_cdk::call::{Call, ConfigurableCall, SendableCall};
+use ic_cdk::call::Call;
 use ic_cdk::update;
 
 /// A simple endpoint that takes empty arguments.
@@ -111,44 +111,44 @@ async fn call_echo_with_args() {
     let bytes = Encode!(&n).unwrap();
     // call*
     let res: u32 = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .call()
         .await
         .unwrap();
     assert_eq!(res, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
     Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .call_oneway()
         .unwrap();
     // with*
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .with_guaranteed_response()
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
     let res: (u32,) = Call::new(canister_self(), "echo")
-        .with_args((n,))
+        .with_args(&(n,))
         .with_cycles(1000)
         .call_tuple()
         .await
@@ -208,4 +208,35 @@ async fn call_echo_with_raw_args() {
     assert_eq!(res.0, n);
 }
 
+/// Retries the call until it succeeds.
+///
+/// Returns the number of retries.
+async fn retry(call_to_retry: Call<'_, '_>) -> u32 {
+    let mut retry = 0;
+    loop {
+        match call_to_retry.call_raw().await {
+            Ok(_) => break,
+            Err(_) => {
+                retry += 1;
+                continue;
+            }
+        }
+    }
+    retry
+}
+
+#[update]
+async fn retry_calls() {
+    let n: u32 = 1u32;
+    let call = Call::new(canister_self(), "foo");
+    assert_eq!(retry(call).await, 0);
+    let call_with_arg = Call::new(canister_self(), "echo").with_arg(n);
+    assert_eq!(retry(call_with_arg).await, 0);
+    let args = (n,);
+    let call_with_args = Call::new(canister_self(), "echo").with_args(&args);
+    assert_eq!(retry(call_with_args).await, 0);
+    let raw_args = Encode!(&n).unwrap();
+    let call_with_raw_args = Call::new(canister_self(), "echo").with_raw_args(&raw_args);
+    assert_eq!(retry(call_with_raw_args).await, 0);
+}
 fn main() {}

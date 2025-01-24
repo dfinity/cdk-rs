@@ -12,16 +12,16 @@ async fn info(canister_id: Principal) -> CanisterInfoResult {
         canister_id,
         num_requested_changes: Some(20),
     };
-    canister_info(request).await.unwrap()
+    canister_info(&request).await.unwrap()
 }
 
 #[ic_cdk::update]
 async fn canister_lifecycle() -> Principal {
-    let canister_id = create_canister(CreateCanisterArgs { settings: None }, 1_000_000_000_000)
+    let canister_id = create_canister(&CreateCanisterArgs { settings: None }, 1_000_000_000_000)
         .await
         .unwrap()
         .canister_id;
-    install_code(InstallCodeArgs {
+    install_code(&InstallCodeArgs {
         mode: Install,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
@@ -29,10 +29,10 @@ async fn canister_lifecycle() -> Principal {
     })
     .await
     .unwrap();
-    uninstall_code(UninstallCodeArgs { canister_id })
+    uninstall_code(&UninstallCodeArgs { canister_id })
         .await
         .unwrap();
-    install_code(InstallCodeArgs {
+    install_code(&InstallCodeArgs {
         mode: Install,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
@@ -40,7 +40,7 @@ async fn canister_lifecycle() -> Principal {
     })
     .await
     .unwrap();
-    install_code(InstallCodeArgs {
+    install_code(&InstallCodeArgs {
         mode: Reinstall,
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
@@ -48,7 +48,7 @@ async fn canister_lifecycle() -> Principal {
     })
     .await
     .unwrap();
-    install_code(InstallCodeArgs {
+    install_code(&InstallCodeArgs {
         mode: Upgrade(None),
         arg: vec![],
         wasm_module: vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00],
@@ -56,7 +56,7 @@ async fn canister_lifecycle() -> Principal {
     })
     .await
     .unwrap();
-    update_settings(UpdateSettingsArgs {
+    update_settings(&UpdateSettingsArgs {
         settings: CanisterSettings {
             controllers: Some(vec![
                 ic_cdk::api::canister_self(),

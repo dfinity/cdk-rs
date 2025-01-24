@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::call::{Call, CallError, CallResult, SendableCall};
+use ic_cdk::call::{Call, CallError, CallResult};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::sync::RwLock;

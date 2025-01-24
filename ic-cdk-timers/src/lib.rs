@@ -29,7 +29,7 @@ use std::{
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use ic_cdk::call::{Call, RejectCode, SendableCall};
+use ic_cdk::call::{Call, RejectCode};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -117,7 +117,7 @@ extern "C" fn global_timer() {
                                         ic_cdk::api::canister_self(),
                                         "<ic-cdk internal> timer_executor",
                                     )
-                                    .with_raw_args(task_id.0.as_ffi().to_be_bytes().to_vec())
+                                    .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
                                     .call_raw()
                                     .await,
                                 )
