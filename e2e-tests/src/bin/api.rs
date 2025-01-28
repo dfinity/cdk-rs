@@ -21,13 +21,13 @@ fn call_msg_caller() {
 async fn call_msg_deadline_caller() {
     use ic_cdk::call::Call;
     // Call with best-effort responses.
-    let reply1 = Call::new(canister_self(), "call_msg_deadline")
+    let reply1 = Call::best_effort(canister_self(), "call_msg_deadline")
         .call_raw()
         .await
         .unwrap();
     assert_eq!(reply1, vec![1]);
     // Call with guaranteed responses.
-    let reply1 = Call::new(canister_self(), "call_msg_deadline")
+    let reply1 = Call::best_effort(canister_self(), "call_msg_deadline")
         .with_guaranteed_response()
         .call_raw()
         .await

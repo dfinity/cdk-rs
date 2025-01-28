@@ -113,7 +113,7 @@ extern "C" fn global_timer() {
                             call_futures.push(async move {
                                 (
                                     timer,
-                                    Call::new(
+                                    Call::best_effort(
                                         ic_cdk::api::canister_self(),
                                         "<ic-cdk internal> timer_executor",
                                     )

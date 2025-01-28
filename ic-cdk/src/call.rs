@@ -173,20 +173,36 @@ enum EncodedArgs<'a> {
 }
 
 impl<'m, 'a> Call<'m, 'a> {
-    /// Constructs a new [`Call`] with the Canister ID and method name.
+    /// Constructs a new best-effort responses [`Call`] with the Canister ID and method name.
     ///
     /// # Note
     ///
-    /// The [`Call`] defaults to a 10-second timeout for best-effort Responses.
+    /// The best-effort responses [`Call`] defaults to a 10-second timeout.
     /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
-    /// To get a guaranteed response, invoke the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
-    pub fn new(canister_id: Principal, method: &'m str) -> Self {
+    ///
+    /// To get guaranteed responses, use the [`Call::guaranteed`] constructor instead.
+    pub fn best_effort(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
             method,
             cycles: None,
             // Default to 10 seconds.
             timeout_seconds: Some(10),
+            // Bytes for empty arguments.
+            // `candid::Encode!(&()).unwrap()`
+            encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
+        }
+    }
+
+    /// Constructs a new guaranteed responses [`Call`] with the Canister ID and method name.
+    ///
+    /// To get best-effort responses, use the  [`Call::best_effort`] constructor instead.
+    pub fn guaranteed(canister_id: Principal, method: &'m str) -> Self {
+        Self {
+            canister_id,
+            method,
+            cycles: None,
+            timeout_seconds: None,
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
             encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
