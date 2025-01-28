@@ -84,6 +84,12 @@ pub type CallResult<R> = Result<R, CallError>;
 ///
 /// This type enables the configuration and execution of inter-canister calls using a builder pattern.
 ///
+/// # Constructors
+///
+/// The `Call` can be constructed for two types of responses:
+/// * Best-effort responses: [`best_effort`][Self::best_effort].
+/// * Guaranteed responses: [`guaranteed`][Self::guaranteed].
+///
 /// # Configuration
 ///
 /// Before sending the call, users can configure following aspects of the call:
@@ -94,11 +100,9 @@ pub type CallResult<R> = Result<R, CallError>;
 ///   * Raw bytes without Candid encoding: [`with_raw_args`][Self::with_raw_args].
 ///   * *Note*: If no methods in this category are invoked, the `Call` defaults to sending a **Candid empty tuple `()`**.
 /// * Cycles:
-///   * [`with_cycles`][Self::with_cycles].
+///   * Attach cycles: [`with_cycles`][Self::with_cycles].
 /// * Response delivery:
-///   * Guaranteed response: [`with_guaranteed_response`][Self::with_guaranteed_response].
-///   * Best-effort response with a timeout: [`change_timeout`][Self::change_timeout].
-///   * *Note*: If no methods in this category are invoked, the `Call` defaults to a **10-second timeout for Best-effort responses**.
+///   * Change the timeout for best-effort responses: [`change_timeout`][Self::change_timeout].
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -110,9 +114,8 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
-/// let call = Call::new(canister_id, method)
+/// let call = Call::best_effort(canister_id, method)
 ///     .with_raw_args(&[1,0])
-///     .with_guaranteed_response()
 ///     .with_cycles(1000)
 ///     .change_timeout(5)
 ///     .with_arg(42)
@@ -140,7 +143,7 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
-/// let call = Call::new(canister_id, method)
+/// let call = Call::best_effort(canister_id, method)
 ///     .change_timeout(5)
 ///     .with_arg(42)
 ///     .with_cycles(2000);
@@ -259,20 +262,17 @@ impl<'m, 'a> Call<'m, 'a> {
 
     /// Sets the timeout for best-effort responses.
     ///
-    /// If not set, the call defaults to a 10-second timeout.
+    /// If not set, the best-effort responses [`Call`] defaults to a 10-second timeout.
     /// If invoked multiple times, the last value takes effect.
-    /// If [`with_guaranteed_response`](Self::with_guaranteed_response) is invoked after this method,
-    /// the timeout will be ignored.
     ///
     /// # Note
     ///
     /// A timeout of 0 second **DOES NOT** mean guranteed response.
-    /// The call would most likely time out (result in a `SysUnknown` reject).
+    /// The call would most likely time out (result in a [`SysUnknown`](RejectCode::SysUnknown) reject).
     /// Unless it's a call to the canister on the same subnet,
     /// and the execution manages to schedule both the request and the response in the same round.
     ///
-    /// To make the call with a guaranteed response,
-    /// use the [`with_guaranteed_response`](Self::with_guaranteed_response) method.
+    /// To get guaranteed responses, use the [`Call::guaranteed`] constructor instead.
     pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         match self.timeout_seconds {
             Some(_) => self.timeout_seconds = Some(timeout_seconds),
