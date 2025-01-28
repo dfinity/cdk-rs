@@ -155,6 +155,9 @@ pub struct Call<'m, 'a> {
     canister_id: Principal,
     method: &'m str,
     cycles: Option<u128>,
+    /// Timeout in seconds for best-effort responses.
+    ///
+    /// If `None`, the call will have a guaranteed response.
     timeout_seconds: Option<u32>,
     encoded_args: EncodedArgs<'a>,
 }
@@ -254,15 +257,6 @@ impl<'m, 'a> Call<'m, 'a> {
         self
     }
 
-    /// Sets the call to have a guaranteed response.
-    ///
-    /// If [`change_timeout`](Self::change_timeout) is invoked after this method,
-    /// the call will instead be set with best-effort responses.
-    pub fn with_guaranteed_response(mut self) -> Self {
-        self.timeout_seconds = None;
-        self
-    }
-
     /// Sets the timeout for best-effort responses.
     ///
     /// If not set, the call defaults to a 10-second timeout.
@@ -280,7 +274,10 @@ impl<'m, 'a> Call<'m, 'a> {
     /// To make the call with a guaranteed response,
     /// use the [`with_guaranteed_response`](Self::with_guaranteed_response) method.
     pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.timeout_seconds = Some(timeout_seconds);
+        match self.timeout_seconds {
+            Some(_) => self.timeout_seconds = Some(timeout_seconds),
+            None => panic!("Cannot set timeout for guaranteed responses"),
+        }
         self
     }
 

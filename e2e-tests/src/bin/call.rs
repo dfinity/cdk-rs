@@ -9,12 +9,16 @@ async fn foo() -> u32 {
     0
 }
 
-/// `Call::new(...)` can be configured and called.
+/// `Call` without args can be configured and called.
 #[update]
 async fn call_foo() {
     let n = 0u32;
     let bytes = Encode!(&n).unwrap();
-
+    let res: (u32,) = Call::guaranteed(canister_self(), "foo")
+        .call_tuple()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
     let res: u32 = Call::best_effort(canister_self(), "foo")
         .call()
         .await
@@ -33,13 +37,6 @@ async fn call_foo() {
     Call::best_effort(canister_self(), "foo")
         .call_oneway()
         .unwrap();
-
-    let res: (u32,) = Call::best_effort(canister_self(), "foo")
-        .with_guaranteed_response()
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res: (u32,) = Call::best_effort(canister_self(), "foo")
         .change_timeout(5)
         .call_tuple()
@@ -60,12 +57,18 @@ async fn echo(arg: u32) -> u32 {
     arg
 }
 
-/// `Call::new(...).with_arg(...)` can be configured and called.
+/// `Call::with_arg(...)` can be configured and called.
 #[update]
 async fn call_echo_with_arg() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
-    // call*
+
+    let res: (u32,) = Call::guaranteed(canister_self(), "echo")
+        .with_arg(n)
+        .call_tuple()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
     let res: u32 = Call::best_effort(canister_self(), "echo")
         .with_arg(n)
         .call()
@@ -88,14 +91,6 @@ async fn call_echo_with_arg() {
         .with_arg(n)
         .call_oneway()
         .unwrap();
-    // with*
-    let res: (u32,) = Call::best_effort(canister_self(), "echo")
-        .with_arg(n)
-        .with_guaranteed_response()
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res: (u32,) = Call::best_effort(canister_self(), "echo")
         .with_arg(n)
         .change_timeout(5)
@@ -112,12 +107,18 @@ async fn call_echo_with_arg() {
     assert_eq!(res.0, n);
 }
 
-/// `Call::new(...).with_args(...)` can be configured and called.
+/// `Call::with_args(...)` can be configured and called.
 #[update]
 async fn call_echo_with_args() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
-    // call*
+
+    let res: (u32,) = Call::guaranteed(canister_self(), "echo")
+        .with_args(&(n,))
+        .call_tuple()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
     let res: u32 = Call::best_effort(canister_self(), "echo")
         .with_args(&(n,))
         .call()
@@ -140,14 +141,6 @@ async fn call_echo_with_args() {
         .with_args(&(n,))
         .call_oneway()
         .unwrap();
-    // with*
-    let res: (u32,) = Call::best_effort(canister_self(), "echo")
-        .with_args(&(n,))
-        .with_guaranteed_response()
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res: (u32,) = Call::best_effort(canister_self(), "echo")
         .with_args(&(n,))
         .change_timeout(5)
@@ -164,12 +157,18 @@ async fn call_echo_with_args() {
     assert_eq!(res.0, n);
 }
 
-/// Call::new(...).with_raw_args(...) can be configured and called.
+/// `Call::with_raw_args(...)` can be configured and called.
 #[update]
 async fn call_echo_with_raw_args() {
     let n = 1u32;
     let bytes: Vec<u8> = Encode!(&n).unwrap();
-    // call*
+
+    let res: (u32,) = Call::guaranteed(canister_self(), "echo")
+        .with_raw_args(&bytes)
+        .call_tuple()
+        .await
+        .unwrap();
+    assert_eq!(res.0, n);
     let res: u32 = Call::best_effort(canister_self(), "echo")
         .with_raw_args(&bytes)
         .call()
@@ -192,14 +191,6 @@ async fn call_echo_with_raw_args() {
         .with_raw_args(&bytes)
         .call_oneway()
         .unwrap();
-    // with*
-    let res: (u32,) = Call::best_effort(canister_self(), "echo")
-        .with_raw_args(&bytes)
-        .with_guaranteed_response()
-        .call_tuple()
-        .await
-        .unwrap();
-    assert_eq!(res.0, n);
     let res: (u32,) = Call::best_effort(canister_self(), "echo")
         .with_raw_args(&bytes)
         .change_timeout(5)

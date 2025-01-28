@@ -59,9 +59,8 @@ pub async fn create_canister(
         settings: arg.settings.clone(),
         sender_canister_version: Some(canister_version()),
     };
-    Call::best_effort(Principal::management_canister(), "create_canister")
+    Call::guaranteed(Principal::management_canister(), "create_canister")
         .with_arg(&complete_arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -312,9 +311,8 @@ pub async fn delete_canister(arg: &DeleteCanisterArgs) -> CallResult<()> {
 ///
 /// See [IC method `deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
 pub async fn deposit_cycles(arg: &DepositCyclesArgs, cycles: u128) -> CallResult<()> {
-    Call::best_effort(Principal::management_canister(), "deposit_cycles")
+    Call::guaranteed(Principal::management_canister(), "deposit_cycles")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -336,9 +334,8 @@ pub async fn raw_rand() -> CallResult<Vec<u8>> {
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
 /// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
 pub async fn http_request(arg: &HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
-    Call::best_effort(Principal::management_canister(), "http_request")
+    Call::guaranteed(Principal::management_canister(), "http_request")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -454,9 +451,8 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 /// This method handles the cycles cost under the hood.
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
 pub async fn sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> CallResult<SignWithEcdsaResult> {
-    Call::best_effort(Principal::management_canister(), "sign_with_ecdsa")
+    Call::guaranteed(Principal::management_canister(), "sign_with_ecdsa")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(SIGN_WITH_ECDSA_FEE)
         .call()
         .await
@@ -483,9 +479,8 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 /// This method handles the cycles cost under the hood.
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
 pub async fn sign_with_schnorr(arg: &SignWithSchnorrArgs) -> CallResult<SignWithSchnorrResult> {
-    Call::best_effort(Principal::management_canister(), "sign_with_schnorr")
+    Call::guaranteed(Principal::management_canister(), "sign_with_schnorr")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(SIGN_WITH_SCHNORR_FEE)
         .call()
         .await
@@ -534,12 +529,11 @@ pub async fn provisional_create_canister_with_cycles(
         specified_id: arg.specified_id,
         sender_canister_version: Some(canister_version()),
     };
-    Call::best_effort(
+    Call::guaranteed(
         Principal::management_canister(),
         "provisional_create_canister_with_cycles",
     )
     .with_arg(&complete_arg)
-    .with_guaranteed_response()
     .call()
     .await
 }
@@ -569,12 +563,11 @@ pub struct ProvisionalCreateCanisterWithCyclesArgs {
 ///
 /// See [IC method `provisional_top_up_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_top_up_canister).
 pub async fn provisional_top_up_canister(arg: &ProvisionalTopUpCanisterArgs) -> CallResult<()> {
-    Call::best_effort(
+    Call::guaranteed(
         Principal::management_canister(),
         "provisional_top_up_canister",
     )
     .with_arg(arg)
-    .with_guaranteed_response()
     .call()
     .await
 }
@@ -587,9 +580,8 @@ pub async fn provisional_top_up_canister(arg: &ProvisionalTopUpCanisterArgs) -> 
 pub async fn take_canister_snapshot(
     arg: &TakeCanisterSnapshotArgs,
 ) -> CallResult<TakeCanisterSnapshotReturn> {
-    Call::best_effort(Principal::management_canister(), "take_canister_snapshot")
+    Call::guaranteed(Principal::management_canister(), "take_canister_snapshot")
         .with_arg(arg)
-        .with_guaranteed_response()
         .call()
         .await
 }
@@ -605,9 +597,8 @@ pub async fn load_canister_snapshot(arg: &LoadCanisterSnapshotArgs) -> CallResul
         snapshot_id: arg.snapshot_id.clone(),
         sender_canister_version: Some(canister_version()),
     };
-    Call::best_effort(Principal::management_canister(), "load_canister_snapshot")
+    Call::guaranteed(Principal::management_canister(), "load_canister_snapshot")
         .with_arg(&complete_arg)
-        .with_guaranteed_response()
         .call()
         .await
 }

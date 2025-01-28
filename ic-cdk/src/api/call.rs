@@ -233,7 +233,7 @@ fn add_payment(payment: u128) {
 ///     on the underlying implementation of one-way calls.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(,,).with_cycles(..).call_oneway()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).with_cycles(...).call_oneway()` instead."
 )]
 pub fn notify_with_payment128<T: ArgumentEncoder>(
     id: Principal,
@@ -248,7 +248,7 @@ pub fn notify_with_payment128<T: ArgumentEncoder>(
 /// Like [notify_with_payment128], but sets the payment to zero.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(,,).with_cycles(..).call_oneway()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).with_cycles(...).call_oneway()` instead."
 )]
 pub fn notify<T: ArgumentEncoder>(
     id: Principal,
@@ -261,7 +261,7 @@ pub fn notify<T: ArgumentEncoder>(
 /// Like [notify], but sends the argument as raw bytes, skipping Candid serialization.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call_oneway()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_raw_args(...).with_cycles(...).call_oneway()` instead."
 )]
 pub fn notify_raw(
     id: Principal,
@@ -321,7 +321,7 @@ pub fn notify_raw(
 /// ```
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_raw_args(...).with_cycles(...).call()` instead."
 )]
 pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
@@ -348,7 +348,7 @@ pub fn call_raw<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
 /// ```
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_raw_args(..).with_cycles(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_raw_args(...).with_cycles(...).call()` instead."
 )]
 pub fn call_raw128<'a, T: AsRef<[u8]> + Send + Sync + 'a>(
     id: Principal,
@@ -418,7 +418,7 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).call()` instead."
 )]
 pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
@@ -464,7 +464,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).with_cycles(...).call()` instead."
 )]
 pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
@@ -511,7 +511,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).with_cycles(...).call()` instead."
 )]
 pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
@@ -561,7 +561,7 @@ pub fn call_with_payment128<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// ```
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::Call::new().with_arg(..).with_cycles(..).with_decoder_config(..).call()` instead."
+    note = "Please use `ic_cdk::call::Call::guaranteed(...).with_arg(...).with_cycles(...).call_raw()` instead and decode the response bytes separately."
 )]
 pub fn call_with_config<'b, T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
     id: Principal,
@@ -864,7 +864,7 @@ impl Default for ArgDecoderConfig {
 /// decoded.
 #[deprecated(
     since = "0.18.0",
-    note = "Please use `ic_cdk::call::msg_arg_data` instead."
+    note = "Please use `ic_cdk::call::msg_arg_data` instead and decode the arg separately."
 )]
 pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) -> R {
     let bytes = arg_data_raw();

@@ -27,8 +27,7 @@ async fn call_msg_deadline_caller() {
         .unwrap();
     assert_eq!(reply1, vec![1]);
     // Call with guaranteed responses.
-    let reply1 = Call::best_effort(canister_self(), "call_msg_deadline")
-        .with_guaranteed_response()
+    let reply1 = Call::guaranteed(canister_self(), "call_msg_deadline")
         .call_raw()
         .await
         .unwrap();
