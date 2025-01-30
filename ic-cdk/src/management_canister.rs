@@ -61,7 +61,6 @@ pub async fn create_canister(
     };
     Call::new(Principal::management_canister(), "create_canister")
         .with_arg(&complete_arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -93,6 +92,7 @@ pub async fn update_settings(arg: &UpdateSettingsArgs) -> CallResult<()> {
     };
     Call::new(Principal::management_canister(), "update_settings")
         .with_arg(&complete_arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -120,6 +120,7 @@ pub struct UpdateSettingsArgs {
 pub async fn upload_chunk(arg: &UploadChunkArgs) -> CallResult<UploadChunkResult> {
     Call::new(Principal::management_canister(), "upload_chunk")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -130,6 +131,7 @@ pub async fn upload_chunk(arg: &UploadChunkArgs) -> CallResult<UploadChunkResult
 pub async fn clear_chunk_store(arg: &ClearChunkStoreArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "clear_chunk_store")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -140,6 +142,7 @@ pub async fn clear_chunk_store(arg: &ClearChunkStoreArgs) -> CallResult<()> {
 pub async fn stored_chunks(arg: &StoredChunksArgs) -> CallResult<StoredChunksResult> {
     Call::new(Principal::management_canister(), "stored_chunks")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -157,6 +160,7 @@ pub async fn install_code(arg: &InstallCodeArgs) -> CallResult<()> {
     };
     Call::new(Principal::management_canister(), "install_code")
         .with_arg(&complete_arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -198,6 +202,7 @@ pub async fn install_chunked_code(arg: &InstallChunkedCodeArgs) -> CallResult<()
     };
     Call::new(Principal::management_canister(), "install_chunked_code")
         .with_arg(&complete_arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -239,6 +244,7 @@ pub async fn uninstall_code(arg: &UninstallCodeArgs) -> CallResult<()> {
     };
     Call::new(Principal::management_canister(), "uninstall_code")
         .with_arg(&complete_arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -264,6 +270,7 @@ pub struct UninstallCodeArgs {
 pub async fn start_canister(arg: &StartCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "start_canister")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -274,6 +281,7 @@ pub async fn start_canister(arg: &StartCanisterArgs) -> CallResult<()> {
 pub async fn stop_canister(arg: &StopCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "stop_canister")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -284,6 +292,7 @@ pub async fn stop_canister(arg: &StopCanisterArgs) -> CallResult<()> {
 pub async fn canister_status(arg: &CanisterStatusArgs) -> CallResult<CanisterStatusResult> {
     Call::new(Principal::management_canister(), "canister_status")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -294,6 +303,7 @@ pub async fn canister_status(arg: &CanisterStatusArgs) -> CallResult<CanisterSta
 pub async fn canister_info(arg: &CanisterInfoArgs) -> CallResult<CanisterInfoResult> {
     Call::new(Principal::management_canister(), "canister_info")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -304,6 +314,7 @@ pub async fn canister_info(arg: &CanisterInfoArgs) -> CallResult<CanisterInfoRes
 pub async fn delete_canister(arg: &DeleteCanisterArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "delete_canister")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -314,7 +325,6 @@ pub async fn delete_canister(arg: &DeleteCanisterArgs) -> CallResult<()> {
 pub async fn deposit_cycles(arg: &DepositCyclesArgs, cycles: u128) -> CallResult<()> {
     Call::new(Principal::management_canister(), "deposit_cycles")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -325,6 +335,7 @@ pub async fn deposit_cycles(arg: &DepositCyclesArgs, cycles: u128) -> CallResult
 /// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
 pub async fn raw_rand() -> CallResult<Vec<u8>> {
     Call::new(Principal::management_canister(), "raw_rand")
+        .with_timeout()
         .call()
         .await
 }
@@ -338,7 +349,6 @@ pub async fn raw_rand() -> CallResult<Vec<u8>> {
 pub async fn http_request(arg: &HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
     Call::new(Principal::management_canister(), "http_request")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(cycles)
         .call()
         .await
@@ -442,6 +452,7 @@ pub use transform_closure::http_request_with_closure;
 pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPublicKeyResult> {
     Call::new(Principal::management_canister(), "ecdsa_public_key")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -456,7 +467,6 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 pub async fn sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> CallResult<SignWithEcdsaResult> {
     Call::new(Principal::management_canister(), "sign_with_ecdsa")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(SIGN_WITH_ECDSA_FEE)
         .call()
         .await
@@ -471,6 +481,7 @@ const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
 pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<SchnorrPublicKeyResult> {
     Call::new(Principal::management_canister(), "schnorr_public_key")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -485,7 +496,6 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 pub async fn sign_with_schnorr(arg: &SignWithSchnorrArgs) -> CallResult<SignWithSchnorrResult> {
     Call::new(Principal::management_canister(), "sign_with_schnorr")
         .with_arg(arg)
-        .with_guaranteed_response()
         .with_cycles(SIGN_WITH_SCHNORR_FEE)
         .call()
         .await
@@ -504,6 +514,7 @@ pub async fn node_metrics_history(
 ) -> CallResult<NodeMetricsHistoryResult> {
     Call::new(Principal::management_canister(), "node_metrics_history")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -516,6 +527,7 @@ pub async fn node_metrics_history(
 pub async fn subnet_info(arg: &SubnetInfoArgs) -> CallResult<SubnetInfoResult> {
     Call::new(Principal::management_canister(), "subnet_info")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -539,7 +551,6 @@ pub async fn provisional_create_canister_with_cycles(
         "provisional_create_canister_with_cycles",
     )
     .with_arg(&complete_arg)
-    .with_guaranteed_response()
     .call()
     .await
 }
@@ -574,7 +585,6 @@ pub async fn provisional_top_up_canister(arg: &ProvisionalTopUpCanisterArgs) -> 
         "provisional_top_up_canister",
     )
     .with_arg(arg)
-    .with_guaranteed_response()
     .call()
     .await
 }
@@ -589,7 +599,6 @@ pub async fn take_canister_snapshot(
 ) -> CallResult<TakeCanisterSnapshotReturn> {
     Call::new(Principal::management_canister(), "take_canister_snapshot")
         .with_arg(arg)
-        .with_guaranteed_response()
         .call()
         .await
 }
@@ -607,7 +616,6 @@ pub async fn load_canister_snapshot(arg: &LoadCanisterSnapshotArgs) -> CallResul
     };
     Call::new(Principal::management_canister(), "load_canister_snapshot")
         .with_arg(&complete_arg)
-        .with_guaranteed_response()
         .call()
         .await
 }
@@ -637,6 +645,7 @@ pub async fn list_canister_snapshots(
 ) -> CallResult<ListCanisterSnapshotsReturn> {
     Call::new(Principal::management_canister(), "list_canister_snapshots")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }
@@ -649,6 +658,7 @@ pub async fn list_canister_snapshots(
 pub async fn delete_canister_snapshot(arg: &DeleteCanisterSnapshotArgs) -> CallResult<()> {
     Call::new(Principal::management_canister(), "delete_canister_snapshot")
         .with_arg(arg)
+        .with_timeout()
         .call()
         .await
 }

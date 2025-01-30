@@ -95,10 +95,10 @@ pub type CallResult<R> = Result<R, CallError>;
 ///   * *Note*: If no methods in this category are invoked, the `Call` defaults to sending a **Candid empty tuple `()`**.
 /// * Cycles:
 ///   * [`with_cycles`][Self::with_cycles].
-/// * Response delivery:
-///   * Guaranteed response: [`with_guaranteed_response`][Self::with_guaranteed_response].
-///   * Best-effort response with a timeout: [`change_timeout`][Self::change_timeout].
-///   * *Note*: If no methods in this category are invoked, the `Call` defaults to a **10-second timeout for Best-effort responses**.
+/// * Wait for response:
+///   * Set a default 10-second timeout: [`with_timeout`][Self::with_timeout].
+///   * Set a custim timeout: [`with_timeout_secs`][Self::with_timeout_secs].
+///   * *Note*: If no methods in this category are invoked, the `Call` defaults to wait for responses unboundedly.
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -112,9 +112,9 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # let method = "foo";
 /// let call = Call::new(canister_id, method)
 ///     .with_raw_args(&[1,0])
-///     .with_guaranteed_response()
+///     .with_timeout()
 ///     .with_cycles(1000)
-///     .change_timeout(5)
+///     .with_timeout_secs(5)
 ///     .with_arg(42)
 ///     .with_cycles(2000);
 /// # }
@@ -123,7 +123,7 @@ pub type CallResult<R> = Result<R, CallError>;
 /// The `call` above will have the following configuration in effect:
 /// * Arguments: `42` encoded as Candid bytes.
 /// * Cycles: 2000 cycles.
-/// * Response delivery: best-effort response with a 5-second timeout.
+/// * Wait for response: 5-second timeout.
 ///
 /// # Execution
 ///
@@ -141,7 +141,7 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
 /// let call = Call::new(canister_id, method)
-///     .change_timeout(5)
+///     .with_timeout()
 ///     .with_arg(42)
 ///     .with_cycles(2000);
 /// let result: u32 = call.call().await.unwrap();
@@ -155,6 +155,8 @@ pub struct Call<'m, 'a> {
     canister_id: Principal,
     method: &'m str,
     cycles: Option<u128>,
+    // The timeout seconds that will be passes to `ic0.call_with_best_effort_response`.
+    // If `None`, the call will wait for responses unboundedly.
     timeout_seconds: Option<u32>,
     encoded_args: EncodedArgs<'a>,
 }
@@ -177,16 +179,16 @@ impl<'m, 'a> Call<'m, 'a> {
     ///
     /// # Note
     ///
-    /// The [`Call`] defaults to a 10-second timeout for best-effort Responses.
-    /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
-    /// To get a guaranteed response, invoke the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
+    /// The [`Call`] defaults to wait for responses unboundedly.
+    ///
+    /// To set a response timeout, invoke [`with_timeout`][Self::with_timeout] or [`with_timeout_secs`][Self::with_timeout_secs].
     pub fn new(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
             method,
             cycles: None,
-            // Default to 10 seconds.
-            timeout_seconds: Some(10),
+            // Default to wait for responses unboundedly.
+            timeout_seconds: None,
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
             encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
@@ -238,32 +240,30 @@ impl<'m, 'a> Call<'m, 'a> {
         self
     }
 
-    /// Sets the call to have a guaranteed response.
+    /// Sets the response with a 10-second timeout.
     ///
-    /// If [`change_timeout`](Self::change_timeout) is invoked after this method,
-    /// the call will instead be set with best-effort responses.
-    pub fn with_guaranteed_response(mut self) -> Self {
-        self.timeout_seconds = None;
+    /// If a custom timeout is needed, use [`with_timeout_secs`][Self::with_timeout_secs].
+    pub fn with_timeout(mut self) -> Self {
+        self.timeout_seconds = Some(10);
         self
     }
 
-    /// Sets the timeout for best-effort responses.
+    /// Sets the response timeout.
     ///
-    /// If not set, the call defaults to a 10-second timeout.
+    /// If not set, the call will wait for response unboundedly.
+    ///
     /// If invoked multiple times, the last value takes effect.
-    /// If [`with_guaranteed_response`](Self::with_guaranteed_response) is invoked after this method,
-    /// the timeout will be ignored.
+    ///
+    /// If [`with_timeout`][Self::with_timeout] is invoked after this method, the timeout will be set to 10 seconds.
     ///
     /// # Note
     ///
-    /// A timeout of 0 second **DOES NOT** mean guranteed response.
+    /// A timeout of 0 second **DOES NOT** mean waiting for response unboundedly.
+    ///
     /// The call would most likely time out (result in a `SysUnknown` reject).
     /// Unless it's a call to the canister on the same subnet,
     /// and the execution manages to schedule both the request and the response in the same round.
-    ///
-    /// To make the call with a guaranteed response,
-    /// use the [`with_guaranteed_response`](Self::with_guaranteed_response) method.
-    pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
+    pub fn with_timeout_secs(mut self, timeout_seconds: u32) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }

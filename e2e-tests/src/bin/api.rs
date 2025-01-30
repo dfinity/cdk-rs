@@ -16,19 +16,19 @@ fn call_msg_caller() {
     msg_reply(vec![]);
 }
 
-/// This entrypoint will call [`call_msg_deadline`] with both best-effort and guaranteed responses.
+/// This entrypoint will call [`call_msg_deadline`] w/o response timeout.
 #[ic_cdk::update]
 async fn call_msg_deadline_caller() {
     use ic_cdk::call::Call;
-    // Call with best-effort responses.
+    // Make the call with a 10-second response timeout.
     let reply1 = Call::new(canister_self(), "call_msg_deadline")
+        .with_timeout()
         .call_raw()
         .await
         .unwrap();
     assert_eq!(reply1, vec![1]);
-    // Call with guaranteed responses.
+    // Make the call which wait for response unboundedly.
     let reply1 = Call::new(canister_self(), "call_msg_deadline")
-        .with_guaranteed_response()
         .call_raw()
         .await
         .unwrap();
@@ -36,8 +36,8 @@ async fn call_msg_deadline_caller() {
 }
 
 /// This entrypoint is to be called by [`call_msg_deadline_caller`].
-/// If the call was made with best-effort responses, `msg_deadline` should be `Some`, then return 1.
-/// If the call was made with guaranteed responses, `msg_deadline` should be `None`, then return 0.
+/// If the call was made with a response timeout, `msg_deadline` should be `Some`, then return 1.
+/// If the call was made without a response timeout, `msg_deadline` should be `None`, then return 0.
 #[export_name = "canister_update call_msg_deadline"]
 fn call_msg_deadline() {
     let reply = match msg_deadline() {
