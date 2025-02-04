@@ -7,7 +7,7 @@ mod http_request {
     fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
         let max_response_bytes = match arg.max_response_bytes {
             Some(ref n) => *n as u128,
-            None => 2 * 1024 * 1024u128, // default 2MiB
+            None => 2_000_000u128, // default 2MB
         };
         let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
         // The fee is for a 13-node subnet to demonstrate a typical usage.
