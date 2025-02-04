@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- The `max_response_size` of `CanisterHttpRequestArgument` is capped at 2MB, not 2MiB.
+
 ## [0.17.1] - 2024-12-19
 
 ### Added
