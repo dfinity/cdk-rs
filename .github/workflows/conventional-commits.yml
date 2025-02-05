@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     name: conventional-pr-title:required
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # Conventional commit patterns:
       #   verb: description
