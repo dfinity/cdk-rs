@@ -129,6 +129,16 @@ fn dfn_macro(
     }
 
     let is_async = signature.asyncness.is_some();
+    let is_semantically_async = match method {
+        MethodType::Heartbeat | MethodType::Update => true,
+        MethodType::Query if attrs.composite => true,
+        MethodType::Query
+        | MethodType::InspectMessage
+        | MethodType::OnLowWasmMemory
+        | MethodType::PreUpgrade
+        | MethodType::PostUpgrade
+        | MethodType::Init => false,
+    };
 
     let return_length = match &signature.output {
         ReturnType::Default => 0,
@@ -179,9 +189,9 @@ fn dfn_macro(
         quote! {}
     } else {
         match return_length {
-            0 => quote! { ic_cdk::api::call::reply(()) },
-            1 => quote! { ic_cdk::api::call::reply((result,)) },
-            _ => quote! { ic_cdk::api::call::reply(result) },
+            0 => quote! { ic_cdk::api::call::reply(()); },
+            1 => quote! { ic_cdk::api::call::reply((result,)); },
+            _ => quote! { ic_cdk::api::call::reply(result); },
         }
     };
 
@@ -259,24 +269,39 @@ fn dfn_macro(
         #item
     };
 
-    Ok(quote! {
-        #[cfg_attr(target_family = "wasm", export_name = #export_name)]
-        #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
-        fn #outer_function_ident() {
-            ic_cdk::setup();
+    if is_semantically_async {
+        Ok(quote! {
+            #[cfg_attr(target_family = "wasm", export_name = #export_name)]
+            #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
+            fn #outer_function_ident() {
+                ic_cdk::setup();
+                #guard
 
-            #guard
+                ic_cdk::spawn(async {
+                    #arg_decode
+                    let result = #function_call;
+                    #return_encode
+                });
+                ic_cdk::poll_all();
+            }
 
-            ic_cdk::spawn(async {
+            #item
+        })
+    } else {
+        Ok(quote! {
+            #[cfg_attr(target_family = "wasm", export_name = #export_name)]
+            #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
+            fn #outer_function_ident() {
+                ic_cdk::setup();
+                #guard
                 #arg_decode
                 let result = #function_call;
                 #return_encode
-            });
-            ic_cdk::poll_all();
-        }
+            }
 
-        #item
-    })
+            #item
+        })
+    }
 }
 
 pub(crate) fn ic_query(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
@@ -344,17 +369,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query();
-                    ic_cdk::api::call::reply(())
-                });
+                let () = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query();
+                ic_cdk::api::call::reply(());
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -387,17 +410,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query();
-                    ic_cdk::api::call::reply((result,))
-                });
+                let () = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query();
+                ic_cdk::api::call::reply((result,));
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -431,17 +452,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query();
-                    ic_cdk::api::call::reply(result)
-                });
+                let () = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query();
+                ic_cdk::api::call::reply(result);
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -475,17 +494,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query(a);
-                    ic_cdk::api::call::reply(())
-                });
+                let (a, ) = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query(a);
+                ic_cdk::api::call::reply(());
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -519,17 +536,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query(a, b);
-                    ic_cdk::api::call::reply(())
-                });
+                let (a, b, ) = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query(a, b);
+                ic_cdk::api::call::reply(());
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -563,17 +578,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let (a, b, ) = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query(a, b);
-                    ic_cdk::api::call::reply((result,))
-                });
+                let (a, b, ) = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query(a, b);
+                ic_cdk::api::call::reply((result,));
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
@@ -607,17 +620,15 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
                 ic_cdk::setup();
-                ic_cdk::spawn(async {
-                    let () = ic_cdk::api::call::arg_data(
-                        ic_cdk::api::call::ArgDecoderConfig {
-                            decoding_quota: None,
-                            skipping_quota: Some(10000usize),
-                            debug: false,
-                        }
-                    );
-                    let result = query();
-                    ic_cdk::api::call::reply(())
-                });
+                let () = ic_cdk::api::call::arg_data(
+                    ic_cdk::api::call::ArgDecoderConfig {
+                        decoding_quota: None,
+                        skipping_quota: Some(10000usize),
+                        debug: false,
+                    }
+                );
+                let result = query();
+                ic_cdk::api::call::reply(());
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();

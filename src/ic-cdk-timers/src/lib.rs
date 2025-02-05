@@ -128,10 +128,8 @@ extern "C" fn global_timer() {
                 break;
             }
         });
-        ic_cdk::println!("n scheduled = {}", call_futures.len());
         // run all the collected tasks, and clean up after them if necessary
         while let Some((timer, res)) = call_futures.next().await {
-            ic_cdk::println!("callfuture await");
             let task_id = timer.task;
             match res {
                 Ok(()) => {}
@@ -186,6 +184,7 @@ extern "C" fn global_timer() {
         MOST_RECENT.with(|recent| recent.set(None));
         update_ic0_timer();
     });
+    ic_cdk::poll_all();
 }
 
 /// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
@@ -299,6 +298,5 @@ extern "C" fn timer_executor() {
             }
         }
     }
-    ic_cdk::println!("callfuture reply");
     ic_cdk::api::call::reply(());
 }

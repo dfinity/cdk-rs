@@ -114,7 +114,6 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // callback and cleanup are safe to parameterize with T because they will always be called in the
                 //   Executing or Trapped states which do not contain a T.
                 let err_code = unsafe {
-                    crate::println!("callnew {}", userdata_ptr as usize);
                     ic0::call_new(
                         callee.as_ptr() as i32,
                         callee.len() as i32,
@@ -151,14 +150,12 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 Poll::Pending
             }
             CallFutureState::Executing { .. } => {
-                crate::println!("nothingburger");
                 *state = CallFutureState::Executing {
                     waker: context.waker().clone(),
                 };
                 Poll::Pending
             }
             CallFutureState::Complete { result } => {
-                crate::println!("registering completion");
                 *state = CallFutureState::PostComplete;
                 Poll::Ready(result)
             }
@@ -186,7 +183,6 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
-    crate::println!("callback {}", state_ptr as usize);
     // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
     let state = unsafe { Arc::from_raw(state_ptr) };
     let completed_state = CallFutureState::Complete {
@@ -206,8 +202,8 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
         }
     };
     // No rwlock guards must be active at this point, because wake() will call poll() which will want to write().
-    crate::println!("hello waker");
     waker.wake();
+    crate::futures::poll_all();
 }
 
 /// This function is called when [callback] was just called with the same parameter, and trapped.

@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::future::Future;
 use std::mem;
 use std::pin::Pin;
@@ -19,17 +19,40 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
         future: pinned_future,
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
-    // let waker = Arc::new(TaskWaker { task_id });
-    // ACTUALLY_POLLING.set(false);
-    // waker.wake();
-    // ACTUALLY_POLLING.set(true);
+    WAKEUP.with_borrow_mut(|wakeup| wakeup.push(task_id));
 }
-///.
+
+#[doc(hidden)]
 pub fn poll_all() {
-    let tasks = TASKS.with(|tasks| tasks.borrow().keys().collect::<Vec<_>>());
-    for task in tasks {
-        Waker::from(Arc::new(TaskWaker { task_id: task })).wake();
+    let mut tasks = WAKEUP.with_borrow_mut(mem::take); // clear the wakeup list
+    for task_id in tasks.drain(..) {
+        // Temporarily remove the task from the table. We need to execute it while `TASKS` is not borrowed, because it may schedule more tasks.
+        let Some(mut task) = TASKS.with_borrow_mut(|tasks| tasks.get_mut(task_id).map(mem::take))
+        else {
+            // The task is dropped on the first callback that panics, but the last callback is the one that sets the flag.
+            // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
+            // This should be the only possible case in which this happens.
+            crate::trap("Call already trapped");
+            // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
+        };
+        let waker = Waker::from(Arc::new(TaskWaker { task_id }));
+        let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
+        match poll {
+            Poll::Pending => {
+                // more to do, put the task back in the table
+                TASKS.with_borrow_mut(|tasks| {
+                    if let Some(t) = tasks.get_mut(task_id) {
+                        *t = task;
+                    }
+                });
+            }
+            Poll::Ready(()) => {
+                // task complete, remove its entry from the table fully
+                TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
+            }
+        }
     }
+    WAKEUP.with_borrow_mut(|wakeup| *wakeup = tasks); // give the allocation back
 }
 
 pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
@@ -40,6 +63,7 @@ new_key_type! {
 
 thread_local! {
     static TASKS: RefCell<SlotMap<TaskId, Task>> = <_>::default();
+    static WAKEUP: RefCell<Vec<TaskId>> = <_>::default();
 }
 
 struct Task {
@@ -63,57 +87,15 @@ struct TaskWaker {
     task_id: TaskId,
 }
 
-thread_local! {
-    static ACTUALLY_POLLING: Cell<bool> = const { Cell::new(true) };
-}
-
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        if ACTUALLY_POLLING.get() {
-            crate::println!("awoken");
-        }
         if CLEANUP.load(Ordering::Relaxed) {
             // This task is recovering from a trap. We cancel it to run destructors.
             TASKS.with_borrow_mut(|tasks| {
                 tasks.remove(self.task_id);
             })
         } else {
-            // Temporarily remove the task from the table. We need to execute it while `TASKS` is not borrowed, because it may schedule more tasks.
-            let Some(mut task) = TASKS.with(|tasks| {
-                let Ok(mut tasks) = tasks.try_borrow_mut() else {
-                    // If this is already borrowed, then wake was called from inside poll. There's not a lot we can do about this - we are not
-                    // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we ignore it.
-                    // This will be disappointing to types like FuturesUnordered that expected this to work, but since the only source of asynchrony
-                    // and thus a guaranteed source of wakeup notifications is the ic0.call_new callback, this shouldn't cause any actual problems.
-                    return None;
-                };
-                tasks.get_mut(self.task_id).map(mem::take)
-            }) else {
-                // The task is dropped on the first callback that panics, but the last callback is the one that sets the flag.
-                // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
-                // This should be the only possible case in which this happens.
-                crate::trap("Call already trapped");
-                // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
-            };
-            let waker = Waker::from(self.clone());
-            if ACTUALLY_POLLING.get() {
-                crate::println!("polling");
-            }
-            let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
-            match poll {
-                Poll::Pending => {
-                    // more to do, put the task back in the table
-                    TASKS.with_borrow_mut(|tasks| {
-                        if let Some(t) = tasks.get_mut(self.task_id) {
-                            *t = task;
-                        }
-                    });
-                }
-                Poll::Ready(()) => {
-                    // task complete, remove its entry from the table fully
-                    TASKS.with_borrow_mut(|tasks| tasks.remove(self.task_id));
-                }
-            }
+            WAKEUP.with_borrow_mut(|wakeup| wakeup.push(self.task_id));
         }
     }
 }
