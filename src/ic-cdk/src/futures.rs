@@ -64,7 +64,7 @@ struct TaskWaker {
 }
 
 thread_local! {
-    static ACTUALLY_POLLING: Cell<bool> = Cell::new(true);
+    static ACTUALLY_POLLING: Cell<bool> = const { Cell::new(true) };
 }
 
 impl Wake for TaskWaker {
