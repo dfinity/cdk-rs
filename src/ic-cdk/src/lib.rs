@@ -13,7 +13,7 @@
 compile_error!("This version of the CDK does not support multithreading.");
 
 pub mod api;
-mod futures;
+pub mod futures;
 mod macros;
 mod printer;
 pub mod storage;
@@ -38,23 +38,6 @@ pub fn setup() {
         printer::hook()
     }
 }
-
-/// See documentation for [spawn].
-#[deprecated(
-    since = "0.3.4",
-    note = "Use the spawn() function instead, it does the same thing but is more appropriately named."
-)]
-pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::spawn(future);
-}
-
-/// Spawn an asynchronous task that drives the provided future to
-/// completion.
-pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::spawn(future);
-}
-
-pub use futures::poll_all;
 
 /// Format and then print the formatted message
 #[cfg(target_arch = "wasm32")]

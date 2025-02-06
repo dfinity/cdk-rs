@@ -183,27 +183,29 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
-    let state = unsafe { Arc::from_raw(state_ptr) };
-    let completed_state = CallFutureState::Complete {
-        result: match reject_code() {
-            RejectionCode::NoError => Ok(arg_data_raw()),
-            n => Err((n, reject_message())),
-        },
-    };
-    let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
-        CallFutureState::Executing { waker } => waker,
-        // This future has already been cancelled and waking it will do nothing.
-        // All that's left is to explicitly trap in case this is the last call being multiplexed,
-        // to replace an automatic trap from not replying.
-        CallFutureState::Trapped => trap("Call already trapped"),
-        _ => {
-            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
-        }
-    };
-    // No rwlock guards must be active at this point, because wake() will call poll() which will want to write().
-    waker.wake();
-    crate::futures::poll_all();
+    crate::futures::in_callback_executor_context(|| {
+        // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
+        let state = unsafe { Arc::from_raw(state_ptr) };
+        let completed_state = CallFutureState::Complete {
+            result: match reject_code() {
+                RejectionCode::NoError => Ok(arg_data_raw()),
+                n => Err((n, reject_message())),
+            },
+        };
+        let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
+            CallFutureState::Executing { waker } => waker,
+            // This future has already been cancelled and waking it will do nothing.
+            // All that's left is to explicitly trap in case this is the last call being multiplexed,
+            // to replace an automatic trap from not replying.
+            CallFutureState::Trapped => trap("Call already trapped"),
+            _ => {
+                unreachable!(
+                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                )
+            }
+        };
+        waker.wake();
+    });
 }
 
 /// This function is called when [callback] was just called with the same parameter, and trapped.

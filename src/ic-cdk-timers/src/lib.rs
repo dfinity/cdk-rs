@@ -90,69 +90,69 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
-    ic_cdk::setup();
-    ic_cdk::spawn(async {
-        // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
-        // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
-        // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
-        let mut call_futures = FuturesUnordered::new();
-        let now = ic_cdk::api::time();
-        TIMERS.with(|timers| {
-            // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
-            loop {
-                let mut timers = timers.borrow_mut();
-                if let Some(timer) = timers.peek() {
-                    if timer.time <= now {
-                        let timer = timers.pop().unwrap();
-                        if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
-                            // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
-                            // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
-                            // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
-                            // become available, this code should be rewritten.
-                            let task_id = timer.task;
-                            call_futures.push(async move {
-                                (
-                                    timer,
-                                    ic_cdk::call(
-                                        ic_cdk::api::id(),
-                                        "<ic-cdk internal> timer_executor",
-                                        (task_id.0.as_ffi(),),
+    ic_cdk::futures::in_executor_context(|| {
+        ic_cdk::futures::spawn(async {
+            // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
+            // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
+            // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
+            let mut call_futures = FuturesUnordered::new();
+            let now = ic_cdk::api::time();
+            TIMERS.with(|timers| {
+                // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
+                loop {
+                    let mut timers = timers.borrow_mut();
+                    if let Some(timer) = timers.peek() {
+                        if timer.time <= now {
+                            let timer = timers.pop().unwrap();
+                            if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
+                                // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
+                                // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
+                                // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
+                                // become available, this code should be rewritten.
+                                let task_id = timer.task;
+                                call_futures.push(async move {
+                                    (
+                                        timer,
+                                        ic_cdk::call(
+                                            ic_cdk::api::id(),
+                                            "<ic-cdk internal> timer_executor",
+                                            (task_id.0.as_ffi(),),
+                                        )
+                                        .await,
                                     )
-                                    .await,
-                                )
-                            });
-                        }
-                        continue;
-                    }
-                }
-                break;
-            }
-        });
-        // run all the collected tasks, and clean up after them if necessary
-        while let Some((timer, res)) = call_futures.next().await {
-            let task_id = timer.task;
-            match res {
-                Ok(()) => {}
-                Err((code, msg)) => {
-                    ic_cdk::println!("in canister_global_timer: {code:?}: {msg}");
-                    match code {
-                        RejectionCode::SysTransient => {
-                            // Try to execute the timer again later.
-                            TIMERS.with(|timers| {
-                                timers.borrow_mut().push(timer);
-                            });
+                                });
+                            }
                             continue;
                         }
-                        RejectionCode::NoError
-                        | RejectionCode::SysFatal
-                        | RejectionCode::DestinationInvalid
-                        | RejectionCode::CanisterReject
-                        | RejectionCode::CanisterError
-                        | RejectionCode::Unknown => {}
+                    }
+                    break;
+                }
+            });
+            // run all the collected tasks, and clean up after them if necessary
+            while let Some((timer, res)) = call_futures.next().await {
+                let task_id = timer.task;
+                match res {
+                    Ok(()) => {}
+                    Err((code, msg)) => {
+                        ic_cdk::println!("in canister_global_timer: {code:?}: {msg}");
+                        match code {
+                            RejectionCode::SysTransient => {
+                                // Try to execute the timer again later.
+                                TIMERS.with(|timers| {
+                                    timers.borrow_mut().push(timer);
+                                });
+                                continue;
+                            }
+                            RejectionCode::NoError
+                            | RejectionCode::SysFatal
+                            | RejectionCode::DestinationInvalid
+                            | RejectionCode::CanisterReject
+                            | RejectionCode::CanisterError
+                            | RejectionCode::Unknown => {}
+                        }
                     }
                 }
-            }
-            TASKS.with(|tasks| {
+                TASKS.with(|tasks| {
                 let mut tasks = tasks.borrow_mut();
                 if let Some(task) = tasks.get(task_id) {
                     match task {
@@ -180,11 +180,11 @@ extern "C" fn global_timer() {
                     }
                 }
             });
-        }
-        MOST_RECENT.with(|recent| recent.set(None));
-        update_ic0_timer();
+            }
+            MOST_RECENT.with(|recent| recent.set(None));
+            update_ic0_timer();
+        });
     });
-    ic_cdk::poll_all();
 }
 
 /// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.

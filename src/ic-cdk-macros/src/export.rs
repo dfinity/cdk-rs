@@ -139,6 +139,11 @@ fn dfn_macro(
         | MethodType::PostUpgrade
         | MethodType::Init => false,
     };
+    let async_context_name = if method == MethodType::Query {
+        format_ident!("in_query_executor_context")
+    } else {
+        format_ident!("in_executor_context")
+    };
 
     let return_length = match &signature.output {
         ReturnType::Default => 0,
@@ -274,15 +279,15 @@ fn dfn_macro(
             #[cfg_attr(target_family = "wasm", export_name = #export_name)]
             #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
             fn #outer_function_ident() {
-                ic_cdk::setup();
-                #guard
+                ic_cdk::futures::#async_context_name(|| {
+                    #guard
 
-                ic_cdk::spawn(async {
-                    #arg_decode
-                    let result = #function_call;
-                    #return_encode
+                    ic_cdk::futures::spawn(async {
+                        #arg_decode
+                        let result = #function_call;
+                        #return_encode
+                    });
                 });
-                ic_cdk::poll_all();
             }
 
             #item
