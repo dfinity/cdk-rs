@@ -141,7 +141,8 @@ extern "C" fn global_timer() {
                         });
                         continue;
                     }
-                    TASKS.with(|tasks| {
+                }
+                TASKS.with(|tasks| {
                     let mut tasks = tasks.borrow_mut();
                     if let Some(task) = tasks.get(task_id) {
                         match task {
@@ -169,10 +170,9 @@ extern "C" fn global_timer() {
                         }
                     }
                 });
-                }
-                MOST_RECENT.with(|recent| recent.set(None));
-                update_ic0_timer();
             }
+            MOST_RECENT.with(|recent| recent.set(None));
+            update_ic0_timer();
         });
     });
 }
