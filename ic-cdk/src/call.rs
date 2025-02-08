@@ -151,6 +151,18 @@ pub type CallResult<R> = Result<R, CallError>;
 /// call.call_oneway().unwrap();
 /// # }
 /// ```
+///
+/// ## `async`/`await`
+///
+/// Inter-canister calls require your code to be asynchronous. Read the [`futures`](crate::futures) module
+/// docs for more information on how this works.
+///
+/// <div class="warning">
+///
+/// Using an inter-canister call creates the possibility that your async function will be canceled partway through.
+/// Read the [`futures`](crate::futures) module docs for why and how this happens.
+///
+/// </div>
 #[derive(Debug)]
 pub struct Call<'m, 'a> {
     canister_id: Principal,
