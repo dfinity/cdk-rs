@@ -1,6 +1,17 @@
 [workspace]
-members = ["src/*", "library/*", "e2e-tests"]
+members = [
+    "ic-cdk",
+    "ic-cdk-bindgen",
+    "ic-cdk-macros",
+    "ic-cdk-timers",
+    "ic-management-canister-types",
+    "ic-response-codes",
+    "ic0",
+    "library/*",
+    "e2e-tests",
+]
 resolver = "2"
+exclude = ["candid-extractor"]
 
 [workspace.package]
 authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
@@ -20,11 +31,13 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "src/ic0", version = "0.23.0" }
-ic-cdk = { path = "src/ic-cdk", version = "0.17.1" }
-ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.11.0" }
+ic0 = { path = "ic0", version = "0.24.0-alpha.1" }
+ic-cdk = { path = "ic-cdk", version = "0.18.0-alpha.1" }
+ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.0-alpha.1" }
+ic-response-codes = { path = "ic-response-codes", version = "0.1.0" }
+ic-management-canister-types = { path = "ic-management-canister-types", version = "0.1.0" }
 
-candid = "0.10.4"
+candid = "0.10.13"
 candid_parser = "0.1.4"
 futures = "0.3"
 hex = "0.4"
