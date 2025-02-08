@@ -1,4 +1,4 @@
-//! The library implements multiple and periodic timers on the Internet Computer.
+//! This library implements multiple and periodic timers on the Internet Computer.
 //!
 //! # Example
 //!

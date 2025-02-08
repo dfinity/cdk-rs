@@ -1,6 +1,55 @@
 //! Functions relating to the async executor.
 //!
+//! ## Running async tasks
 //!
+//! Most async tasks can be run just by changing your canister entry point to `async`:
+//!
+//! ```
+//! # use ic_cdk::update;
+//! # async fn some_other_async_fn() {}
+//! #[update]
+//! async fn foo() {
+//!     some_other_async_fn().await;
+//! }
+//! ```
+//!
+//! To run async tasks in the *background*, however, use [`spawn`]:
+//!
+//! ```
+//! # use ic_cdk::{update, futures::spawn};
+//! # async fn some_other_async_fn() {}
+//! #[update]
+//! async fn foo() {
+//!     spawn(async { some_other_async_fn().await; });
+//!     // do other stuff
+//! }
+//! ```
+//!
+//! The spawned future will not be run at the same time as the remaining code, nor will it run immediately. It will start
+//! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
+//! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
+//!
+//! "Background" is a tricky subject on the IC. A canister message handler has an instruction limit
+//! before it traps, and background tasks can only run in the context of a canister message.
+//! Thus, anything you spawn will take from the instruction limit for the handler you spawn it from;
+//! and if it awaits something completed from elsewhere in the program, such as a channel, the portion
+//! after the await will take from the instruction limit for the message that triggered it.
+//!
+//! ## Automatic cancellation
+//!
+//! Asynchronous tasks can be *canceled*, meaning that a partially completed function will halt at an
+//! `await` point, never complete, and drop its local variables as though it had returned. Cancellation
+//! is caused by panics and traps: if an async function panics, time will be rewound to the
+//! previous await as though the code since then never ran, and then the task will be canceled.
+//!
+//! Use panics sparingly in async functions after the first await, and beware system functions that trap
+//! (which is most of them in the right context). Make atomic transactions between awaits wherever
+//! possible, and use [`scopeguard`] or a [`Drop`] impl for any cleanup functions that must run no matter what.
+//! If an await cannot be removed from the middle of a transaction, and it must be rolled back if it fails,
+//! [`is_recovering_from_trap`] can be used to detect when the task is being automatically canceled.
+//!
+//! [`scopeguard`]: https://docs.rs/scopeguard
+//! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
@@ -13,28 +62,8 @@ use std::task::{Context, Poll, Wake, Waker};
 
 use slotmap::{new_key_type, SlotMap};
 
-/// Spawn an asynchronous task to run in the background.
-///
-/// "Background" is a tricky subject on the IC. A canister message handler has an instruction limit
-/// before it traps, and background tasks can only run in the context of a canister message.
-/// Thus, anything you spawn will take from the instruction limit for the handler you spawn it from;
-/// and if it awaits something completed from elsewhere in the program, such as a channel, the portion
-/// after the await will take from the instruction limit for the message that triggered it.
-///
-/// # Automatic cancellation
-///
-/// Asynchronous tasks can be *canceled*, meaning that a partially completed function will halt at an
-/// `await` point, never complete, and drop its local variables as though it had returned. Cancellation
-/// is caused by panics and traps: if an async function panics, time will be rewound to the
-/// previous await as though the code since then never ran, and then the task will be canceled.
-///
-/// Use panics sparingly in async functions after the first await, and beware system functions that trap
-/// (which is most of them in the right context). Make atomic transactions between awaits wherever
-/// possible, and use [`scopeguard`] or a [`Drop`] impl for any cleanup functions that must run no matter what.
-/// If an await cannot be removed from the middle of a transaction, and it must be rolled back if it fails,
-/// [`is_recovering_from_trap`] can be used to detect when the task is being automatically canceled.
-///
-/// [`scopeguard`]: https://docs.rs/scopeguard
+/// Spawn an asynchronous task to run in the background. For information about semantics, see
+/// [the module docs](self).
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let in_query = match CONTEXT.get() {
         AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
@@ -53,9 +82,9 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 
 /// Execute an update function in a context that allows calling [`spawn`].
 ///
-/// Background tasks will be polled in the process (and will not be run otherwise).
 /// You do not need to worry about this function unless you are avoiding the attribute macros.
 ///
+/// Background tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
     let _guard = ContextGuard::new(AsyncContext::Update);
@@ -67,9 +96,9 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute a composite query function in a context that allows calling [`spawn`].
 ///
-/// Background composite query tasks will be polled in the process (and will not be run otherwise).
 /// You do not need to worry about this function unless you are avoiding the attribute macros.
 ///
+/// Background composite query tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     let _guard = ContextGuard::new(AsyncContext::Query);
@@ -87,16 +116,11 @@ pub(crate) fn in_callback_executor_context(f: impl FnOnce()) {
 
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
 ///
-/// If a function traps/panics, then the canister state is rewound to the beginning of the function.
-/// However, due to the way async works, the beginning of the function as the IC understands it is actually
-/// the most recent `await` from an inter-canister-call. This means that part of the function will have executed,
-/// and part of it won't.
-///
-/// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
-/// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
-/// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
+/// In a destructor, `is_recovering_from_trap` serves the same purpose as
 /// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
+///
+/// For information about when and how this occurs, see [the module docs](self).
 pub fn is_recovering_from_trap() -> bool {
     crate::futures::CLEANUP.load(Ordering::Relaxed)
 }

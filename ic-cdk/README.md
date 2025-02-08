@@ -25,7 +25,7 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.15"
+ic-cdk = "0.18"
 candid = "0.10" # required if you want to define Candid data types
 ```
 
@@ -62,6 +62,11 @@ These macros are directly related to the [Internet Computer Specification](https
 * [`update`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.update.html)
 * [`query`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.query.html)
 
+Canister entry points can be `async`. The CDK embeds an asynchronous executor. Unfortunately anything `tokio`-specific cannot be used.
+Use the [`spawn`](https://docs.rs/ic-cdk/latest/ic_cdk/futures/fn.spawn.html) function to run more asynchronous functions in
+the background. Panics can cause async tasks to cancel partway through; read the documentation for the 
+[`futures`](https://docs.rs/ic-cdk/latest/ic_cdk/futures/index.html) module for more information.
+
 ### Export Candid definitions
 
 * [`export_candid`](https://docs.rs/ic-cdk/latest/ic_cdk/macro.export_candid.html)
@@ -73,7 +78,7 @@ Check [Generating Candid files for Rust canisters](https://internetcomputer.org/
 * [Basic examples](https://github.com/dfinity/cdk-rs/tree/main/examples): Demonstrate usage of `ic-cdk` API.
 * [Comprehensive examples](https://github.com/dfinity/examples/tree/master/rust): Illustrate how to build useful Rust canisters.
 
-## Manage Data Structure in Stable Memory
+## Manage Data Structures in Stable Memory
 
 Using the `ic_cdk::storage::{stable_save, stable_restore}` API is easy but it doesn't scale well.
 
