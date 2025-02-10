@@ -129,3 +129,22 @@ fn test_composite_query() {
         query_candid(&pic, sender_id, "greet_self", (receiver_id,)).unwrap();
     assert_eq!(greeting, "Hello, myself");
 }
+
+#[test]
+fn channels() {
+    let pic = pocket_ic();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let (greeting,): (String,) = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "await_channel_completion",
+        (),
+    )
+    .unwrap();
+    assert_eq!(greeting, "Hello, myself");
+}

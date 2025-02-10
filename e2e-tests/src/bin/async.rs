@@ -114,4 +114,19 @@ async fn invalid_reply_payload_does_not_trap() -> String {
     }
 }
 
+#[update]
+async fn await_channel_completion() -> String {
+    let (tx, rx) = async_channel::bounded(1);
+    ic_cdk::futures::spawn(async move {
+        let greeting: String = Call::new(ic_cdk::api::canister_self(), "greet")
+            .with_arg("myself")
+            .call()
+            .await
+            .unwrap();
+        tx.send(greeting).await.unwrap();
+    });
+    let greeting = rx.recv().await;
+    greeting.unwrap()
+}
+
 fn main() {}
