@@ -310,7 +310,7 @@ fn dfn_macro(
                 #arg_decode
                 let result = #function_call;
                 #return_encode
-            })
+            });
         }
     };
 
