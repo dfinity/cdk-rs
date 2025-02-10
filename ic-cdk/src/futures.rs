@@ -29,11 +29,12 @@
 //! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
 //! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
 //!
-//! "Background" is a tricky subject on the IC. A canister message handler has an instruction limit
-//! before it traps, and background tasks can only run in the context of a canister message.
-//! Thus, anything you spawn will take from the instruction limit for the handler you spawn it from;
-//! and if it awaits something completed from elsewhere in the program, such as a channel, the portion
-//! after the await will take from the instruction limit for the message that triggered it.
+//! "Background" is a tricky subject on the IC. Background tasks can only run in the context of a canister message.
+//! If you await a future whose completion you manually trigger in code, such as sending to an async channel,
+//! then the code after the await will be in the call context of whatever you completed it in. This means that global state
+//! like [`caller`], [`in_replicated_execution`], and even [`canister_self`] may have changed. (The canister method
+//! itself cannot await anything triggered by another canister method, or you will get an error that it 'failed to reply'.)
+//! It will also take from that call's instruction limit, which can introduce hidden sources of instruction limit based traps.
 //!
 //! ## Automatic cancellation
 //!
@@ -50,6 +51,9 @@
 //!
 //! [`scopeguard`]: https://docs.rs/scopeguard
 //! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
+//! [`caller`]: crate::api::caller
+//! [`in_replicated_execution`]: crate::api::in_replicated_execution
+//! [`canister_self`]: crate::api::canister_self
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
