@@ -286,19 +286,39 @@ fn dfn_macro(
         #item
     };
 
-    Ok(quote! {
-        #[cfg_attr(target_family = "wasm", export_name = #export_name)]
-        #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
-        fn #outer_function_ident() {
-            ::ic_cdk::setup();
-
+    // 7. exported function body
+    let async_context_name = if method == MethodType::Query {
+        format_ident!("in_query_executor_context")
+    } else {
+        format_ident!("in_executor_context")
+    };
+    let body = if signature.asyncness.is_some() {
+        quote! {
+            ::ic_cdk::futures::#async_context_name(|| {
+                #guard
+                ::ic_cdk::futures::spawn(async {
+                    #arg_decode
+                    let result = #function_call;
+                    #return_encode
+                });
+            });
+        }
+    } else {
+        quote! {
             #guard
-
-            ::ic_cdk::spawn(async {
+            ::ic_cdk::futures::#async_context_name(|| {
                 #arg_decode
                 let result = #function_call;
                 #return_encode
             });
+        }
+    };
+
+    Ok(quote! {
+        #[cfg_attr(target_family = "wasm", export_name = #export_name)]
+        #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
+        fn #outer_function_ident() {
+            #body
         }
 
         #item
@@ -366,8 +386,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });
@@ -403,8 +422,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
                 });
@@ -440,8 +458,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_args(result).unwrap());
                 });
@@ -477,8 +494,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a);
@@ -516,8 +532,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
@@ -554,8 +569,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
@@ -593,8 +607,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
-                ::ic_cdk::setup();
-                ::ic_cdk::spawn(async {
+                ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
                     ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
                 });

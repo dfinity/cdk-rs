@@ -9,8 +9,10 @@ repository = "https://github.com/dfinity/cdk-rs"
 publish = false
 
 [dependencies]
+async-channel = "2.3.1"
 candid.workspace = true
-escargot = { version = "0.5.7", features = ["print"] }
+env_logger = "0.11.5"
+escargot = { version = "0.5.7" }
 futures.workspace = true
 ic-cdk = { workspace = true, features = ["transform-closure"] }
 ic-cdk-timers.workspace = true

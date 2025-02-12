@@ -1,4 +1,4 @@
-//! The library implements multiple and periodic timers on the Internet Computer.
+//! This library implements multiple and periodic timers on the Internet Computer.
 //!
 //! # Example
 //!
@@ -90,89 +90,90 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
-    ic_cdk::setup();
-    ic_cdk::spawn(async {
-        // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
-        // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
-        // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
-        let mut call_futures = FuturesUnordered::new();
-        let now = ic_cdk::api::time();
-        TIMERS.with(|timers| {
-            // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
-            loop {
-                let mut timers = timers.borrow_mut();
-                if let Some(timer) = timers.peek() {
-                    if timer.time <= now {
-                        let timer = timers.pop().unwrap();
-                        if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
-                            // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
-                            // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
-                            // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
-                            // become available, this code should be rewritten.
-                            let task_id = timer.task;
-                            call_futures.push(async move {
-                                (
-                                    timer,
-                                    Call::new(
-                                        ic_cdk::api::canister_self(),
-                                        "<ic-cdk internal> timer_executor",
+    ic_cdk::futures::in_executor_context(|| {
+        ic_cdk::futures::spawn(async {
+            // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
+            // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
+            // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
+            let mut call_futures = FuturesUnordered::new();
+            let now = ic_cdk::api::time();
+            TIMERS.with(|timers| {
+                // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
+                loop {
+                    let mut timers = timers.borrow_mut();
+                    if let Some(timer) = timers.peek() {
+                        if timer.time <= now {
+                            let timer = timers.pop().unwrap();
+                            if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
+                                // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
+                                // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
+                                // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
+                                // become available, this code should be rewritten.
+                                let task_id = timer.task;
+                                call_futures.push(async move {
+                                    (
+                                        timer,
+                                        Call::new(
+                                            ic_cdk::api::canister_self(),
+                                            "<ic-cdk internal> timer_executor",
+                                        )
+                                        .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
+                                        .call_raw()
+                                        .await,
                                     )
-                                    .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
-                                    .call_raw()
-                                    .await,
-                                )
-                            });
+                                });
+                            }
+                            continue;
                         }
+                    }
+                    break;
+                }
+            });
+            // run all the collected tasks, and clean up after them if necessary
+            while let Some((timer, res)) = call_futures.next().await {
+                let task_id = timer.task;
+                if let Err(e) = res {
+                    ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
+                    if e.reject_code() == RejectCode::SysTransient {
+                        // Try to execute the timer again later.
+                        TIMERS.with(|timers| {
+                            timers.borrow_mut().push(timer);
+                        });
                         continue;
                     }
                 }
-                break;
-            }
-        });
-        // run all the collected tasks, and clean up after them if necessary
-        while let Some((timer, res)) = call_futures.next().await {
-            let task_id = timer.task;
-            if let Err(e) = res {
-                ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
-                if e.reject_code() == RejectCode::SysTransient {
-                    // Try to execute the timer again later.
-                    TIMERS.with(|timers| {
-                        timers.borrow_mut().push(timer);
-                    });
-                    continue;
-                }
-            }
-            TASKS.with(|tasks| {
-                let mut tasks = tasks.borrow_mut();
-                if let Some(task) = tasks.get(task_id) {
-                    match task {
-                        // duplicated on purpose - it must be removed in the function call, to access self by value;
-                        // and it must be removed here, because it may have trapped and not actually been removed.
-                        // Luckily slotmap ops are equivalent to simple vector indexing.
-                        Task::Once(_) => {
-                            tasks.remove(task_id);
-                        }
-                        // reschedule any repeating tasks
-                        Task::Repeated { interval, .. } => {
-                            match now.checked_add(interval.as_nanos() as u64) {
-                                Some(time) => TIMERS.with(|timers| {
-                                    timers.borrow_mut().push(Timer {
-                                        task: task_id,
-                                        time,
-                                    })
-                                }),
-                                None => ic_cdk::println!(
-                                    "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
-                                    interval = interval.as_nanos(),
-                                ),
+                TASKS.with(|tasks| {
+                    let mut tasks = tasks.borrow_mut();
+                    if let Some(task) = tasks.get(task_id) {
+                        match task {
+                            // duplicated on purpose - it must be removed in the function call, to access self by value;
+                            // and it must be removed here, because it may have trapped and not actually been removed.
+                            // Luckily slotmap ops are equivalent to simple vector indexing.
+                            Task::Once(_) => {
+                                tasks.remove(task_id);
+                            }
+                            // reschedule any repeating tasks
+                            Task::Repeated { interval, .. } => {
+                                match now.checked_add(interval.as_nanos() as u64) {
+                                    Some(time) => TIMERS.with(|timers| {
+                                        timers.borrow_mut().push(Timer {
+                                            task: task_id,
+                                            time,
+                                        })
+                                    }),
+                                    None => ic_cdk::println!(
+                                        "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                        interval = interval.as_nanos(),
+                                    ),
+                                }
                             }
                         }
                     }
-                }
-            });
-        }
-        MOST_RECENT.with(|recent| recent.set(None));
-        update_ic0_timer();
+                });
+            }
+            MOST_RECENT.with(|recent| recent.set(None));
+            update_ic0_timer();
+        });
     });
 }
 

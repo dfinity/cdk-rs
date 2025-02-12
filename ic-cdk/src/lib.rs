@@ -14,14 +14,14 @@ compile_error!("This version of the CDK does not support multithreading.");
 
 pub mod api;
 pub mod call;
-mod futures;
+pub mod futures;
 mod macros;
 pub mod management_canister;
 mod printer;
 pub mod stable;
 pub mod storage;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Once;
 
 #[doc(inline)]
 pub use api::trap;
@@ -36,30 +36,11 @@ pub use api::{
 #[doc(inline)]
 pub use macros::*;
 
-pub use futures::is_recovering_from_trap;
-
-static DONE: AtomicBool = AtomicBool::new(false);
+static SETUP: Once = Once::new();
 
 /// Setup the stdlib hooks.
-pub fn setup() {
-    if !DONE.swap(true, Ordering::SeqCst) {
-        printer::hook()
-    }
-}
-
-/// See documentation for [spawn].
-#[deprecated(
-    since = "0.3.4",
-    note = "Use the spawn() function instead, it does the same thing but is more appropriately named."
-)]
-pub fn block_on<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::spawn(future);
-}
-
-/// Spawn an asynchronous task that drives the provided future to
-/// completion.
-pub fn spawn<F: 'static + std::future::Future<Output = ()>>(future: F) {
-    futures::spawn(future);
+fn setup() {
+    SETUP.call_once(printer::hook);
 }
 
 /// Format and then print the formatted message

@@ -1,12 +1,13 @@
 //! APIs to make and manage calls in the canister.
 use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
+use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
 use std::future::Future;
-
+use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 
 pub use ic_response_codes::RejectCode;
@@ -150,6 +151,18 @@ pub type CallResult<R> = Result<R, CallError>;
 /// call.call_oneway().unwrap();
 /// # }
 /// ```
+///
+/// ## `async`/`await`
+///
+/// Inter-canister calls require your code to be asynchronous. Read the [`futures`](crate::futures) module
+/// docs for more information on how this works.
+///
+/// <div class="warning">
+///
+/// Using an inter-canister call creates the possibility that your async function will be canceled partway through.
+/// Read the [`futures`](crate::futures) module docs for why and how this happens.
+///
+/// </div>
 #[derive(Debug)]
 pub struct Call<'m, 'a> {
     canister_id: Principal,
@@ -270,11 +283,7 @@ impl<'m, 'a> Call<'m, 'a> {
 
     /// Sends the call and gets the reply as raw bytes.
     pub fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + '_ {
-        let state = Arc::new(RwLock::new(CallFutureState {
-            result: None,
-            waker: None,
-            call: self,
-        }));
+        let state = Arc::new(RwLock::new(CallFutureState::Prepared { call: self }));
         CallFuture { state }
     }
 
@@ -338,54 +347,71 @@ impl<'m, 'a> Call<'m, 'a> {
     /// # Returns
     ///
     /// The return value of `ic0.call_perform`.
-    fn perform(&self, state_ptr_opt: Option<*const RwLock<CallFutureState<'_, '_>>>) -> u32 {
+    fn perform(&self, state_opt: Option<Arc<RwLock<CallFutureState<'_, '_>>>>) -> u32 {
         let callee = self.canister_id.as_slice();
         let method = self.method;
         let arg = match &self.encoded_args {
             EncodedArgs::Owned(vec) => vec,
             EncodedArgs::Ref(r) => *r,
         };
+        let state_ptr_opt = state_opt.map(Arc::into_raw);
+        match state_ptr_opt {
+            Some(state_ptr) => {
+                // asynchronous execution
+                //
+                // # SAFETY:
+                // * `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+                // * `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+                // * `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as
+                //      both reply and reject fn for ic0.call_new.
+                // * `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be called as
+                //      cleanup fn for ic0.call_on_cleanup.
+                // * `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for
+                //      `callback` and `cleanup`.
+                // * if-and-only-if ic0.call_perform returns 0, exactly one of `callback` or `cleanup` will be called, exactly once,
+                //      and therefore `state_ptr`'s ownership can be passed to both functions.
+                // * both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
+                //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
+                unsafe {
+                    ic0::call_new(
+                        callee.as_ptr() as usize,
+                        callee.len(),
+                        method.as_ptr() as usize,
+                        method.len(),
+                        callback as usize,
+                        state_ptr as usize,
+                        callback as usize,
+                        state_ptr as usize,
+                    );
+                    ic0::call_on_cleanup(cleanup as usize, state_ptr as usize);
+                }
+            }
 
-        let (reply_fun, reply_env, reject_fun, reject_env) = match state_ptr_opt {
-            // asynchronous execution
-            //
-            // # SAFETY:
-            // ic0.call_new
-            // * `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as both reply and reject fn for ic0.call_new.
-            // * `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `callback`.
-            Some(state_ptr) => (
-                callback as usize,
-                state_ptr as usize,
-                cleanup as usize,
-                state_ptr as usize,
-            ),
-            // oneway execution
-            //
-            // # SAFETY:
-            // ic0.call_new
-            // * `reply_fun` and `reject_fun`: In "oneway" style call, we want these callback functions to not be called.
-            //    So pass `usize::MAX` which is a function pointer the wasm module cannot possibly contain.
-            // * `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed as its context parameter.
-            //
-            // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
-            None => (usize::MAX, usize::MAX, usize::MAX, usize::MAX),
+            None => {
+                // oneway execution
+                //
+                // # SAFETY:
+                // * `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+                // * `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+                // * `reply_fun` and `reject_fun`: `usize::MAX` is a function pointer the wasm module cannot possibly contain.
+                // * `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed
+                //      as their context parameters.
+                //
+                // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
+                unsafe {
+                    ic0::call_new(
+                        callee.as_ptr() as usize,
+                        callee.len(),
+                        method.as_ptr() as usize,
+                        method.len(),
+                        usize::MAX,
+                        usize::MAX,
+                        usize::MAX,
+                        usize::MAX,
+                    );
+                }
+            }
         };
-        // SAFETY:
-        // `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-        // `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-        // reply and reject callbacks are discussed above.
-        unsafe {
-            ic0::call_new(
-                callee.as_ptr() as usize,
-                callee.len(),
-                method.as_ptr() as usize,
-                method.len(),
-                reply_fun,
-                reply_env,
-                reject_fun,
-                reject_env,
-            );
-        }
         if !arg.is_empty() {
             // SAFETY: `args`, being a &[u8], is a readable sequence of bytes.
             unsafe { ic0::call_data_append(arg.as_ptr() as usize, arg.len()) };
@@ -400,28 +426,45 @@ impl<'m, 'a> Call<'m, 'a> {
             // SAFETY: ic0.call_with_best_effort_response is always safe to call.
             unsafe { ic0::call_with_best_effort_response(timeout_seconds) };
         }
-        if let Some(state_ptr) = state_ptr_opt {
-            // Only invoke `ic0.call_on_cleanup` for asynchronous (non-oneway) calls.
-            // For oneway calls, since the reply/reject callback always traps (the callbacks were set to `usize::MAX`),
-            // the cleanup callback must not be set to ensure the "oneway" semantics.
-            //
-            // SAFETY:
-            // `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be passed as a cleanup callback ptr.
-            // `state_ptr` is a pointer created via Weak::into_raw, and can therefore be passed as the userdata for `cleanup`.
-            unsafe { ic0::call_on_cleanup(cleanup as usize, state_ptr as usize) };
-        }
         // SAFETY: ic0.call_perform is always safe to call
-        unsafe { ic0::call_perform() }
+        let res = unsafe { ic0::call_perform() };
+        if res != 0 {
+            if let Some(state_ptr) = state_ptr_opt {
+                // SAFETY:
+                // * `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
+                // * by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
+                //      to any functions
+                // therefore, there is an outstanding handle to `state`, which it is safe to deallocate
+                unsafe {
+                    Arc::from_raw(state_ptr);
+                }
+            }
+        }
+        res
     }
 }
 
 // # Internal =================================================================
 
 /// Internal state for the Future when sending a call.
-struct CallFutureState<'m, 'a> {
-    result: Option<SystemResult<Vec<u8>>>,
-    waker: Option<Waker>,
-    call: &'m Call<'m, 'a>,
+#[derive(Debug, Default)]
+enum CallFutureState<'m, 'a> {
+    /// The future has been constructed, and the call has not yet been performed.
+    /// Needed because futures are supposed to do nothing unless polled.
+    /// Polling will attempt to fire off the request. Success returns `Pending` and transitions to `Executing`,
+    /// failure returns `Ready` and transitions to `PostComplete.`
+    Prepared { call: &'m Call<'m, 'a> },
+    /// The call has been performed and the message is in flight. Neither callback has been called. Polling will return `Pending`.
+    /// This state will transition to `Trapped` if the future is canceled because of a trap in another future.
+    Executing { waker: Waker },
+    /// `callback` has been called, so the call has been completed. This completion state has not yet been read by the user.
+    /// Polling will return `Ready` and transition to `PostComplete`.
+    Complete { result: SystemResult<Vec<u8>> },
+    /// The completion state of `Complete` has been returned from `poll` as `Poll::Ready`. Polling again will trap.
+    #[default]
+    PostComplete,
+    /// The future (*not* the state) was canceled because of a trap in another future during `Executing`. Polling will trap.
+    Trapped,
 }
 
 struct CallFuture<'m, 'a> {
@@ -434,32 +477,51 @@ impl<'m, 'a> Future for CallFuture<'m, 'a> {
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
         let mut state = self_ref.state.write().unwrap();
-
-        if let Some(result) = state.result.take() {
-            Poll::Ready(result)
-        } else {
-            if state.waker.is_none() {
-                let state_ptr = Weak::into_raw(Arc::downgrade(&self_ref.state));
-
-                match state.call.perform(Some(state_ptr)) {
+        match mem::take(&mut *state) {
+            CallFutureState::Prepared { call } => {
+                match call.perform(Some(self_ref.state.clone())) {
                     0 => {
                         // call_perform returns 0 means the call was successfully enqueued.
+                        *state = CallFutureState::Executing {
+                            waker: context.waker().clone(),
+                        };
+                        Poll::Pending
                     }
                     code => {
-                        // SAFETY: The conversion is safe because the code is not 0.
+                        // The conversion is safe because the code is not 0.
                         let reject_code = RejectCode::try_from(code).unwrap();
                         let result = Err(CallRejected {
                             reject_code,
                             reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
                             sync: true,
                         });
-                        state.result = Some(result.clone());
-                        return Poll::Ready(result);
+                        *state = CallFutureState::PostComplete;
+                        Poll::Ready(result)
                     }
                 }
             }
-            state.waker = Some(context.waker().clone());
-            Poll::Pending
+            CallFutureState::Executing { .. } => {
+                *state = CallFutureState::Executing {
+                    waker: context.waker().clone(),
+                };
+                Poll::Pending
+            }
+            CallFutureState::Complete { result } => {
+                *state = CallFutureState::PostComplete;
+                Poll::Ready(result)
+            }
+            CallFutureState::Trapped => trap("Call already trapped"),
+            CallFutureState::PostComplete => trap("CallFuture polled after completing"),
+        }
+    }
+}
+
+impl<'m, 'a> Drop for CallFuture<'m, 'a> {
+    fn drop(&mut self) {
+        // If this future is dropped while is_recovering_from_trap is true,
+        // then it has been canceled due to a trap in another future.
+        if is_recovering_from_trap() {
+            *self.state.write().unwrap() = CallFutureState::Trapped;
         }
     }
 }
@@ -471,17 +533,16 @@ impl<'m, 'a> Future for CallFuture<'m, 'a> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from `Weak::into_raw` as userdata.
+/// This function must only be passed to the IC with a pointer from `Arc::into_raw` as userdata.
 unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
-    let state = unsafe { Weak::from_raw(state_ptr) };
-    if let Some(state) = state.upgrade() {
-        // Make sure to un-borrow_mut the state.
-        {
-            state.write().unwrap().result = Some(match msg_reject_code() {
+    crate::futures::in_callback_executor_context(|| {
+        // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
+        let state = unsafe { Arc::from_raw(state_ptr) };
+        let completed_state = CallFutureState::Complete {
+            result: match msg_reject_code() {
                 0 => Ok(msg_arg_data()),
                 code => {
-                    // SAFETY: The conversion is safe because the code is not 0.
+                    // The conversion is safe because the code is not 0.
                     let reject_code = RejectCode::try_from(code).unwrap();
                     Err(CallRejected {
                         reject_code,
@@ -489,15 +550,20 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
                         sync: false,
                     })
                 }
-            });
-        }
-        let w = state.write().unwrap().waker.take();
-        if let Some(waker) = w {
-            // This is all to protect this little guy here which will call the poll() which
-            // borrow_mut() the state as well. So we need to be careful to not double-borrow_mut.
-            waker.wake()
-        }
-    }
+            },
+        };
+        let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
+            CallFutureState::Executing { waker } => waker,
+            // This future has already been cancelled and waking it will do nothing.
+            // All that's left is to explicitly trap in case this is the last call being multiplexed,
+            // to replace an automatic trap from not replying.
+            CallFutureState::Trapped => trap("Call already trapped"),
+            _ => unreachable!(
+                "CallFutureState for in-flight calls should only be Executing or Trapped"
+            ),
+        };
+        waker.wake();
+    });
 }
 
 /// The cleanup callback for `ic0.call_on_cleanup`.
@@ -508,28 +574,41 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Weak::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Weak as userdata.
-    let state = unsafe { Weak::from_raw(state_ptr) };
-    if let Some(state) = state.upgrade() {
-        // We set the call result, even though it won't be read on the
-        // default executor, because we can't guarantee it was called on
-        // our executor. However, we are not allowed to inspect
-        // reject_code() inside of a cleanup callback, so always set the
-        // result to a reject.
-        //
-        // Borrowing does not trap - the rollback from the
-        // previous trap ensures that the RwLock can be borrowed again.
-        let w = state.write().unwrap().waker.take();
-        if let Some(waker) = w {
-            // Flag that we do not want to actually wake the task - we
-            // want to drop it *without* executing it.
-            crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-            waker.wake();
-            crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
+    // We set the call result, even though it won't be read on the
+    // default executor, because we can't guarantee it was called on
+    // our executor. However, we are not allowed to inspect
+    // reject_code() inside of a cleanup callback, so always set the
+    // result to a reject.
+    //
+    // Borrowing does not trap - the rollback from the
+    // previous trap ensures that the RwLock can be borrowed again.
+    let err_state = CallFutureState::Complete {
+        result: Err(CallRejected {
+            reject_code: RejectCode::CanisterReject,
+            reject_message: "cleanup".into(),
+            sync: false,
+        }),
+    };
+    let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
+        CallFutureState::Executing { waker } => waker,
+        CallFutureState::Trapped => {
+            // The future has already been canceled and dropped. There is nothing
+            // more to clean up except for the CallFutureState.
+            return;
         }
-    }
+        _ => {
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+        }
+    };
+    // Flag that we do not want to actually wake the task - we
+    // want to drop it *without* executing it.
+    crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+    waker.wake();
+    crate::futures::CLEANUP.store(false, Ordering::Relaxed);
 }
 
 // # Internal END =============================================================
