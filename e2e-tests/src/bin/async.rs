@@ -32,7 +32,7 @@ async fn panic_after_async() {
     let value = *lock;
     // Do not drop the lock before the await point.
 
-    let _: u64 = Call::new(ic_cdk::api::canister_self(), "inc")
+    let _: u64 = Call::bounded_wait(ic_cdk::api::canister_self(), "inc")
         .with_arg(value)
         .call()
         .await
@@ -50,7 +50,7 @@ async fn panic_twice() {
 }
 
 async fn async_then_panic() {
-    let _: u64 = Call::new(ic_cdk::api::canister_self(), "on_notify")
+    let _: u64 = Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
         .call()
         .await
         .unwrap();
@@ -69,7 +69,7 @@ fn on_notify() {
 
 #[update]
 fn notify(whom: Principal, method: String) {
-    Call::new(whom, method.as_str())
+    Call::bounded_wait(whom, method.as_str())
         .call_oneway()
         .unwrap_or_else(|reject| {
             ic_cdk::api::trap(format!(
@@ -86,7 +86,7 @@ fn greet(name: String) -> String {
 
 #[query(composite = true)]
 async fn greet_self(greeter: Principal) -> String {
-    Call::new(greeter, "greet")
+    Call::bounded_wait(greeter, "greet")
         .with_arg("myself")
         .call()
         .await
@@ -96,7 +96,7 @@ async fn greet_self(greeter: Principal) -> String {
 #[update]
 async fn invalid_reply_payload_does_not_trap() -> String {
     // We're decoding an integer instead of a string, decoding must fail.
-    let result: CallResult<u64> = Call::new(ic_cdk::api::canister_self(), "greet")
+    let result: CallResult<u64> = Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
         .with_arg("World")
         .call()
         .await;
@@ -118,7 +118,7 @@ async fn invalid_reply_payload_does_not_trap() -> String {
 async fn await_channel_completion() -> String {
     let (tx, rx) = async_channel::bounded(1);
     ic_cdk::futures::spawn(async move {
-        let greeting: String = Call::new(ic_cdk::api::canister_self(), "greet")
+        let greeting: String = Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
             .with_arg("myself")
             .call()
             .await

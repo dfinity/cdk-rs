@@ -85,21 +85,25 @@ pub type CallResult<R> = Result<R, CallError>;
 ///
 /// This type enables the configuration and execution of inter-canister calls using a builder pattern.
 ///
+/// # Constructors
+///
+/// [`Call`] has two constructors that differentiate whether the call is made unboundedly waiting for a response or not.
+/// * Wait boundedly (defaults with 10-second timeout): [`bounded_wait`][Self::bounded_wait].
+/// * Wait unboundedly: [`unbounded_wait`][Self::unbounded_wait].
+///
 /// # Configuration
 ///
-/// Before sending the call, users can configure following aspects of the call:
+/// Before execution, a [`Call`] can be configured in following aspects:
 ///
 /// * Arguments:
 ///   * Single `CandidType` value: [`with_arg`][Self::with_arg].
 ///   * Tuple of multiple `CandidType` values: [`with_args`][Self::with_args].
 ///   * Raw bytes without Candid encoding: [`with_raw_args`][Self::with_raw_args].
-///   * *Note*: If no methods in this category are invoked, the `Call` defaults to sending a **Candid empty tuple `()`**.
+///   * *Note*: If no methods in this category are invoked, the [`Call`] defaults to sending a **Candid empty tuple `()`**.
 /// * Cycles:
-///   * [`with_cycles`][Self::with_cycles].
-/// * Response delivery:
-///   * Guaranteed response: [`with_guaranteed_response`][Self::with_guaranteed_response].
-///   * Best-effort response with a timeout: [`change_timeout`][Self::change_timeout].
-///   * *Note*: If no methods in this category are invoked, the `Call` defaults to a **10-second timeout for Best-effort responses**.
+///   * Attach cycles: [`with_cycles`][Self::with_cycles].
+/// * Response waiting timeout:
+///   * Change the timeout for **unbounded_wait** call: [`change_timeout`][Self::change_timeout].
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -111,9 +115,8 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
-/// let call = Call::new(canister_id, method)
+/// let call = Call::bounded_wait(canister_id, method)
 ///     .with_raw_args(&[1,0])
-///     .with_guaranteed_response()
 ///     .with_cycles(1000)
 ///     .change_timeout(5)
 ///     .with_arg(42)
@@ -123,8 +126,8 @@ pub type CallResult<R> = Result<R, CallError>;
 ///
 /// The `call` above will have the following configuration in effect:
 /// * Arguments: `42` encoded as Candid bytes.
-/// * Cycles: 2000 cycles.
-/// * Response delivery: best-effort response with a 5-second timeout.
+/// * Attach 2000 cycles.
+/// * Boundedly waiting for response with a 5-second timeout.
 ///
 /// # Execution
 ///
@@ -141,7 +144,7 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
-/// let call = Call::new(canister_id, method)
+/// let call = Call::bounded_wait(canister_id, method)
 ///     .change_timeout(5)
 ///     .with_arg(42)
 ///     .with_cycles(2000);
@@ -151,18 +154,6 @@ pub type CallResult<R> = Result<R, CallError>;
 /// call.call_oneway().unwrap();
 /// # }
 /// ```
-///
-/// ## `async`/`await`
-///
-/// Inter-canister calls require your code to be asynchronous. Read the [`futures`](crate::futures) module
-/// docs for more information on how this works.
-///
-/// <div class="warning">
-///
-/// Using an inter-canister call creates the possibility that your async function will be canceled partway through.
-/// Read the [`futures`](crate::futures) module docs for why and how this happens.
-///
-/// </div>
 #[derive(Debug)]
 pub struct Call<'m, 'a> {
     canister_id: Principal,
@@ -185,15 +176,17 @@ enum EncodedArgs<'a> {
     Ref(&'a [u8]),
 }
 
+// Constructors
 impl<'m, 'a> Call<'m, 'a> {
-    /// Constructs a new [`Call`] with the Canister ID and method name.
+    /// Constructs a [`Call`] which will **boundedly** wait for response.
     ///
     /// # Note
     ///
-    /// The [`Call`] defaults to a 10-second timeout for best-effort Responses.
+    /// The boundedly waiting is set with a default 10-second timeout.
     /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
-    /// To get a guaranteed response, invoke the [`with_guaranteed_response`][Self::with_guaranteed_response] method.
-    pub fn new(canister_id: Principal, method: &'m str) -> Self {
+    ///
+    /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
+    pub fn bounded_wait(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
             method,
@@ -206,6 +199,24 @@ impl<'m, 'a> Call<'m, 'a> {
         }
     }
 
+    /// Constructs a [`Call`] which will **unboundedly** wait for response.
+    ///
+    /// To boundedly wait for response, use the  [`Call::bounded_wait`] constructor instead.
+    pub fn unbounded_wait(canister_id: Principal, method: &'m str) -> Self {
+        Self {
+            canister_id,
+            method,
+            cycles: None,
+            timeout_seconds: None,
+            // Bytes for empty arguments.
+            // `candid::Encode!(&()).unwrap()`
+            encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
+        }
+    }
+}
+
+// Configuration
+impl<'m, 'a> Call<'m, 'a> {
     /// Sets the argument for the call.
     ///
     /// The argument must implement [`CandidType`].
@@ -251,36 +262,35 @@ impl<'m, 'a> Call<'m, 'a> {
         self
     }
 
-    /// Sets the call to have a guaranteed response.
+    /// Changes the timeout for bounded response waiting.
     ///
-    /// If [`change_timeout`](Self::change_timeout) is invoked after this method,
-    /// the call will instead be set with best-effort responses.
-    pub fn with_guaranteed_response(mut self) -> Self {
-        self.timeout_seconds = None;
-        self
-    }
-
-    /// Sets the timeout for best-effort responses.
+    /// [`Call::bounded_wait`] defaults to a 10-second timeout.
     ///
-    /// If not set, the call defaults to a 10-second timeout.
     /// If invoked multiple times, the last value takes effect.
-    /// If [`with_guaranteed_response`](Self::with_guaranteed_response) is invoked after this method,
-    /// the timeout will be ignored.
+    ///
+    /// If invoked on an unbounded call constructed by [`Call::unbounded_wait`] , it will panic.
     ///
     /// # Note
     ///
-    /// A timeout of 0 second **DOES NOT** mean guranteed response.
-    /// The call would most likely time out (result in a `SysUnknown` reject).
+    /// A timeout of 0 second **DOES NOT** mean unbounded response waiting.
+    /// The call would most likely time out (result in a [`SysUnknown`](RejectCode::SysUnknown) reject).
     /// Unless it's a call to the canister on the same subnet,
     /// and the execution manages to schedule both the request and the response in the same round.
     ///
-    /// To make the call with a guaranteed response,
-    /// use the [`with_guaranteed_response`](Self::with_guaranteed_response) method.
+    /// To boundedly wait for response, use the  [`Call::bounded_wait`] constructor instead.
     pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
-        self.timeout_seconds = Some(timeout_seconds);
+        match self.timeout_seconds {
+            Some(_) => self.timeout_seconds = Some(timeout_seconds),
+            None => {
+                panic!("Cannot set a timeout for an instance created with Call::unbounded_wait")
+            }
+        }
         self
     }
+}
 
+// Execution
+impl<'m, 'a> Call<'m, 'a> {
     /// Sends the call and gets the reply as raw bytes.
     pub fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + '_ {
         let state = Arc::new(RwLock::new(CallFutureState::Prepared { call: self }));

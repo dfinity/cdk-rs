@@ -15,30 +15,37 @@ async fn call_foo() {
     let n = 0u32;
     let bytes = Encode!(&n).unwrap();
 
-    let res: u32 = Call::new(canister_self(), "foo").call().await.unwrap();
+    let res: u32 = Call::bounded_wait(canister_self(), "foo")
+        .call()
+        .await
+        .unwrap();
     assert_eq!(res, n);
-    let res: (u32,) = Call::new(canister_self(), "foo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "foo")
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res = Call::new(canister_self(), "foo").call_raw().await.unwrap();
+    let res = Call::bounded_wait(canister_self(), "foo")
+        .call_raw()
+        .await
+        .unwrap();
     assert_eq!(res, bytes);
-    Call::new(canister_self(), "foo").call_oneway().unwrap();
+    Call::bounded_wait(canister_self(), "foo")
+        .call_oneway()
+        .unwrap();
 
-    let res: (u32,) = Call::new(canister_self(), "foo")
-        .with_guaranteed_response()
+    let res: (u32,) = Call::unbounded_wait(canister_self(), "foo")
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "foo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "foo")
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "foo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "foo")
         .with_cycles(1000)
         .call_tuple()
         .await
@@ -58,44 +65,43 @@ async fn call_echo_with_arg() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
     // call*
-    let res: u32 = Call::new(canister_self(), "echo")
+    let res: u32 = Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .call()
         .await
         .unwrap();
     assert_eq!(res, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res = Call::new(canister_self(), "echo")
+    let res = Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
-    Call::new(canister_self(), "echo")
+    Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .call_oneway()
         .unwrap();
     // with*
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::unbounded_wait(canister_self(), "echo")
         .with_arg(n)
-        .with_guaranteed_response()
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_arg(n)
         .with_cycles(1000)
         .call_tuple()
@@ -110,44 +116,43 @@ async fn call_echo_with_args() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
     // call*
-    let res: u32 = Call::new(canister_self(), "echo")
+    let res: u32 = Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .call()
         .await
         .unwrap();
     assert_eq!(res, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res = Call::new(canister_self(), "echo")
+    let res = Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
-    Call::new(canister_self(), "echo")
+    Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .call_oneway()
         .unwrap();
     // with*
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::unbounded_wait(canister_self(), "echo")
         .with_args(&(n,))
-        .with_guaranteed_response()
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_args(&(n,))
         .with_cycles(1000)
         .call_tuple()
@@ -162,44 +167,43 @@ async fn call_echo_with_raw_args() {
     let n = 1u32;
     let bytes: Vec<u8> = Encode!(&n).unwrap();
     // call*
-    let res: u32 = Call::new(canister_self(), "echo")
+    let res: u32 = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .call()
         .await
         .unwrap();
     assert_eq!(res, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res = Call::new(canister_self(), "echo")
+    let res = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .call_raw()
         .await
         .unwrap();
     assert_eq!(res, bytes);
-    Call::new(canister_self(), "echo")
+    Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .call_oneway()
         .unwrap();
     // with*
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::unbounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
-        .with_guaranteed_response()
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .change_timeout(5)
         .call_tuple()
         .await
         .unwrap();
     assert_eq!(res.0, n);
-    let res: (u32,) = Call::new(canister_self(), "echo")
+    let res: (u32,) = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
         .with_cycles(1000)
         .call_tuple()
@@ -228,15 +232,15 @@ async fn retry(call_to_retry: Call<'_, '_>) -> u32 {
 #[update]
 async fn retry_calls() {
     let n: u32 = 1u32;
-    let call = Call::new(canister_self(), "foo");
+    let call = Call::bounded_wait(canister_self(), "foo");
     assert_eq!(retry(call).await, 0);
-    let call_with_arg = Call::new(canister_self(), "echo").with_arg(n);
+    let call_with_arg = Call::bounded_wait(canister_self(), "echo").with_arg(n);
     assert_eq!(retry(call_with_arg).await, 0);
     let args = (n,);
-    let call_with_args = Call::new(canister_self(), "echo").with_args(&args);
+    let call_with_args = Call::bounded_wait(canister_self(), "echo").with_args(&args);
     assert_eq!(retry(call_with_args).await, 0);
     let raw_args = Encode!(&n).unwrap();
-    let call_with_raw_args = Call::new(canister_self(), "echo").with_raw_args(&raw_args);
+    let call_with_raw_args = Call::bounded_wait(canister_self(), "echo").with_raw_args(&raw_args);
     assert_eq!(retry(call_with_raw_args).await, 0);
 }
 fn main() {}
