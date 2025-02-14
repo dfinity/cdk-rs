@@ -29,7 +29,7 @@ use std::{
 use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
-use ic_cdk::call::{Call, RejectCode};
+use ic_cdk::call::{Call, CallFailed, RejectCode};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -118,7 +118,6 @@ extern "C" fn global_timer() {
                                             "<ic-cdk internal> timer_executor",
                                         )
                                         .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
-                                        .call_raw()
                                         .await,
                                     )
                                 });
@@ -134,7 +133,9 @@ extern "C" fn global_timer() {
                 let task_id = timer.task;
                 if let Err(e) = res {
                     ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
-                    if e.reject_code() == RejectCode::SysTransient {
+                    if matches!(e, CallFailed::CallPerformFailed(_))
+                        || matches!(e, CallFailed::CallRejected(e) if e.reject_code() == RejectCode::SysTransient)
+                    {
                         // Try to execute the timer again later.
                         TIMERS.with(|timers| {
                             timers.borrow_mut().push(timer);

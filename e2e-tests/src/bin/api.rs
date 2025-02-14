@@ -21,14 +21,14 @@ fn call_msg_caller() {
 async fn call_msg_deadline_caller() {
     use ic_cdk::call::Call;
     let reply1 = Call::bounded_wait(canister_self(), "call_msg_deadline")
-        .call_raw()
         .await
-        .unwrap();
+        .unwrap()
+        .into_bytes();
     assert_eq!(reply1, vec![1]);
     let reply1 = Call::unbounded_wait(canister_self(), "call_msg_deadline")
-        .call_raw()
         .await
-        .unwrap();
+        .unwrap()
+        .into_bytes();
     assert_eq!(reply1, vec![0]);
 }
 

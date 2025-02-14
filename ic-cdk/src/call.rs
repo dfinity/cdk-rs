@@ -3,83 +3,14 @@ use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
-use std::future::Future;
 use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
+use thiserror::Error;
 
 pub use ic_response_codes::RejectCode;
-
-const CALL_PERFORM_REJECT_MESSAGE: &str = "call_perform failed";
-
-/// The error type for inter-canister calls and decoding the response.
-///
-/// See [`Call::call`] or [`Call::call_tuple`].
-#[derive(thiserror::Error, Debug, Clone)]
-pub enum CallError {
-    /// The call was rejected.
-    ///
-    /// Please handle the error by matching on the rejection code.
-    #[error("The call was rejected with code {0:?}")]
-    CallRejected(CallRejected),
-
-    /// The response could not be decoded.
-    #[error("Failed to decode the response as {0}")]
-    CandidDecodeFailed(String),
-}
-
-/// The error type for inter-canister calls.
-///
-/// See [`Call::call_raw`] and [`Call::call_oneway`].
-///
-/// This type is also the inner error type of [`CallError::CallRejected`].
-#[derive(Debug, Clone)]
-pub struct CallRejected {
-    /// All fields are private so we will be able to change the implementation without breaking the API.
-    /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
-    /// It will still be possible to get the [`RejectCode`] using the public getter,
-    /// because every `error_code` can map to a [`RejectCode`].
-    reject_code: RejectCode,
-    reject_message: String,
-    sync: bool,
-}
-
-impl CallRejected {
-    /// Gets the [`RejectCode`].
-    pub fn reject_code(&self) -> RejectCode {
-        self.reject_code
-    }
-
-    /// Retrieves the reject message associated with the call.
-    ///
-    /// - For an asynchronous rejection (when the IC rejects the call after it was enqueued),
-    ///   the message is obtained from [`api::msg_reject_msg`](`msg_reject_msg`).
-    /// - For a synchronous rejection (when `ic0.call_perform` returns a non-zero code),
-    ///   the message is set to a fixed string: `"call_perform failed"`.
-    pub fn reject_message(&self) -> &str {
-        &self.reject_message
-    }
-
-    /// Checks if the call was rejected synchronously or asynchronously.
-    ///
-    /// A synchronous rejection occurs when `ic0.call_perform` returns a non-zero code immediately.
-    /// An asynchronous rejection happens when the call is enqueued but later rejected by the IC.
-    ///
-    /// # Returns
-    /// - `true` if the call was rejected synchronously.
-    /// - `false` if the call was rejected asynchronously.
-    pub fn is_sync(&self) -> bool {
-        self.sync
-    }
-}
-
-/// Result of a inter-canister call.
-pub type SystemResult<R> = Result<R, CallRejected>;
-
-/// Result of a inter-canister call and decoding the response.
-pub type CallResult<R> = Result<R, CallError>;
 
 /// Inter-canister Call.
 ///
@@ -88,22 +19,22 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # Constructors
 ///
 /// [`Call`] has two constructors that differentiate whether the call is made unboundedly waiting for a response or not.
-/// * Wait boundedly (defaults with 10-second timeout): [`bounded_wait`][Self::bounded_wait].
-/// * Wait unboundedly: [`unbounded_wait`][Self::unbounded_wait].
+/// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 10-second timeout).
+/// - [`unbounded_wait`][Self::unbounded_wait]: wait unboundedly.
 ///
 /// # Configuration
 ///
 /// Before execution, a [`Call`] can be configured in following aspects:
 ///
-/// * Arguments:
-///   * Single `CandidType` value: [`with_arg`][Self::with_arg].
-///   * Tuple of multiple `CandidType` values: [`with_args`][Self::with_args].
-///   * Raw bytes without Candid encoding: [`with_raw_args`][Self::with_raw_args].
-///   * *Note*: If no methods in this category are invoked, the [`Call`] defaults to sending a **Candid empty tuple `()`**.
-/// * Cycles:
-///   * Attach cycles: [`with_cycles`][Self::with_cycles].
-/// * Response waiting timeout:
-///   * Change the timeout for **unbounded_wait** call: [`change_timeout`][Self::change_timeout].
+/// - Arguments:
+///   - [`with_arg`][Self::with_arg]: single `CandidType` value that will be encoded.
+///   - [`with_args`][Self::with_args]: a tuple of multiple `CandidType` values that will be encoded.
+///   - [`with_raw_args`][Self::with_raw_args]: raw bytes that won't be encoded.
+///   - *Note*: If no methods in this category are invoked, the [`Call`] defaults to sending a **Candid empty tuple `()`**.
+/// - Cycles:
+///   - [`with_cycles`][Self::with_cycles]: set the cycles attached in this call.
+/// - Response waiting timeout:
+///   - [`change_timeout`][Self::change_timeout]: change the timeout for **unbounded_wait** call.
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -125,17 +56,15 @@ pub type CallResult<R> = Result<R, CallError>;
 /// ```
 ///
 /// The `call` above will have the following configuration in effect:
-/// * Arguments: `42` encoded as Candid bytes.
-/// * Attach 2000 cycles.
-/// * Boundedly waiting for response with a 5-second timeout.
+/// - Arguments: `42` encoded as Candid bytes.
+/// - Attach 2000 cycles.
+/// - Boundedly waiting for response with a 5-second timeout.
 ///
 /// # Execution
 ///
-/// The `Call` can be executed using the following methods:
-/// * [`call`][Self::call]: Decodes the response to a single `CandidType` value.
-/// * [`call_tuple`][Self::call_tuple]: Decodes the response to a tuple of `CandidType` values.
-/// * [`call_raw`][Self::call_raw]: Returns the raw bytes of the response.
-/// * [`call_oneway`][Self::call_oneway]: Ignores the response.
+/// A [`Call`] can be executed in two ways:
+/// - [`.await`]: convert into a future, execute asynchronously and wait for response.
+/// - [`oneway`][Self::oneway]: send a oneway call and not wait for the response.
 ///
 /// ## Example
 ///
@@ -144,17 +73,31 @@ pub type CallResult<R> = Result<R, CallError>;
 /// # async fn bar() {
 /// # let canister_id = ic_cdk::api::canister_self();
 /// # let method = "foo";
-/// let call = Call::bounded_wait(canister_id, method)
-///     .change_timeout(5)
-///     .with_arg(42)
-///     .with_cycles(2000);
-/// let result: u32 = call.call().await.unwrap();
-/// let result_tuple: (u32,) = call.call_tuple().await.unwrap();
-/// let result_bytes: Vec<u8> = call.call_raw().await.unwrap();
-/// call.call_oneway().unwrap();
+/// let call = Call::bounded_wait(canister_id, method);
+/// let response = call.clone().await.unwrap();
+/// call.oneway().unwrap();
 /// # }
 /// ```
-#[derive(Debug)]
+///
+/// # Deocding the response
+///
+/// If an asynchronous [`Call`] succeeds, the response can be decoded in two ways:
+/// - [`candid`][Response::candid]: decode the response as a single Candid type.
+/// - [`candid_tuple`][Response::candid_tuple]: decode the response as a tuple of Candid types.
+///
+/// ## Example
+///
+/// ```rust, no_run
+/// # use ic_cdk::call::{Call, Response};
+/// # async fn bar() {
+/// # let canister_id = ic_cdk::api::canister_self();
+/// # let method = "foo";
+/// let res: Response = Call::bounded_wait(canister_id, method).await.unwrap();
+/// let result: u32 = res.candid().unwrap();
+/// let result_tuple: (u32,) = res.candid_tuple().unwrap();
+/// # }
+/// ```
+#[derive(Debug, Clone)]
 pub struct Call<'m, 'a> {
     canister_id: Principal,
     method: &'m str,
@@ -164,7 +107,7 @@ pub struct Call<'m, 'a> {
 }
 
 /// Encoded arguments for the call.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum EncodedArgs<'a> {
     /// Owned bytes.
     ///
@@ -289,54 +232,172 @@ impl<'m, 'a> Call<'m, 'a> {
     }
 }
 
+/// Response of a successful call.
+#[derive(Debug)]
+pub struct Response(Vec<u8>);
+
+impl Response {
+    /// Gets the raw bytes of the response.
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.0
+    }
+
+    /// Decodes the response as a single Candid type.
+    pub fn candid<R>(&self) -> Result<R, CandidDecodeFailed>
+    where
+        R: CandidType + for<'de> Deserialize<'de>,
+    {
+        decode_one(&self.0).map_err(|e| CandidDecodeFailed {
+            type_name: std::any::type_name::<R>().to_string(),
+            candid_error: e.to_string(),
+        })
+    }
+
+    /// Decodes the response as a tuple of Candid types.
+    pub fn candid_tuple<R>(&self) -> Result<R, CandidDecodeFailed>
+    where
+        R: for<'de> ArgumentDecoder<'de>,
+    {
+        decode_args(&self.0).map_err(|e| CandidDecodeFailed {
+            type_name: std::any::type_name::<R>().to_string(),
+            candid_error: e.to_string(),
+        })
+    }
+}
+
+impl PartialEq<&[u8]> for Response {
+    fn eq(&self, other: &&[u8]) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<Vec<u8>> for Response {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq for Response {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl std::ops::Deref for Response {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl AsRef<[u8]> for Response {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::borrow::Borrow<[u8]> for Response {
+    fn borrow(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+/// The error type for inter-canister calls and decoding the response.
+///
+/// See [`Call::call`] or [`Call::call_tuple`].
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum Error {
+    /// The call failed.
+    #[error(transparent)]
+    CallFailed(#[from] CallFailed),
+
+    /// The response could not be decoded as Candid.
+    #[error(transparent)]
+    CandidDecodeFailed(#[from] CandidDecodeFailed),
+}
+
+/// The error type for inter-canister calls and decoding the response.
+///
+/// See [`Call::call`] or [`Call::call_tuple`].
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum CallFailed {
+    /// `ic0.call_perform` returned a non-zero code.
+    #[error(transparent)]
+    CallPerformFailed(#[from] CallPerformFailed),
+
+    /// The call was rejected.
+    #[error(transparent)]
+    CallRejected(#[from] CallRejected),
+}
+
+/// The error type for inter-canister calls.
+///
+/// See [`Call::call_raw`] and [`Call::call_oneway`].
+///
+/// This type is also the inner error type of [`CallError::CallRejected`].
+#[derive(Error, Debug, Clone)]
+#[error("Call rejected: {reject_code} - {reject_message}")]
+pub struct CallRejected {
+    /// All fields are private so we will be able to change the implementation without breaking the API.
+    /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
+    /// It will still be possible to get the [`RejectCode`] using the public getter,
+    /// because every `error_code` can map to a [`RejectCode`].
+    reject_code: RejectCode,
+    reject_message: String,
+}
+
+impl CallRejected {
+    /// Gets the [`RejectCode`].
+    pub fn reject_code(&self) -> RejectCode {
+        self.reject_code
+    }
+
+    /// Retrieves the reject message associated with the call.
+    ///
+    /// - For an asynchronous rejection (when the IC rejects the call after it was enqueued),
+    ///   the message is obtained from [`api::msg_reject_msg`](`msg_reject_msg`).
+    /// - For a synchronous rejection (when `ic0.call_perform` returns a non-zero code),
+    ///   the message is set to a fixed string: `"call_perform failed"`.
+    pub fn reject_message(&self) -> &str {
+        &self.reject_message
+    }
+}
+
+/// `ic0.call_perform` returned a non-zero code.
+#[derive(Error, Debug, Clone)]
+#[error("Call perform failed")]
+pub struct CallPerformFailed;
+
+/// Failed to decode the response as Candid.
+#[derive(Error, Debug, Clone)]
+#[error("Candid decode failed for type: {type_name}, candid error: {candid_error}")]
+pub struct CandidDecodeFailed {
+    type_name: String,
+    candid_error: String,
+}
+
+/// Result of a inter-canister call and decoding the response.
+pub type CallResult<R> = Result<R, Error>;
+
+impl<'m, 'a> std::future::IntoFuture for Call<'m, 'a> {
+    type Output = Result<Response, CallFailed>;
+    type IntoFuture = CallFuture<'m, 'a>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        CallFuture {
+            state: Arc::new(RwLock::new(CallFutureState::Prepared { call: self })),
+        }
+    }
+}
+
 // Execution
 impl<'m, 'a> Call<'m, 'a> {
-    /// Sends the call and gets the reply as raw bytes.
-    pub fn call_raw(&self) -> impl Future<Output = SystemResult<Vec<u8>>> + Send + Sync + '_ {
-        let state = Arc::new(RwLock::new(CallFutureState::Prepared { call: self }));
-        CallFuture { state }
-    }
-
-    /// Sends the call and decodes the reply to a Candid type.
-    pub fn call<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync + '_
-    where
-        Self: Sized,
-        R: CandidType + for<'d> Deserialize<'d>,
-    {
-        let fut = self.call_raw();
-        async {
-            let bytes = fut.await.map_err(CallError::CallRejected)?;
-            decode_one(&bytes).map_err(decoder_error_to_call_error::<R>)
-        }
-    }
-
-    /// Sends the call and decodes the reply to a Candid type.
-    pub fn call_tuple<R>(&self) -> impl Future<Output = CallResult<R>> + Send + Sync + '_
-    where
-        Self: Sized,
-        R: for<'d> ArgumentDecoder<'d>,
-    {
-        let fut = self.call_raw();
-        async {
-            let bytes = fut.await.map_err(CallError::CallRejected)?;
-            decode_args(&bytes).map_err(decoder_error_to_call_error::<R>)
-        }
-    }
-
     /// Sends the call and ignores the reply.
-    pub fn call_oneway(&self) -> SystemResult<()> {
-        // The conversion fails only when the err_code is 0, which means the call was successfully enqueued.
+    pub fn oneway(&self) -> Result<(), CallPerformFailed> {
         match self.perform(None) {
             0 => Ok(()),
-            code => {
-                // SAFETY: The conversion is safe because the code is not 0.
-                let reject_code = RejectCode::try_from(code).unwrap();
-                Err(CallRejected {
-                    reject_code,
-                    reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
-                    sync: true,
-                })
-            }
+            _ => Err(CallPerformFailed),
         }
     }
 
@@ -346,13 +407,13 @@ impl<'m, 'a> Call<'m, 'a> {
     ///
     /// # Arguments
     ///
-    /// * `state_ptr`: An optional pointer to the internal state of the [`CallFuture`].
-    ///   * If `Some`, the call will be prepared for asynchronous execution:
-    ///     * `ic0.call_new` will be invoked with [`callback`] and state pointer.
-    ///     * `ic0.call_on_cleanup` will be invoked with [`cleanup`].
-    ///   * If `None`, the call will be prepared for oneway execution:
-    ///     * `ic0.call_new` will be invoked with invalid callback functions.
-    ///     * `ic0.call_on_cleanup` won't be invoked.
+    /// - `state_ptr`: An optional pointer to the internal state of the [`CallFuture`].
+    ///   - If `Some`, the call will be prepared for asynchronous execution:
+    ///     - `ic0.call_new` will be invoked with [`callback`] and state pointer.
+    ///     - `ic0.call_on_cleanup` will be invoked with [`cleanup`].
+    ///   - If `None`, the call will be prepared for oneway execution:
+    ///     - `ic0.call_new` will be invoked with invalid callback functions.
+    ///     - `ic0.call_on_cleanup` won't be invoked.
     ///
     /// # Returns
     ///
@@ -370,17 +431,17 @@ impl<'m, 'a> Call<'m, 'a> {
                 // asynchronous execution
                 //
                 // # SAFETY:
-                // * `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-                // * `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-                // * `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as
+                // - `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+                // - `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+                // - `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as
                 //      both reply and reject fn for ic0.call_new.
-                // * `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be called as
+                // - `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be called as
                 //      cleanup fn for ic0.call_on_cleanup.
-                // * `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for
+                // - `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for
                 //      `callback` and `cleanup`.
-                // * if-and-only-if ic0.call_perform returns 0, exactly one of `callback` or `cleanup` will be called, exactly once,
+                // - if-and-only-if ic0.call_perform returns 0, exactly one of `callback` or `cleanup` will be called, exactly once,
                 //      and therefore `state_ptr`'s ownership can be passed to both functions.
-                // * both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
+                // - both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
                 //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
                 unsafe {
                     ic0::call_new(
@@ -401,10 +462,10 @@ impl<'m, 'a> Call<'m, 'a> {
                 // oneway execution
                 //
                 // # SAFETY:
-                // * `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-                // * `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-                // * `reply_fun` and `reject_fun`: `usize::MAX` is a function pointer the wasm module cannot possibly contain.
-                // * `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed
+                // - `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
+                // - `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
+                // - `reply_fun` and `reject_fun`: `usize::MAX` is a function pointer the wasm module cannot possibly contain.
+                // - `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed
                 //      as their context parameters.
                 //
                 // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
@@ -441,8 +502,8 @@ impl<'m, 'a> Call<'m, 'a> {
         if res != 0 {
             if let Some(state_ptr) = state_ptr_opt {
                 // SAFETY:
-                // * `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
-                // * by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
+                // - `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
+                // - by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
                 //      to any functions
                 // therefore, there is an outstanding handle to `state`, which it is safe to deallocate
                 unsafe {
@@ -463,13 +524,15 @@ enum CallFutureState<'m, 'a> {
     /// Needed because futures are supposed to do nothing unless polled.
     /// Polling will attempt to fire off the request. Success returns `Pending` and transitions to `Executing`,
     /// failure returns `Ready` and transitions to `PostComplete.`
-    Prepared { call: &'m Call<'m, 'a> },
+    Prepared { call: Call<'m, 'a> },
     /// The call has been performed and the message is in flight. Neither callback has been called. Polling will return `Pending`.
     /// This state will transition to `Trapped` if the future is canceled because of a trap in another future.
     Executing { waker: Waker },
     /// `callback` has been called, so the call has been completed. This completion state has not yet been read by the user.
     /// Polling will return `Ready` and transition to `PostComplete`.
-    Complete { result: SystemResult<Vec<u8>> },
+    Complete {
+        result: Result<Response, CallFailed>,
+    },
     /// The completion state of `Complete` has been returned from `poll` as `Poll::Ready`. Polling again will trap.
     #[default]
     PostComplete,
@@ -477,12 +540,14 @@ enum CallFutureState<'m, 'a> {
     Trapped,
 }
 
-struct CallFuture<'m, 'a> {
+/// Future for a call.
+#[derive(Debug)]
+pub struct CallFuture<'m, 'a> {
     state: Arc<RwLock<CallFutureState<'m, 'a>>>,
 }
 
-impl<'m, 'a> Future for CallFuture<'m, 'a> {
-    type Output = SystemResult<Vec<u8>>;
+impl<'m, 'a> std::future::Future for CallFuture<'m, 'a> {
+    type Output = Result<Response, CallFailed>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let self_ref = Pin::into_inner(self);
@@ -497,14 +562,8 @@ impl<'m, 'a> Future for CallFuture<'m, 'a> {
                         };
                         Poll::Pending
                     }
-                    code => {
-                        // The conversion is safe because the code is not 0.
-                        let reject_code = RejectCode::try_from(code).unwrap();
-                        let result = Err(CallRejected {
-                            reject_code,
-                            reject_message: CALL_PERFORM_REJECT_MESSAGE.to_string(),
-                            sync: true,
-                        });
+                    _ => {
+                        let result = Err(CallPerformFailed.into());
                         *state = CallFutureState::PostComplete;
                         Poll::Ready(result)
                     }
@@ -550,15 +609,14 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
         let state = unsafe { Arc::from_raw(state_ptr) };
         let completed_state = CallFutureState::Complete {
             result: match msg_reject_code() {
-                0 => Ok(msg_arg_data()),
+                0 => Ok(Response(msg_arg_data())),
                 code => {
                     // The conversion is safe because the code is not 0.
                     let reject_code = RejectCode::try_from(code).unwrap();
-                    Err(CallRejected {
+                    Err(CallFailed::CallRejected(CallRejected {
                         reject_code,
                         reject_message: msg_reject_msg(),
-                        sync: false,
-                    })
+                    }))
                 }
             },
         };
@@ -597,11 +655,10 @@ unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) 
     // Borrowing does not trap - the rollback from the
     // previous trap ensures that the RwLock can be borrowed again.
     let err_state = CallFutureState::Complete {
-        result: Err(CallRejected {
+        result: Err(CallFailed::CallRejected(CallRejected {
             reject_code: RejectCode::CanisterReject,
             reject_message: "cleanup".into(),
-            sync: false,
-        }),
+        })),
     };
     let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
         CallFutureState::Executing { waker } => waker,
@@ -622,11 +679,6 @@ unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) 
 }
 
 // # Internal END =============================================================
-
-/// Converts a decoder error to a [`CallError`].
-fn decoder_error_to_call_error<T>(err: candid::error::Error) -> CallError {
-    CallError::CandidDecodeFailed(format!("{}: {}", std::any::type_name::<T>(), err))
-}
 
 /// Panics with an informative message when argument encoding fails.
 ///
