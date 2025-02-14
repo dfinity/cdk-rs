@@ -76,6 +76,7 @@ async fn echo(arg: u32) -> u32 {
 async fn call_echo() {
     let n = 1u32;
     let bytes = Encode!(&n).unwrap();
+
     // unbounded_wait
     let res = Call::unbounded_wait(canister_self(), "echo")
         .with_arg(n)
@@ -196,4 +197,30 @@ async fn retry_calls() {
     let call_with_raw_args = Call::bounded_wait(canister_self(), "echo").with_raw_args(&raw_args);
     assert_eq!(retry(call_with_raw_args).await, 0);
 }
+
+#[update]
+async fn join_calls() {
+    use futures::future::{join_all, Future};
+    use std::pin::Pin;
+    let future1 = async {
+        Call::bounded_wait(canister_self(), "foo")
+            .await
+            .unwrap()
+            .candid::<u32>()
+            .unwrap()
+    };
+    let future2 = async {
+        Call::bounded_wait(canister_self(), "echo")
+            .with_arg(1u32)
+            .await
+            .unwrap()
+            .candid::<u32>()
+            .unwrap()
+    };
+    let futures: Vec<Pin<Box<dyn Future<Output = u32>>>> =
+        vec![Box::pin(future1), Box::pin(future2)];
+    let results = join_all(futures).await;
+    assert_eq!(results, vec![0, 1]);
+}
+
 fn main() {}

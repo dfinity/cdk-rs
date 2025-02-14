@@ -35,4 +35,12 @@ fn call() {
         (),
     )
     .unwrap();
+    let _: () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "join_calls",
+        (),
+    )
+    .unwrap();
 }

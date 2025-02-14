@@ -3,6 +3,7 @@ use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
+use std::future::IntoFuture;
 use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -303,39 +304,50 @@ impl std::borrow::Borrow<[u8]> for Response {
     }
 }
 
-/// The error type for inter-canister calls and decoding the response.
+/// Represents errors that can occur during inter-canister calls.
 ///
-/// See [`Call::call`] or [`Call::call_tuple`].
-#[derive(thiserror::Error, Debug, Clone)]
+/// This is the top-level error type for the inter-canister call API.
+/// It encapsulates all possible errors that can arise, including:
+/// - Call failures (e.g., `ic0.call_perform` failed or asynchronously rejected).
+/// - Candid decoding failures (e.g.,  the response cannot be decoded).
+#[derive(Error, Debug, Clone)]
 pub enum Error {
-    /// The call failed.
+    /// The inter-canister call failed.
+    ///
+    /// This variant wraps errors related to the execution of the call itself.
     #[error(transparent)]
     CallFailed(#[from] CallFailed),
 
-    /// The response could not be decoded as Candid.
+    /// The response from the inter-canister call could not be decoded as Candid.
+    ///
+    /// This variant wraps errors that occur when attempting to decode the response
+    /// into the expected Candid type.
     #[error(transparent)]
     CandidDecodeFailed(#[from] CandidDecodeFailed),
 }
 
-/// The error type for inter-canister calls and decoding the response.
+/// Represents errors that can occur during the execution of an inter-canister call.
 ///
-/// See [`Call::call`] or [`Call::call_tuple`].
-#[derive(thiserror::Error, Debug, Clone)]
+/// This is the error type when awaiting a [`CallFuture`].
+///
+/// It is wrapped by the top-level [`Error::CallFailed`] variant.
+#[derive(Error, Debug, Clone)]
 pub enum CallFailed {
-    /// `ic0.call_perform` returned a non-zero code.
+    /// The `ic0.call_perform` operation returned a non-zero code, indicating a failure.
     #[error(transparent)]
     CallPerformFailed(#[from] CallPerformFailed),
 
-    /// The call was rejected.
+    /// The inter-canister call is rejected.
     #[error(transparent)]
     CallRejected(#[from] CallRejected),
 }
 
-/// The error type for inter-canister calls.
+/// Represents an error that occurs when an inter-canister call is rejected.
 ///
-/// See [`Call::call_raw`] and [`Call::call_oneway`].
+/// The [`reject_code`][`Self::reject_code`] and [`reject_message`][`Self::reject_message`]
+/// are exposed to provide information about the rejection.
 ///
-/// This type is also the inner error type of [`CallError::CallRejected`].
+/// It is wrapped by the [`CallFailed::CallRejected`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("Call rejected: {reject_code} - {reject_message}")]
 pub struct CallRejected {
@@ -364,12 +376,27 @@ impl CallRejected {
     }
 }
 
-/// `ic0.call_perform` returned a non-zero code.
+/// Represents an error that occurs when the `ic0.call_perform` operation fails.
+///
+/// This error type indicates that the underlying `ic0.call_perform` operation
+/// returned a non-zero code, signaling a failure in the call execution.
+///
+/// This is the only possible error that can occur in [`Call::oneway`].
+///
+/// It is wrapped by the [`CallFailed::CallPerformFailed`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("Call perform failed")]
 pub struct CallPerformFailed;
 
-/// Failed to decode the response as Candid.
+/// Represents an error that occurs when the response from an inter-canister call
+/// cannot be decoded as Candid.
+///
+/// This error type provides details about the Candid decoding failure, including
+/// the type that was being decoded and the specific Candid error that occurred.
+///
+/// This is the only possible error that can occur in [`Response::candid`] and [`Response::candid_tuple`].
+///
+/// It is wrapped by the top-level [`Error::CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("Candid decode failed for type: {type_name}, candid error: {candid_error}")]
 pub struct CandidDecodeFailed {
@@ -380,7 +407,7 @@ pub struct CandidDecodeFailed {
 /// Result of a inter-canister call and decoding the response.
 pub type CallResult<R> = Result<R, Error>;
 
-impl<'m, 'a> std::future::IntoFuture for Call<'m, 'a> {
+impl<'m, 'a> IntoFuture for Call<'m, 'a> {
     type Output = Result<Response, CallFailed>;
     type IntoFuture = CallFuture<'m, 'a>;
 
@@ -540,7 +567,11 @@ enum CallFutureState<'m, 'a> {
     Trapped,
 }
 
-/// Future for a call.
+/// Represents a future that resolves to the result of an inter-canister call.
+///
+/// This type is returned by [`IntoFuture::into_future`] when called on a [`Call`].
+/// The `Call` type implements the [`IntoFuture`] trait, allowing it to be converted
+/// into a `CallFuture`. The future can be awaited to retrieve the result of the call.
 #[derive(Debug)]
 pub struct CallFuture<'m, 'a> {
     state: Arc<RwLock<CallFutureState<'m, 'a>>>,
