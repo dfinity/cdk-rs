@@ -1,8 +1,51 @@
-//! APIs to make and manage calls in the canister.
+//! Inter-canister Call API
+//!
+//! This module provides the necessary APIs to make and manage inter-canister calls within a canister.
+//! It offers a builder pattern to configure and execute calls, allowing for flexible and customizable interactions
+//! between canisters.
+//!
+//! # Overview
+//!
+//! The primary type in this module is [`Call`], which represents an inter-canister call. For detailed usage and examples,
+//! refer to the [`Call`] type documentation.
+//!
+//! ```rust, no_run
+//! # use ic_cdk::call::Call;
+//! # async fn bar() {
+//! # let canister_id = ic_cdk::api::canister_self();
+//! # let method = "foo";
+//! let result: u32 = Call::bounded_wait(canister_id, method).await.unwrap().candid().unwrap();
+//! # }
+//! ```
+//!
+//! # Error Handling
+//!
+//! The module defines various error types to handle different failure scenarios during inter-canister calls:
+//!
+//! - [`enum@Error`]: The top-level error type encapsulating all possible errors.
+//! - [`CallFailed`]: Errors related to the execution of the call itself.
+//! - [`CallRejected`]: Errors when an inter-canister call is rejected.
+//! - [`CallPerformFailed`]: Errors when the `ic0.call_perform` operation fails.
+//! - [`CandidDecodeFailed`]: Errors when the response cannot be decoded as Candid.
+//!
+//! ```text
+//! Error
+//! ├── CallFailed
+//! │   ├── CallPerformFailed
+//! │   └── CallRejected
+//! └── CandidDecodeFailed
+//! ```
+//!
+//! # Internal Details
+//!
+//! The module also includes internal types and functions to manage the state and execution of inter-canister calls,
+//! such as [`CallFuture`] and its associated state management.
+
 use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
+use std::borrow::Cow;
 use std::future::IntoFuture;
 use std::mem;
 use std::pin::Pin;
@@ -104,20 +147,7 @@ pub struct Call<'m, 'a> {
     method: &'m str,
     cycles: Option<u128>,
     timeout_seconds: Option<u32>,
-    encoded_args: EncodedArgs<'a>,
-}
-
-/// Encoded arguments for the call.
-#[derive(Debug, Clone)]
-enum EncodedArgs<'a> {
-    /// Owned bytes.
-    ///
-    /// For "no arg", [`Call::with_arg`] and [`Call::with_args`].
-    Owned(Vec<u8>),
-    /// Reference to raw bytes.
-    ///
-    /// For [`Call::with_raw_args`].
-    Ref(&'a [u8]),
+    encoded_args: Cow<'a, [u8]>,
 }
 
 // Constructors
@@ -139,7 +169,7 @@ impl<'m, 'a> Call<'m, 'a> {
             timeout_seconds: Some(10),
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
-            encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
+            encoded_args: Cow::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
         }
     }
 
@@ -154,7 +184,7 @@ impl<'m, 'a> Call<'m, 'a> {
             timeout_seconds: None,
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
-            encoded_args: EncodedArgs::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
+            encoded_args: Cow::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
         }
     }
 }
@@ -166,9 +196,7 @@ impl<'m, 'a> Call<'m, 'a> {
     /// The argument must implement [`CandidType`].
     pub fn with_arg<A: CandidType>(self, arg: A) -> Self {
         Self {
-            encoded_args: EncodedArgs::Owned(
-                encode_one(&arg).unwrap_or_else(panic_when_encode_fails),
-            ),
+            encoded_args: Cow::Owned(encode_one(&arg).unwrap_or_else(panic_when_encode_fails)),
             ..self
         }
     }
@@ -178,9 +206,7 @@ impl<'m, 'a> Call<'m, 'a> {
     /// The arguments are a tuple of types, each implementing [`CandidType`].
     pub fn with_args<A: ArgumentEncoder>(self, args: &A) -> Self {
         Self {
-            encoded_args: EncodedArgs::Owned(
-                encode_args_ref(args).unwrap_or_else(panic_when_encode_fails),
-            ),
+            encoded_args: Cow::Owned(encode_args_ref(args).unwrap_or_else(panic_when_encode_fails)),
             ..self
         }
     }
@@ -188,7 +214,7 @@ impl<'m, 'a> Call<'m, 'a> {
     /// Sets the arguments for the call as raw bytes.
     pub fn with_raw_args(self, raw_args: &'a [u8]) -> Self {
         Self {
-            encoded_args: EncodedArgs::Ref(raw_args),
+            encoded_args: Cow::Borrowed(raw_args),
             ..self
         }
     }
@@ -449,8 +475,8 @@ impl<'m, 'a> Call<'m, 'a> {
         let callee = self.canister_id.as_slice();
         let method = self.method;
         let arg = match &self.encoded_args {
-            EncodedArgs::Owned(vec) => vec,
-            EncodedArgs::Ref(r) => *r,
+            Cow::Owned(vec) => vec,
+            Cow::Borrowed(r) => *r,
         };
         let state_ptr_opt = state_opt.map(Arc::into_raw);
         match state_ptr_opt {
@@ -570,8 +596,8 @@ enum CallFutureState<'m, 'a> {
 /// Represents a future that resolves to the result of an inter-canister call.
 ///
 /// This type is returned by [`IntoFuture::into_future`] when called on a [`Call`].
-/// The `Call` type implements the [`IntoFuture`] trait, allowing it to be converted
-/// into a `CallFuture`. The future can be awaited to retrieve the result of the call.
+/// The [`Call`] type implements the [`IntoFuture`] trait, allowing it to be converted
+/// into a [`CallFuture`]. The future can be awaited to retrieve the result of the call.
 #[derive(Debug)]
 pub struct CallFuture<'m, 'a> {
     state: Arc<RwLock<CallFutureState<'m, 'a>>>,
