@@ -88,6 +88,80 @@ type schnorr_algorithm = variant {
     ed25519;
 };
 
+type satoshi = nat64;
+
+type bitcoin_network = variant {
+    mainnet;
+    testnet;
+};
+
+type bitcoin_address = text;
+
+type bitcoin_block_hash = blob;
+
+type bitcoin_block_header = blob;
+
+type millisatoshi_per_byte = nat64;
+
+type bitcoin_block_height = nat32;
+
+type outpoint = record {
+    txid : blob;
+    vout : nat32;
+};
+
+type utxo = record {
+    outpoint : outpoint;
+    value : satoshi;
+    height : nat32;
+};
+
+type bitcoin_get_utxos_args = record {
+    address : bitcoin_address;
+    network : bitcoin_network;
+    filter : opt variant {
+        min_confirmations : nat32;
+        page : blob;
+    };
+};
+
+type bitcoin_get_utxos_result = record {
+    utxos : vec utxo;
+    tip_block_hash : bitcoin_block_hash;
+    tip_height : bitcoin_block_height;
+    next_page : opt blob;
+};
+
+type bitcoin_get_balance_args = record {
+    address : bitcoin_address;
+    network : bitcoin_network;
+    min_confirmations : opt nat32;
+};
+
+type bitcoin_get_balance_result = satoshi;
+
+type bitcoin_get_current_fee_percentiles_args = record {
+    network : bitcoin_network;
+};
+
+type bitcoin_get_current_fee_percentiles_result = vec millisatoshi_per_byte;
+
+type bitcoin_send_transaction_args = record {
+    transaction : blob;
+    network : bitcoin_network;
+};
+
+type bitcoin_get_block_headers_args = record {
+    start_height : bitcoin_block_height;
+    end_height : opt bitcoin_block_height;
+    network : bitcoin_network;
+};
+
+type bitcoin_get_block_headers_result = record {
+    tip_height : bitcoin_block_height;
+    block_headers : vec bitcoin_block_header;
+};
+
 type node_metrics = record {
     node_id : principal;
     num_blocks_proposed_total : nat64;
@@ -336,6 +410,20 @@ type delete_canister_snapshot_args = record {
     snapshot_id : snapshot_id;
 };
 
+type fetch_canister_logs_args = record {
+    canister_id : canister_id;
+};
+
+type canister_log_record = record {
+    idx : nat64;
+    timestamp_nanos : nat64;
+    content : blob;
+};
+
+type fetch_canister_logs_result = record {
+    canister_log_records : vec canister_log_record;
+};
+
 service ic : {
     create_canister : (create_canister_args) -> (create_canister_result);
     update_settings : (update_settings_args) -> ();
@@ -362,6 +450,13 @@ service ic : {
     schnorr_public_key : (schnorr_public_key_args) -> (schnorr_public_key_result);
     sign_with_schnorr : (sign_with_schnorr_args) -> (sign_with_schnorr_result);
 
+    // bitcoin interface
+    // bitcoin_get_balance : (bitcoin_get_balance_args) -> (bitcoin_get_balance_result);
+    // bitcoin_get_utxos : (bitcoin_get_utxos_args) -> (bitcoin_get_utxos_result);
+    // bitcoin_send_transaction : (bitcoin_send_transaction_args) -> ();
+    // bitcoin_get_current_fee_percentiles : (bitcoin_get_current_fee_percentiles_args) -> (bitcoin_get_current_fee_percentiles_result);
+    // bitcoin_get_block_headers : (bitcoin_get_block_headers_args) -> (bitcoin_get_block_headers_result);
+
     // metrics interface
     node_metrics_history : (node_metrics_history_args) -> (node_metrics_history_result);
 
@@ -377,4 +472,7 @@ service ic : {
     load_canister_snapshot : (load_canister_snapshot_args) -> ();
     list_canister_snapshots : (list_canister_snapshots_args) -> (list_canister_snapshots_result);
     delete_canister_snapshot : (delete_canister_snapshot_args) -> ();
+
+    // canister logging
+    // fetch_canister_logs : (fetch_canister_logs_args) -> (fetch_canister_logs_result) query;
 };
