@@ -330,10 +330,13 @@ impl std::borrow::Borrow<[u8]> for Response {
     }
 }
 
+// Errors ---------------------------------------------------------------------
+
 /// Represents errors that can occur during inter-canister calls.
 ///
 /// This is the top-level error type for the inter-canister call API.
-/// It encapsulates all possible errors that can arise, including:
+///
+/// This encapsulates all possible errors that can arise, including:
 /// - Call failures (e.g., `ic0.call_perform` failed or asynchronously rejected).
 /// - Candid decoding failures (e.g.,  the response cannot be decoded).
 #[derive(Error, Debug, Clone)]
@@ -356,7 +359,7 @@ pub enum Error {
 ///
 /// This is the error type when awaiting a [`CallFuture`].
 ///
-/// It is wrapped by the top-level [`Error::CallFailed`] variant.
+/// This is wrapped by the top-level [`Error::CallFailed`] variant.
 #[derive(Error, Debug, Clone)]
 pub enum CallFailed {
     /// The `ic0.call_perform` operation returned a non-zero code, indicating a failure.
@@ -371,9 +374,9 @@ pub enum CallFailed {
 /// Represents an error that occurs when an inter-canister call is rejected.
 ///
 /// The [`reject_code`][`Self::reject_code`] and [`reject_message`][`Self::reject_message`]
-/// are exposed to provide information about the rejection.
+/// are exposed to provide details of the rejection.
 ///
-/// It is wrapped by the [`CallFailed::CallRejected`] variant.
+/// This is wrapped by the [`CallFailed::CallRejected`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("Call rejected: {reject_code} - {reject_message}")]
 pub struct CallRejected {
@@ -387,16 +390,15 @@ pub struct CallRejected {
 
 impl CallRejected {
     /// Gets the [`RejectCode`].
+    ///
+    /// This code is obtained from [`api::msg_reject_code`](`msg_reject_code`).
     pub fn reject_code(&self) -> RejectCode {
         self.reject_code
     }
 
     /// Retrieves the reject message associated with the call.
     ///
-    /// - For an asynchronous rejection (when the IC rejects the call after it was enqueued),
-    ///   the message is obtained from [`api::msg_reject_msg`](`msg_reject_msg`).
-    /// - For a synchronous rejection (when `ic0.call_perform` returns a non-zero code),
-    ///   the message is set to a fixed string: `"call_perform failed"`.
+    /// This message is obtained from [`api::msg_reject_msg`](`msg_reject_msg`).
     pub fn reject_message(&self) -> &str {
         &self.reject_message
     }
@@ -409,7 +411,7 @@ impl CallRejected {
 ///
 /// This is the only possible error that can occur in [`Call::oneway`].
 ///
-/// It is wrapped by the [`CallFailed::CallPerformFailed`] variant.
+/// This is wrapped by the [`CallFailed::CallPerformFailed`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("Call perform failed")]
 pub struct CallPerformFailed;
@@ -430,7 +432,9 @@ pub struct CandidDecodeFailed {
     candid_error: String,
 }
 
-/// Result of a inter-canister call and decoding the response.
+// Errors END -----------------------------------------------------------------
+
+/// Result of a inter-canister call.
 pub type CallResult<R> = Result<R, Error>;
 
 impl<'m, 'a> IntoFuture for Call<'m, 'a> {
