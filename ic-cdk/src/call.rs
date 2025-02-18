@@ -432,6 +432,91 @@ pub struct CandidDecodeFailed {
     candid_error: String,
 }
 
+/// Extension trait for error types to provide additional methods.
+pub trait CallErrorExt {
+    /// Checks if the error is a clean reject.
+    /// A clean reject means that there must be no state changes on the callee side.
+    fn is_clean_reject(&self) -> bool;
+    /// Checks if the failed call is immediately retryable.
+    /// This method will return false if the call is likely to
+    /// just fail again if we retry it immediatly.
+    fn is_immediately_retryable(&self) -> bool;
+}
+
+impl CallErrorExt for CallPerformFailed {
+    fn is_clean_reject(&self) -> bool {
+        true
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        // TODO: check if this is correct
+        false
+    }
+}
+
+impl CallErrorExt for CallRejected {
+    fn is_clean_reject(&self) -> bool {
+        // Here we apply a conservative whitelist of reject codes that are considered clean.
+        // Once finer `error_code` is available, we can allow more cases to be clean.
+        matches!(
+            self.reject_code,
+            RejectCode::SysFatal | RejectCode::SysTransient | RejectCode::DestinationInvalid
+        )
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        // Here we apply a conservative whitelist of reject codes that are considered clean.
+        // Once finer `error_code` is available, we can allow more cases to be immediately retryable.
+        matches!(self.reject_code, RejectCode::SysTransient)
+    }
+}
+
+impl CallErrorExt for CandidDecodeFailed {
+    fn is_clean_reject(&self) -> bool {
+        // Decoding failure suggests that the inter-canister call was successfully processed by the callee.
+        // Therefore, the callee state is likely changed (unless the callee endpoint doesn't change its own state).
+        false
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        // Decoding failure suggests a mismatch between the expected and actual response types.
+        // Either the callee or the caller has a bug, and retrying the call immediately is unlikely to succeed.
+        false
+    }
+}
+
+impl CallErrorExt for Error {
+    fn is_clean_reject(&self) -> bool {
+        match self {
+            Error::CallFailed(e) => e.is_clean_reject(),
+            Error::CandidDecodeFailed(e) => e.is_clean_reject(),
+        }
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        match self {
+            Error::CallFailed(e) => e.is_immediately_retryable(),
+            Error::CandidDecodeFailed(e) => e.is_immediately_retryable(),
+        }
+    }
+}
+
+impl CallErrorExt for CallFailed {
+    fn is_clean_reject(&self) -> bool {
+        match self {
+            CallFailed::CallPerformFailed(e) => e.is_clean_reject(),
+            CallFailed::CallRejected(e) => e.is_clean_reject(),
+        }
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        match self {
+            CallFailed::CallPerformFailed(e) => e.is_immediately_retryable(),
+            CallFailed::CallRejected(e) => e.is_immediately_retryable(),
+        }
+    }
+}
+
 // Errors END -----------------------------------------------------------------
 
 /// Result of a inter-canister call.

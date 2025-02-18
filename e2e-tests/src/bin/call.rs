@@ -1,4 +1,4 @@
-use candid::Encode;
+use candid::{Encode, Principal};
 use ic_cdk::api::canister_self;
 use ic_cdk::call::Call;
 use ic_cdk::update;
@@ -221,6 +221,18 @@ async fn join_calls() {
         vec![Box::pin(future1), Box::pin(future2)];
     let results = join_all(futures).await;
     assert_eq!(results, vec![0, 1]);
+}
+
+#[update]
+async fn call_error_ext() {
+    // The trait need to be in scope so that the provided methods can be called.
+    use ic_cdk::call::CallErrorExt;
+    // Trigger a DestinationInvalid rejection
+    let err = Call::bounded_wait(Principal::anonymous(), "foobar")
+        .await
+        .unwrap_err();
+    assert!(err.is_clean_reject());
+    assert!(!err.is_immediately_retryable());
 }
 
 fn main() {}
