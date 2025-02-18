@@ -161,6 +161,7 @@ async fn schnorr() {
         message,
         derivation_path,
         key_id,
+        aux: None,
     };
     let SignWithSchnorrResult { signature } = sign_with_schnorr(&arg).await.unwrap();
     assert_eq!(signature.len(), 64);
