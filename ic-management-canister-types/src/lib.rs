@@ -1058,7 +1058,7 @@ pub struct NodeMetrics {
     /// Number of blocks proposed by this node.
     pub num_blocks_proposed_total: u64,
     /// Number of failed block proposals by this node.
-    pub num_blocks_failures_total: u64,
+    pub num_block_failures_total: u64,
 }
 
 /// # Subnet Info Args.
