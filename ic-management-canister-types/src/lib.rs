@@ -676,6 +676,11 @@ pub struct DepositCyclesArgs {
     pub canister_id: CanisterId,
 }
 
+/// # Raw Rand Result
+///
+/// Result type of [`raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
+pub type RawRandResult = Vec<u8>;
+
 /// # HTTP Request Args
 ///
 /// Argument type of [`http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
@@ -980,6 +985,24 @@ pub struct SchnorrPublicKeyResult {
     pub chain_code: Vec<u8>,
 }
 
+/// # Schnorr Aux.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub enum SchnorrAux {
+    #[serde(rename = "bip341")]
+    Bip341(Bip341),
+}
+
+/// # Bip341 variant of Schnorr Aux.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct Bip341 {
+    /// Merkle tree root hash.
+    pub merkle_root_hash: Vec<u8>,
+}
+
 /// # Sign With Schnorr Args.
 ///
 /// Argument type of [`sign_with_schnorr`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_schnorr).
@@ -994,6 +1017,8 @@ pub struct SignWithSchnorrArgs {
     pub derivation_path: Vec<Vec<u8>>,
     /// The key ID.
     pub key_id: SchnorrKeyId,
+    /// Schnorr auxiliary inputs.
+    pub aux: Option<SchnorrAux>,
 }
 
 /// # Sign With Schnorr Result.
@@ -1163,10 +1188,10 @@ pub struct TakeCanisterSnapshotArgs {
     pub replace_snapshot: Option<SnapshotId>,
 }
 
-/// # Take Canister Snapshot Return.
+/// # Take Canister Snapshot Result.
 ///
-/// Return type of [`take_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-take_canister_snapshot).
-pub type TakeCanisterSnapshotReturn = Snapshot;
+/// Result type of [`take_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-take_canister_snapshot).
+pub type TakeCanisterSnapshotResult = Snapshot;
 
 /// # Load Canister Snapshot Args.
 ///
@@ -1194,10 +1219,10 @@ pub struct ListCanisterSnapshotsArgs {
     pub canister_id: CanisterId,
 }
 
-/// # List Canister Snapshots Return.
+/// # List Canister Snapshots Result.
 ///
-/// Return type of [`list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
-pub type ListCanisterSnapshotsReturn = Vec<Snapshot>;
+/// Result type of [`list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
+pub type ListCanisterSnapshotsResult = Vec<Snapshot>;
 
 /// # Delete Canister Snapshot Args.
 ///

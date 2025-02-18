@@ -16,5 +16,6 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
 candid.workspace = true
+candid_parser.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
