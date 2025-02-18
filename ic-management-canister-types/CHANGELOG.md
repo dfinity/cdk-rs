@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Added `aux` field in `SignWithSchnorrArgs`, introducing `SchnorrAux` and `Bip341` types.
+- Fixed `NodeMetrics` which should have a field `num_block_failures_total`, not `num_blocks_failures_total`.
 
 ## [0.1.0] - 2023-01-22
 
