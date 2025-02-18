@@ -16,22 +16,23 @@ use serde::{Deserialize, Serialize};
 
 // Re-export types from `ic_management_canister_types` crate.
 pub use ic_management_canister_types::{
-    CanisterId, CanisterInfoArgs, CanisterInfoResult, CanisterInstallMode, CanisterSettings,
-    CanisterStatusArgs, CanisterStatusResult, CanisterStatusType, Change, ChangeDetails,
-    ChangeOrigin, ChunkHash, ClearChunkStoreArgs, CodeDeploymentMode, CodeDeploymentRecord,
-    ControllersChangeRecord, CreateCanisterResult, CreationRecord, DefiniteCanisterSettings,
-    DeleteCanisterArgs, DeleteCanisterSnapshotArgs, DepositCyclesArgs, EcdsaCurve, EcdsaKeyId,
-    EcdsaPublicKeyArgs, EcdsaPublicKeyResult, FromCanisterRecord, FromUserRecord, HttpHeader,
-    HttpMethod, HttpRequestArgs, HttpRequestResult, ListCanisterSnapshotsArgs,
-    ListCanisterSnapshotsReturn, LoadSnapshotRecord, LogVisibility, NodeMetrics,
-    NodeMetricsHistoryArgs, NodeMetricsHistoryRecord, NodeMetricsHistoryResult,
+    Bip341, CanisterId, CanisterInfoArgs, CanisterInfoResult, CanisterInstallMode,
+    CanisterSettings, CanisterStatusArgs, CanisterStatusResult, CanisterStatusType, Change,
+    ChangeDetails, ChangeOrigin, ChunkHash, ClearChunkStoreArgs, CodeDeploymentMode,
+    CodeDeploymentRecord, ControllersChangeRecord, CreateCanisterResult, CreationRecord,
+    DefiniteCanisterSettings, DeleteCanisterArgs, DeleteCanisterSnapshotArgs, DepositCyclesArgs,
+    EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgs, EcdsaPublicKeyResult, FromCanisterRecord,
+    FromUserRecord, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult,
+    ListCanisterSnapshotsArgs, ListCanisterSnapshotsResult, LoadSnapshotRecord, LogVisibility,
+    NodeMetrics, NodeMetricsHistoryArgs, NodeMetricsHistoryRecord, NodeMetricsHistoryResult,
     ProvisionalCreateCanisterWithCyclesResult, ProvisionalTopUpCanisterArgs, QueryStats,
-    SchnorrAlgorithm, SchnorrKeyId, SchnorrPublicKeyArgs, SchnorrPublicKeyResult,
-    SignWithEcdsaArgs, SignWithEcdsaResult, SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot,
-    SnapshotId, StartCanisterArgs, StopCanisterArgs, StoredChunksArgs, StoredChunksResult,
-    SubnetInfoArgs, SubnetInfoResult, TakeCanisterSnapshotArgs, TakeCanisterSnapshotReturn,
-    TransformArgs, TransformContext, TransformFunc, UpgradeFlags, UploadChunkArgs,
-    UploadChunkResult, WasmMemoryPersistence, WasmModule,
+    RawRandResult, SchnorrAlgorithm, SchnorrAux, SchnorrKeyId, SchnorrPublicKeyArgs,
+    SchnorrPublicKeyResult, SignWithEcdsaArgs, SignWithEcdsaResult, SignWithSchnorrArgs,
+    SignWithSchnorrResult, Snapshot, SnapshotId, StartCanisterArgs, StopCanisterArgs,
+    StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
+    TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
+    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, WasmMemoryPersistence,
+    WasmModule,
 };
 // Following Args types contain `sender_canister_version` field which is set automatically in the corresponding functions.
 // We provide reduced versions of these types to avoid duplication of the field.
@@ -323,7 +324,7 @@ pub async fn deposit_cycles(arg: &DepositCyclesArgs, cycles: u128) -> CallResult
 // Gets 32 pseudo-random bytes.
 ///
 /// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
-pub async fn raw_rand() -> CallResult<Vec<u8>> {
+pub async fn raw_rand() -> CallResult<RawRandResult> {
     Call::new(Principal::management_canister(), "raw_rand")
         .call()
         .await
@@ -586,7 +587,7 @@ pub async fn provisional_top_up_canister(arg: &ProvisionalTopUpCanisterArgs) -> 
 /// See [IC method `take_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-take_canister_snapshot).
 pub async fn take_canister_snapshot(
     arg: &TakeCanisterSnapshotArgs,
-) -> CallResult<TakeCanisterSnapshotReturn> {
+) -> CallResult<TakeCanisterSnapshotResult> {
     Call::new(Principal::management_canister(), "take_canister_snapshot")
         .with_arg(arg)
         .with_guaranteed_response()
@@ -634,7 +635,7 @@ pub struct LoadCanisterSnapshotArgs {
 /// See [IC method `list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
 pub async fn list_canister_snapshots(
     arg: &ListCanisterSnapshotsArgs,
-) -> CallResult<ListCanisterSnapshotsReturn> {
+) -> CallResult<ListCanisterSnapshotsResult> {
     Call::new(Principal::management_canister(), "list_canister_snapshots")
         .with_arg(arg)
         .call()
