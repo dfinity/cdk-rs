@@ -1,6 +1,6 @@
 [package]
 name = "ic-management-canister-types"
-version = "0.1.0"
+version = "0.2.0"
 authors.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -16,5 +16,6 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
 candid.workspace = true
+candid_parser.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
