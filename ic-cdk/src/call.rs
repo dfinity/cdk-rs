@@ -437,9 +437,14 @@ pub trait CallErrorExt {
     /// Checks if the error is a clean reject.
     /// A clean reject means that there must be no state changes on the callee side.
     fn is_clean_reject(&self) -> bool;
-    /// Checks if the failed call is immediately retryable.
-    /// This method will return false if the call is likely to
-    /// just fail again if we retry it immediatly.
+    /// Determines if the failed call can be retried immediately within the update method
+    /// that's handling the error, as opposed to relying on a background timer or heartbeat.
+    ///
+    /// A return value of `true` indicates that an immediate retry *might* succeed,
+    /// but does not guarantee a clean rejection. Callers should also check [`is_clean_reject`](CallErrorExt::is_clean_reject)
+    /// to decide if retrying is appropriate.
+    ///
+    /// For idempotent endpoints, immediate retries are generally safe when this returns `true`.
     fn is_immediately_retryable(&self) -> bool;
 }
 
@@ -465,9 +470,12 @@ impl CallErrorExt for CallRejected {
     }
 
     fn is_immediately_retryable(&self) -> bool {
-        // Here we apply a conservative whitelist of reject codes that are considered clean.
+        // Here we apply a conservative whitelist of reject codes that are considered immediately retryable.
         // Once finer `error_code` is available, we can allow more cases to be immediately retryable.
-        matches!(self.reject_code, RejectCode::SysTransient)
+        matches!(
+            self.reject_code,
+            RejectCode::SysTransient | RejectCode::SysUnknown
+        )
     }
 }
 
