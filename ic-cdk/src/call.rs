@@ -440,11 +440,10 @@ pub trait CallErrorExt {
     /// Determines if the failed call can be retried immediately within the update method
     /// that's handling the error, as opposed to relying on a background timer or heartbeat.
     ///
-    /// A return value of `true` indicates that an immediate retry *might* succeed,
-    /// but does not guarantee a clean rejection. Callers should also check [`is_clean_reject`](CallErrorExt::is_clean_reject)
-    /// to decide if retrying is appropriate.
-    ///
-    /// For idempotent endpoints, immediate retries are generally safe when this returns `true`.
+    /// A return value of `true` indicates that an immediate retry *might* succeed, i.e., not result in another error.
+    /// However, the caller is responsible for ensuring that retries are safe in their specific context.
+    /// For idempotent endpoints, immediate retries are generally safe. For non-idempotent ones,
+    /// checking [`is_clean_reject`](CallErrorExt::is_clean_reject) before retrying is recommended.
     fn is_immediately_retryable(&self) -> bool;
 }
 
