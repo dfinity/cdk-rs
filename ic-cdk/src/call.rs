@@ -62,7 +62,7 @@ pub use ic_response_codes::RejectCode;
 ///
 /// # Constructors
 ///
-/// [`Call`] has two constructors that differentiate whether the call is made unboundedly waiting for a response or not.
+/// [`Call`] has two constructors that differentiate whether the call's response is waited for an unbounded amount of time or not.
 /// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 10-second timeout).
 /// - [`unbounded_wait`][Self::unbounded_wait]: wait unboundedly.
 ///
@@ -107,7 +107,7 @@ pub use ic_response_codes::RejectCode;
 /// # Execution
 ///
 /// A [`Call`] can be executed in two ways:
-/// - [`.await`]: convert into a future, execute asynchronously and wait for response.
+/// - `.await`: convert into a future, execute asynchronously and wait for response.
 /// - [`oneway`][Self::oneway]: send a oneway call and not wait for the response.
 ///
 /// ## Example
@@ -123,7 +123,7 @@ pub use ic_response_codes::RejectCode;
 /// # }
 /// ```
 ///
-/// # Deocding the response
+/// # Decoding the response
 ///
 /// If an asynchronous [`Call`] succeeds, the response can be decoded in two ways:
 /// - [`candid`][Response::candid]: decode the response as a single Candid type.
@@ -141,6 +141,13 @@ pub use ic_response_codes::RejectCode;
 /// let result_tuple: (u32,) = res.candid_tuple().unwrap();
 /// # }
 /// ```
+///
+/// <div class="warning">
+///
+/// Using an inter-canister call creates the possibility that your async function will be canceled partway through.
+/// Read the [`futures`](crate::futures) module docs for why and how this happens.
+///
+/// </div>
 #[derive(Debug, Clone)]
 pub struct Call<'m, 'a> {
     canister_id: Principal,
@@ -156,7 +163,7 @@ impl<'m, 'a> Call<'m, 'a> {
     ///
     /// # Note
     ///
-    /// The boundedly waiting is set with a default 10-second timeout.
+    /// The bounded waiting is set with a default 10-second timeout.
     /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
     ///
     /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
@@ -238,7 +245,9 @@ impl<'m, 'a> Call<'m, 'a> {
     ///
     /// If invoked multiple times, the last value takes effect.
     ///
-    /// If invoked on an unbounded call constructed by [`Call::unbounded_wait`] , it will panic.
+    /// # Panics
+    ///
+    /// This method will panic if invoked on an unbounded response waiting call constructed by [`Call::unbounded_wait`] .
     ///
     /// # Note
     ///
@@ -247,7 +256,7 @@ impl<'m, 'a> Call<'m, 'a> {
     /// Unless it's a call to the canister on the same subnet,
     /// and the execution manages to schedule both the request and the response in the same round.
     ///
-    /// To boundedly wait for response, use the  [`Call::bounded_wait`] constructor instead.
+    /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
     pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         match self.timeout_seconds {
             Some(_) => self.timeout_seconds = Some(timeout_seconds),
