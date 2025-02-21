@@ -23,23 +23,7 @@ fn call() {
         &pic,
         canister_id,
         RawEffectivePrincipal::None,
-        "call_echo_with_arg",
-        (),
-    )
-    .unwrap();
-    let _: () = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "call_echo_with_args",
-        (),
-    )
-    .unwrap();
-    let _: () = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "call_echo_with_raw_args",
+        "call_echo",
         (),
     )
     .unwrap();
@@ -48,6 +32,22 @@ fn call() {
         canister_id,
         RawEffectivePrincipal::None,
         "retry_calls",
+        (),
+    )
+    .unwrap();
+    let _: () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "join_calls",
+        (),
+    )
+    .unwrap();
+    let _: () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "call_error_ext",
         (),
     )
     .unwrap();

@@ -691,10 +691,10 @@ pub async fn account_balance(
     ledger_canister_id: Principal,
     args: &AccountBalanceArgs,
 ) -> CallResult<Tokens> {
-    Call::new(ledger_canister_id, "account_balance")
+    Ok(Call::bounded_wait(ledger_canister_id, "account_balance")
         .with_arg(args)
-        .call()
-        .await
+        .await?
+        .candid()?)
 }
 
 /// Calls the "transfer" method on the specified canister.
@@ -721,10 +721,10 @@ pub async fn transfer(
     ledger_canister_id: Principal,
     args: &TransferArgs,
 ) -> CallResult<TransferResult> {
-    Call::new(ledger_canister_id, "transfer")
+    Ok(Call::bounded_wait(ledger_canister_id, "transfer")
         .with_arg(args)
-        .call()
-        .await
+        .await?
+        .candid()?)
 }
 
 /// Return type of the `token_symbol` function.
@@ -745,7 +745,9 @@ pub struct Symbol {
 /// }
 /// ```
 pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
-    Call::new(ledger_canister_id, "token_symbol").call().await
+    Ok(Call::bounded_wait(ledger_canister_id, "token_symbol")
+        .await?
+        .candid()?)
 }
 
 /// Calls the "query_block" method on the specified canister.
@@ -780,10 +782,10 @@ pub async fn query_blocks(
     ledger_canister_id: Principal,
     args: &GetBlocksArgs,
 ) -> CallResult<QueryBlocksResponse> {
-    Call::new(ledger_canister_id, "query_blocks")
+    Ok(Call::bounded_wait(ledger_canister_id, "query_blocks")
         .with_arg(args)
-        .call()
-        .await
+        .await?
+        .candid()?)
 }
 
 /// Continues a query started in [`query_blocks`] by calling its returned archive function.
@@ -820,10 +822,10 @@ pub async fn query_archived_blocks(
     func: &QueryArchiveFn,
     args: &GetBlocksArgs,
 ) -> CallResult<GetBlocksResult> {
-    Call::new(func.0.principal, &func.0.method)
+    Ok(Call::bounded_wait(func.0.principal, &func.0.method)
         .with_arg(args)
-        .call()
-        .await
+        .await?
+        .candid()?)
 }
 
 #[cfg(test)]

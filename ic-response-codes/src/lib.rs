@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use std::error::Error;
+use std::fmt::Display;
 
 /// Classifies why an API request or inter-canister call in the IC is rejected.
 ///
@@ -39,13 +40,27 @@ pub enum RejectCode {
     Unrecognized(u32),
 }
 
+impl Display for RejectCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RejectCode::SysFatal => write!(f, "SysFatal(1)"),
+            RejectCode::SysTransient => write!(f, "SysTransient(2)"),
+            RejectCode::DestinationInvalid => write!(f, "DestinationInvalid(3)"),
+            RejectCode::CanisterReject => write!(f, "CanisterReject(4)"),
+            RejectCode::CanisterError => write!(f, "CanisterError(5)"),
+            RejectCode::SysUnknown => write!(f, "SysUnknown(6)"),
+            RejectCode::Unrecognized(code) => write!(f, "Unrecognized({})", code),
+        }
+    }
+}
+
 /// Error type for [`RejectCode`] conversion.
 ///
 /// The only case where this error can occur is when trying to convert a 0 to a [`RejectCode`].
 #[derive(Clone, Copy, Debug)]
 pub struct ZeroIsInvalidRejectCode;
 
-impl std::fmt::Display for ZeroIsInvalidRejectCode {
+impl Display for ZeroIsInvalidRejectCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "zero is invalid reject code")
     }
