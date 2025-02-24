@@ -1,6 +1,6 @@
 use ic_cdk::management_canister::{
-    http_request, http_request_with_closure, transform_context_from_query, HttpHeader, HttpMethod,
-    HttpRequestArgs, HttpRequestResult, TransformArgs,
+    http_request_with_closure, http_request_with_cycles, transform_context_from_query, HttpHeader,
+    HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs,
 };
 use ic_cdk::{query, update};
 
@@ -38,7 +38,7 @@ async fn get_without_transform() {
         transform: None,
     };
     let cycles = cycles_cost(&args);
-    let res = http_request(&args, cycles).await.unwrap();
+    let res = http_request_with_cycles(&args, cycles).await.unwrap();
     assert_eq!(res.status, 200u32);
     assert_eq!(
         res.headers,
@@ -59,7 +59,7 @@ async fn post() {
         ..Default::default()
     };
     let cycles = cycles_cost(&args);
-    http_request(&args, cycles).await.unwrap();
+    http_request_with_cycles(&args, cycles).await.unwrap();
 }
 
 /// Method is HEAD.
@@ -71,7 +71,7 @@ async fn head() {
         ..Default::default()
     };
     let cycles = cycles_cost(&args);
-    http_request(&args, cycles).await.unwrap();
+    http_request_with_cycles(&args, cycles).await.unwrap();
 }
 
 /// The standard way to define a transform function.
@@ -101,7 +101,7 @@ async fn get_with_transform() {
         ..Default::default()
     };
     let cycles = cycles_cost(&args);
-    let res = http_request(&args, cycles).await.unwrap();
+    let res = http_request_with_cycles(&args, cycles).await.unwrap();
     assert_eq!(res.status, 200u32);
     assert_eq!(
         res.headers,
