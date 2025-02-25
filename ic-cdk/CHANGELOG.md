@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.0-alpha.1] - 2025-02-25
+
+### Added
+
+- New `Call` API.
+  - Supports bounded-wait inter-canister calls.
+  - Uses a builder pattern for optional call configuration.
+  - Allows chaining `.candid()` decoding only when needed.
+  - Provides ergonomic Rust error handling to encourage best practices.
+- Support for Wasm64 module compilation.
+  - Seamlessly handles 32-bit and 64-bit System APIs.
+- Enhanced `update`/`query`/`init` macros with support for custom decoders.
+- Simplified module hierarchy with one level under the crate root.
+  - `api` module offers consistent System API bindings.
+  - `management_canister` module for convenient Management Canister calls.
+  - `bitcoin_canister` module for direct Bitcoin Canisters calls (coming soon).
+
+### Changed
+
+- Introduces a new task scheduler-based executor.
+  - Capable of scheduling any async task, not limited to inter-canister calls.
+  - The `futures` module is now public to expose functionalities related to the async executor.
+
+### Deprecated
+
+- Submodules in `api` are now deprecated in favor of root-level modules.
+  - `api/call` -> `call`
+  - `api/management_canister` -> `management_canister` & `bitcoin_canister`
+  - `api/stable` -> `stable`
+
 ## [0.17.1] - 2024-12-19
 
 ### Added
