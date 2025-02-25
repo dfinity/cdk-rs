@@ -1,11 +1,11 @@
-//! Functions and types for calling [the IC management canister][1].
+//! Functions and types for interacting with the [IC management canister][1].
 //!
-//! This module is a direct translation from its Candid interface description.
+//! This module provides a Rust interface for the IC management canister's Candid interface.
 //!
-//! The functions and types defined in this module serves these purposes:
-//! * Make it easy to construct correct request data.
-//! * Handle the response ergonomically.
-//! * For those calls require cycles payments, the cycles amount is an explicit argument.
+//! The functions and types defined in this module serve the following purposes:
+//! - Facilitate the construction of correct request data.
+//! - Provide ergonomic handling of responses.
+//! - Explicitly specify cycles amounts for calls that require cycles payments.
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
