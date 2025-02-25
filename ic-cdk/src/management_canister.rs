@@ -70,13 +70,13 @@ pub async fn create_canister_with_cycles(
     )
 }
 
-/// Argument type of [`create_canister`].
+/// Argument type of [`create_canister_with_cycles`].
 ///
 /// # Note
 ///
 /// This type is a reduced version of [`ic_management_canister_types::CreateCanisterArgs`].
 ///
-/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister_with_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -430,17 +430,27 @@ mod transform_closure {
 
     /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
     ///
-    /// Do not set the `transform` field of `arg`. To use a Candid function, call [`http_request`] instead.
-    ///
     /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
     ///
-    /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+    /// # Panics
+    ///
+    /// This method will panic if the `transform` field in `arg` is not `None`,
+    /// as it would conflict with the transform function provided by the closure.
+    ///
+    /// # Note
+    ///
+    /// This method provides a straightforward way to transform the HTTP outcall result.
+    /// If you need to specify a custom transform [`context`](`ic_management_canister_types::TransformContext::context`),
+    /// please use [`http_request_with_cycles`] instead.
+    ///
+    /// This call requires cycles payment which varies with the argument.
+    /// When calculating the request size for cycles payment, don't forget to include the extra 40 bytes from the transform closure.
     /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
     #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
-    pub async fn http_request_with_closure(
+    pub async fn http_request_with_closure_with_cycles(
         arg: &HttpRequestArgs,
-        cycles: u128,
         transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
+        cycles: u128,
     ) -> CallResult<HttpRequestResult> {
         assert!(
             arg.transform.is_none(),
@@ -468,7 +478,7 @@ mod transform_closure {
 }
 
 #[cfg(feature = "transform-closure")]
-pub use transform_closure::http_request_with_closure;
+pub use transform_closure::http_request_with_closure_with_cycles;
 
 /// Gets a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///

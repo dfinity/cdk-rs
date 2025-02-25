@@ -1,6 +1,6 @@
 use ic_cdk::management_canister::{
-    http_request_with_closure, http_request_with_cycles, transform_context_from_query, HttpHeader,
-    HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs,
+    http_request_with_closure_with_cycles, http_request_with_cycles, transform_context_from_query,
+    HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs,
 };
 use ic_cdk::{query, update};
 
@@ -134,7 +134,7 @@ async fn get_with_transform_closure() {
     };
     // The transform closure takes 40 bytes.
     let cycles = cycles_cost(&args) + 40 * 400 * 13;
-    let res = http_request_with_closure(&args, cycles, transform)
+    let res = http_request_with_closure_with_cycles(&args, transform, cycles)
         .await
         .unwrap();
     assert_eq!(res.status, 200u32);
