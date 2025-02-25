@@ -690,11 +690,11 @@ pub struct HttpRequestArgs {
     pub url: String,
     /// The maximal size of the response in bytes.
     ///
-    /// If None, 2MiB will be the limit.
+    /// If None, 2MB will be the limit.
     /// This value affects the cost of the http request and it is highly recommended
     /// to set it as low as possible to avoid unnecessary extra costs.
     ///
-    /// See also the [pricing section of HTTP outcalls documentation](https://internetcomputer.org/docs/current/developer-docs/integrations/http_requests/http_requests-how-it-works#pricing).
+    /// See also the [pricing section of HTTP outcalls documentation](https://internetcomputer.org/docs/current/references/https-outcalls-how-it-works#pricing).
     pub max_response_bytes: Option<u64>,
     /// The method of HTTP request.
     pub method: HttpMethod,

@@ -1,6 +1,6 @@
 use candid::Principal;
 use ic_cdk::management_canister::{
-    canister_info, create_canister, install_code, uninstall_code, update_settings,
+    canister_info, create_canister_with_cycles, install_code, uninstall_code, update_settings,
     CanisterInfoArgs, CanisterInfoResult,
     CanisterInstallMode::{Install, Reinstall, Upgrade},
     CanisterSettings, CreateCanisterArgs, InstallCodeArgs, UninstallCodeArgs, UpdateSettingsArgs,
@@ -17,10 +17,11 @@ async fn info(canister_id: Principal) -> CanisterInfoResult {
 
 #[ic_cdk::update]
 async fn canister_lifecycle() -> Principal {
-    let canister_id = create_canister(&CreateCanisterArgs { settings: None }, 1_000_000_000_000)
-        .await
-        .unwrap()
-        .canister_id;
+    let canister_id =
+        create_canister_with_cycles(&CreateCanisterArgs::default(), 1_000_000_000_000)
+            .await
+            .unwrap()
+            .canister_id;
     install_code(&InstallCodeArgs {
         mode: Install,
         arg: vec![],

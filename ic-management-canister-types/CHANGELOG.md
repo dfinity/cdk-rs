@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Doc: `HttpRequestArgs::max_response_bytes` is capped at 2MB, not 2MiB.
+
 ## [0.2.0] - 2025-02-18
 
 ### Changed

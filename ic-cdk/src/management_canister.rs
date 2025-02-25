@@ -46,13 +46,14 @@ use ic_management_canister_types::{
     UpdateSettingsArgs as UpdateSettingsArgsComplete,
 };
 
-/// Registers a new canister and get its canister id.
+/// Creates a new canister with a user-specified amount of cycles.
 ///
 /// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
 ///
-/// This call requires cycles payment. The required cycles varies according to the subnet size (number of nodes).
-/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
-pub async fn create_canister(
+/// Canister creation costs cycles. That amount will be deducted from the newly created canister.
+/// Therefore, the caller must provide enough cycles to cover the cost.
+/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#canister-creation) for more details.
+pub async fn create_canister_with_cycles(
     arg: &CreateCanisterArgs,
     cycles: u128,
 ) -> CallResult<CreateCanisterResult> {
@@ -69,13 +70,13 @@ pub async fn create_canister(
     )
 }
 
-/// Argument type of [`create_canister`].
+/// Argument type of [`create_canister_with_cycles`].
 ///
 /// # Note
 ///
 /// This type is a reduced version of [`ic_management_canister_types::CreateCanisterArgs`].
 ///
-/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister_with_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -347,7 +348,7 @@ pub async fn deposit_cycles(arg: &DepositCyclesArgs, cycles: u128) -> CallResult
     )
 }
 
-// Gets 32 pseudo-random bytes.
+/// Gets 32 pseudo-random bytes.
 ///
 /// See [IC method `raw_rand`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-raw_rand).
 pub async fn raw_rand() -> CallResult<RawRandResult> {
@@ -358,13 +359,16 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
-/// Makes an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+/// Makes an HTTP outcall with a user-specified amount of cycles.
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
 /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
 /// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
-pub async fn http_request(arg: &HttpRequestArgs, cycles: u128) -> CallResult<HttpRequestResult> {
+pub async fn http_request_with_cycles(
+    arg: &HttpRequestArgs,
+    cycles: u128,
+) -> CallResult<HttpRequestResult> {
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "http_request")
             .with_arg(arg)
@@ -392,8 +396,8 @@ pub fn transform_context_from_query(
 #[cfg(feature = "transform-closure")]
 mod transform_closure {
     use super::{
-        http_request, transform_context_from_query, CallResult, HttpRequestArgs, HttpRequestResult,
-        Principal, TransformArgs,
+        http_request_with_cycles, transform_context_from_query, CallResult, HttpRequestArgs,
+        HttpRequestResult, Principal, TransformArgs,
     };
     use candid::{decode_one, encode_one};
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
@@ -426,17 +430,27 @@ mod transform_closure {
 
     /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.
     ///
-    /// Do not set the `transform` field of `arg`. To use a Candid function, call [`http_request`] instead.
-    ///
     /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
     ///
-    /// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+    /// # Panics
+    ///
+    /// This method will panic if the `transform` field in `arg` is not `None`,
+    /// as it would conflict with the transform function provided by the closure.
+    ///
+    /// # Note
+    ///
+    /// This method provides a straightforward way to transform the HTTP outcall result.
+    /// If you need to specify a custom transform [`context`](`ic_management_canister_types::TransformContext::context`),
+    /// please use [`http_request_with_cycles`] instead.
+    ///
+    /// This call requires cycles payment which varies with the argument.
+    /// When calculating the request size for cycles payment, don't forget to include the extra 40 bytes from the transform closure.
     /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
     #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
-    pub async fn http_request_with_closure(
+    pub async fn http_request_with_closure_with_cycles(
         arg: &HttpRequestArgs,
-        cycles: u128,
         transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
+        cycles: u128,
     ) -> CallResult<HttpRequestResult> {
         assert!(
             arg.transform.is_none(),
@@ -459,12 +473,12 @@ mod transform_closure {
             )),
             ..arg.clone()
         };
-        http_request(&arg, cycles).await
+        http_request_with_cycles(&arg, cycles).await
     }
 }
 
 #[cfg(feature = "transform-closure")]
-pub use transform_closure::http_request_with_closure;
+pub use transform_closure::http_request_with_closure_with_cycles;
 
 /// Gets a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///
@@ -478,25 +492,26 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
     )
 }
 
-/// Gets a new ECDSA signature of the given message_hash that can be separately verified against a derived ECDSA public key.
+/// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
+///
+/// The signature can be separately verified against a derived ECDSA public key.
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
 ///
-/// This call requires cycles payment.
-/// This method handles the cycles cost under the hood.
-/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
-pub async fn sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> CallResult<SignWithEcdsaResult> {
+/// This call requires cycles payment which varies for different keys.
+/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
+pub async fn sign_with_ecdsa_with_cycles(
+    arg: &SignWithEcdsaArgs,
+    cycles: u128,
+) -> CallResult<SignWithEcdsaResult> {
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_ecdsa")
             .with_arg(arg)
-            .with_cycles(SIGN_WITH_ECDSA_FEE)
+            .with_cycles(cycles)
             .await?
             .candid()?,
     )
 }
-
-/// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works#fees-for-the-t-ecdsa-production-key
-const SIGN_WITH_ECDSA_FEE: u128 = 26_153_846_153;
 
 /// Gets a SEC1 encoded Schnorr public key for the given canister using the given derivation path.
 ///
@@ -510,25 +525,26 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
     )
 }
 
-/// Gets a new Schnorr signature of the given message that can be separately verified against a derived Schnorr public key.
+/// Gets a new Schnorr signature of the given message with a user-specified amount of cycles.
+///
+/// The signature can be separately verified against a derived Schnorr public key.
 ///
 /// See [IC method `sign_with_schnorr`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_schnorr).
 ///
-/// This call requires cycles payment.
-/// This method handles the cycles cost under the hood.
-/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works) for more details.
-pub async fn sign_with_schnorr(arg: &SignWithSchnorrArgs) -> CallResult<SignWithSchnorrResult> {
+/// This call requires cycles payment which varies for different keys.
+/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
+pub async fn sign_with_schnorr_with_cycles(
+    arg: &SignWithSchnorrArgs,
+    cycles: u128,
+) -> CallResult<SignWithSchnorrResult> {
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
             .with_arg(arg)
-            .with_cycles(SIGN_WITH_SCHNORR_FEE)
+            .with_cycles(cycles)
             .await?
             .candid()?,
     )
 }
-
-/// https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-production-key
-const SIGN_WITH_SCHNORR_FEE: u128 = 26_153_846_153;
 
 /// Gets a time series of subnet's node metrics.
 ///
