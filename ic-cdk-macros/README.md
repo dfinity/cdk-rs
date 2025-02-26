@@ -1,6 +1,6 @@
 [![Documentation](https://docs.rs/ic-cdk-macros/badge.svg)](https://docs.rs/ic-cdk-macros/)
 [![Crates.io](https://img.shields.io/crates/v/ic-cdk-macros.svg)](https://crates.io/crates/ic-cdk-macros)
-[![License](https://img.shields.io/crates/l/ic-cdk-macros.svg)](https://github.com/dfinity/cdk-rs/blob/main/src/ic-cdk-macros/LICENSE)
+[![License](https://img.shields.io/crates/l/ic-cdk-macros.svg)](https://github.com/dfinity/cdk-rs/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/ic-cdk-macros.svg)](https://crates.io/crates/ic-cdk-macros)
 [![CI](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml)
 
@@ -26,6 +26,7 @@ These macros are directly related to the [Internet Computer Specification](https
 * [`post_upgrade`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.post_upgrade.html)
 * [`inspect_message`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.inspect_message.html)
 * [`heartbeat`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.heartbeat.html)
+* [`on_low_wasm_memory`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.on_low_wasm_memory.html)
 * [`update`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.update.html)
 * [`query`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.query.html)
 
