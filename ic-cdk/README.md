@@ -75,11 +75,8 @@ Check [Generating Candid files for Rust canisters](https://internetcomputer.org/
 
 ## More examples
 
-* [Basic examples](https://github.com/dfinity/cdk-rs/tree/main/examples): Demonstrate usage of `ic-cdk` API.
-* [Comprehensive examples](https://github.com/dfinity/examples/tree/master/rust): Illustrate how to build useful Rust canisters.
+The [examples repository](https://github.com/dfinity/examples/tree/master/rust) offers numerous Rust examples demonstrating how to build functional Rust canisters.
 
 ## Manage Data Structures in Stable Memory
 
-Using the `ic_cdk::storage::{stable_save, stable_restore}` API is easy but it doesn't scale well.
-
-[`ic-stable-structures`](https://crates.io/crates/ic-stable-structures) is recommended when you are dealing with multiple data structures with larger datasets.
+For managing larger datasets and multiple data structures in stable memory, consider using the [`ic-stable-structures`](https://crates.io/crates/ic-stable-structures) crate. While the `ic_cdk::storage::{stable_save, stable_restore}` API is straightforward, it may not be efficient for larger datasets. The `ic-stable-structures` crate provides more scalable solutions for such scenarios.
