@@ -549,8 +549,6 @@ pub async fn sign_with_schnorr_with_cycles(
 /// Gets a time series of subnet's node metrics.
 ///
 /// See [IC method `node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node_metrics_history).
-// ! The actual url ends with `ic-node-metrics-history` instead of `ic-node_metrics_history`.
-// ! It will likely be changed to be consistent with the other methods soon.
 pub async fn node_metrics_history(
     arg: &NodeMetricsHistoryArgs,
 ) -> CallResult<NodeMetricsHistoryResult> {
@@ -565,8 +563,6 @@ pub async fn node_metrics_history(
 /// Gets the metadata about a subnet.
 ///
 /// See [IC method `subnet_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-subnet_info).
-// ! The actual url ends with `ic-subnet-info` instead of `ic-subnet_info`.
-// ! It will likely be changed to be consistent with the other methods soon.
 pub async fn subnet_info(arg: &SubnetInfoArgs) -> CallResult<SubnetInfoResult> {
     Ok(
         Call::bounded_wait(Principal::management_canister(), "subnet_info")
