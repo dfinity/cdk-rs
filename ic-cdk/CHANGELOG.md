@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.18.0-alpha.1] - 2025-02-25
 
+Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
+
 ### Added
 
 - New `Call` API.
