@@ -1236,3 +1236,25 @@ pub struct DeleteCanisterSnapshotArgs {
     /// ID of the snapshot to be deleted.
     pub snapshot_id: SnapshotId,
 }
+
+/// # Canister Log Record
+///
+/// See [`FetchCanisterLogsResult::canister_log_records`].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterLogRecord {
+    pub idx: u64,
+    pub timestamp_nanos: u64,
+    pub content: Vec<u8>,
+}
+
+/// # Fetch Canister Logs Result.
+///
+/// Result type of [`fetch_canister_logs`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-fetch_canister_logs).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct FetchCanisterLogsResult {
+    pub canister_log_records: Vec<CanisterLogRecord>,
+}
