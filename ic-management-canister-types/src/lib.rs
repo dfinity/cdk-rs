@@ -1237,6 +1237,17 @@ pub struct DeleteCanisterSnapshotArgs {
     pub snapshot_id: SnapshotId,
 }
 
+/// # Fetch Canister Logs Args.
+///
+/// Argument type of [`fetch_canister_logs`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-fetch_canister_logs).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct FetchCanisterLogsArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+}
+
 /// # Canister Log Record
 ///
 /// See [`FetchCanisterLogsResult::canister_log_records`].
