@@ -6,6 +6,17 @@ use serde::{Deserialize, Serialize};
 /// # Canister ID.
 pub type CanisterId = Principal;
 
+/// # Canister ID Record
+///
+/// Alias for argument and result types of various IC management canister methods.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterIdRecord {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+}
+
 /// # Chunk hash.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
