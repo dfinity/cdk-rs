@@ -161,8 +161,7 @@ impl<M: StableMemory> StableIO<M> {
     /// When it cannot grow the memory to accommodate the new data.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
         let required_capacity_bytes = self.offset + buf.len() as u64;
-        let required_capacity_pages =
-            (required_capacity_bytes + WASM_PAGE_SIZE_IN_BYTES - 1) / WASM_PAGE_SIZE_IN_BYTES;
+        let required_capacity_pages = required_capacity_bytes.div_ceil(WASM_PAGE_SIZE_IN_BYTES);
         let current_pages = self.capacity;
         let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
 
