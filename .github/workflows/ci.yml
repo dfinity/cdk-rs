@@ -185,10 +185,10 @@ jobs:
   aggregate:
     name: ci:required
     if: ${{ always() }}
-    needs: [build, test, wasm64, fmt, clippy, doc]
+    needs: [msrv, test, wasm64, fmt, clippy, doc]
     runs-on: ubuntu-24.04
     steps:
-      - name: check build result
+      - name: check msrv result
         if: ${{ needs.msrv.result != 'success' }}
         run: exit 1
       - name: check test result
