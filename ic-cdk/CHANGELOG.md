@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.18.0-alpha.1] - 2025-02-25
+## [0.18.0-alpha.2] - upcoming
 
 Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
 
@@ -19,7 +19,9 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
   - Provides ergonomic Rust error handling to encourage best practices.
 - Support for Wasm64 module compilation.
   - Seamlessly handles 32-bit and 64-bit System APIs.
-- Enhanced `update`/`query`/`init` macros with support for custom decoders.
+- Enhanced macros for flexible argument decoding and result encoding.
+  - `update`/`query`/`init` macros now support custom argument decoders via `decode_with`.
+  - `update`/`query` macros now support custom result encoders via `encode_with`.
 - Simplified module hierarchy with one level under the crate root.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
