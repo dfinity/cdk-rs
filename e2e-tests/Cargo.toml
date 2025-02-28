@@ -21,7 +21,8 @@ serde_bytes.workspace = true
 sha2.workspace = true
 
 [dev-dependencies]
+candid_parser.workspace = true
 cargo_metadata = "0.19"
+futures = "0.3"
 hex.workspace = true
 pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2024-11-28_03-15-base" }
-futures = "0.3"
