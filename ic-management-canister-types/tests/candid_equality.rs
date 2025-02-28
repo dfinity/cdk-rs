@@ -144,7 +144,7 @@ fn delete_canister_snapshot(_: DeleteCanisterSnapshotArgs) {
     unreachable!()
 }
 
-#[candid_method(update)]
+#[candid_method(query)]
 fn fetch_canister_logs(_: FetchCanisterLogsArgs) -> FetchCanisterLogsResult {
     unreachable!()
 }
