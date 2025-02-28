@@ -13,14 +13,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: cargo build
+  msrv:
+    name: cargo build with MSRV
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-24.04, macos-13-large]
       fail-fast: false
     steps:
+      - name: Install specific Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.75.0 # MSRV, should sync with `rust-toolchain` in `Cargo.toml`
+          target: wasm32-unknown-unknown
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -32,9 +37,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-msrv-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-msrv-
             ${{ runner.os }}-
       - name: Run builds
         run: |
@@ -184,7 +189,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: check build result
-        if: ${{ needs.build.result != 'success' }}
+        if: ${{ needs.msrv.result != 'success' }}
         run: exit 1
       - name: check test result
         if: ${{ needs.test.result != 'success' }}
