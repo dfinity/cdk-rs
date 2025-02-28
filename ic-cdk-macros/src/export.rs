@@ -225,9 +225,14 @@ fn dfn_macro(
         let decode_with_ident = syn::Ident::new(&decode_with, Span::call_site());
         if arg_tuple.len() == 1 {
             let arg_one = &arg_tuple[0];
-            quote! { let #arg_one = #decode_with_ident(); }
+            quote! {
+                let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                let #arg_one = #decode_with_ident(arg_bytes);
+            }
         } else {
-            quote! { let ( #( #arg_tuple, )* ) = #decode_with_ident(); }
+            quote! {
+            let arg_bytes = ::ic_cdk::api::msg_arg_data();
+            let ( #( #arg_tuple, )* ) = #decode_with_ident(arg_bytes); }
         }
     } else if arg_tuple.is_empty() {
         quote! {}

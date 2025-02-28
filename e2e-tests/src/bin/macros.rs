@@ -1,18 +1,16 @@
 use candid::utils::{decode_args, decode_one};
-use ic_cdk::api::msg_arg_data;
 use ic_cdk::{export_candid, update};
 use std::marker::PhantomData;
 
 #[update(decode_with = "decode_arg0")]
 fn arg0() {}
-fn decode_arg0() {}
+fn decode_arg0(_arg_bytes: Vec<u8>) {}
 
 #[update(decode_with = "decode_arg1")]
 fn arg1(a: u32) {
     assert_eq!(a, 1)
 }
-fn decode_arg1() -> u32 {
-    let arg_bytes = msg_arg_data();
+fn decode_arg1(arg_bytes: Vec<u8>) -> u32 {
     decode_one(&arg_bytes).unwrap()
 }
 
@@ -21,8 +19,7 @@ fn arg2(a: u32, b: u32) {
     assert_eq!(a, 1);
     assert_eq!(b, 2);
 }
-fn decode_arg2() -> (u32, u32) {
-    let arg_bytes = msg_arg_data();
+fn decode_arg2(arg_bytes: Vec<u8>) -> (u32, u32) {
     decode_args(&arg_bytes).unwrap()
 }
 
