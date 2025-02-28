@@ -10,7 +10,16 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    /// The name of the function to use for decoding arguments.
+    /// If not provided, the arguments are decoded as Candid.
+    ///
+    /// Even if the argument type is empty, the specified function will still be executed.
     pub decode_with: Option<String>,
+    /// The name of the function to use for encoding the return value.
+    /// If not provided, the return value is encoded as Candid.
+    ///
+    /// If the endpoint returns a tuple, this custom encoder function should take the tuple as an argument.
+    pub encode_with: Option<String>,
     #[serde(default)]
     pub manual_reply: bool,
     #[serde(default)]
@@ -244,22 +253,42 @@ fn dfn_macro(
             _ => 1,
         },
     };
-    if method.is_lifecycle() && return_length > 0 {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("#[{}] function cannot have a return value.", method),
-        ));
+    if method.is_lifecycle() {
+        if return_length > 0 {
+            return Err(Error::new(
+                Span::call_site(),
+                format!("#[{}] function cannot have a return value.", method),
+            ));
+        }
+        if attrs.encode_with.is_some() {
+            return Err(Error::new(
+                attr.span(),
+                format!(
+                    "#[{}] function cannot have an encode_with attribute.",
+                    method
+                ),
+            ));
+        }
     }
     let return_encode = if method.is_lifecycle() || attrs.manual_reply {
         quote! {}
     } else {
-        let return_bytes = match return_length {
-            0 => quote! { ::candid::utils::encode_one(()).unwrap() },
-            1 => quote! { ::candid::utils::encode_one(result).unwrap() },
-            _ => quote! { ::candid::utils::encode_args(result).unwrap() },
+        let return_bytes = if let Some(encode_with) = attrs.encode_with {
+            let encode_with_ident = syn::Ident::new(&encode_with, Span::call_site());
+            match return_length {
+                0 => quote! { #encode_with_ident()},
+                _ => quote! { #encode_with_ident(result)},
+            }
+        } else {
+            match return_length {
+                0 => quote! { ::candid::utils::encode_one(()).unwrap() },
+                1 => quote! { ::candid::utils::encode_one(result).unwrap() },
+                _ => quote! { ::candid::utils::encode_args(result).unwrap() },
+            }
         };
         quote! {
-            ::ic_cdk::api::msg_reply(#return_bytes);
+            let bytes: Vec<u8> = #return_bytes;
+            ::ic_cdk::api::msg_reply(bytes);
         }
     };
 
@@ -388,7 +417,8 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -424,7 +454,8 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -460,7 +491,8 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_args(result).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_args(result).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -498,7 +530,8 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a);
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -536,7 +569,8 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -573,7 +607,8 @@ mod test {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(result).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
@@ -609,7 +644,8 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
-                    ::ic_cdk::api::msg_reply(::candid::utils::encode_one(()).unwrap());
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
                 });
             }
         };
