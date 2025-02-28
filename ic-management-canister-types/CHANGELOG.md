@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.1] - 2025-02-28
+
 ### Added
 
-- Types for IC management canister method `fetch_canister_logs`.
+- Types for `fetch_canister_logs`.
+- `CanisterIdRecord`, an alias for various argument and result types to enhance inter-operability.
 
 ### Fixed
 
