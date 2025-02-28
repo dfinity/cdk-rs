@@ -8,7 +8,9 @@ pub type CanisterId = Principal;
 
 /// # Canister ID Record
 ///
-/// Alias for argument and result types of various IC management canister methods.
+/// A record containing only a `canister_id` field.
+///
+/// The argument or result type of various Management Canister methods are aliases of this type.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -149,13 +151,7 @@ pub struct CreateCanisterArgs {
 /// # Create Canister Result
 ///
 /// Result type of [`create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
-)]
-pub struct CreateCanisterResult {
-    /// Canister ID of the created canister.
-    pub canister_id: CanisterId,
-}
+pub type CreateCanisterResult = CanisterIdRecord;
 
 /// # Update Settings Args
 ///
@@ -194,24 +190,12 @@ pub type UploadChunkResult = ChunkHash;
 /// # Clear Chunk Store Args
 ///
 /// Argument type of [`clear_chunk_store`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-clear_chunk_store).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct ClearChunkStoreArgs {
-    /// The canister whose chunk store will be cleared.
-    pub canister_id: CanisterId,
-}
+pub type ClearChunkStoreArgs = CanisterIdRecord;
 
 /// # Stored Chunks Args
 ///
 /// Argument type of [`stored_chunks`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stored_chunks).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct StoredChunksArgs {
-    /// The canister whose chunk store will be queried.
-    pub canister_id: CanisterId,
-}
+pub type StoredChunksArgs = CanisterIdRecord;
 
 /// # Stored Chunks Result
 ///
@@ -363,36 +347,16 @@ pub struct UninstallCodeArgs {
 /// # Start Canister Args
 ///
 /// Argument type of [`start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct StartCanisterArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
-
+pub type StartCanisterArgs = CanisterIdRecord;
 /// # Stop Canister Args
 ///
 /// Argument type of [`stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct StopCanisterArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
+pub type StopCanisterArgs = CanisterIdRecord;
 
 /// # Canister Status Args
 ///
 /// Argument type of [`canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct CanisterStatusArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
-
+pub type CanisterStatusArgs = CanisterIdRecord;
 /// # Canister Status Result
 ///
 /// Result type of [`canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
@@ -668,24 +632,12 @@ pub struct Change {
 /// # Delete Canister Args
 ///
 /// Argument type of [`delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct DeleteCanisterArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
+pub type DeleteCanisterArgs = CanisterIdRecord;
 
 /// # Deposit Cycles Args
 ///
 /// Argument type of [`deposit_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-deposit_cycles).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct DepositCyclesArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
+pub type DepositCyclesArgs = CanisterIdRecord;
 
 /// # Raw Rand Result
 ///
@@ -1143,13 +1095,7 @@ pub struct ProvisionalCreateCanisterWithCyclesArgs {
 /// # Provisional Create Canister With Cycles Result.
 ///
 /// Result type of [`provisional_create_canister_with_cycles`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-provisional_create_canister_with_cycles).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct ProvisionalCreateCanisterWithCyclesResult {
-    /// Canister ID of the created canister.
-    pub canister_id: CanisterId,
-}
+pub type ProvisionalCreateCanisterWithCyclesResult = CanisterIdRecord;
 
 /// # Provisional Top Up Canister Args.
 ///
@@ -1222,13 +1168,7 @@ pub struct LoadCanisterSnapshotArgs {
 /// # List Canister Snapshots Args.
 ///
 /// Argument type of [`list_canister_snapshots`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-list_canister_snapshots).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct ListCanisterSnapshotsArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
+pub type ListCanisterSnapshotsArgs = CanisterIdRecord;
 
 /// # List Canister Snapshots Result.
 ///
@@ -1251,13 +1191,7 @@ pub struct DeleteCanisterSnapshotArgs {
 /// # Fetch Canister Logs Args.
 ///
 /// Argument type of [`fetch_canister_logs`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-fetch_canister_logs).
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct FetchCanisterLogsArgs {
-    /// Canister ID.
-    pub canister_id: CanisterId,
-}
+pub type FetchCanisterLogsArgs = CanisterIdRecord;
 
 /// # Canister Log Record
 ///
