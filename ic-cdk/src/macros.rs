@@ -59,6 +59,38 @@ pub use ic_cdk_macros::export_candid;
 /// }
 /// ```
 ///
+/// You can specify a custom function to decode the arguments.
+/// The function must take a `Vec<u8>` as an argument and return the same type as the query arguments.
+///
+/// ```rust
+/// # use ic_cdk::query;
+/// fn decode_args(arg_bytes: Vec<u8>) -> (u32, u32) {
+///    // ...
+/// # unimplemented!()
+/// }
+/// #[query(decode_with = "decode_args")]
+/// fn query_function(a: u32, b: u32) {
+///    // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can specify a custom function to encode the return value.
+/// The function must take the query return value as argument and return a `Vec<u8>`.
+///
+/// ```rust
+/// # use ic_cdk::query;
+/// fn encode_result(result: (u32, u32)) -> Vec<u8> {
+///   // ...
+/// # unimplemented!()
+/// }
+/// #[query(encode_with = "encode_result")]
+/// fn query_function() -> (u32, u32) {
+///  // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
 /// To be able to make inter-canister calls from a query call, it must be a *composite* query (which cannot be executed in replicated mode).
 ///
 /// ```rust
@@ -141,6 +173,37 @@ pub use ic_cdk_macros::query;
 /// }
 /// ```
 ///
+/// You can specify a custom function to decode the arguments.
+/// The function must take a `Vec<u8>` as an argument and return the same type as the update arguments.
+///
+/// ```rust
+/// # use ic_cdk::update;
+/// fn decode_args(arg_bytes: Vec<u8>) -> (u32, u32) {
+///    // ...
+/// # unimplemented!()
+/// }
+/// #[update(decode_with = "decode_args")]
+/// fn update_function(a: u32, b: u32) {
+///    // ...
+/// # unimplemented!()
+/// }
+/// ```
+///
+/// You can specify a custom function to encode the return value.
+/// The function must take the update return value as an argument and return a `Vec<u8>`.
+///
+/// ```rust
+/// # use ic_cdk::update;
+/// fn encode_result(result: (u32, u32)) -> Vec<u8> {
+///   // ...
+/// # unimplemented!()
+/// }
+/// #[update(encode_with = "encode_result")]
+/// fn update_function() -> (u32, u32) {
+///  // ...
+/// # unimplemented!()
+/// }
+/// ```
 /// If you would rather call the [`reply()`](crate::api::call::reply) function than return a value,
 /// you will need to set `manual_reply` to `true` so that the canister does not trap.
 ///
@@ -201,6 +264,26 @@ pub use ic_cdk_macros::update;
 /// In this case, the argument will be read from `ic0.msg_arg_data_size/copy` and passed to the
 /// init function upon successful deserialization.
 ///
+/// You can specify a custom function to decode the arguments.
+/// The function must take a `Vec<u8>` as an argument and return the same type as the init arguments.
+///
+/// ```rust
+/// # use ic_cdk::init;
+/// # use candid::*;
+/// # #[derive(Clone, Debug, CandidType, Deserialize)]
+/// # struct InitArg {
+/// #    foo: u8,
+/// # }
+/// fn decode_args(arg_bytes: Vec<u8>) -> InitArg {
+///     // ...
+/// # unimplemented!()
+/// }
+/// #[init(decode_with = "decode_args")]
+/// fn init_function(arg: InitArg) {
+///     // ...
+/// # unimplemented!()
+/// }
+/// ```
 ///
 /// Refer to the [`canister_init` Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-init) for more information.
 pub use ic_cdk_macros::init;
