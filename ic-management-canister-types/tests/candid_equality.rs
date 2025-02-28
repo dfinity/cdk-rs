@@ -165,6 +165,6 @@ mod test {
         let implemented_interface = CandidSource::Text(&implemented_interface_str);
 
         let result = service_equal(declared_interface, implemented_interface);
-        assert!(result.is_ok(), "{:?}\n\n", result.unwrap_err());
+        assert!(result.is_ok(), "{:?}", result.unwrap_err());
     }
 }
