@@ -158,7 +158,7 @@ pub struct Call<'m, 'a> {
 }
 
 // Constructors
-impl<'m, 'a> Call<'m, 'a> {
+impl<'m> Call<'m, '_> {
     /// Constructs a [`Call`] which will **boundedly** wait for response.
     ///
     /// # Note
@@ -197,7 +197,7 @@ impl<'m, 'a> Call<'m, 'a> {
 }
 
 // Configuration
-impl<'m, 'a> Call<'m, 'a> {
+impl<'a> Call<'_, 'a> {
     /// Sets the argument for the call.
     ///
     /// The argument must implement [`CandidType`].
@@ -550,7 +550,7 @@ impl<'m, 'a> IntoFuture for Call<'m, 'a> {
 }
 
 // Execution
-impl<'m, 'a> Call<'m, 'a> {
+impl Call<'_, '_> {
     /// Sends the call and ignores the reply.
     pub fn oneway(&self) -> Result<(), CallPerformFailed> {
         match self.perform(None) {
@@ -708,7 +708,7 @@ pub struct CallFuture<'m, 'a> {
     state: Arc<RwLock<CallFutureState<'m, 'a>>>,
 }
 
-impl<'m, 'a> std::future::Future for CallFuture<'m, 'a> {
+impl std::future::Future for CallFuture<'_, '_> {
     type Output = Result<Response, CallFailed>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
@@ -747,7 +747,7 @@ impl<'m, 'a> std::future::Future for CallFuture<'m, 'a> {
     }
 }
 
-impl<'m, 'a> Drop for CallFuture<'m, 'a> {
+impl Drop for CallFuture<'_, '_> {
     fn drop(&mut self) {
         // If this future is dropped while is_recovering_from_trap is true,
         // then it has been canceled due to a trap in another future.
