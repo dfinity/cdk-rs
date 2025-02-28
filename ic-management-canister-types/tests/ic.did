@@ -474,5 +474,5 @@ service ic : {
     delete_canister_snapshot : (delete_canister_snapshot_args) -> ();
 
     // canister logging
-    // fetch_canister_logs : (fetch_canister_logs_args) -> (fetch_canister_logs_result) query;
+    fetch_canister_logs : (fetch_canister_logs_args) -> (fetch_canister_logs_result) query;
 };
