@@ -281,11 +281,11 @@ extern "C" fn timer_executor() {
     if let Some(mut task) = task {
         match task {
             Task::Once(func) => {
-                func();
+                ic_cdk::futures::in_executor_context(|| func());
                 TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
             }
             Task::Repeated { ref mut func, .. } => {
-                func();
+                ic_cdk::futures::in_executor_context(|| func());
                 TASKS.with(|tasks| tasks.borrow_mut().get_mut(task_id).map(|slot| *slot = task));
             }
         }
