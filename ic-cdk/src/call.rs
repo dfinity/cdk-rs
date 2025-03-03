@@ -645,15 +645,14 @@ impl Call<'_, '_> {
             // SAFETY: `args`, being a &[u8], is a readable sequence of bytes.
             unsafe { ic0::call_data_append(arg.as_ptr() as usize, arg.len()) };
         }
-        if let Some(cycles) = self.cycles {
-            let high = (cycles >> 64) as u64;
-            let low = (cycles & u64::MAX as u128) as u64;
-            // SAFETY: ic0.call_cycles_add128 is always safe to call.
-            unsafe { ic0::call_cycles_add128(high, low) };
-        }
-        if let Some(timeout_seconds) = self.timeout_seconds {
-            // SAFETY: ic0.call_with_best_effort_response is always safe to call.
-            unsafe { ic0::call_with_best_effort_response(timeout_seconds) };
+        match self.cycles {
+            Some(cycles) if cycles > 0 => {
+                let high = (cycles >> 64) as u64;
+                let low = (cycles & u64::MAX as u128) as u64;
+                // SAFETY: ic0.call_cycles_add128 is always safe to call.
+                unsafe { ic0::call_cycles_add128(high, low) };
+            }
+            _ => {}
         }
         // SAFETY: ic0.call_perform is always safe to call
         let res = unsafe { ic0::call_perform() };
