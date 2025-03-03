@@ -654,6 +654,10 @@ impl Call<'_, '_> {
             }
             _ => {}
         }
+        if let Some(timeout_seconds) = self.timeout_seconds {
+            // SAFETY: ic0.call_with_best_effort_response is always safe to call.
+            unsafe { ic0::call_with_best_effort_response(timeout_seconds) };
+        }
         // SAFETY: ic0.call_perform is always safe to call
         let res = unsafe { ic0::call_perform() };
         if res != 0 {
