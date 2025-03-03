@@ -17,6 +17,26 @@ const MAINNET_ID: Principal = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 4, 
 const TESTNET_ID: Principal = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]); // "g4xu7-jiaaa-aaaan-aaaaq-cai"
 const REGTEST_ID: Principal = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]); // "g4xu7-jiaaa-aaaan-aaaaq-cai"
 
+// The cycles costs below are from the [API fees & Pricing](https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing) documentation.
+// They are unlikely to change, so hardcoded here for simplicity.
+const GET_UTXO_MAINNET: u128 = 10_000_000_000;
+const GET_UTXO_TESTNET: u128 = 4_000_000_000;
+
+const GET_BALANCE_MAINNET: u128 = 100_000_000;
+const GET_BALANCE_TESTNET: u128 = 40_000_000;
+
+const GET_CURRENT_FEE_PERCENTILES_MAINNET: u128 = 100_000_000;
+const GET_CURRENT_FEE_PERCENTILES_TESTNET: u128 = 40_000_000;
+
+const GET_BLOCK_HEADERS_MAINNET: u128 = 10_000_000_000;
+const GET_BLOCK_HEADERS_TESTNET: u128 = 4_000_000_000;
+
+const SEND_TRANSACTION_SUBMISSION_MAINNET: u128 = 5_000_000_000;
+const SEND_TRANSACTION_SUBMISSION_TESTNET: u128 = 2_000_000_000;
+
+const SEND_TRANSACTION_PAYLOAD_MAINNET: u128 = 20_000_000;
+const SEND_TRANSACTION_PAYLOAD_TESTNET: u128 = 8_000_000;
+
 fn get_canister_id(network: &Network) -> Principal {
     match network {
         Network::Mainnet => MAINNET_ID,
@@ -144,8 +164,14 @@ pub struct GetUtxosResponse {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_utxos) for more details.
 pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResponse> {
     let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_get_utxos")
+    let cycles = match arg.network {
+        Network::Mainnet => GET_UTXO_MAINNET,
+        Network::Testnet => GET_UTXO_TESTNET,
+        Network::Regtest => 0,
+    };
+    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_utxos")
         .with_arg(arg)
+        .with_cycles(cycles)
         .await?
         .candid()?)
 }
@@ -186,8 +212,14 @@ pub struct GetBalanceRequest {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
 pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<Satoshi> {
     let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance")
+    let cycles = match arg.network {
+        Network::Mainnet => GET_BALANCE_MAINNET,
+        Network::Testnet => GET_BALANCE_TESTNET,
+        Network::Regtest => 0,
+    };
+    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_balance")
         .with_arg(arg)
+        .with_cycles(cycles)
         .await?
         .candid()?)
 }
@@ -242,9 +274,15 @@ pub async fn bitcoin_get_current_fee_percentiles(
     arg: GetCurrentFeePercentilesRequest,
 ) -> CallResult<Vec<MillisatoshiPerByte>> {
     let canister_id = get_canister_id(&arg.network);
+    let cycles = match arg.network {
+        Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
+        Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
+        Network::Regtest => 0,
+    };
     Ok(
-        Call::bounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
+        Call::unbounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
             .with_arg(arg)
+            .with_cycles(cycles)
             .await?
             .candid()?,
     )
@@ -284,10 +322,18 @@ pub async fn bitcoin_get_block_headers(
     arg: GetBlockHeadersRequest,
 ) -> CallResult<GetBlockHeadersResponse> {
     let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_get_block_headers")
-        .with_arg(arg)
-        .await?
-        .candid()?)
+    let cycles = match arg.network {
+        Network::Mainnet => GET_BLOCK_HEADERS_MAINNET,
+        Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
+        Network::Regtest => 0,
+    };
+    Ok(
+        Call::unbounded_wait(canister_id, "bitcoin_get_block_headers")
+            .with_arg(arg)
+            .with_cycles(cycles)
+            .await?
+            .candid()?,
+    )
 }
 
 /// Argument type of the [`bitcoin_send_transaction`] function.
@@ -306,8 +352,27 @@ pub struct SendTransactionRequest {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_send_transaction) for more details.
 pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
     let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_send_transaction")
-        .with_arg(arg)
-        .await?
-        .candid()?)
+    let cycles = send_transaction_fee(&arg);
+    Ok(
+        Call::unbounded_wait(canister_id, "bitcoin_send_transaction")
+            .with_arg(arg)
+            .with_cycles(cycles)
+            .await?
+            .candid()?,
+    )
+}
+
+fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
+    let (submission, payload) = match arg.network {
+        Network::Mainnet => (
+            SEND_TRANSACTION_SUBMISSION_MAINNET,
+            SEND_TRANSACTION_PAYLOAD_MAINNET,
+        ),
+        Network::Testnet => (
+            SEND_TRANSACTION_SUBMISSION_TESTNET,
+            SEND_TRANSACTION_PAYLOAD_TESTNET,
+        ),
+        Network::Regtest => (0, 0),
+    };
+    submission + payload * arg.transaction.len() as u128
 }
