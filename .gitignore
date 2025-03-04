@@ -12,8 +12,5 @@ target/
 # The candid-extractor has its own Cargo.lock file which is tracked to build the binary.
 Cargo.lock
 
-# Bitcoin Canister wasm module
-e2e-tests/ic-btc-canister.wasm.gz
-
 # Generated bindings
 **/declarations/

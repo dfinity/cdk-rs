@@ -77,7 +77,6 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
 
 // The linter complains "function `update` is never used"
 // because not EVERY test uses this function.
-#[allow(dead_code)]
 pub fn update<Input, Output>(
     env: &PocketIc,
     canister_id: Principal,
@@ -162,6 +161,25 @@ fn cache_pocket_ic_server() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_pocket_ic() {
+        let _pic = pocket_ic();
+    }
+
+    #[test]
+    fn test_update() {
+        let pic = pocket_ic();
+        let canister_id = pic.create_canister();
+        pic.add_cycles(canister_id, 2_000_000_000_000);
+        pic.install_canister(
+            canister_id,
+            b"\x00asm\x01\x00\x00\x00".to_vec(),
+            vec![],
+            None,
+        );
+        assert!(update::<(), ()>(&pic, canister_id, "insert", ()).is_err());
+    }
 
     #[test]
     fn test_cache_pocket_ic_server() {
