@@ -21,7 +21,8 @@ jobs:
         os: [ubuntu-24.04, macos-13-large]
       fail-fast: false
     steps:
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        run: rustup toolchain install
         with:
           toolchain: 1.75.0 # MSRV, should sync with `rust-toolchain` in `Cargo.toml`
           target: wasm32-unknown-unknown
@@ -54,7 +55,8 @@ jobs:
         os: [ubuntu-24.04, macos-13-large]
       fail-fast: false
     steps:
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        run: rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -84,6 +86,10 @@ jobs:
         os: [ubuntu-24.04, macos-13-large]
       fail-fast: false
     steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rust-src
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -99,10 +105,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-wasm64-
             ${{ runner.os }}-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          components: rust-src
       - name: Run tests
         run: WASM64=1 cargo test --package ic-cdk-e2e-tests --no-fail-fast
 
@@ -110,7 +112,8 @@ jobs:
     name: cargo fmt
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        run: rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -134,7 +137,8 @@ jobs:
     name: cargo clippy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        run: rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -158,7 +162,8 @@ jobs:
     name: cargo doc
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        run: rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
