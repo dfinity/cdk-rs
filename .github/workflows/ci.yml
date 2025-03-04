@@ -56,7 +56,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Install Rust toolchain
-        run: rustup toolchain install
+        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
-        run: rustup toolchain install
+        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
-        run: rustup toolchain install
+        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -164,7 +164,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
-        run: rustup toolchain install
+        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
