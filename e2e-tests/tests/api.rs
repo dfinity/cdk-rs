@@ -1,8 +1,8 @@
 use candid::Principal;
-use pocket_ic::{ErrorCode, UserError, WasmResult};
+use pocket_ic::ErrorCode;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 #[test]
 fn call_api() {
@@ -15,44 +15,40 @@ fn call_api() {
     let res = pic
         .update_call(canister_id, sender, "call_msg_arg_data", vec![42])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_msg_caller", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
-    let res = pic
-        .update_call(canister_id, sender, "call_msg_deadline_caller", vec![])
-        .unwrap();
+    assert!(res.is_empty());
     // Unlike the other entry points, `call_msg_dealine_caller` was implemented with the `#[update]` macro.
-    // So it returns the bytes of the Candid value `()` which is not the vec![]`.
-    // The assertion below is to check if the call was successful.
-    assert!(matches!(res, WasmResult::Reply(_)));
+    // So we use the update method which assumes candid
+    let _: () = update(&pic, canister_id, "call_msg_deadline_caller", ()).unwrap();
     // `msg_reject_code` and `msg_reject_msg` can't be tested here.
     // They are invoked in the reply/reject callback of inter-canister calls.
     // So the `call.rs` test covers them.
     let res = pic
         .update_call(canister_id, sender, "call_msg_reply", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![42]));
+    assert_eq!(res, vec![42]);
     let res = pic
         .update_call(canister_id, sender, "call_msg_reject", vec![])
-        .unwrap();
-    assert_eq!(res, WasmResult::Reject("e2e test reject".to_string()));
+        .unwrap_err();
+    assert_eq!(res.reject_message, "e2e test reject");
     let res = pic
         .update_call(canister_id, sender, "call_msg_cycles_available", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     // `msg_cycles_refunded` can't be tested here.
     // It can only be called in the reply/reject callback of inter-canister calls.
     // TODO: Find a way to test it.
     let res = pic
         .update_call(canister_id, sender, "call_msg_cycles_accept", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_cycles_burn", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(
             canister_id,
@@ -61,62 +57,62 @@ fn call_api() {
             canister_id.as_slice().to_vec(),
         )
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_canister_cycle_balance", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_canister_status", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_canister_version", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     // `msg_method_name` and `accept_message` are invoked in the inspect_message entry point.
     // Every calls above/below execute the inspect_message entry point.
     // So these two API bindings are tested implicitly.
     let res = pic
         .update_call(canister_id, sender, "call_stable", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_certified_data_set", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .query_call(canister_id, sender, "call_data_certificate", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_time", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     // `global_timer_set` is tested in `timers.rs`.
     let res = pic
         .update_call(canister_id, sender, "call_performance_counter", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_is_controller", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_in_replicated_execution", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![1]));
+    assert_eq!(res, vec![1]);
     let res = pic
         .query_call(canister_id, sender, "call_in_replicated_execution", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![0]));
+    assert_eq!(res, vec![0]);
     let res = pic
         .update_call(canister_id, sender, "call_debug_print", vec![])
         .unwrap();
-    assert_eq!(res, WasmResult::Reply(vec![]));
-    let UserError { code, description } = pic
+    assert!(res.is_empty());
+    let rej = pic
         .update_call(canister_id, sender, "call_trap", vec![])
         .unwrap_err();
-    assert_eq!(code, ErrorCode::CanisterCalledTrap);
-    assert!(description.contains("It's a trap!"));
+    assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
+    assert!(rej.reject_message.contains("It's a trap!"));
 }

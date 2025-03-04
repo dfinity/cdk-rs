@@ -3,7 +3,7 @@ use pocket_ic::common::rest::{
     CanisterHttpHeader, CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse,
     MockCanisterHttpResponse,
 };
-use pocket_ic::{PocketIc, WasmResult};
+use pocket_ic::PocketIc;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pocket_ic};
@@ -49,8 +49,7 @@ fn test_one_http_request(pic: &PocketIc, canister_id: Principal, method: &str) {
         }),
         additional_responses: vec![],
     });
-    let result = pic.await_call(call_id).unwrap();
-    assert!(matches!(result, WasmResult::Reply(_)));
+    pic.await_call(call_id).unwrap();
 }
 
 fn tick_until_next_request(pic: &PocketIc) -> Vec<CanisterHttpRequest> {

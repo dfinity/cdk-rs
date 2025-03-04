@@ -1,5 +1,8 @@
+use candid::utils::{ArgumentDecoder, ArgumentEncoder};
+use candid::Principal;
 use cargo_metadata::MetadataCommand;
-use pocket_ic::{PocketIc, PocketIcBuilder};
+use pocket_ic::common::rest::RawEffectivePrincipal;
+use pocket_ic::{call_candid, PocketIc, PocketIcBuilder, RejectResponse};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Once;
@@ -76,4 +79,20 @@ pub fn pocket_ic() -> PocketIc {
         .with_nonmainnet_features(true)
         .with_ii_subnet()
         .build()
+}
+
+// The linter complains "function `update` is never used"
+// because not EVERY test uses this function.
+#[allow(dead_code)]
+pub fn update<Input, Output>(
+    env: &PocketIc,
+    canister_id: Principal,
+    method: &str,
+    input: Input,
+) -> Result<Output, RejectResponse>
+where
+    Input: ArgumentEncoder,
+    Output: for<'a> ArgumentDecoder<'a>,
+{
+    call_candid(env, canister_id, RawEffectivePrincipal::None, method, input)
 }

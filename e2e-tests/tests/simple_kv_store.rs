@@ -1,9 +1,8 @@
-use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, query_candid};
+use pocket_ic::query_candid;
 use serde_bytes::ByteBuf;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 /// Checks that a canister that uses [`ic_cdk::storage::stable_save`]
 /// and [`ic_cdk::storage::stable_restore`] functions can keep its data
@@ -16,14 +15,8 @@ fn test_storage_roundtrip() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm.clone(), vec![], None);
 
-    let () = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "insert",
-        (&"candid", &b"did"),
-    )
-    .expect("failed to insert 'candid'");
+    let () = update(&pic, canister_id, "insert", (&"candid", &b"did"))
+        .expect("failed to insert 'candid'");
 
     pic.upgrade_canister(canister_id, wasm, vec![], None)
         .expect("failed to upgrade the simple_kv_store canister");
