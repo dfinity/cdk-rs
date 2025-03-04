@@ -16,5 +16,8 @@ examples/*/Cargo.lock
 # The pocket-ic server binary installed by scripts/download_pocket_ic.sh
 e2e-tests/pocket-ic
 
+# Bitcoin Canister wasm module
+e2e-tests/ic-btc-canister.wasm.gz
+
 # Generated bindings
 **/declarations/
