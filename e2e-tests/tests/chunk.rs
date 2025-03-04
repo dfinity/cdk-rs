@@ -1,10 +1,8 @@
 use candid::Principal;
-use pocket_ic::call_candid;
-use pocket_ic::common::rest::RawEffectivePrincipal;
 use sha2::Digest;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 #[test]
 fn test_chunk() {
@@ -13,14 +11,8 @@ fn test_chunk() {
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
-    let (target_canister_id,): (Principal,) = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "call_create_canister",
-        (),
-    )
-    .unwrap();
+    let (target_canister_id,): (Principal,) =
+        update(&pic, canister_id, "call_create_canister", ()).unwrap();
 
     let wasm_module = b"\x00asm\x01\x00\x00\x00".to_vec();
     let wasm_module_hash = sha2::Sha256::digest(&wasm_module).to_vec();
@@ -29,46 +21,41 @@ fn test_chunk() {
     let hash1_expected = sha2::Sha256::digest(&chunk1).to_vec();
     let hash2_expected = sha2::Sha256::digest(&chunk2).to_vec();
 
-    let (hash1_return,): (Vec<u8>,) = call_candid(
+    let (hash1_return,): (Vec<u8>,) = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_upload_chunk",
         (target_canister_id, chunk1.clone()),
     )
     .unwrap();
     assert_eq!(&hash1_return, &hash1_expected);
 
-    let () = call_candid(
+    let () = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_clear_chunk_store",
         (target_canister_id,),
     )
     .unwrap();
 
-    let (_hash1_return,): (Vec<u8>,) = call_candid(
+    let (_hash1_return,): (Vec<u8>,) = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_upload_chunk",
         (target_canister_id, chunk1),
     )
     .unwrap();
-    let (_hash2_return,): (Vec<u8>,) = call_candid(
+    let (_hash2_return,): (Vec<u8>,) = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_upload_chunk",
         (target_canister_id, chunk2),
     )
     .unwrap();
 
-    let (hashes,): (Vec<Vec<u8>>,) = call_candid(
+    let (hashes,): (Vec<Vec<u8>>,) = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_stored_chunks",
         (target_canister_id,),
     )
@@ -78,10 +65,9 @@ fn test_chunk() {
     assert!(hashes.contains(&hash1_expected));
     assert!(hashes.contains(&hash2_expected));
 
-    let () = call_candid(
+    let () = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "call_install_chunked_code",
         (
             target_canister_id,

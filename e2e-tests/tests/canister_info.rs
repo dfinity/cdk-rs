@@ -5,12 +5,11 @@ use ic_cdk::management_canister::{
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,
     FromUserRecord, InstallCodeArgs, UninstallCodeArgs,
 };
-use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, call_candid_as};
+use pocket_ic::{call_candid_as, common::rest::RawEffectivePrincipal};
 use std::time::UNIX_EPOCH;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 #[test]
 fn test_canister_info() {
@@ -29,14 +28,8 @@ fn test_canister_info() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    let new_canister: (Principal,) = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "canister_lifecycle",
-        (),
-    )
-    .expect("Error calling canister_lifecycle");
+    let new_canister: (Principal,) = update(&pic, canister_id, "canister_lifecycle", ())
+        .expect("Error calling canister_lifecycle");
 
     let () = call_candid_as(
         &pic,
@@ -64,14 +57,8 @@ fn test_canister_info() {
     )
     .expect("Error calling install_code");
 
-    let info: (CanisterInfoResult,) = call_candid(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "info",
-        (new_canister.0,),
-    )
-    .expect("Error calling canister_info");
+    let info: (CanisterInfoResult,) =
+        update(&pic, canister_id, "info", (new_canister.0,)).expect("Error calling canister_info");
 
     assert_eq!(
         info.0,

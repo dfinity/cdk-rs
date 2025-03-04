@@ -11,10 +11,6 @@ target/
 # The root Cargo.lock is ignored because the workspace only has library crates.
 # The candid-extractor has its own Cargo.lock file which is tracked to build the binary.
 Cargo.lock
-examples/*/Cargo.lock
-
-# The pocket-ic server binary installed by scripts/download_pocket_ic.sh
-e2e-tests/pocket-ic
 
 # Generated bindings
 **/declarations/
