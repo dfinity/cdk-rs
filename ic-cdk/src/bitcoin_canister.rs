@@ -123,9 +123,10 @@ pub struct Utxo {
 )]
 pub enum UtxosFilter {
     /// Filter by minimum number of confirmations.
-    #[serde(rename = "min_confirmation")]
-    MinConfirmation(u32),
+    #[serde(rename = "min_confirmations")]
+    MinConfirmations(u32),
     /// Filter by a page reference.
+    #[serde(rename = "page")]
     Page(Vec<u8>),
 }
 
@@ -210,7 +211,7 @@ pub struct GetBalanceRequest {
 /// Gets the current balance of a Bitcoin address in Satoshi.
 ///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
-pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<Satoshi> {
+pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
     let canister_id = get_canister_id(&arg.network);
     let cycles = match arg.network {
         Network::Mainnet => GET_BALANCE_MAINNET,
@@ -232,7 +233,7 @@ pub async fn bitcoin_get_balance(arg: GetBalanceRequest) -> CallResult<Satoshi> 
 ///
 /// This function behaves the same as `bitcoin_get_balance`, but it can only be invoked in a **query** call.
 /// It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
-pub async fn bitcoin_get_balance_query(arg: GetBalanceRequest) -> CallResult<Satoshi> {
+pub async fn bitcoin_get_balance_query(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
     let canister_id = get_canister_id(&arg.network);
     Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance_query")
         .with_arg(arg)
@@ -271,7 +272,7 @@ pub type MillisatoshiPerByte = u64;
 /// over the last 10,000 transactions in the specified network,
 /// i.e., over the transactions in the last approximately 4-10 blocks.
 pub async fn bitcoin_get_current_fee_percentiles(
-    arg: GetCurrentFeePercentilesRequest,
+    arg: &GetCurrentFeePercentilesRequest,
 ) -> CallResult<Vec<MillisatoshiPerByte>> {
     let canister_id = get_canister_id(&arg.network);
     let cycles = match arg.network {
@@ -319,7 +320,7 @@ pub struct GetBlockHeadersResponse {
 ///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_block_headers) for more details.
 pub async fn bitcoin_get_block_headers(
-    arg: GetBlockHeadersRequest,
+    arg: &GetBlockHeadersRequest,
 ) -> CallResult<GetBlockHeadersResponse> {
     let canister_id = get_canister_id(&arg.network);
     let cycles = match arg.network {
@@ -350,9 +351,9 @@ pub struct SendTransactionRequest {
 /// Sends a Bitcoin transaction to the Bitcoin network.
 ///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_send_transaction) for more details.
-pub async fn bitcoin_send_transaction(arg: SendTransactionRequest) -> CallResult<()> {
+pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResult<()> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = send_transaction_fee(&arg);
+    let cycles = send_transaction_fee(arg);
     Ok(
         Call::unbounded_wait(canister_id, "bitcoin_send_transaction")
             .with_arg(arg)
