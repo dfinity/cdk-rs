@@ -1,10 +1,9 @@
-use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, query_candid, PocketIc};
+use pocket_ic::{query_candid, PocketIc};
 use std::time::Duration;
 use std::time::SystemTime;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 #[test]
 fn test_timers() {
@@ -14,52 +13,19 @@ fn test_timers() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    call_candid::<(), ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "schedule",
-        (),
-    )
-    .expect("Failed to call schedule");
+    update::<(), ()>(&pic, canister_id, "schedule", ()).expect("Failed to call schedule");
     advance_seconds(&pic, 5);
 
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "schedule_long",
-        (),
-    )
-    .expect("Failed to call schedule_long");
+    update::<_, ()>(&pic, canister_id, "schedule_long", ()).expect("Failed to call schedule_long");
     advance_seconds(&pic, 5);
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "cancel_long",
-        (),
-    )
-    .expect("Failed to call cancel_long");
+    update::<_, ()>(&pic, canister_id, "cancel_long", ()).expect("Failed to call cancel_long");
     advance_seconds(&pic, 5);
 
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "start_repeating",
-        (),
-    )
-    .expect("Failed to call start_repeating");
+    update::<_, ()>(&pic, canister_id, "start_repeating", ())
+        .expect("Failed to call start_repeating");
     advance_seconds(&pic, 3);
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "stop_repeating",
-        (),
-    )
-    .expect("Failed to call stop_repeating");
+    update::<_, ()>(&pic, canister_id, "stop_repeating", ())
+        .expect("Failed to call stop_repeating");
     advance_seconds(&pic, 2);
 
     let (events,): (Vec<String>,) =
@@ -78,22 +44,10 @@ fn test_timers_can_cancel_themselves() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "set_self_cancelling_timer",
-        (),
-    )
-    .expect("Failed to call set_self_cancelling_timer");
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "set_self_cancelling_periodic_timer",
-        (),
-    )
-    .expect("Failed to call set_self_cancelling_periodic_timer");
+    update::<_, ()>(&pic, canister_id, "set_self_cancelling_timer", ())
+        .expect("Failed to call set_self_cancelling_timer");
+    update::<_, ()>(&pic, canister_id, "set_self_cancelling_periodic_timer", ())
+        .expect("Failed to call set_self_cancelling_periodic_timer");
 
     advance_seconds(&pic, 1);
 
@@ -115,10 +69,9 @@ fn test_scheduling_many_timers() {
     pic.add_cycles(canister_id, 100_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    let () = call_candid(
+    let () = update(
         &pic,
         canister_id,
-        RawEffectivePrincipal::None,
         "schedule_n_timers",
         (timers_to_schedule,),
     )
@@ -158,38 +111,19 @@ fn test_set_global_timers() {
         .unwrap()
         .as_nanos() as u64;
     let t1 = t0 + 9_000_000_000;
-    call_candid::<_, ()>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "schedule_long",
-        (),
-    )
-    .expect("Failed to call schedule_long");
+    update::<_, ()>(&pic, canister_id, "schedule_long", ()).expect("Failed to call schedule_long");
 
     // 5 seconds later, the 9s timer is still active
     advance_seconds(&pic, 5);
 
     // Set the expiration time of the timer to t2 = t1 + 5s
     let t2 = t1 + 5_000_000_000;
-    let (previous,) = call_candid::<(u64,), (u64,)>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "global_timer_set",
-        (t2,),
-    )
-    .unwrap();
+    let (previous,) =
+        update::<(u64,), (u64,)>(&pic, canister_id, "global_timer_set", (t2,)).unwrap();
     assert!(previous.abs_diff(t1) < 2); // time error no more than 1 nanosecond
 
     // Deactivate the timer
-    let (previous,) = call_candid::<(u64,), (u64,)>(
-        &pic,
-        canister_id,
-        RawEffectivePrincipal::None,
-        "global_timer_set",
-        (0,),
-    )
-    .unwrap();
+    let (previous,) =
+        update::<(u64,), (u64,)>(&pic, canister_id, "global_timer_set", (0,)).unwrap();
     assert!(previous.abs_diff(t2) < 2); // time error no more than 1 nanosecond
 }
