@@ -179,6 +179,49 @@ fn call_in_replicated_execution() {
     msg_reply(vec![res]);
 }
 
+#[export_name = "canister_update call_cost_call"]
+fn call_cost_call() {
+    let res = cost_call(1, 2);
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_create_canister"]
+fn call_cost_create_canister() {
+    let res = cost_create_canister();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_http_request"]
+fn call_cost_http_request() {
+    let res = cost_http_request(100, 1000);
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_sign_with_ecdsa"]
+fn call_cost_sign_with_ecdsa() {
+    use ic_cdk::management_canister::EcdsaCurve;
+    let res = cost_sign_with_ecdsa("wrong_key_name", EcdsaCurve::Secp256k1);
+    assert!(res.is_err());
+    let res = cost_sign_with_ecdsa("test_key_1", EcdsaCurve::Secp256k1).unwrap();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_sign_with_schnorr"]
+fn call_cost_sign_with_schnorr() {
+    use ic_cdk::management_canister::SchnorrAlgorithm;
+    let res = cost_sign_with_schnorr("wrong_key_name", SchnorrAlgorithm::Bip340secp256k1);
+    assert!(res.is_err());
+    let res = cost_sign_with_schnorr("test_key_1", SchnorrAlgorithm::Bip340secp256k1).unwrap();
+    assert!(res > 0);
+    let res = cost_sign_with_schnorr("test_key_1", SchnorrAlgorithm::Ed25519).unwrap();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_debug_print"]
 fn call_debug_print() {
     debug_print("Hello, world!");

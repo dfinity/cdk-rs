@@ -6,7 +6,8 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn call_api() {
-    let pic = pic_base().build();
+    // with_ii_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
+    let pic = pic_base().with_ii_subnet().build();
     let wasm = cargo_build_canister("api");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
@@ -106,6 +107,26 @@ fn call_api() {
         .query_call(canister_id, sender, "call_in_replicated_execution", vec![])
         .unwrap();
     assert_eq!(res, vec![0]);
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_call", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_create_canister", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_http_request", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_sign_with_ecdsa", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_sign_with_schnorr", vec![])
+        .unwrap();
+    assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_debug_print", vec![])
         .unwrap();
