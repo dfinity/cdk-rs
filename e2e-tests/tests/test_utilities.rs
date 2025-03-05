@@ -77,7 +77,6 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
 
 // The linter complains "function `update` is never used"
 // because not EVERY test uses this function.
-#[allow(dead_code)]
 pub fn update<Input, Output>(
     env: &PocketIc,
     canister_id: Principal,
@@ -91,17 +90,15 @@ where
     call_candid(env, canister_id, RawEffectivePrincipal::None, method, input)
 }
 
-/// Instantiates a PocketIc instance for e2e tests.
+/// Creates a PocketIcBuilder with the base configuration for e2e tests.
 ///
 /// The PocketIc server binary is cached for reuse.
-pub fn pocket_ic() -> PocketIc {
+pub fn pic_base() -> PocketIcBuilder {
     let pocket_ic_server = cache_pocket_ic_server();
     PocketIcBuilder::new()
         .with_server_binary(pocket_ic_server)
         .with_application_subnet()
         .with_nonmainnet_features(true)
-        .with_ii_subnet()
-        .build()
 }
 
 fn cache_pocket_ic_server() -> PathBuf {
@@ -162,6 +159,25 @@ fn cache_pocket_ic_server() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_pocket_ic() {
+        let _pic = pic_base();
+    }
+
+    #[test]
+    fn test_update() {
+        let pic = pic_base().build();
+        let canister_id = pic.create_canister();
+        pic.add_cycles(canister_id, 2_000_000_000_000);
+        pic.install_canister(
+            canister_id,
+            b"\x00asm\x01\x00\x00\x00".to_vec(),
+            vec![],
+            None,
+        );
+        assert!(update::<(), ()>(&pic, canister_id, "insert", ()).is_err());
+    }
 
     #[test]
     fn test_cache_pocket_ic_server() {

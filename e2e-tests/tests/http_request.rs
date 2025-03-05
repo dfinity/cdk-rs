@@ -6,11 +6,11 @@ use pocket_ic::common::rest::{
 use pocket_ic::PocketIc;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic};
+use test_utilities::{cargo_build_canister, pic_base};
 
 #[test]
 fn test_http_request() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
 
     let wasm = cargo_build_canister("http_request");
     let canister_id = pic.create_canister();

@@ -9,11 +9,11 @@ use pocket_ic::{call_candid_as, common::rest::RawEffectivePrincipal};
 use std::time::UNIX_EPOCH;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic, update};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_canister_info() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("canister_info");
     // As of PocketIC server v5.0.0 and client v4.0.0, the first canister creation happens at (time0+4).
     // Each operation advances the Pic by 2 nanos, except for the last operation which advances only by 1 nano.

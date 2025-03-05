@@ -1,11 +1,11 @@
 use candid::Principal;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic, update};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn call_macros() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("macros");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
