@@ -5,7 +5,7 @@ use ic_cdk::bitcoin_canister::Network;
 use std::path::PathBuf;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic, update};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_bitcoin_canister() {
@@ -101,7 +101,7 @@ fn test_bitcoin_canister() {
 fn test_one_network(network: Network, btc_id: Principal, init_args: &str) {
     // The Bitcoin Canisters can still function without connecting to a `bitcoind` node.
     // The interface check and the cycles cost logic are still valid.
-    let pic = pocket_ic();
+    let pic = pic_base().with_bitcoin_subnet().build();
     let wasm = cargo_build_canister("bitcoin_canister");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T

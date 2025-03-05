@@ -1,9 +1,9 @@
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic, update};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_management_canister() {
-    let pic = pocket_ic();
+    let pic = pic_base().with_ii_subnet().build();
 
     let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();

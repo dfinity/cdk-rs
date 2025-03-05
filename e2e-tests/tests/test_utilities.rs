@@ -90,18 +90,15 @@ where
     call_candid(env, canister_id, RawEffectivePrincipal::None, method, input)
 }
 
-/// Instantiates a PocketIc instance for e2e tests.
+/// Creates a PocketIcBuilder with the base configuration for e2e tests.
 ///
 /// The PocketIc server binary is cached for reuse.
-pub fn pocket_ic() -> PocketIc {
+pub fn pic_base() -> PocketIcBuilder {
     let pocket_ic_server = cache_pocket_ic_server();
     PocketIcBuilder::new()
         .with_server_binary(pocket_ic_server)
         .with_application_subnet()
         .with_nonmainnet_features(true)
-        .with_ii_subnet()
-        .with_bitcoin_subnet()
-        .build()
 }
 
 fn cache_pocket_ic_server() -> PathBuf {
@@ -165,12 +162,12 @@ mod tests {
 
     #[test]
     fn test_pocket_ic() {
-        let _pic = pocket_ic();
+        let _pic = pic_base();
     }
 
     #[test]
     fn test_update() {
-        let pic = pocket_ic();
+        let pic = pic_base().build();
         let canister_id = pic.create_canister();
         pic.add_cycles(canister_id, 2_000_000_000_000);
         pic.install_canister(

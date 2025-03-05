@@ -1,11 +1,11 @@
 use pocket_ic::{query_candid, ErrorCode};
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pocket_ic, update};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn panic_after_async_frees_resources() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -45,7 +45,7 @@ fn panic_after_async_frees_resources() {
 
 #[test]
 fn notify_calls() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
@@ -65,7 +65,7 @@ fn notify_calls() {
 
 #[test]
 fn test_composite_query() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
@@ -81,7 +81,7 @@ fn test_composite_query() {
 
 #[test]
 fn channels() {
-    let pic = pocket_ic();
+    let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
