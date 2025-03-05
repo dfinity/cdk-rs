@@ -31,7 +31,7 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "ic0", version = "0.24.0-alpha.1" }
+ic0 = { path = "ic0", version = "0.24.0-alpha.2" }
 ic-cdk = { path = "ic-cdk", version = "0.18.0-alpha.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.0-alpha.1" }
 ic-response-codes = { path = "ic-response-codes", version = "0.1.1" }

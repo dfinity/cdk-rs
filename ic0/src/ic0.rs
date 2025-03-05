@@ -54,6 +54,17 @@ extern "C" {
     pub fn performance_counter(counter_type: u32) -> u64;
     pub fn is_controller(src: usize, size: usize) -> u32;
     pub fn in_replicated_execution() -> u32;
+    pub fn cost_call(method_name_size: u64, payload_size: u64, dst: usize);
+    pub fn cost_create_canister(dst: usize);
+    pub fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize);
+    pub fn cost_sign_with_ecdsa(src: usize, size: usize, ecdsa_curve: u32, dst: usize) -> u32;
+    pub fn cost_sign_with_schnorr(src: usize, size: usize, algorithm: u32, dst: usize) -> u32;
+    pub fn cost_vetkd_derive_encrypted_key(
+        src: usize,
+        size: usize,
+        vetkd_curve: u32,
+        dst: usize,
+    ) -> u32;
     pub fn debug_print(src: usize, size: usize);
     pub fn trap(src: usize, size: usize);
 }
@@ -197,6 +208,39 @@ mod non_wasm {
     }
     pub unsafe fn in_replicated_execution() -> u32 {
         panic!("in_replicated_execution should only be called inside canisters.");
+    }
+    pub unsafe fn cost_call(method_name_size: u64, payload_size: u64, dst: usize) {
+        panic!("cost_call should only be called inside canisters.");
+    }
+    pub unsafe fn cost_create_canister(dst: usize) {
+        panic!("cost_create_canister should only be called inside canisters.");
+    }
+    pub unsafe fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize) {
+        panic!("cost_http_request should only be called inside canisters.");
+    }
+    pub unsafe fn cost_sign_with_ecdsa(
+        src: usize,
+        size: usize,
+        ecdsa_curve: u32,
+        dst: usize,
+    ) -> u32 {
+        panic!("cost_sign_with_ecdsa should only be called inside canisters.");
+    }
+    pub unsafe fn cost_sign_with_schnorr(
+        src: usize,
+        size: usize,
+        algorithm: u32,
+        dst: usize,
+    ) -> u32 {
+        panic!("cost_sign_with_schnorr should only be called inside canisters.");
+    }
+    pub unsafe fn cost_vetkd_derive_encrypted_key(
+        src: usize,
+        size: usize,
+        vetkd_curve: u32,
+        dst: usize,
+    ) -> u32 {
+        panic!("cost_vetkd_derive_encrypted_key should only be called inside canisters.");
     }
     pub unsafe fn debug_print(src: usize, size: usize) {
         panic!("debug_print should only be called inside canisters.");
