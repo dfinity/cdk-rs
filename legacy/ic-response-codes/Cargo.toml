@@ -1,11 +1,13 @@
+[workspace]
+
 [package]
 name = "ic-response-codes"
-version = "0.1.1"
-authors.workspace = true
-edition.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-license.workspace = true
+version = "0.1.2"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2021"
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.75.0"
+license = "Apache-2.0"
 description = "Internet Computer Response Codes"
 homepage = "https://docs.rs/ic-response-codes"
 documentation = "https://docs.rs/ic-response-codes"
