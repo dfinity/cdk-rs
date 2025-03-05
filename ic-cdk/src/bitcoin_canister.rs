@@ -156,7 +156,7 @@ pub struct GetUtxosResponse {
     pub tip_height: u32,
     /// Page reference when the response needs to be paginated.
     ///
-    /// To be used in [`UtxoFilter::Page`].
+    /// To be used in [`UtxosFilter::Page`].
     pub next_page: Option<Vec<u8>>,
 }
 
