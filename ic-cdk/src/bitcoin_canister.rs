@@ -130,7 +130,7 @@ pub enum UtxosFilter {
     Page(Vec<u8>),
 }
 
-/// Argument type of the [`bitcoin_get_utxos`] and [`bitcoin_get_utxos_query`] functions.
+/// Argument type of [`bitcoin_get_utxos`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -143,7 +143,7 @@ pub struct GetUtxosRequest {
     pub filter: Option<UtxosFilter>,
 }
 
-/// Result type of the [`bitcoin_get_utxos`] and [`bitcoin_get_utxos_query`] functions.
+/// Result type of [`bitcoin_get_utxos`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -177,23 +177,7 @@ pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResp
         .candid()?)
 }
 
-/// Gets all unspent transaction outputs (UTXOs) associated with the provided address.
-///
-/// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_utxos_query) for more details.
-///
-/// # Note
-///
-/// This function behaves the same as `bitcoin_get_utxos`, but it can only be invoked in a **query** call.
-/// It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
-pub async fn bitcoin_get_utxos_query(arg: &GetUtxosRequest) -> CallResult<GetUtxosResponse> {
-    let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_get_utxos_query")
-        .with_arg(arg)
-        .await?
-        .candid()?)
-}
-
-/// Argument type of the [`bitcoin_get_balance`] and [`bitcoin_get_balance_query`] functions.
+/// Argument type of [`bitcoin_get_balance`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -221,22 +205,6 @@ pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi>
     Ok(Call::unbounded_wait(canister_id, "bitcoin_get_balance")
         .with_arg(arg)
         .with_cycles(cycles)
-        .await?
-        .candid()?)
-}
-
-/// Gets the current balance of a Bitcoin address in Satoshi.
-///
-/// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
-///
-/// # Note
-///
-/// This function behaves the same as `bitcoin_get_balance`, but it can only be invoked in a **query** call.
-/// It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
-pub async fn bitcoin_get_balance_query(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
-    let canister_id = get_canister_id(&arg.network);
-    Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance_query")
-        .with_arg(arg)
         .await?
         .candid()?)
 }
