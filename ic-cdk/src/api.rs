@@ -526,7 +526,7 @@ pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
 }
 
 /// The error type for [`cost_sign_with_ecdsa`] and [`cost_sign_with_schnorr`].
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum SignatureCostError {
     /// The key name is invalid.
     #[error("invalid key name")]
@@ -544,6 +544,11 @@ pub enum SignatureCostError {
 /// # Error
 ///
 /// Returns an error if the curve is invalid or the key name is invalid.
+///
+/// # Panics
+///
+/// This function will panic if the `ecdsa_curve` is not recognized by the system API.
+/// This should never happen, but if it does, please report it to the ic-cdk maintainers.
 pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
     key_name: T,
     ecdsa_curve: EcdsaCurve,
@@ -566,7 +571,10 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
     };
     match code {
         0 => Ok(dst),
-        0b01 => panic!("Unexpected error: ic0.cost_sign_with_ecdsa rejected the curve {} - {:?}. Please report this issue to the ic-cdk maintainers", ecdsa_curve_index, ecdsa_curve),
+        0b01 => panic!(
+            "Unexpected error: ic0.cost_sign_with_ecdsa rejected the curve {} - {:?}",
+            ecdsa_curve_index, ecdsa_curve
+        ),
         0b10 => Err(SignatureCostError::InvalidKeyName),
         _ => Err(SignatureCostError::UnrecognizedError(code)),
     }
@@ -577,6 +585,11 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
 /// # Error
 ///
 /// Returns an error if the algorithm is invalid or the key name is invalid.
+///
+/// # Panics
+///
+/// This function will panic if the `algorithm` is not recognized by the system API.
+/// This should never happen, but if it does, please report it to the ic-cdk maintainers.
 pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     key_name: T,
     algorithm: SchnorrAlgorithm,
@@ -600,7 +613,10 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     };
     match code {
         0 => Ok(dst),
-        0b01 => panic!("Unexpected error: ic0.cost_sign_with_schnorr rejected the algorithm {} - {:?}. Please report this issue to the ic-cdk maintainers.", algorithm_index, algorithm),
+        0b01 => panic!(
+            "Unexpected error: ic0.cost_sign_with_schnorr rejected the algorithm {} - {:?}",
+            algorithm_index, algorithm
+        ),
         0b10 => Err(SignatureCostError::InvalidKeyName),
         _ => Err(SignatureCostError::UnrecognizedError(code)),
     }

@@ -21,7 +21,7 @@ async fn basic() {
     };
     // 500 B is the minimum cycles required to create a canister.
     // Here we set 1 T cycles for other operations below.
-    let canister_id = create_canister_with_cycles(&arg, 1_000_000_000_000u128)
+    let canister_id = create_canister_with_extra_cycles(&arg, 1_000_000_000_000u128)
         .await
         .unwrap()
         .canister_id;
@@ -117,13 +117,7 @@ async fn ecdsa() {
         derivation_path,
         key_id,
     };
-    // The test key resides on a regular-sized (13-node) application subnet.
-    // So the fee is 10 T cycles.
-    // https://internetcomputer.org/docs/current/references/t-sigs-how-it-works#fees-for-the-t-ecdsa-test-key
-    const SIGN_WITH_ECDSA_FEE: u128 = 10_000_000_000;
-    let SignWithEcdsaResult { signature } = sign_with_ecdsa_with_cycles(&arg, SIGN_WITH_ECDSA_FEE)
-        .await
-        .unwrap();
+    let SignWithEcdsaResult { signature } = sign_with_ecdsa(&arg).await.unwrap();
     assert_eq!(signature.len(), 64);
 }
 
@@ -169,14 +163,7 @@ async fn schnorr() {
         key_id,
         aux: None,
     };
-    // The test key resides on a regular-sized (13-node) application subnet.
-    // So the fee is 10 T cycles.
-    // https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#fees-for-the-t-schnorr-test-key
-    const SIGN_WITH_SCHNORR_FEE: u128 = 10_000_000_000;
-    let SignWithSchnorrResult { signature } =
-        sign_with_schnorr_with_cycles(&arg, SIGN_WITH_SCHNORR_FEE)
-            .await
-            .unwrap();
+    let SignWithSchnorrResult { signature } = sign_with_schnorr(&arg).await.unwrap();
     assert_eq!(signature.len(), 64);
 }
 
@@ -232,7 +219,7 @@ async fn provisional() {
 #[update]
 async fn snapshots() {
     let arg = CreateCanisterArgs::default();
-    let canister_id = create_canister_with_cycles(&arg, 2_000_000_000_000u128)
+    let canister_id = create_canister_with_extra_cycles(&arg, 2_000_000_000_000u128)
         .await
         .unwrap()
         .canister_id;
