@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added System API `cost_*` bindings in `api.rs`.
 - Removed the `_with_cycles` suffix from some Management canister methods
   - They no longer takes `cycles` as an argument.
-  - The cycles cost is calucated inside by invoking the new `cost_*` API.
+  - The cycles cost is calculated using the new `cost_*` API.
 
 ## [0.18.0-alpha.1] - 2025-02-25
 
