@@ -1,33 +1,16 @@
 use candid::{IDLArgs, Principal};
 use candid_parser::parse_idl_args;
 use cargo_metadata::MetadataCommand;
-use pocket_ic::PocketIcBuilder;
+use ic_cdk::bitcoin_canister::Network;
 use std::path::PathBuf;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, update};
+use test_utilities::{cargo_build_canister, pocket_ic, update};
 
 #[test]
 fn test_bitcoin_canister() {
-    // The Bitcoin Canisters can still function without connecting to a `bitcoind` node.
-    // The interface check and the cycles cost logic are still valid.
-    let pic = PocketIcBuilder::new()
-        .with_application_subnet()
-        .with_nonmainnet_features(true)
-        .with_bitcoin_subnet()
-        .build();
-    let wasm = cargo_build_canister("bitcoin_canister");
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
-    pic.install_canister(canister_id, wasm, vec![], None);
-
-    let btc_canister_wasm = std::fs::read(cache_btc_canister_wasm()).unwrap();
     // Mainnet
-    let btc_mainnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 4, 1, 1]);
-    let _ = pic
-        .create_canister_with_id(None, None, btc_mainnet_id)
-        .unwrap();
-    pic.add_cycles(btc_mainnet_id, 10_000_000_000_000u128);
+    let mainnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 4, 1, 1]);
     let mainnet_init_args = r#"(
   record {
     api_access = variant { enabled };
@@ -54,21 +37,9 @@ fn test_bitcoin_canister() {
     disable_api_if_not_fully_synced = variant { enabled };
   },
 )"#;
-    let args: IDLArgs = parse_idl_args(mainnet_init_args).expect("failed to parse IDL args");
-    let encoded_args = args.to_bytes().expect("failed to encode IDL args");
-    pic.install_canister(
-        btc_mainnet_id,
-        btc_canister_wasm.clone(),
-        encoded_args,
-        None,
-    );
-    let () = update(&pic, canister_id, "execute_bitcoin_methods", (true,)).unwrap();
+    test_one_network(Network::Mainnet, mainnet_id, mainnet_init_args);
     // Testnet
-    let btc_testnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]);
-    let _ = pic
-        .create_canister_with_id(None, None, btc_testnet_id)
-        .unwrap();
-    pic.add_cycles(btc_testnet_id, 10_000_000_000_000u128);
+    let testnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]);
     let testnet_init_args = r#"(
   record {
     api_access = variant { enabled };
@@ -95,10 +66,54 @@ fn test_bitcoin_canister() {
     disable_api_if_not_fully_synced = variant { enabled };
   },
 )"#;
-    let args: IDLArgs = parse_idl_args(testnet_init_args).expect("failed to parse IDL args");
+    test_one_network(Network::Testnet, testnet_id, testnet_init_args);
+    // Regtest
+    let regtest_id = testnet_id;
+    let regtest_init_args = r#"(
+  record {
+    api_access = variant { enabled };
+    lazily_evaluate_fee_percentiles = variant { enabled };
+    blocks_source = principal "aaaaa-aa";
+    fees = record {
+      get_current_fee_percentiles = 0 : nat;
+      get_utxos_maximum = 0 : nat;
+      get_block_headers_cycles_per_ten_instructions = 0 : nat;
+      get_current_fee_percentiles_maximum = 0 : nat;
+      send_transaction_per_byte = 0 : nat;
+      get_balance = 0 : nat;
+      get_utxos_cycles_per_ten_instructions = 0 : nat;
+      get_block_headers_base = 0 : nat;
+      get_utxos_base = 0 : nat;
+      get_balance_maximum = 0 : nat;
+      send_transaction_base = 0 : nat;
+      get_block_headers_maximum = 0 : nat;
+    };
+    network = variant { regtest };
+    stability_threshold = 144 : nat;
+    syncing = variant { enabled };
+    burn_cycles = variant { enabled };
+    disable_api_if_not_fully_synced = variant { enabled };
+  },
+)"#;
+    test_one_network(Network::Regtest, regtest_id, regtest_init_args);
+}
+
+fn test_one_network(network: Network, btc_id: Principal, init_args: &str) {
+    // The Bitcoin Canisters can still function without connecting to a `bitcoind` node.
+    // The interface check and the cycles cost logic are still valid.
+    let pic = pocket_ic();
+    let wasm = cargo_build_canister("bitcoin_canister");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let btc_canister_wasm = std::fs::read(cache_btc_canister_wasm()).unwrap();
+    let _ = pic.create_canister_with_id(None, None, btc_id).unwrap();
+    pic.add_cycles(btc_id, 10_000_000_000_000u128);
+    let args: IDLArgs = parse_idl_args(init_args).expect("failed to parse IDL args");
     let encoded_args = args.to_bytes().expect("failed to encode IDL args");
-    pic.install_canister(btc_testnet_id, btc_canister_wasm, encoded_args, None);
-    let () = update(&pic, canister_id, "execute_bitcoin_methods", (false,)).unwrap();
+    pic.install_canister(btc_id, btc_canister_wasm.clone(), encoded_args, None);
+    let () = update(&pic, canister_id, "execute_non_query_methods", (network,)).unwrap();
 }
 
 fn cache_btc_canister_wasm() -> PathBuf {

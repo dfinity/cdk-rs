@@ -2,16 +2,13 @@ use ic_cdk::bitcoin_canister::*;
 use ic_cdk::call::Error;
 use ic_cdk::update;
 
-#[update]
-async fn execute_bitcoin_methods(is_mainnet: bool) {
-    let network = match is_mainnet {
-        true => Network::Mainnet,
-        false => Network::Testnet,
-    };
-    let address = "bcrt1qu58aj62urda83c00eylc6w34yl2s6e5rkzqet7".to_string();
+/// A random Bitcoin address for testing.
+const BTC_ADDRESS: &str = "bcrt1qu58aj62urda83c00eylc6w34yl2s6e5rkzqet7";
 
+#[update]
+async fn execute_non_query_methods(network: Network) {
     let arg = GetUtxosRequest {
-        address: address.clone(),
+        address: BTC_ADDRESS.to_string(),
         network,
         filter: Some(UtxosFilter::MinConfirmations(1)),
     };
@@ -19,7 +16,7 @@ async fn execute_bitcoin_methods(is_mainnet: bool) {
 
     let arg = GetBalanceRequest {
         network,
-        address: address.clone(),
+        address: BTC_ADDRESS.to_string(),
         min_confirmations: Some(1),
     };
     let _balance = bitcoin_get_balance(&arg).await.unwrap();

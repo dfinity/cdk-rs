@@ -100,6 +100,7 @@ pub fn pocket_ic() -> PocketIc {
         .with_application_subnet()
         .with_nonmainnet_features(true)
         .with_ii_subnet()
+        .with_bitcoin_subnet()
         .build()
 }
 
