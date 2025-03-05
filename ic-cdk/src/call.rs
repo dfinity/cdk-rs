@@ -54,7 +54,7 @@ use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 use thiserror::Error;
 
-pub use ic_response_codes::RejectCode;
+pub use ic_error_types::RejectCode;
 
 /// Inter-canister Call.
 ///
@@ -387,22 +387,42 @@ pub enum CallFailed {
 ///
 /// This is wrapped by the [`CallFailed::CallRejected`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Call rejected: {reject_code} - {reject_message}")]
+#[error("Call rejected: {raw_reject_code} - {reject_message}")]
 pub struct CallRejected {
     /// All fields are private so we will be able to change the implementation without breaking the API.
     /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
     /// It will still be possible to get the [`RejectCode`] using the public getter,
     /// because every `error_code` can map to a [`RejectCode`].
-    reject_code: RejectCode,
+    raw_reject_code: u32,
     reject_message: String,
 }
+
+/// The error type for when an unrecognized reject code is encountered.
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[error("Unrecognized reject code: {0}")]
+pub struct UnrecognizedRejectCode(u32);
 
 impl CallRejected {
     /// Gets the [`RejectCode`].
     ///
-    /// This code is obtained from [`api::msg_reject_code`](`msg_reject_code`).
-    pub fn reject_code(&self) -> RejectCode {
-        self.reject_code
+    /// The value is converted from [`api::msg_reject_code`](`msg_reject_code`).
+    ///
+    /// # Errors
+    ///
+    /// If the raw reject code is not recognized, this method will return an [`UnrecognizedRejectCode`] error.
+    /// This can happen if the IC produces a new reject code that hasn't been included in [`ic_error_types::RejectCode`].
+    /// Please check if your `ic-error-types` dependency is up-to-date.
+    /// If the latest version of `ic-error-types` doesn't include the new reject code, please report it to the `ic-cdk` maintainers.
+    pub fn reject_code(&self) -> Result<RejectCode, UnrecognizedRejectCode> {
+        RejectCode::try_from(self.raw_reject_code as u64)
+            .map_err(|_| UnrecognizedRejectCode(self.raw_reject_code))
+    }
+
+    /// Gets the raw numeric [`RejectCode`] value.
+    ///
+    /// This is a "never-fail" version of [`reject_code`](Self::reject_code) that returns the raw numeric value.
+    pub fn raw_reject_code(&self) -> u32 {
+        self.raw_reject_code
     }
 
     /// Retrieves the reject message associated with the call.
@@ -471,19 +491,22 @@ impl CallErrorExt for CallRejected {
     fn is_clean_reject(&self) -> bool {
         // Here we apply a conservative whitelist of reject codes that are considered clean.
         // Once finer `error_code` is available, we can allow more cases to be clean.
-        matches!(
-            self.reject_code,
-            RejectCode::SysFatal | RejectCode::SysTransient | RejectCode::DestinationInvalid
-        )
+        let clean_reject_codes: Vec<u32> = vec![
+            RejectCode::SysFatal as u32,
+            RejectCode::SysTransient as u32,
+            RejectCode::DestinationInvalid as u32,
+        ];
+        clean_reject_codes.contains(&self.raw_reject_code)
     }
 
     fn is_immediately_retryable(&self) -> bool {
         // Here we apply a conservative whitelist of reject codes that are considered immediately retryable.
         // Once finer `error_code` is available, we can allow more cases to be immediately retryable.
-        matches!(
-            self.reject_code,
-            RejectCode::SysTransient | RejectCode::SysUnknown
-        )
+        let immediately_retryable_codes: Vec<u32> = vec![
+            RejectCode::SysTransient as u32,
+            RejectCode::SysUnknown as u32,
+        ];
+        immediately_retryable_codes.contains(&self.raw_reject_code)
     }
 }
 
@@ -774,9 +797,8 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
                 0 => Ok(Response(msg_arg_data())),
                 code => {
                     // The conversion is safe because the code is not 0.
-                    let reject_code = RejectCode::try_from(code).unwrap();
                     Err(CallFailed::CallRejected(CallRejected {
-                        reject_code,
+                        raw_reject_code: code,
                         reject_message: msg_reject_msg(),
                     }))
                 }
@@ -818,7 +840,7 @@ unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) 
     // previous trap ensures that the RwLock can be borrowed again.
     let err_state = CallFutureState::Complete {
         result: Err(CallFailed::CallRejected(CallRejected {
-            reject_code: RejectCode::CanisterReject,
+            raw_reject_code: RejectCode::CanisterReject as u32,
             reject_message: "cleanup".into(),
         })),
     };
