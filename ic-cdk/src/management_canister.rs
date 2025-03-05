@@ -567,6 +567,12 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
 ///
+/// # Errors
+///
+/// Unlike other methods in this module, this method returns an error of type [`SignCallError`].
+///
+/// This is because the signature cost calculation may fail before the inter-canister call is made.
+///
 /// # Note
 ///
 /// Signature costs cycles which varies for different curves and key names.
@@ -603,6 +609,12 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 /// The signature can be separately verified against a derived Schnorr public key.
 ///
 /// See [IC method `sign_with_schnorr`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_schnorr).
+///
+/// # Errors
+///
+/// Unlike other methods in this module, this method returns an error of type [`SignCallError`].
+///
+/// This is because the signature cost calculation may fail before the inter-canister call is made.
 ///
 /// # Note
 ///

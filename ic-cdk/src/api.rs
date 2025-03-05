@@ -541,9 +541,9 @@ pub enum SignatureCostError {
 
 /// Gets the cost of signing a message with the specified ECDSA curve via [`sign_with_ecdsa`](crate::management_canister::sign_with_ecdsa).
 ///
-/// # Error
+/// # Errors
 ///
-/// Returns an error if the curve is invalid or the key name is invalid.
+/// This function will return an error if the `key_name` is invalid.
 ///
 /// # Panics
 ///
@@ -582,9 +582,9 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
 
 /// Gets the cost of signing a message with the specified Schnorr algorithm via [`sign_with_schnorr`](crate::management_canister::sign_with_schnorr).
 ///
-/// # Error
+/// # Errors
 ///
-/// Returns an error if the algorithm is invalid or the key name is invalid.
+/// This function will return an error if the `key_name` is invalid.
 ///
 /// # Panics
 ///
