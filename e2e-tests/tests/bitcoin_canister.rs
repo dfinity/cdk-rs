@@ -37,7 +37,7 @@ fn test_bitcoin_canister() {
     disable_api_if_not_fully_synced = variant { enabled };
   },
 )"#;
-    test_one_network(Network::Mainnet, mainnet_id, mainnet_init_args);
+    test_network(Network::Mainnet, mainnet_id, mainnet_init_args);
     // Testnet
     let testnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]);
     let testnet_init_args = r#"(
@@ -66,7 +66,7 @@ fn test_bitcoin_canister() {
     disable_api_if_not_fully_synced = variant { enabled };
   },
 )"#;
-    test_one_network(Network::Testnet, testnet_id, testnet_init_args);
+    test_network(Network::Testnet, testnet_id, testnet_init_args);
     // Regtest
     let regtest_id = testnet_id;
     let regtest_init_args = r#"(
@@ -95,11 +95,11 @@ fn test_bitcoin_canister() {
     disable_api_if_not_fully_synced = variant { enabled };
   },
 )"#;
-    test_one_network(Network::Regtest, regtest_id, regtest_init_args);
+    test_network(Network::Regtest, regtest_id, regtest_init_args);
 }
 
-fn test_one_network(network: Network, btc_id: Principal, init_args: &str) {
-    // The Bitcoin Canisters can still function without connecting to a `bitcoind` node.
+fn test_network(network: Network, btc_id: Principal, init_args: &str) {
+    // The Bitcoin canisters can still function without connecting to a `bitcoind` node.
     // The interface check and the cycles cost logic are still valid.
     let pic = pic_base().with_bitcoin_subnet().build();
     let wasm = cargo_build_canister("bitcoin_canister");
