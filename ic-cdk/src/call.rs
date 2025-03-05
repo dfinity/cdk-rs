@@ -152,7 +152,7 @@ pub use ic_response_codes::RejectCode;
 pub struct Call<'m, 'a> {
     canister_id: Principal,
     method: &'m str,
-    cycles: Option<u128>,
+    cycles: u128,
     timeout_seconds: Option<u32>,
     encoded_args: Cow<'a, [u8]>,
 }
@@ -171,7 +171,7 @@ impl<'m> Call<'m, '_> {
         Self {
             canister_id,
             method,
-            cycles: None,
+            cycles: 0,
             // Default to 10 seconds.
             timeout_seconds: Some(10),
             // Bytes for empty arguments.
@@ -187,7 +187,7 @@ impl<'m> Call<'m, '_> {
         Self {
             canister_id,
             method,
-            cycles: None,
+            cycles: 0,
             timeout_seconds: None,
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
@@ -235,7 +235,7 @@ impl<'a> Call<'_, 'a> {
     /// - Last invocation determines the final cycles amount
     /// - Does not accumulate cycles across multiple invocations
     pub fn with_cycles(mut self, cycles: u128) -> Self {
-        self.cycles = Some(cycles);
+        self.cycles = cycles;
         self
     }
 
@@ -645,14 +645,11 @@ impl Call<'_, '_> {
             // SAFETY: `args`, being a &[u8], is a readable sequence of bytes.
             unsafe { ic0::call_data_append(arg.as_ptr() as usize, arg.len()) };
         }
-        match self.cycles {
-            Some(cycles) if cycles > 0 => {
-                let high = (cycles >> 64) as u64;
-                let low = (cycles & u64::MAX as u128) as u64;
-                // SAFETY: ic0.call_cycles_add128 is always safe to call.
-                unsafe { ic0::call_cycles_add128(high, low) };
-            }
-            _ => {}
+        if self.cycles > 0 {
+            let high = (self.cycles >> 64) as u64;
+            let low = (self.cycles & u64::MAX as u128) as u64;
+            // SAFETY: ic0.call_cycles_add128 is always safe to call.
+            unsafe { ic0::call_cycles_add128(high, low) };
         }
         if let Some(timeout_seconds) = self.timeout_seconds {
             // SAFETY: ic0.call_with_best_effort_response is always safe to call.
