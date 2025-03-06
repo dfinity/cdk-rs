@@ -19,7 +19,6 @@
 //! For example, [`msg_arg_data`] wraps both `ic0::msg_arg_data_size` and `ic0::msg_arg_data_copy`.
 
 use candid::Principal;
-use ic_management_canister_types::{EcdsaCurve, SchnorrAlgorithm};
 use std::{convert::TryFrom, num::NonZeroU64};
 
 #[doc(hidden)]
@@ -509,7 +508,13 @@ pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
     dst
 }
 
-/// Gets the cost of creating a canister on the same subnet as the calling canister via [`create_canister`](crate::management_canister::create_canister).
+/// Gets the cycle cost of the Management canister method [`creating_canister`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-create_canister).
+///
+/// # Note
+///
+/// [`create_canister`](crate::management_canister::create_canister) and
+/// [`create_canister_with_extra_cycles`](crate::management_canister::create_canister_with_extra_cycles)
+/// invoke this function inside and attach the required cycles to the call.
 pub fn cost_create_canister() -> u128 {
     let mut dst = 0u128;
     // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_create_canister`.
@@ -517,7 +522,12 @@ pub fn cost_create_canister() -> u128 {
     dst
 }
 
-/// Gets the cost of a canister http outcall via [`http_request`](crate::management_canister::http_request).
+/// Gets the cycle cost of the Management canister method [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request).
+///
+/// # Note
+///
+/// [`http_request`](crate::management_canister::http_request) and [`http_request_with_closure`](crate::management_canister::http_request_with_closure)
+/// invoke this function inside and attach the required cycles to the call.
 pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
     let mut dst = 0u128;
     // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_http_request`.
@@ -527,7 +537,11 @@ pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
 
 /// The error type for [`cost_sign_with_ecdsa`] and [`cost_sign_with_schnorr`].
 #[derive(thiserror::Error, Debug, Clone)]
-pub enum SignatureCostError {
+pub enum SignCostError {
+    /// The curve or algorithm is invalid.
+    #[error("invalid curve or algorithm")]
+    InvalidCurveOrAlgorithm,
+
     /// The key name is invalid.
     #[error("invalid key name")]
     InvalidKeyName,
@@ -539,24 +553,31 @@ pub enum SignatureCostError {
     UnrecognizedError(u32),
 }
 
-/// Gets the cost of signing a message with the specified ECDSA curve via [`sign_with_ecdsa`](crate::management_canister::sign_with_ecdsa).
+/// Helper function to handle the result of a signature cost function.
+fn sign_cost_result(dst: u128, code: u32) -> Result<u128, SignCostError> {
+    match code {
+        0 => Ok(dst),
+        0b01 => Err(SignCostError::InvalidCurveOrAlgorithm),
+        0b10 => Err(SignCostError::InvalidKeyName),
+        _ => Err(SignCostError::UnrecognizedError(code)),
+    }
+}
+
+/// Gets the cycle cost of the Management canister method [`sign_with_ecdsa`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-sign_with_ecdsa).
+///
+/// # Note
+///
+/// [`sign_with_ecdsa`](crate::management_canister::sign_with_ecdsa) invokes this function inside and attaches the required cycles to the call.
 ///
 /// # Errors
 ///
-/// This function will return an error if the `key_name` is invalid.
-///
-/// # Panics
-///
-/// This function will panic if the `ecdsa_curve` is not recognized by the system API.
-/// This should never happen, but if it does, please report it to the ic-cdk maintainers.
+/// This function will return an error if the `key_name` or the `ecdsa_curve`is invalid.
+/// The error type [`SignCostError`] provides more information about the reason of the error.
 pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
     key_name: T,
-    ecdsa_curve: EcdsaCurve,
-) -> Result<u128, SignatureCostError> {
+    ecdsa_curve: u32,
+) -> Result<u128, SignCostError> {
     let buf = key_name.as_ref();
-    let ecdsa_curve_index = match ecdsa_curve {
-        EcdsaCurve::Secp256k1 => 0,
-    };
     let mut dst = 0u128;
     // SAFETY:
     // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_sign_with_ecdsa`.
@@ -565,40 +586,28 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
         ic0::cost_sign_with_ecdsa(
             buf.as_ptr() as usize,
             buf.len(),
-            ecdsa_curve_index,
+            ecdsa_curve,
             &mut dst as *mut u128 as usize,
         )
     };
-    match code {
-        0 => Ok(dst),
-        0b01 => panic!(
-            "Unexpected error: ic0.cost_sign_with_ecdsa rejected the curve {} - {:?}",
-            ecdsa_curve_index, ecdsa_curve
-        ),
-        0b10 => Err(SignatureCostError::InvalidKeyName),
-        _ => Err(SignatureCostError::UnrecognizedError(code)),
-    }
+    sign_cost_result(dst, code)
 }
 
-/// Gets the cost of signing a message with the specified Schnorr algorithm via [`sign_with_schnorr`](crate::management_canister::sign_with_schnorr).
+/// Gets the cycle cost of the Management canister method [`sign_with_schnorr`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-sign_with_schnorr).
+///
+/// # Note
+///
+/// [`sign_with_schnorr`](crate::management_canister::sign_with_schnorr) invokes this function inside and attaches the required cycles to the call.
 ///
 /// # Errors
 ///
-/// This function will return an error if the `key_name` is invalid.
-///
-/// # Panics
-///
-/// This function will panic if the `algorithm` is not recognized by the system API.
-/// This should never happen, but if it does, please report it to the ic-cdk maintainers.
+/// This function will return an error if the `key_name` or the `algorithm` is invalid.
+/// The error type [`SignCostError`] provides more information about the reason of the error.
 pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     key_name: T,
-    algorithm: SchnorrAlgorithm,
-) -> Result<u128, SignatureCostError> {
+    algorithm: u32,
+) -> Result<u128, SignCostError> {
     let buf = key_name.as_ref();
-    let algorithm_index = match algorithm {
-        SchnorrAlgorithm::Bip340secp256k1 => 0,
-        SchnorrAlgorithm::Ed25519 => 1,
-    };
     let mut dst = 0u128;
     // SAFETY:
     // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_sign_with_schnorr`.
@@ -607,19 +616,11 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
         ic0::cost_sign_with_schnorr(
             buf.as_ptr() as usize,
             buf.len(),
-            algorithm_index,
+            algorithm,
             &mut dst as *mut u128 as usize,
         )
     };
-    match code {
-        0 => Ok(dst),
-        0b01 => panic!(
-            "Unexpected error: ic0.cost_sign_with_schnorr rejected the algorithm {} - {:?}",
-            algorithm_index, algorithm
-        ),
-        0b10 => Err(SignatureCostError::InvalidKeyName),
-        _ => Err(SignatureCostError::UnrecognizedError(code)),
-    }
+    sign_cost_result(dst, code)
 }
 
 /// Emits textual trace messages.

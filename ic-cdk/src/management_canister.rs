@@ -11,7 +11,7 @@
 
 use crate::api::{
     canister_version, cost_create_canister, cost_http_request, cost_sign_with_ecdsa,
-    cost_sign_with_schnorr, SignatureCostError,
+    cost_sign_with_schnorr, SignCostError,
 };
 use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
@@ -54,7 +54,7 @@ use ic_management_canister_types::{
 pub enum SignCallError {
     /// The signature cost calculation failed.
     #[error(transparent)]
-    SignatureCostError(#[from] SignatureCostError),
+    SignCostError(#[from] SignCostError),
     /// Failed to make the inter-canister call to the Management canister.
     #[error(transparent)]
     CallFailed(#[from] CallFailed),
@@ -569,9 +569,12 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 ///
 /// # Errors
 ///
-/// Unlike other methods in this module, this method returns an error of type [`SignCallError`].
+/// This method returns an error of type [`SignCallError`].
 ///
-/// This is because the signature cost calculation may fail before the inter-canister call is made.
+/// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
+///
+/// Since the call argument is constructed as [`SignWithEcdsaArgs`], the `ecdsa_curve` field is guaranteed to be valid.
+/// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
 ///
 /// # Note
 ///
@@ -582,7 +585,10 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 pub async fn sign_with_ecdsa(
     arg: &SignWithEcdsaArgs,
 ) -> Result<SignWithEcdsaResult, SignCallError> {
-    let cycles = cost_sign_with_ecdsa(&arg.key_id.name, arg.key_id.curve)?;
+    let ecdsa_curve = match arg.key_id.curve {
+        EcdsaCurve::Secp256k1 => 0,
+    };
+    let cycles = cost_sign_with_ecdsa(&arg.key_id.name, ecdsa_curve)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_ecdsa")
             .with_arg(arg)
@@ -612,9 +618,12 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 ///
 /// # Errors
 ///
-/// Unlike other methods in this module, this method returns an error of type [`SignCallError`].
+/// This method returns an error of type [`SignCallError`].
 ///
-/// This is because the signature cost calculation may fail before the inter-canister call is made.
+/// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
+///
+/// Since the call argument is constructed as [`SignWithSchnorrArgs`], the `algorithm` field is guaranteed to be valid.
+/// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
 ///
 /// # Note
 ///
@@ -625,7 +634,11 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 pub async fn sign_with_schnorr(
     arg: &SignWithSchnorrArgs,
 ) -> Result<SignWithSchnorrResult, SignCallError> {
-    let cycles = cost_sign_with_schnorr(&arg.key_id.name, arg.key_id.algorithm)?;
+    let algorithm = match arg.key_id.algorithm {
+        SchnorrAlgorithm::Bip340secp256k1 => 0,
+        SchnorrAlgorithm::Ed25519 => 1,
+    };
+    let cycles = cost_sign_with_schnorr(&arg.key_id.name, algorithm)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
             .with_arg(arg)
