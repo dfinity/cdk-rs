@@ -414,7 +414,7 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
-/// Calculates the cost of an HTTP outcall directly from the [`HttpRequestArg`].
+/// Calculates the cost of an HTTP outcall directly from the [`HttpRequestArgs`].
 /// See [`http_request`] for more details.
 pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
     let request_size = (arg.url.len()
