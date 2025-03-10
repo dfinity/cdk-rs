@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Implemented trait that convert from `EcdsaCurve` and `SchnorrAlgorithm` into `u32`.
+
 ## [0.2.1] - 2025-02-28
 
 ### Added

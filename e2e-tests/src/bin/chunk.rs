@@ -1,6 +1,6 @@
 use candid::Principal;
 use ic_cdk::management_canister::{
-    clear_chunk_store, create_canister_with_cycles, install_chunked_code, stored_chunks,
+    clear_chunk_store, create_canister_with_extra_cycles, install_chunked_code, stored_chunks,
     upload_chunk, CanisterInstallMode, ChunkHash, ClearChunkStoreArgs, CreateCanisterArgs,
     InstallChunkedCodeArgs, StoredChunksArgs, UploadChunkArgs,
 };
@@ -8,7 +8,7 @@ use ic_cdk::update;
 
 #[update]
 async fn call_create_canister() -> Principal {
-    create_canister_with_cycles(&CreateCanisterArgs::default(), 1_000_000_000_000u128)
+    create_canister_with_extra_cycles(&CreateCanisterArgs::default(), 1_000_000_000_000u128)
         .await
         .unwrap()
         .canister_id

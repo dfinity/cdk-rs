@@ -9,8 +9,12 @@
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
-use crate::api::canister_version;
-use crate::call::{Call, CallResult};
+use crate::api::{
+    canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
+    cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
+    cost_sign_with_schnorr as ic0_cost_sign_with_schnorr, SignCostError,
+};
+use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
 
@@ -46,21 +50,41 @@ use ic_management_canister_types::{
     UpdateSettingsArgs as UpdateSettingsArgsComplete,
 };
 
-/// Creates a new canister with a user-specified amount of cycles.
+/// The error type for the [`sign_with_ecdsa`] and [`sign_with_schnorr`] functions.
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum SignCallError {
+    /// The signature cost calculation failed.
+    #[error(transparent)]
+    SignCostError(#[from] SignCostError),
+    /// Failed to make the inter-canister call to the Management canister.
+    #[error(transparent)]
+    CallFailed(#[from] CallFailed),
+    /// Failed to decode the response from the Management canister.
+    #[error(transparent)]
+    CandidDecodeFailed(#[from] CandidDecodeFailed),
+}
+
+/// Creates a new canister.
 ///
 /// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
 ///
+/// # Note
+///
 /// Canister creation costs cycles. That amount will be deducted from the newly created canister.
-/// Therefore, the caller must provide enough cycles to cover the cost.
+/// This method will only attach the required cycles for the canister creation (detemined by [`cost_create_canister`]).
+/// The new canister will have a 0 cycle balance.
+///
+/// To ensure the new canister has extra cycles after creation, use [`create_canister_with_extra_cycles`] instead.
+///
+/// Cycles can also be deposited to the new canister using [`deposit_cycles`].
+///
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#canister-creation) for more details.
-pub async fn create_canister_with_cycles(
-    arg: &CreateCanisterArgs,
-    cycles: u128,
-) -> CallResult<CreateCanisterResult> {
+pub async fn create_canister(arg: &CreateCanisterArgs) -> CallResult<CreateCanisterResult> {
     let complete_arg = CreateCanisterArgsComplete {
         settings: arg.settings.clone(),
         sender_canister_version: Some(canister_version()),
     };
+    let cycles = cost_create_canister();
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "create_canister")
             .with_arg(&complete_arg)
@@ -70,13 +94,44 @@ pub async fn create_canister_with_cycles(
     )
 }
 
-/// Argument type of [`create_canister_with_cycles`].
+/// Creates a new canister with extra cycles.
+///
+/// See [IC method `create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
+///
+/// # Note
+///
+/// Canister creation costs cycles. That amount will be deducted from the newly created canister.
+/// This method will attach the required cycles for the canister creation (detemined by [`cost_create_canister`]) plus the `extra_cycles` to the call.
+/// The new cansiter will have a cycle balance of `extra_cycles`.
+///
+/// To simply create a canister with 0 cycle balance, use [`create_canister`] instead.
+///
+/// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#canister-creation) for more details.
+pub async fn create_canister_with_extra_cycles(
+    arg: &CreateCanisterArgs,
+    extra_cycles: u128,
+) -> CallResult<CreateCanisterResult> {
+    let complete_arg = CreateCanisterArgsComplete {
+        settings: arg.settings.clone(),
+        sender_canister_version: Some(canister_version()),
+    };
+    let cycles = cost_create_canister() + extra_cycles;
+    Ok(
+        Call::unbounded_wait(Principal::management_canister(), "create_canister")
+            .with_arg(&complete_arg)
+            .with_cycles(cycles)
+            .await?
+            .candid()?,
+    )
+}
+
+/// Argument type of [`create_canister`] and [`create_canister_with_extra_cycles`].
 ///
 /// # Note
 ///
 /// This type is a reduced version of [`ic_management_canister_types::CreateCanisterArgs`].
 ///
-/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister_with_cycles`].
+/// The `sender_canister_version` field is removed as it is set automatically in [`create_canister`] and [`create_canister_with_extra_cycles`].
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -359,16 +414,45 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
+/// Calculates the cost of making an HTTP outcall with the given [`HttpRequestArgs`].
+///
+/// [`http_request`] and [`http_request_with_closure`] invoke this method internally and attach the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_http_request`][ic0_cost_http_request] requires manually calculating the request size and the maximum response size.
+/// This method handles the calculation internally.
+pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
+    let request_size = (arg.url.len()
+        + arg
+            .headers
+            .iter()
+            .map(|h| h.name.len() + h.value.len())
+            .sum::<usize>()
+        + arg.body.as_ref().map(|b| b.len()).unwrap_or(0)
+        + arg
+            .transform
+            .as_ref()
+            .map(|t| t.context.len() + t.function.0.method.len())
+            .unwrap_or(0)) as u64;
+    // As stated here: https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request:
+    // "The upper limit on the maximal size for the response is 2MB (2,000,000B) and this value also applies if no maximal size value is specified."
+    let max_res_bytes = arg.max_response_bytes.unwrap_or(2_000_000);
+    ic0_cost_http_request(request_size, max_res_bytes)
+}
+
 /// Makes an HTTP outcall with a user-specified amount of cycles.
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
-/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// # Note
+///
+/// HTTP outcall costs cycles which varies with the request size and the maximum response size.
+/// This method attaches the required cycles (detemined by [`cost_http_request`]) to the call.
+///
 /// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
-pub async fn http_request_with_cycles(
-    arg: &HttpRequestArgs,
-    cycles: u128,
-) -> CallResult<HttpRequestResult> {
+pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult> {
+    let cycles = cost_http_request(arg);
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "http_request")
             .with_arg(arg)
@@ -396,8 +480,8 @@ pub fn transform_context_from_query(
 #[cfg(feature = "transform-closure")]
 mod transform_closure {
     use super::{
-        http_request_with_cycles, transform_context_from_query, CallResult, HttpRequestArgs,
-        HttpRequestResult, Principal, TransformArgs,
+        http_request, transform_context_from_query, CallResult, HttpRequestArgs, HttpRequestResult,
+        Principal, TransformArgs,
     };
     use candid::{decode_one, encode_one};
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
@@ -441,16 +525,16 @@ mod transform_closure {
     ///
     /// This method provides a straightforward way to transform the HTTP outcall result.
     /// If you need to specify a custom transform [`context`](`ic_management_canister_types::TransformContext::context`),
-    /// please use [`http_request_with_cycles`] instead.
+    /// please use [`http_request`] instead.
     ///
-    /// This call requires cycles payment which varies with the argument.
-    /// When calculating the request size for cycles payment, don't forget to include the extra 40 bytes from the transform closure.
+    /// HTTP outcall costs cycles which varies with the request size and the maximum response size.
+    /// This method attaches the required cycles (detemined by [`cost_http_request`](crate::api::cost_http_request)) to the call.
+    ///
     /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
     #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
-    pub async fn http_request_with_closure_with_cycles(
+    pub async fn http_request_with_closure(
         arg: &HttpRequestArgs,
         transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
-        cycles: u128,
     ) -> CallResult<HttpRequestResult> {
         assert!(
             arg.transform.is_none(),
@@ -473,12 +557,12 @@ mod transform_closure {
             )),
             ..arg.clone()
         };
-        http_request_with_cycles(&arg, cycles).await
+        http_request(&arg).await
     }
 }
 
 #[cfg(feature = "transform-closure")]
-pub use transform_closure::http_request_with_closure_with_cycles;
+pub use transform_closure::http_request_with_closure;
 
 /// Gets a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///
@@ -492,18 +576,42 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
     )
 }
 
+/// Calculates the cost of ECDSA signanature with the given [`SignWithEcdsaArgs`].
+///
+/// [`sign_with_ecdsa`] invokes this method internally and attaches the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_sign_with_ecdsa`][ic0_cost_sign_with_ecdsa] takes the numeric representation of the curve.
+pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostError> {
+    ic0_cost_sign_with_ecdsa(&arg.key_id.name, arg.key_id.curve.into())
+}
+
 /// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
 ///
 /// The signature can be separately verified against a derived ECDSA public key.
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
 ///
-/// This call requires cycles payment which varies for different keys.
+/// # Errors
+///
+/// This method returns an error of type [`SignCallError`].
+///
+/// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
+///
+/// Since the call argument is constructed as [`SignWithEcdsaArgs`], the `ecdsa_curve` field is guaranteed to be valid.
+/// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
+///
+/// # Note
+///
+/// Signature costs cycles which varies for different curves and key names.
+/// This method attaches the required cycles (detemined by [`cost_sign_with_ecdsa`]) to the call.
+///
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
-pub async fn sign_with_ecdsa_with_cycles(
+pub async fn sign_with_ecdsa(
     arg: &SignWithEcdsaArgs,
-    cycles: u128,
-) -> CallResult<SignWithEcdsaResult> {
+) -> Result<SignWithEcdsaResult, SignCallError> {
+    let cycles = cost_sign_with_ecdsa(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_ecdsa")
             .with_arg(arg)
@@ -525,18 +633,42 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
     )
 }
 
+/// Calculates the cost of Schnorr signanature with the given [`SignWithSchnorrArgs`].
+///
+/// [`sign_with_schnorr`] invokes this method internally and attaches the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_sign_with_schnorr`][ic0_cost_sign_with_schnorr] takes the numeric representation of the algorithm.
+pub fn cost_sign_with_schnorr(arg: &SignWithSchnorrArgs) -> Result<u128, SignCostError> {
+    ic0_cost_sign_with_schnorr(&arg.key_id.name, arg.key_id.algorithm.into())
+}
+
 /// Gets a new Schnorr signature of the given message with a user-specified amount of cycles.
 ///
 /// The signature can be separately verified against a derived Schnorr public key.
 ///
 /// See [IC method `sign_with_schnorr`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_schnorr).
 ///
-/// This call requires cycles payment which varies for different keys.
+/// # Errors
+///
+/// This method returns an error of type [`SignCallError`].
+///
+/// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
+///
+/// Since the call argument is constructed as [`SignWithSchnorrArgs`], the `algorithm` field is guaranteed to be valid.
+/// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
+///
+/// # Note
+///
+/// Signature costs cycles which varies for different algorithms and key names.
+/// This method attaches the required cycles (detemined by [`cost_sign_with_schnorr`]) to the call.
+///
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
-pub async fn sign_with_schnorr_with_cycles(
+pub async fn sign_with_schnorr(
     arg: &SignWithSchnorrArgs,
-    cycles: u128,
-) -> CallResult<SignWithSchnorrResult> {
+) -> Result<SignWithSchnorrResult, SignCallError> {
+    let cycles = cost_sign_with_schnorr(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
             .with_arg(arg)

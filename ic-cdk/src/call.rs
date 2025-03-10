@@ -41,7 +41,7 @@
 //! The module also includes internal types and functions to manage the state and execution of inter-canister calls,
 //! such as [`CallFuture`] and its associated state management.
 
-use crate::api::{msg_arg_data, msg_reject_code, msg_reject_msg};
+use crate::api::{cost_call, msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
@@ -265,6 +265,20 @@ impl<'a> Call<'_, 'a> {
             }
         }
         self
+    }
+
+    /// Returns the amount of cycles a canister needs to be above the freezing threshold in order to
+    /// successfully perform this call. Takes into account the attached cycles as well as
+    /// - the method name byte length
+    /// - the payload length
+    /// - the cost of transmitting the request
+    /// - the cost for the reservation of response transmission (may be partially refunded)
+    /// - the cost for the reservation of callback execution (may be partially refunded).
+    pub fn get_cost(&self) -> u128 {
+        self.cycles.saturating_add(cost_call(
+            self.method.len() as u64,
+            self.encoded_args.len() as u64,
+        ))
     }
 }
 

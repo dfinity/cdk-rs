@@ -179,6 +179,63 @@ fn call_in_replicated_execution() {
     msg_reply(vec![res]);
 }
 
+#[export_name = "canister_update call_cost_call"]
+fn call_cost_call() {
+    let res = cost_call(1, 2);
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_create_canister"]
+fn call_cost_create_canister() {
+    let res = cost_create_canister();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_http_request"]
+fn call_cost_http_request() {
+    let res = cost_http_request(100, 1000);
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+const INVALID_KEY_NAME: &str = "invalid_key_name";
+const INVALID_CURVE_OR_ALGORITHM: u32 = 42; // Just a big number which is impossible to be valid.
+const VALID_KEY_NAME: &str = "test_key_1";
+
+#[export_name = "canister_query call_cost_sign_with_ecdsa"]
+fn call_cost_sign_with_ecdsa() {
+    let err = cost_sign_with_ecdsa(VALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
+    let err = cost_sign_with_ecdsa(INVALID_KEY_NAME, 0).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidKeyName));
+    // The current implementation doesn't follow the `bitflags` approach.
+    // When both key name and curve/algorithm are invalid, the error is `InvalidCurveOrAlgorithm`.
+    let err = cost_sign_with_ecdsa(INVALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
+    let res = cost_sign_with_ecdsa(VALID_KEY_NAME, 0).unwrap();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_cost_sign_with_schnorr"]
+fn call_cost_sign_with_schnorr() {
+    let err = cost_sign_with_schnorr(VALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
+    let err = cost_sign_with_schnorr(INVALID_KEY_NAME, 0).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidKeyName));
+    // The current implementation doesn't follow the `bitflags` approach.
+    // When both key name and curve/algorithm are invalid, the error is `InvalidCurveOrAlgorithm`.
+    let err = cost_sign_with_schnorr(INVALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
+    assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
+    let res = cost_sign_with_schnorr(VALID_KEY_NAME, 0).unwrap();
+    assert!(res > 0);
+    let res = cost_sign_with_schnorr(VALID_KEY_NAME, 1).unwrap();
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_debug_print"]
 fn call_debug_print() {
     debug_print("Hello, world!");
