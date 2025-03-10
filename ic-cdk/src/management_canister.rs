@@ -429,6 +429,8 @@ pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
             .as_ref()
             .map(|t| t.context.len() + t.function.0.method.len())
             .unwrap_or(0)) as u64;
+    // As stated here: https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request:
+    // "The upper limit on the maximal size for the response is 2MB (2,000,000B) and this value also applies if no maximal size value is specified."
     let max_res_bytes = arg.max_response_bytes.unwrap_or(2_000_000);
     ic0_cost_http_request(request_size, max_res_bytes)
 }

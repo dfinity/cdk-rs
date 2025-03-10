@@ -56,7 +56,7 @@ pub fn msg_caller() -> Principal {
     // SAFETY: `ic0.msg_caller_size` is always safe to call.
     let len = unsafe { ic0::msg_caller_size() };
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte ubuffer, it is safe to be passed to `ic0.msg_caller_copy` with a 0-offset.
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_caller_copy` with a 0-offset.
     unsafe {
         ic0::msg_caller_copy(buf.as_mut_ptr() as usize, 0, len);
     }
@@ -79,7 +79,7 @@ pub fn msg_reject_msg() -> String {
     // SAFETY: `ic0.msg_reject_msg_size` is always safe to call.
     let len = unsafe { ic0::msg_reject_msg_size() };
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte ubuffer, it is safe to be passed to `ic0.msg_reject_msg_copy` with a 0-offset.
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_reject_msg_copy` with a 0-offset.
     unsafe {
         ic0::msg_reject_msg_copy(buf.as_mut_ptr() as usize, 0, len);
     }
@@ -188,7 +188,7 @@ pub fn canister_self() -> Principal {
     // SAFETY: `ic0.canister_self_size` is always safe to call.
     let len = unsafe { ic0::canister_self_size() };
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte ubuffer, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
     unsafe {
         ic0::canister_self_copy(buf.as_mut_ptr() as usize, 0, len);
     }
@@ -275,7 +275,7 @@ pub fn msg_method_name() -> String {
     // SAFETY: `ic0.msg_method_name_size` is always safe to call.
     let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
     let mut buf = vec![0u8; len as usize];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte ubuffer, it is safe to be passed to `ic0.msg_method_name_copy` with a 0-offset.
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_method_name_copy` with a 0-offset.
     unsafe {
         ic0::msg_method_name_copy(buf.as_mut_ptr() as usize, 0, len as usize);
     }
@@ -538,11 +538,11 @@ pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
 /// The error type for [`cost_sign_with_ecdsa`] and [`cost_sign_with_schnorr`].
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum SignCostError {
-    /// The curve or algorithm is invalid.
+    /// The ECDSA/vetKD curve or Schnorr algorithm is invalid.
     #[error("invalid curve or algorithm")]
     InvalidCurveOrAlgorithm,
 
-    /// The key name is invalid.
+    /// The key name is invalid for the provided curve or algorithm.
     #[error("invalid key name")]
     InvalidKeyName,
     /// Unrecognized error.
@@ -571,7 +571,7 @@ fn sign_cost_result(dst: u128, code: u32) -> Result<u128, SignCostError> {
 ///
 /// # Errors
 ///
-/// This function will return an error if the `key_name` or the `ecdsa_curve`is invalid.
+/// This function will return an error if the `key_name` or the `ecdsa_curve` is invalid.
 /// The error type [`SignCostError`] provides more information about the reason of the error.
 pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
     key_name: T,
