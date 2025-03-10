@@ -822,9 +822,9 @@ pub enum EcdsaCurve {
     Secp256k1,
 }
 
-impl Into<u32> for EcdsaCurve {
-    fn into(self) -> u32 {
-        match self {
+impl From<EcdsaCurve> for u32 {
+    fn from(val: EcdsaCurve) -> Self {
+        match val {
             EcdsaCurve::Secp256k1 => 0,
         }
     }
@@ -926,9 +926,9 @@ pub enum SchnorrAlgorithm {
     Ed25519,
 }
 
-impl Into<u32> for SchnorrAlgorithm {
-    fn into(self) -> u32 {
-        match self {
+impl From<SchnorrAlgorithm> for u32 {
+    fn from(val: SchnorrAlgorithm) -> Self {
+        match val {
             SchnorrAlgorithm::Bip340secp256k1 => 0,
             SchnorrAlgorithm::Ed25519 => 1,
         }
