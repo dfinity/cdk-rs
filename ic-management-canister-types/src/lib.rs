@@ -822,6 +822,14 @@ pub enum EcdsaCurve {
     Secp256k1,
 }
 
+impl Into<u32> for EcdsaCurve {
+    fn into(self) -> u32 {
+        match self {
+            EcdsaCurve::Secp256k1 => 0,
+        }
+    }
+}
+
 /// # ECDSA Public Key Args.
 ///
 /// Argument type of [`ecdsa_public_key`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-ecdsa_public_key).
@@ -916,6 +924,15 @@ pub enum SchnorrAlgorithm {
     /// ed25519.
     #[serde(rename = "ed25519")]
     Ed25519,
+}
+
+impl Into<u32> for SchnorrAlgorithm {
+    fn into(self) -> u32 {
+        match self {
+            SchnorrAlgorithm::Bip340secp256k1 => 0,
+            SchnorrAlgorithm::Ed25519 => 1,
+        }
+    }
 }
 
 /// # Schnorr Public Key Args.

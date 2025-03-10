@@ -584,10 +584,7 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 ///
 /// Alternatively, [`api::cost_sign_with_ecdsa`][ic0_cost_sign_with_ecdsa] takes the numeric representation of the curve.
 pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostError> {
-    let ecdsa_curve = match arg.key_id.curve {
-        EcdsaCurve::Secp256k1 => 0,
-    };
-    ic0_cost_sign_with_ecdsa(&arg.key_id.name, ecdsa_curve)
+    ic0_cost_sign_with_ecdsa(&arg.key_id.name, arg.key_id.curve.into())
 }
 
 /// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
@@ -644,11 +641,7 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 ///
 /// Alternatively, [`api::cost_sign_with_schnorr`][ic0_cost_sign_with_schnorr] takes the numeric representation of the algorithm.
 pub fn cost_sign_with_schnorr(arg: &SignWithSchnorrArgs) -> Result<u128, SignCostError> {
-    let algorithm = match arg.key_id.algorithm {
-        SchnorrAlgorithm::Bip340secp256k1 => 0,
-        SchnorrAlgorithm::Ed25519 => 1,
-    };
-    ic0_cost_sign_with_schnorr(&arg.key_id.name, algorithm)
+    ic0_cost_sign_with_schnorr(&arg.key_id.name, arg.key_id.algorithm.into())
 }
 
 /// Gets a new Schnorr signature of the given message with a user-specified amount of cycles.
