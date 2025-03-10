@@ -414,8 +414,14 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
-/// Calculates the cost of an HTTP outcall directly from the [`HttpRequestArgs`].
-/// See [`http_request`] for more details.
+/// Calculates the cost of making an HTTP outcall with the given [`HttpRequestArgs`].
+///
+/// [`http_request`] and [`http_request_with_closure`] invoke this method internally and attach the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_http_request`][ic0_cost_http_request] requires manually calculating the request size and the maximum response size.
+/// This method handles the calculation internally.
 pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
     let request_size = (arg.url.len()
         + arg
@@ -570,8 +576,13 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
     )
 }
 
-/// Calculates the cost of signing with the given ECDSA argument.
-/// See [`sign_with_ecdsa`] for more details.
+/// Calculates the cost of ECDSA signanature with the given [`SignWithEcdsaArgs`].
+///
+/// [`sign_with_ecdsa`] invokes this method internally and attaches the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_sign_with_ecdsa`][ic0_cost_sign_with_ecdsa] takes the numeric representation of the curve.
 pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostError> {
     let ecdsa_curve = match arg.key_id.curve {
         EcdsaCurve::Secp256k1 => 0,
@@ -625,8 +636,13 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
     )
 }
 
-/// Calculates the cost of signing with the given Schnorr argument.
-/// See [`sign_with_ecdsa`] for more details.
+/// Calculates the cost of Schnorr signanature with the given [`SignWithSchnorrArgs`].
+///
+/// [`sign_with_schnorr`] invokes this method internally and attaches the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_sign_with_schnorr`][ic0_cost_sign_with_schnorr] takes the numeric representation of the algorithm.
 pub fn cost_sign_with_schnorr(arg: &SignWithSchnorrArgs) -> Result<u128, SignCostError> {
     let algorithm = match arg.key_id.algorithm {
         SchnorrAlgorithm::Bip340secp256k1 => 0,

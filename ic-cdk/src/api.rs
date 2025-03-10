@@ -557,8 +557,8 @@ pub enum SignCostError {
 fn sign_cost_result(dst: u128, code: u32) -> Result<u128, SignCostError> {
     match code {
         0 => Ok(dst),
-        0b01 => Err(SignCostError::InvalidCurveOrAlgorithm),
-        0b10 => Err(SignCostError::InvalidKeyName),
+        1 => Err(SignCostError::InvalidCurveOrAlgorithm),
+        2 => Err(SignCostError::InvalidKeyName),
         _ => Err(SignCostError::UnrecognizedError(code)),
     }
 }
@@ -567,7 +567,7 @@ fn sign_cost_result(dst: u128, code: u32) -> Result<u128, SignCostError> {
 ///
 /// # Note
 ///
-/// [`sign_with_ecdsa`](crate::management_canister::sign_with_ecdsa) invokes this function inside and attaches the required cycles to the call.
+/// Alternatively, [`management_canister::cost_sign_with_ecdsa`](crate::management_canister::cost_sign_with_ecdsa) provides a higher-level API that wraps this function.
 ///
 /// # Errors
 ///
@@ -597,7 +597,7 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
 ///
 /// # Note
 ///
-/// [`sign_with_schnorr`](crate::management_canister::sign_with_schnorr) invokes this function inside and attaches the required cycles to the call.
+/// Alternatively, [`management_canister::cost_sign_with_schnorr`](crate::management_canister::cost_sign_with_schnorr) provides a higher-level API that wraps this function.
 ///
 /// # Errors
 ///
