@@ -10,8 +10,9 @@
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
 use crate::api::{
-    canister_version, cost_create_canister, cost_http_request, cost_sign_with_ecdsa,
-    cost_sign_with_schnorr, SignCostError,
+    canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
+    cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
+    cost_sign_with_schnorr as ic0_cost_sign_with_schnorr, SignCostError,
 };
 use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
@@ -413,17 +414,9 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
-/// Makes an HTTP outcall with a user-specified amount of cycles.
-///
-/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
-///
-/// # Note
-///
-/// HTTP outcall costs cycles which varies with the request size and the maximum response size.
-/// This method attaches the required cycles (detemined by [`cost_http_request`]) to the call.
-///
-/// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
-pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult> {
+/// Calculates the cost of an HTTP outcall directly from the [`HttpRequestArg`].
+/// See [`http_request`] for more details.
+pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
     let request_size = (arg.url.len()
         + arg
             .headers
@@ -437,7 +430,21 @@ pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult
             .map(|t| t.context.len() + t.function.0.method.len())
             .unwrap_or(0)) as u64;
     let max_res_bytes = arg.max_response_bytes.unwrap_or(2_000_000);
-    let cycles = cost_http_request(request_size, max_res_bytes);
+    ic0_cost_http_request(request_size, max_res_bytes)
+}
+
+/// Makes an HTTP outcall with a user-specified amount of cycles.
+///
+/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+///
+/// # Note
+///
+/// HTTP outcall costs cycles which varies with the request size and the maximum response size.
+/// This method attaches the required cycles (detemined by [`cost_http_request`]) to the call.
+///
+/// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
+pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult> {
+    let cycles = cost_http_request(arg);
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "http_request")
             .with_arg(arg)
@@ -561,6 +568,15 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
     )
 }
 
+/// Calculates the cost of signing with the given ECDSA argument.
+/// See [`sign_with_ecdsa`] for more details.
+pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostError> {
+    let ecdsa_curve = match arg.key_id.curve {
+        EcdsaCurve::Secp256k1 => 0,
+    };
+    ic0_cost_sign_with_ecdsa(&arg.key_id.name, ecdsa_curve)
+}
+
 /// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
 ///
 /// The signature can be separately verified against a derived ECDSA public key.
@@ -585,10 +601,7 @@ pub async fn ecdsa_public_key(arg: &EcdsaPublicKeyArgs) -> CallResult<EcdsaPubli
 pub async fn sign_with_ecdsa(
     arg: &SignWithEcdsaArgs,
 ) -> Result<SignWithEcdsaResult, SignCallError> {
-    let ecdsa_curve = match arg.key_id.curve {
-        EcdsaCurve::Secp256k1 => 0,
-    };
-    let cycles = cost_sign_with_ecdsa(&arg.key_id.name, ecdsa_curve)?;
+    let cycles = cost_sign_with_ecdsa(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_ecdsa")
             .with_arg(arg)
@@ -608,6 +621,16 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
             .await?
             .candid()?,
     )
+}
+
+/// Calculates the cost of signing with the given Schnorr argument.
+/// See [`sign_with_ecdsa`] for more details.
+pub fn cost_sign_with_schnorr(arg: &SignWithSchnorrArgs) -> Result<u128, SignCostError> {
+    let algorithm = match arg.key_id.algorithm {
+        SchnorrAlgorithm::Bip340secp256k1 => 0,
+        SchnorrAlgorithm::Ed25519 => 1,
+    };
+    ic0_cost_sign_with_schnorr(&arg.key_id.name, algorithm)
 }
 
 /// Gets a new Schnorr signature of the given message with a user-specified amount of cycles.
@@ -634,11 +657,7 @@ pub async fn schnorr_public_key(arg: &SchnorrPublicKeyArgs) -> CallResult<Schnor
 pub async fn sign_with_schnorr(
     arg: &SignWithSchnorrArgs,
 ) -> Result<SignWithSchnorrResult, SignCallError> {
-    let algorithm = match arg.key_id.algorithm {
-        SchnorrAlgorithm::Bip340secp256k1 => 0,
-        SchnorrAlgorithm::Ed25519 => 1,
-    };
-    let cycles = cost_sign_with_schnorr(&arg.key_id.name, algorithm)?;
+    let cycles = cost_sign_with_schnorr(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
             .with_arg(arg)
