@@ -268,6 +268,19 @@ pub fn canister_version() -> u64 {
     unsafe { ic0::canister_version() }
 }
 
+/// Gets the ID of the subnet on which the canister is running.
+pub fn subnet_self() -> Principal {
+    // SAFETY: `ic0.subnet_self_size` is always safe to call.
+    let len = unsafe { ic0::subnet_self_size() };
+    let mut buf = vec![0u8; len];
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.subnet_self_copy` with a 0-offset.
+    unsafe {
+        ic0::subnet_self_copy(buf.as_mut_ptr() as usize, 0, len);
+    }
+    // Trust that the system always returns a valid principal.
+    Principal::try_from(&buf).unwrap()
+}
+
 /// Gets the name of the method to be inspected.
 ///
 /// This function is only available in the `canister_inspect_message` context.
