@@ -105,6 +105,15 @@ fn call_canister_version() {
     msg_reply(vec![]);
 }
 
+#[export_name = "canister_update call_subnet_self"]
+fn call_subnet_self() {
+    let id = subnet_self();
+    debug_print(format!("Subnet ID: {:?}", id.to_text()));
+    // The subnet ID is a Principal which uses all 29 bytes.
+    assert_eq!(id.as_slice().len(), 29);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_inspect_message"]
 fn inspect_message() {
     assert!(msg_method_name().starts_with("call_"));
