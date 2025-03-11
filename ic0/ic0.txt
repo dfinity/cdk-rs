@@ -20,6 +20,8 @@
     ic0.canister_cycle_balance128 : (dst : I) -> ();                                      // *
     ic0.canister_status : () -> i32;                                                      // *
     ic0.canister_version : () -> i64;                                                     // *
+    ic0.subnet_self_size : () -> I;                                                       // *
+    ic0.subnet_self_copy : (dst : I, offset : I, size : I) -> ();                         // *
     ic0.msg_method_name_size : () -> I;                                                   // F
     ic0.msg_method_name_copy : (dst : I, offset : I, size : I) -> ();                     // F
     ic0.accept_message : () -> ();                                                        // F

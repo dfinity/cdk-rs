@@ -23,6 +23,8 @@ extern "C" {
     pub fn canister_cycle_balance128(dst: usize);
     pub fn canister_status() -> u32;
     pub fn canister_version() -> u64;
+    pub fn subnet_self_size() -> usize;
+    pub fn subnet_self_copy(dst: usize, offset: usize, size: usize);
     pub fn msg_method_name_size() -> usize;
     pub fn msg_method_name_copy(dst: usize, offset: usize, size: usize);
     pub fn accept_message();
@@ -133,6 +135,12 @@ mod non_wasm {
     }
     pub unsafe fn canister_version() -> u64 {
         panic!("canister_version should only be called inside canisters.");
+    }
+    pub unsafe fn subnet_self_size() -> usize {
+        panic!("subnet_self_size should only be called inside canisters.");
+    }
+    pub unsafe fn subnet_self_copy(dst: usize, offset: usize, size: usize) {
+        panic!("subnet_self_copy should only be called inside canisters.");
     }
     pub unsafe fn msg_method_name_size() -> usize {
         panic!("msg_method_name_size should only be called inside canisters.");
