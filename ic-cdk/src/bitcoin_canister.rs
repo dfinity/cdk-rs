@@ -4,6 +4,14 @@
 //! This module includes functions and types that facilitate these interactions, adhering to the
 //! [Bitcoin Canisters Interface Specification][2].
 //!
+//! # Bounded-wait vs. Unbounded-wait
+//!
+//! Interacting with the Bitcoin canisters involves making inter-canister calls,
+//! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
+//!
+//! Most of the functions in this module use the bounded-wait calls because they only read state.
+//! The only function that uses the unbounded-wait call is [`bitcoin_send_transaction`].
+//!
 //! [1]: https://github.com/dfinity/bitcoin-canister
 //! [2]: https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md
 
@@ -160,6 +168,8 @@ pub struct GetUtxosResponse {
 
 /// Gets all unspent transaction outputs (UTXOs) associated with the provided address.
 ///
+/// **Bounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_utxos) for more details.
 pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResponse> {
     let canister_id = get_canister_id(&arg.network);
@@ -191,6 +201,8 @@ pub struct GetBalanceRequest {
 }
 
 /// Gets the current balance of a Bitcoin address in Satoshi.
+///
+/// **Bounded-wait call**
 ///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
 pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
@@ -233,6 +245,8 @@ pub struct GetCurrentFeePercentilesRequest {
 pub type MillisatoshiPerByte = u64;
 
 /// Gets the Bitcoin transaction fee percentiles.
+///
+/// **Bounded-wait call**
 ///
 /// The percentiles are measured in millisatoshi/byte (1000 millisatoshi = 1 satoshi),
 /// over the last 10,000 transactions in the specified network,
@@ -284,6 +298,8 @@ pub struct GetBlockHeadersResponse {
 
 /// Gets the block headers in the provided range of block heights.
 ///
+/// **Bounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_block_headers) for more details.
 pub async fn bitcoin_get_block_headers(
     arg: &GetBlockHeadersRequest,
@@ -315,6 +331,8 @@ pub struct SendTransactionRequest {
 }
 
 /// Sends a Bitcoin transaction to the Bitcoin network.
+///
+/// **Unbounded-wait call**
 ///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_send_transaction) for more details.
 pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResult<()> {
