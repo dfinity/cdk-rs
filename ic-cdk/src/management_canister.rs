@@ -18,18 +18,11 @@
 //! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
 //! This module selects the appropriate type of wait call for each method based on the characteristics of the endpoint.
 //!
-//! Most methods in this module use bounded-wait calls because they are read-only or idempotent.
-//! However, some methods use unbounded-wait calls because the management canister endpoints they interact with are **not idempotent**.
+//! The strategy for choosing the type of wait call is as follows:
+//! - Unbounded-wait call by default because the management canister is universally trusted.
+//! - Bounded-wait call for methods that only read state.
 //!
-//! The following methods use unbounded-wait calls:
-//! - [`create_canister`]
-//! - [`create_canister_with_extra_cycles`]
-//! - [`install_code`]
-//! - [`install_chunked_code`]
-//! - [`deposit_cycles`]
-//! - [`provisional_create_canister_with_cycles`]
-//! - [`provisional_top_up_canister`]
-//! - [`take_canister_snapshot`]
+//! Please check the documentation of each function for the type of wait call it uses.
 //!
 //! ## Cycle Cost
 //!
@@ -178,7 +171,7 @@ pub struct CreateCanisterArgs {
 
 /// Updates the settings of a canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `update_settings`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-update_settings).
 pub async fn update_settings(arg: &UpdateSettingsArgs) -> CallResult<()> {
@@ -188,7 +181,7 @@ pub async fn update_settings(arg: &UpdateSettingsArgs) -> CallResult<()> {
         sender_canister_version: Some(canister_version()),
     };
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "update_settings")
+        Call::unbounded_wait(Principal::management_canister(), "update_settings")
             .with_arg(&complete_arg)
             .await?
             .candid()?,
@@ -214,12 +207,12 @@ pub struct UpdateSettingsArgs {
 
 /// Uploads a chunk to the chunk store of a canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `upload_chunk`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_chunk).
 pub async fn upload_chunk(arg: &UploadChunkArgs) -> CallResult<UploadChunkResult> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "upload_chunk")
+        Call::unbounded_wait(Principal::management_canister(), "upload_chunk")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -228,12 +221,12 @@ pub async fn upload_chunk(arg: &UploadChunkArgs) -> CallResult<UploadChunkResult
 
 /// Clears the chunk store of a canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `clear_chunk_store`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-clear_chunk_store).
 pub async fn clear_chunk_store(arg: &ClearChunkStoreArgs) -> CallResult<()> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "clear_chunk_store")
+        Call::unbounded_wait(Principal::management_canister(), "clear_chunk_store")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -349,7 +342,7 @@ pub struct InstallChunkedCodeArgs {
 
 /// Removes a canister's code and state, making the canister empty again.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `uninstall_code`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-uninstall_code).
 pub async fn uninstall_code(arg: &UninstallCodeArgs) -> CallResult<()> {
@@ -358,7 +351,7 @@ pub async fn uninstall_code(arg: &UninstallCodeArgs) -> CallResult<()> {
         sender_canister_version: Some(canister_version()),
     };
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "uninstall_code")
+        Call::unbounded_wait(Principal::management_canister(), "uninstall_code")
             .with_arg(&complete_arg)
             .await?
             .candid()?,
@@ -382,12 +375,12 @@ pub struct UninstallCodeArgs {
 
 /// Starts a canister if the canister status was `stopped` or `stopping`.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
 pub async fn start_canister(arg: &StartCanisterArgs) -> CallResult<()> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "start_canister")
+        Call::unbounded_wait(Principal::management_canister(), "start_canister")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -396,12 +389,12 @@ pub async fn start_canister(arg: &StartCanisterArgs) -> CallResult<()> {
 
 /// Stops a canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
 pub async fn stop_canister(arg: &StopCanisterArgs) -> CallResult<()> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "stop_canister")
+        Call::unbounded_wait(Principal::management_canister(), "stop_canister")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -438,12 +431,12 @@ pub async fn canister_info(arg: &CanisterInfoArgs) -> CallResult<CanisterInfoRes
 
 /// Deletes a canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `delete_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister).
 pub async fn delete_canister(arg: &DeleteCanisterArgs) -> CallResult<()> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "delete_canister")
+        Call::unbounded_wait(Principal::management_canister(), "delete_canister")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -507,7 +500,7 @@ pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
 
 /// Makes an HTTP outcall with a user-specified amount of cycles.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
@@ -520,7 +513,7 @@ pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
 pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult> {
     let cycles = cost_http_request(arg);
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "http_request")
+        Call::unbounded_wait(Principal::management_canister(), "http_request")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
@@ -579,7 +572,7 @@ mod transform_closure {
 
     /// Makes an HTTP outcall and transforms the response using a closure.
     ///
-    /// **Bounded-wait call**
+    /// **Unbounded-wait call**
     ///
     /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
     ///
@@ -868,7 +861,7 @@ pub async fn take_canister_snapshot(
 
 /// Loads a snapshot onto the canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// It fails if no snapshot with the specified `snapshot_id` can be found.
 ///
@@ -880,7 +873,7 @@ pub async fn load_canister_snapshot(arg: &LoadCanisterSnapshotArgs) -> CallResul
         sender_canister_version: Some(canister_version()),
     };
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "load_canister_snapshot")
+        Call::unbounded_wait(Principal::management_canister(), "load_canister_snapshot")
             .with_arg(&complete_arg)
             .await?
             .candid()?,
@@ -922,14 +915,14 @@ pub async fn list_canister_snapshots(
 
 /// Deletes a specified snapshot that belongs to an existing canister.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// An error will be returned if the snapshot is not found.
 ///
 /// See [IC method `delete_canister_snapshot`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-delete_canister_snapshot).
 pub async fn delete_canister_snapshot(arg: &DeleteCanisterSnapshotArgs) -> CallResult<()> {
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "delete_canister_snapshot")
+        Call::unbounded_wait(Principal::management_canister(), "delete_canister_snapshot")
             .with_arg(arg)
             .await?
             .candid()?,
