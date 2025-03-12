@@ -63,7 +63,7 @@ pub use ic_error_types::RejectCode;
 /// # Constructors
 ///
 /// [`Call`] has two constructors that differentiate whether the call's response is waited for an unbounded amount of time or not.
-/// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 10-second timeout).
+/// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 30-second timeout).
 /// - [`unbounded_wait`][Self::unbounded_wait]: wait unboundedly.
 ///
 /// # Configuration
@@ -163,7 +163,7 @@ impl<'m> Call<'m, '_> {
     ///
     /// # Note
     ///
-    /// The bounded waiting is set with a default 10-second timeout.
+    /// The bounded waiting is set with a default 30-second timeout.
     /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
     ///
     /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
@@ -172,8 +172,10 @@ impl<'m> Call<'m, '_> {
             canister_id,
             method,
             cycles: 0,
-            // Default to 10 seconds.
-            timeout_seconds: Some(10),
+            // Default to 30-second timeout.
+            // Most calls should complete in a short time.
+            // Considering subnet pauses due to checkpointing, 30 seconds should be sufficient.
+            timeout_seconds: Some(30),
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
             encoded_args: Cow::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
@@ -241,7 +243,7 @@ impl<'a> Call<'_, 'a> {
 
     /// Changes the timeout for bounded response waiting.
     ///
-    /// [`Call::bounded_wait`] defaults to a 10-second timeout.
+    /// [`Call::bounded_wait`] defaults to a 30-second timeout.
     ///
     /// If invoked multiple times, the last value takes effect.
     ///
