@@ -63,7 +63,7 @@ pub use ic_error_types::RejectCode;
 /// # Constructors
 ///
 /// [`Call`] has two constructors that differentiate whether the call's response is waited for an unbounded amount of time or not.
-/// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 30-second timeout).
+/// - [`bounded_wait`][Self::bounded_wait]: wait boundedly (defaults with 300-second timeout).
 /// - [`unbounded_wait`][Self::unbounded_wait]: wait unboundedly.
 ///
 /// # Configuration
@@ -78,7 +78,7 @@ pub use ic_error_types::RejectCode;
 /// - Cycles:
 ///   - [`with_cycles`][Self::with_cycles]: set the cycles attached in this call.
 /// - Response waiting timeout:
-///   - [`change_timeout`][Self::change_timeout]: change the timeout for **unbounded_wait** call.
+///   - [`change_timeout`][Self::change_timeout]: change the timeout for **bounded_wait** call.
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -163,8 +163,9 @@ impl<'m> Call<'m, '_> {
     ///
     /// # Note
     ///
-    /// The bounded waiting is set with a default 30-second timeout.
-    /// To change the timeout, invoke the [`change_timeout`][Self::change_timeout] method.
+    /// The bounded waiting is set with a default 300-second timeout.
+    /// It aligns with the `MAX_CALL_TIMEOUT` constant in the current IC implementation.
+    /// The timeout can be changed using the [`change_timeout`][Self::change_timeout] method.
     ///
     /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
     pub fn bounded_wait(canister_id: Principal, method: &'m str) -> Self {
@@ -172,10 +173,8 @@ impl<'m> Call<'m, '_> {
             canister_id,
             method,
             cycles: 0,
-            // Default to 30-second timeout.
-            // Most calls should complete in a short time.
-            // Considering subnet pauses due to checkpointing, 30 seconds should be sufficient.
-            timeout_seconds: Some(30),
+            // Default to 300-second timeout.
+            timeout_seconds: Some(300),
             // Bytes for empty arguments.
             // `candid::Encode!(&()).unwrap()`
             encoded_args: Cow::Owned(vec![0x44, 0x49, 0x44, 0x4c, 0x00, 0x00]),
@@ -243,9 +242,10 @@ impl<'a> Call<'_, 'a> {
 
     /// Changes the timeout for bounded response waiting.
     ///
-    /// [`Call::bounded_wait`] defaults to a 30-second timeout.
-    ///
     /// If invoked multiple times, the last value takes effect.
+    ///
+    /// The timeout value is silently capped by the `MAX_CALL_TIMEOUT` constant which is currently set to 300 seconds.
+    /// Therefore, setting a timeout greater than 300 seconds will actually result in a 300-second timeout.
     ///
     /// # Panics
     ///
