@@ -651,7 +651,7 @@ pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostErr
 
 /// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// The signature can be separately verified against a derived ECDSA public key.
 ///
@@ -677,7 +677,7 @@ pub async fn sign_with_ecdsa(
 ) -> Result<SignWithEcdsaResult, SignCallError> {
     let cycles = cost_sign_with_ecdsa(arg)?;
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "sign_with_ecdsa")
+        Call::unbounded_wait(Principal::management_canister(), "sign_with_ecdsa")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
@@ -712,7 +712,7 @@ pub fn cost_sign_with_schnorr(arg: &SignWithSchnorrArgs) -> Result<u128, SignCos
 
 /// Gets a new Schnorr signature of the given message with a user-specified amount of cycles.
 ///
-/// **Bounded-wait call**
+/// **Unbounded-wait call**
 ///
 /// The signature can be separately verified against a derived Schnorr public key.
 ///
@@ -738,7 +738,7 @@ pub async fn sign_with_schnorr(
 ) -> Result<SignWithSchnorrResult, SignCallError> {
     let cycles = cost_sign_with_schnorr(arg)?;
     Ok(
-        Call::bounded_wait(Principal::management_canister(), "sign_with_schnorr")
+        Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
