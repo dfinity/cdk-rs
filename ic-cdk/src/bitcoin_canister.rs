@@ -178,7 +178,7 @@ pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResp
         Network::Testnet => GET_UTXO_TESTNET,
         Network::Regtest => 0,
     };
-    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_utxos")
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_utxos")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
@@ -212,7 +212,7 @@ pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi>
         Network::Testnet => GET_BALANCE_TESTNET,
         Network::Regtest => 0,
     };
-    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_balance")
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
@@ -261,7 +261,7 @@ pub async fn bitcoin_get_current_fee_percentiles(
         Network::Regtest => 0,
     };
     Ok(
-        Call::unbounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
+        Call::bounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
@@ -310,13 +310,11 @@ pub async fn bitcoin_get_block_headers(
         Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
         Network::Regtest => 0,
     };
-    Ok(
-        Call::unbounded_wait(canister_id, "bitcoin_get_block_headers")
-            .with_arg(arg)
-            .with_cycles(cycles)
-            .await?
-            .candid()?,
-    )
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_block_headers")
+        .with_arg(arg)
+        .with_cycles(cycles)
+        .await?
+        .candid()?)
 }
 
 /// Argument type of the [`bitcoin_send_transaction`] function.
