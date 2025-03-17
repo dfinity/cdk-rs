@@ -108,6 +108,14 @@ pub struct CanisterSettings {
     ///
     /// Default value: 3_221_225_472 (3 GiB).
     pub wasm_memory_limit: Option<Nat>,
+    /// Indicates the threshold on the remaining wasm memory size of the canister in bytes.
+    ///
+    /// If the remaining wasm memory size of the canister is below the threshold, execution of the "on low wasm memory" hook is scheduled.
+    ///
+    /// Must be a number between 0 and 2<sup>64</sup>-1, inclusively.
+    ///
+    /// Default value: 0 (i.e., the "on low wasm memory" hook is never scheduled).
+    pub wasm_memory_threshold: Option<Nat>,
 }
 
 /// # Definite Canister Settings
@@ -133,6 +141,8 @@ pub struct DefiniteCanisterSettings {
     pub log_visibility: LogVisibility,
     /// Upper limit on the WASM heap memory (bytes) consumption of the canister.
     pub wasm_memory_limit: Nat,
+    /// Threshold on the remaining wasm memory size of the canister in bytes.
+    pub wasm_memory_threshold: Nat,
 }
 
 /// # Create Canister Args
