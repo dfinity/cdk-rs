@@ -4,7 +4,9 @@ use cargo_metadata::MetadataCommand;
 use flate2::read::GzDecoder;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, PocketIc, PocketIcBuilder, RejectResponse};
+use std::fs::Permissions;
 use std::io::Read;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Once;
@@ -152,6 +154,8 @@ fn cache_pocket_ic_server() -> PathBuf {
         .read_to_end(&mut decompressed_data)
         .expect("failed to decompress pocket-ic-server");
     std::fs::write(&pocket_ic_server, decompressed_data).expect("failed to write pocket-ic-server");
+    let permissions = Permissions::from_mode(0o755); // Make the file executable
+    std::fs::set_permissions(&pocket_ic_server, permissions).expect("failed to set permissions");
     std::fs::write(tag_file, pocket_ic_tag).expect("failed to write pocket-ic-tag");
     pocket_ic_server.into()
 }
