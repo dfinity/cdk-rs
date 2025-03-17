@@ -196,11 +196,19 @@ pub fn canister_self() -> Principal {
     Principal::try_from(&buf).unwrap()
 }
 
-/// Gets the current cycle balance of the canister
+/// Gets the current cycle balance of the canister.
 pub fn canister_cycle_balance() -> u128 {
     let mut dst = 0u128;
     // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.canister_cycle_balance128`.
     unsafe { ic0::canister_cycle_balance128(&mut dst as *mut u128 as usize) }
+    dst
+}
+
+/// Gets the current amount of cycles that is available for spending in calls and execution.
+pub fn canister_liquid_cycle_balance() -> u128 {
+    let mut dst = 0u128;
+    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.canister_liquid_cycle_balance128`.
+    unsafe { ic0::canister_liquid_cycle_balance128(&mut dst as *mut u128 as usize) }
     dst
 }
 
