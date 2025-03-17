@@ -133,7 +133,7 @@ extern "C" fn global_timer() {
                 let task_id = timer.task;
                 if let Err(e) = res {
                     ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
-                    if matches!(e, CallFailed::CallPerformFailed(_))
+                    if matches!(e, CallFailed::PreExecutionFailure(_))
                         || matches!(e, CallFailed::CallRejected(e) if e.reject_code() == Ok(RejectCode::SysTransient))
                     {
                         // Try to execute the timer again later.
