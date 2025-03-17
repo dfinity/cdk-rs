@@ -24,6 +24,26 @@
 //!
 //! Please check the documentation of each function for the type of wait call it uses.
 //!
+//! If the default behavior is not suitable for a particular use case, the [`Call`] struct can be used directly to make the call.
+//!
+//! For example, [`sign_with_ecdsa`] makes an unbounded-wait call. If a bounded-wait call is preferred, the call can be made as follows:
+//! ```rust, no_run
+//! # use ic_cdk::management_canister::{SignWithEcdsaArgs, SignWithEcdsaResult};
+//! # use ic_cdk::call::Call;
+//! # use candid::Principal;
+//! # async fn example() -> ic_cdk::call::CallResult<SignWithEcdsaResult> {
+//! let callee = Principal::management_canister();
+//! let arg = SignWithEcdsaArgs::default();
+//! let cycles = cost_sign_with_ecdsa(&arg)?;
+//! let res: SignWithEcdsaResult = Call::bounded_wait(callee, "sign_with_ecdsa")
+//!     .with_arg(&arg)
+//!     .with_cycles(cycles)
+//!     .await?
+//!     .candid()?;
+//! # Ok(res)
+//! # }
+//! ```
+//!
 //! ## Cycle Cost
 //!
 //! Some management canister endpoints require cycles to be attached to the call.
