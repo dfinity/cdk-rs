@@ -12,5 +12,13 @@ fn call() {
     let _: () = update(&pic, canister_id, "call_echo", ()).unwrap();
     let _: () = update(&pic, canister_id, "retry_calls", ()).unwrap();
     let _: () = update(&pic, canister_id, "join_calls", ()).unwrap();
+    let _: () = update(
+        &pic,
+        canister_id,
+        "insufficient_liquid_cycle_balance_error",
+        (),
+    )
+    .unwrap();
+
     let _: () = update(&pic, canister_id, "call_error_ext", ()).unwrap();
 }
