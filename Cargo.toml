@@ -33,7 +33,7 @@ opt-level = 'z'
 ic0 = { path = "ic0", version = "0.24.0-alpha.2" }
 ic-cdk = { path = "ic-cdk", version = "0.18.0-alpha.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.0-alpha.1" }
-ic-management-canister-types = { path = "ic-management-canister-types", version = "0.2.0" }
+ic-management-canister-types = { path = "ic-management-canister-types", version = "0.3.0" }
 
 candid = "0.10.13"      # sync with the doc comment in ic-cdk/README.md
 candid_parser = "0.1.4"

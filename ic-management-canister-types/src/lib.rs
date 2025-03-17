@@ -108,6 +108,14 @@ pub struct CanisterSettings {
     ///
     /// Default value: 3_221_225_472 (3 GiB).
     pub wasm_memory_limit: Option<Nat>,
+    /// Indicates the threshold on the remaining wasm memory size of the canister in bytes.
+    ///
+    /// If the remaining wasm memory size of the canister is below the threshold, execution of the "on low wasm memory" hook is scheduled.
+    ///
+    /// Must be a number between 0 and 2<sup>64</sup>-1, inclusively.
+    ///
+    /// Default value: 0 (i.e., the "on low wasm memory" hook is never scheduled).
+    pub wasm_memory_threshold: Option<Nat>,
 }
 
 /// # Definite Canister Settings
@@ -133,6 +141,8 @@ pub struct DefiniteCanisterSettings {
     pub log_visibility: LogVisibility,
     /// Upper limit on the WASM heap memory (bytes) consumption of the canister.
     pub wasm_memory_limit: Nat,
+    /// Threshold on the remaining wasm memory size of the canister in bytes.
+    pub wasm_memory_threshold: Nat,
 }
 
 /// # Create Canister Args
@@ -372,6 +382,8 @@ pub struct CanisterStatusResult {
     pub module_hash: Option<Vec<u8>>,
     /// The memory size taken by the canister.
     pub memory_size: Nat,
+    /// The detailed metrics on the memory consumption of the canister.
+    pub memory_metrics: MemoryMetrics,
     /// The cycle balance of the canister.
     pub cycles: Nat,
     /// The reserved cycles balance of the canister.
@@ -403,6 +415,33 @@ pub enum CanisterStatusType {
     /// The canister is stopped.
     #[serde(rename = "stopped")]
     Stopped,
+}
+
+/// # Memory Metrics
+///
+/// Memory metrics of a canister.
+///
+/// See [`CanisterStatusResult::memory_metrics`].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct MemoryMetrics {
+    /// Represents the Wasm memory usage of the canister, i.e. the heap memory used by the canister's WebAssembly code.
+    pub wasm_memory_size: Nat,
+    /// Represents the stable memory usage of the canister.
+    pub stable_memory_size: Nat,
+    /// Represents the memory usage of the global variables that the canister is using.
+    pub global_memory_size: Nat,
+    /// Represents the memory occupied by the Wasm binary that is currently installed on the canister.
+    pub wasm_binary_size: Nat,
+    /// Represents the memory used by custom sections defined by the canister.
+    pub custom_sections_size: Nat,
+    /// Represents the memory used for storing the canister's history.
+    pub canister_history_size: Nat,
+    /// Represents the memory used by the Wasm chunk store of the canister.
+    pub wasm_chunk_store_size: Nat,
+    /// Represents the memory consumed by all snapshots that belong to this canister.
+    pub snapshots_size: Nat,
 }
 
 /// # Query Stats

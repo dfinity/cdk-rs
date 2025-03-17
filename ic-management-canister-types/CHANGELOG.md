@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.3.0] - 2025-03-17
+
+### Changed
+
+- Added `wasm_memory_threshold` field to `CanisterSettings` and `DefiniteCanisterSettings`.
+- Added the `memory_metrics` field to `CanisterStatusResult`.
+  - Added the type `MemoryMetrics`.
+
 ### Added
 
 - Implemented trait that convert from `EcdsaCurve` and `SchnorrAlgorithm` into `u32`.
