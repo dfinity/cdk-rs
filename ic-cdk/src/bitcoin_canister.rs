@@ -16,7 +16,7 @@
 //!
 //! For example, [`bitcoin_get_utxos`] makes an bounded-wait call. If an unbounded-wait call is preferred, the call can be made as follows:
 //! ```rust, no_run
-//! # use ic_cdk::bitcoin_canister::{GetUtxosRequest, GetUtxosResponse, get_bitcoin_canister_id};
+//! # use ic_cdk::bitcoin_canister::{cost_get_utxos, get_bitcoin_canister_id, GetUtxosRequest, GetUtxosResponse};
 //! # use ic_cdk::call::Call;
 //! # async fn example() -> ic_cdk::call::CallResult<GetUtxosResponse> {
 //! let arg = GetUtxosRequest::default();

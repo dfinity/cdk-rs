@@ -28,10 +28,10 @@
 //!
 //! For example, [`sign_with_ecdsa`] makes an unbounded-wait call. If a bounded-wait call is preferred, the call can be made as follows:
 //! ```rust, no_run
-//! # use ic_cdk::management_canister::{SignWithEcdsaArgs, SignWithEcdsaResult};
+//! # use ic_cdk::management_canister::{cost_sign_with_ecdsa, SignCallError, SignWithEcdsaArgs, SignWithEcdsaResult};
 //! # use ic_cdk::call::Call;
 //! # use candid::Principal;
-//! # async fn example() -> ic_cdk::call::CallResult<SignWithEcdsaResult> {
+//! # async fn example() -> Result<SignWithEcdsaResult, SignCallError> {
 //! let callee = Principal::management_canister();
 //! let arg = SignWithEcdsaArgs::default();
 //! let cycles = cost_sign_with_ecdsa(&arg)?;
