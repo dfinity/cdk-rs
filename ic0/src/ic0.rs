@@ -21,6 +21,7 @@ extern "C" {
     pub fn canister_self_size() -> usize;
     pub fn canister_self_copy(dst: usize, offset: usize, size: usize);
     pub fn canister_cycle_balance128(dst: usize);
+    pub fn canister_liquid_cycle_balance128(dst: usize);
     pub fn canister_status() -> u32;
     pub fn canister_version() -> u64;
     pub fn subnet_self_size() -> usize;
@@ -129,6 +130,9 @@ mod non_wasm {
     }
     pub unsafe fn canister_cycle_balance128(dst: usize) {
         panic!("canister_cycle_balance128 should only be called inside canisters.");
+    }
+    pub unsafe fn canister_liquid_cycle_balance128(dst: usize) {
+        panic!("canister_liquid_cycle_balance128 should only be called inside canisters.");
     }
     pub unsafe fn canister_status() -> u32 {
         panic!("canister_status should only be called inside canisters.");
