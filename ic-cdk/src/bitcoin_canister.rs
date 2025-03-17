@@ -46,7 +46,7 @@
 //! # Bitcoin Canister ID
 //!
 //! The Bitcoin canister ID is determined by the network.
-//! The helper fcunctions in this module automatically determine the canister ID based on the `network` field in the request.
+//! The helper functions in this module automatically determine the canister ID based on the `network` field in the request.
 //!
 //! For completeness, the [`get_bitcoin_canister_id`] function can be used to get the canister ID manually.
 //!

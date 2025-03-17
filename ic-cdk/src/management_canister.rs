@@ -47,7 +47,7 @@
 //! ## Cycle Cost
 //!
 //! Some management canister endpoints require cycles to be attached to the call.
-//! The functions for calling management cansiter automatically calculate the required cycles and attach them to the call.
+//! The functions for calling management canister automatically calculate the required cycles and attach them to the call.
 //!
 //! For completeness, this module also provides functions to calculate the cycle cost:
 //! - [`cost_http_request`]
