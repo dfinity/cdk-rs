@@ -43,7 +43,8 @@ const SEND_TRANSACTION_SUBMISSION_TESTNET: u128 = 2_000_000_000;
 const SEND_TRANSACTION_PAYLOAD_MAINNET: u128 = 20_000_000;
 const SEND_TRANSACTION_PAYLOAD_TESTNET: u128 = 8_000_000;
 
-fn get_canister_id(network: &Network) -> Principal {
+/// Gets the canister ID of the Bitcoin canister for the specified network.
+pub fn get_canister_id(network: &Network) -> Principal {
     match network {
         Network::Mainnet => MAINNET_ID,
         Network::Testnet => TESTNET_ID,
@@ -173,16 +174,26 @@ pub struct GetUtxosResponse {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_utxos) for more details.
 pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResponse> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_UTXO_MAINNET,
-        Network::Testnet => GET_UTXO_TESTNET,
-        Network::Regtest => 0,
-    };
+    let cycles = cost_get_utxos(arg);
     Ok(Call::bounded_wait(canister_id, "bitcoin_get_utxos")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
         .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_utxos`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_utxos`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_utxos(arg: &GetUtxosRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_UTXO_MAINNET,
+        Network::Testnet => GET_UTXO_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of [`bitcoin_get_balance`].
@@ -207,16 +218,26 @@ pub struct GetBalanceRequest {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
 pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_BALANCE_MAINNET,
-        Network::Testnet => GET_BALANCE_TESTNET,
-        Network::Regtest => 0,
-    };
+    let cycles = cost_get_balance(arg);
     Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
         .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_balance`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_balance`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_balance(arg: &GetBalanceRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_BALANCE_MAINNET,
+        Network::Testnet => GET_BALANCE_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of the [`bitcoin_get_current_fee_percentiles`] function.
@@ -255,11 +276,7 @@ pub async fn bitcoin_get_current_fee_percentiles(
     arg: &GetCurrentFeePercentilesRequest,
 ) -> CallResult<Vec<MillisatoshiPerByte>> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
-        Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
-        Network::Regtest => 0,
-    };
+    let cycles = cost_get_current_fee_percentiles(arg);
     Ok(
         Call::bounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
             .with_arg(arg)
@@ -267,6 +284,20 @@ pub async fn bitcoin_get_current_fee_percentiles(
             .await?
             .candid()?,
     )
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_current_fee_percentiles`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_current_fee_percentiles`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_current_fee_percentiles(arg: &GetCurrentFeePercentilesRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
+        Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of the [`bitcoin_get_block_headers`] function.
@@ -305,16 +336,26 @@ pub async fn bitcoin_get_block_headers(
     arg: &GetBlockHeadersRequest,
 ) -> CallResult<GetBlockHeadersResponse> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_BLOCK_HEADERS_MAINNET,
-        Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
-        Network::Regtest => 0,
-    };
+    let cycles = cost_bitcoin_get_block_headers(arg);
     Ok(Call::bounded_wait(canister_id, "bitcoin_get_block_headers")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
         .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_block_headers`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_block_headers`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_bitcoin_get_block_headers(arg: &GetBlockHeadersRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_BLOCK_HEADERS_MAINNET,
+        Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of the [`bitcoin_send_transaction`] function.
@@ -335,7 +376,7 @@ pub struct SendTransactionRequest {
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_send_transaction) for more details.
 pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResult<()> {
     let canister_id = get_canister_id(&arg.network);
-    let cycles = send_transaction_fee(arg);
+    let cycles = cost_send_transaction(arg);
     Ok(
         Call::unbounded_wait(canister_id, "bitcoin_send_transaction")
             .with_arg(arg)
@@ -345,7 +386,13 @@ pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResul
     )
 }
 
-fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
+/// Gets the cycles cost for the [`bitcoin_send_transaction`] function.
+///
+/// # Note
+///
+/// [`bitcoin_send_transaction`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_send_transaction(arg: &SendTransactionRequest) -> u128 {
     let (submission, payload) = match arg.network {
         Network::Mainnet => (
             SEND_TRANSACTION_SUBMISSION_MAINNET,
