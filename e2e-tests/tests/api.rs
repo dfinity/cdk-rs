@@ -64,6 +64,15 @@ fn call_api() {
         .unwrap();
     assert!(res.is_empty());
     let res = pic
+        .update_call(
+            canister_id,
+            sender,
+            "call_canister_liquid_cycle_balance",
+            vec![],
+        )
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
         .update_call(canister_id, sender, "call_canister_status", vec![])
         .unwrap();
     assert!(res.is_empty());

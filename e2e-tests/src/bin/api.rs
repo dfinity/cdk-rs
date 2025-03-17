@@ -92,6 +92,12 @@ fn call_canister_cycle_balance() {
     msg_reply(vec![]);
 }
 
+#[export_name = "canister_update call_canister_liquid_cycle_balance"]
+fn call_canister_liquid_cycle_balance() {
+    assert!(canister_liquid_cycle_balance() > 0);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_canister_status"]
 fn call_canister_status() {
     assert_eq!(canister_status(), CanisterStatusCode::Running);
