@@ -20,7 +20,7 @@
 //!
 //! The strategy for choosing the type of wait call is as follows:
 //! - Unbounded-wait call by default because the management canister is universally trusted.
-//! - Bounded-wait call for methods that only read state.
+//! - Bounded-wait call (with the default 300s timeout) for methods that only read state.
 //!
 //! Please check the documentation of each function for the type of wait call it uses.
 //!
