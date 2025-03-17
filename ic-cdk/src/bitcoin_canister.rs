@@ -4,6 +4,52 @@
 //! This module includes functions and types that facilitate these interactions, adhering to the
 //! [Bitcoin Canisters Interface Specification][2].
 //!
+//! # Bounded-wait vs. Unbounded-wait
+//!
+//! Interacting with the Bitcoin canisters involves making inter-canister calls,
+//! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
+//!
+//! Most of the functions in this module use the bounded-wait calls because they only read state.
+//! The only function that uses the unbounded-wait call is [`bitcoin_send_transaction`].
+//!
+//! If the default behavior is not suitable for a particular use case, the [`Call`] struct can be used directly to make the call.
+//!
+//! For example, [`bitcoin_get_utxos`] makes an bounded-wait call. If an unbounded-wait call is preferred, the call can be made as follows:
+//! ```rust, no_run
+//! # use ic_cdk::bitcoin_canister::{cost_get_utxos, get_bitcoin_canister_id, GetUtxosRequest, GetUtxosResponse};
+//! # use ic_cdk::call::Call;
+//! # async fn example() -> ic_cdk::call::CallResult<GetUtxosResponse> {
+//! let arg = GetUtxosRequest::default();
+//! let canister_id = get_bitcoin_canister_id(&arg.network);
+//! let cycles = cost_get_utxos(&arg);
+//! let res: GetUtxosResponse = Call::unbounded_wait(canister_id, "bitcoin_get_utxos")
+//!     .with_arg(&arg)
+//!     .with_cycles(cycles)
+//!     .await?
+//!     .candid()?;
+//! # Ok(res)
+//! # }
+//! ```
+//!
+//! ## Cycle Cost
+//!
+//! All the Bitcoin canister endpoints require cycles to be attached to the call.
+//! The helper functions in this module automatically calculate the required cycles and attach them to the call.
+//!
+//! For completeness, this module also provides functions to calculate the cycle cost:
+//! - [`cost_get_utxos`]
+//! - [`cost_get_balance`]
+//! - [`cost_get_current_fee_percentiles`]
+//! - [`cost_get_block_headers`]
+//! - [`cost_send_transaction`]
+//!
+//! # Bitcoin Canister ID
+//!
+//! The Bitcoin canister ID is determined by the network.
+//! The helper functions in this module automatically determine the canister ID based on the `network` field in the request.
+//!
+//! For completeness, the [`get_bitcoin_canister_id`] function can be used to get the canister ID manually.
+//!
 //! [1]: https://github.com/dfinity/bitcoin-canister
 //! [2]: https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md
 
@@ -35,7 +81,8 @@ const SEND_TRANSACTION_SUBMISSION_TESTNET: u128 = 2_000_000_000;
 const SEND_TRANSACTION_PAYLOAD_MAINNET: u128 = 20_000_000;
 const SEND_TRANSACTION_PAYLOAD_TESTNET: u128 = 8_000_000;
 
-fn get_canister_id(network: &Network) -> Principal {
+/// Gets the canister ID of the Bitcoin canister for the specified network.
+pub fn get_bitcoin_canister_id(network: &Network) -> Principal {
     match network {
         Network::Mainnet => MAINNET_ID,
         Network::Testnet => TESTNET_ID,
@@ -160,19 +207,31 @@ pub struct GetUtxosResponse {
 
 /// Gets all unspent transaction outputs (UTXOs) associated with the provided address.
 ///
+/// **Bounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_utxos) for more details.
 pub async fn bitcoin_get_utxos(arg: &GetUtxosRequest) -> CallResult<GetUtxosResponse> {
-    let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_UTXO_MAINNET,
-        Network::Testnet => GET_UTXO_TESTNET,
-        Network::Regtest => 0,
-    };
-    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_utxos")
+    let canister_id = get_bitcoin_canister_id(&arg.network);
+    let cycles = cost_get_utxos(arg);
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_utxos")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
         .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_utxos`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_utxos`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_utxos(arg: &GetUtxosRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_UTXO_MAINNET,
+        Network::Testnet => GET_UTXO_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of [`bitcoin_get_balance`].
@@ -192,19 +251,31 @@ pub struct GetBalanceRequest {
 
 /// Gets the current balance of a Bitcoin address in Satoshi.
 ///
+/// **Bounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_balance) for more details.
 pub async fn bitcoin_get_balance(arg: &GetBalanceRequest) -> CallResult<Satoshi> {
-    let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_BALANCE_MAINNET,
-        Network::Testnet => GET_BALANCE_TESTNET,
-        Network::Regtest => 0,
-    };
-    Ok(Call::unbounded_wait(canister_id, "bitcoin_get_balance")
+    let canister_id = get_bitcoin_canister_id(&arg.network);
+    let cycles = cost_get_balance(arg);
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_balance")
         .with_arg(arg)
         .with_cycles(cycles)
         .await?
         .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_balance`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_balance`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_balance(arg: &GetBalanceRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_BALANCE_MAINNET,
+        Network::Testnet => GET_BALANCE_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of the [`bitcoin_get_current_fee_percentiles`] function.
@@ -234,25 +305,37 @@ pub type MillisatoshiPerByte = u64;
 
 /// Gets the Bitcoin transaction fee percentiles.
 ///
+/// **Bounded-wait call**
+///
 /// The percentiles are measured in millisatoshi/byte (1000 millisatoshi = 1 satoshi),
 /// over the last 10,000 transactions in the specified network,
 /// i.e., over the transactions in the last approximately 4-10 blocks.
 pub async fn bitcoin_get_current_fee_percentiles(
     arg: &GetCurrentFeePercentilesRequest,
 ) -> CallResult<Vec<MillisatoshiPerByte>> {
-    let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
-        Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
-        Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
-        Network::Regtest => 0,
-    };
+    let canister_id = get_bitcoin_canister_id(&arg.network);
+    let cycles = cost_get_current_fee_percentiles(arg);
     Ok(
-        Call::unbounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
+        Call::bounded_wait(canister_id, "bitcoin_get_current_fee_percentiles")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
             .candid()?,
     )
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_current_fee_percentiles`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_current_fee_percentiles`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_current_fee_percentiles(arg: &GetCurrentFeePercentilesRequest) -> u128 {
+    match arg.network {
+        Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
+        Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
+        Network::Regtest => 0,
+    }
 }
 
 /// Argument type of the [`bitcoin_get_block_headers`] function.
@@ -284,23 +367,33 @@ pub struct GetBlockHeadersResponse {
 
 /// Gets the block headers in the provided range of block heights.
 ///
+/// **Bounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_get_block_headers) for more details.
 pub async fn bitcoin_get_block_headers(
     arg: &GetBlockHeadersRequest,
 ) -> CallResult<GetBlockHeadersResponse> {
-    let canister_id = get_canister_id(&arg.network);
-    let cycles = match arg.network {
+    let canister_id = get_bitcoin_canister_id(&arg.network);
+    let cycles = cost_get_block_headers(arg);
+    Ok(Call::bounded_wait(canister_id, "bitcoin_get_block_headers")
+        .with_arg(arg)
+        .with_cycles(cycles)
+        .await?
+        .candid()?)
+}
+
+/// Gets the cycles cost for the [`bitcoin_get_block_headers`] function.
+///
+/// # Note
+///
+/// [`bitcoin_get_block_headers`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_get_block_headers(arg: &GetBlockHeadersRequest) -> u128 {
+    match arg.network {
         Network::Mainnet => GET_BLOCK_HEADERS_MAINNET,
         Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
         Network::Regtest => 0,
-    };
-    Ok(
-        Call::unbounded_wait(canister_id, "bitcoin_get_block_headers")
-            .with_arg(arg)
-            .with_cycles(cycles)
-            .await?
-            .candid()?,
-    )
+    }
 }
 
 /// Argument type of the [`bitcoin_send_transaction`] function.
@@ -316,10 +409,12 @@ pub struct SendTransactionRequest {
 
 /// Sends a Bitcoin transaction to the Bitcoin network.
 ///
+/// **Unbounded-wait call**
+///
 /// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#bitcoin_send_transaction) for more details.
 pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResult<()> {
-    let canister_id = get_canister_id(&arg.network);
-    let cycles = send_transaction_fee(arg);
+    let canister_id = get_bitcoin_canister_id(&arg.network);
+    let cycles = cost_send_transaction(arg);
     Ok(
         Call::unbounded_wait(canister_id, "bitcoin_send_transaction")
             .with_arg(arg)
@@ -329,7 +424,13 @@ pub async fn bitcoin_send_transaction(arg: &SendTransactionRequest) -> CallResul
     )
 }
 
-fn send_transaction_fee(arg: &SendTransactionRequest) -> u128 {
+/// Gets the cycles cost for the [`bitcoin_send_transaction`] function.
+///
+/// # Note
+///
+/// [`bitcoin_send_transaction`] calls this function internally so it's not necessary to call this function directly.
+/// When it is preferred to construct a [`Call`] manually, this function can be used to get the cycles cost.
+pub fn cost_send_transaction(arg: &SendTransactionRequest) -> u128 {
     let (submission, payload) = match arg.network {
         Network::Mainnet => (
             SEND_TRANSACTION_SUBMISSION_MAINNET,
