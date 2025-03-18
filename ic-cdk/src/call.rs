@@ -387,7 +387,7 @@ pub enum Error {
 
 /// The error type when awaiting a [`CallFuture`].
 ///
-/// This encapsulates all possible [`Error`] except for the [`CandidDecodeFailed`] variant.
+/// This encapsulates all possible [`enum@Error`] except for the [`CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
 pub enum CallFailed {
     /// The liquid cycle balance is insufficient to perform the call.
@@ -459,8 +459,6 @@ pub struct InsufficientLiquidCycleBalance {
 ///
 /// This error type indicates that the underlying `ic0.call_perform` operation
 /// returned a non-zero code, signaling a failure.
-///
-/// This is wrapped by the [`PreExecutionFailure::CallPerformFailed`] variant.
 #[derive(Error, Debug, Clone)]
 #[error("call perform failed")]
 pub struct CallPerformFailed;
