@@ -22,23 +22,15 @@
 //!
 //! The module defines various error types to handle different failure scenarios during inter-canister calls:
 //!
-//! - [`enum@Error`]: The top-level error type encapsulating all possible errors.
-//! - [`CallFailed`]: Errors related to the execution of the call itself.
-//! - [`PreExecutionFailure`]: Errors during the pre-execution phase of an inter-canister call.
-//! - [`InsufficientLiquidCycleBalance`]: Errors when the liquid cycle balance is insufficient to perform the call.
-//! - [`CallPerformFailed`]: Errors when the `ic0.call_perform` operation fails.
-//! - [`CallRejected`]: Errors when an inter-canister call is rejected.
-//! - [`CandidDecodeFailed`]: Errors when the response cannot be decoded as Candid.
-//!
-//! ```text
-//! Error
-//! ├── CallFailed
-//! │   ├── PreExecutionFailure
-//! │   │   ├── InsufficientLiquidCycleBalance
-//! │   │   └── CallPerformFailed
-//! │   └── CallRejected
-//! └── CandidDecodeFailed
-//! ```
+//! - The base error cases:
+//!   - [`InsufficientLiquidCycleBalance`]: Errors when the liquid cycle balance is insufficient to perform the call.
+//!   - [`CallPerformFailed`]: Errors when the `ic0.call_perform` operation fails.
+//!   - [`CallRejected`]: Errors when an inter-canister call is rejected.
+//!   - [`CandidDecodeFailed`]: Errors when the response cannot be decoded as Candid.
+//! - The composite error types:
+//!   - [`enum@Error`]: The top-level error type encapsulating all possible errors.
+//!   - [`CallFailed`]: Errors related to the execution of the call itself, i.e. all the errors except for the Candid decoding failure.
+//!   - [`OnewayError`]: The error type for when sending a [`oneway`](Call::oneway) call.
 //!
 //! # Internal Details
 //!
@@ -367,15 +359,23 @@ impl std::borrow::Borrow<[u8]> for Response {
 /// This is the top-level error type for the inter-canister call API.
 ///
 /// This encapsulates all possible errors that can arise, including:
-/// - Call failures (e.g., `ic0.call_perform` failed or asynchronously rejected).
-/// - Candid decoding failures (e.g.,  the response cannot be decoded).
+/// - Insufficient liquid cycle balance.
+/// - `ic0.call_perform` failed.
+/// - Asynchronously rejected.
+/// - Candid decoding of the response failed.
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    /// The inter-canister call failed.
-    ///
-    /// This variant wraps errors related to the execution of the call itself.
+    /// The liquid cycle balance is insufficient to perform the call.
     #[error(transparent)]
-    CallFailed(#[from] CallFailed),
+    InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
+
+    /// The `ic0.call_perform` operation failed.
+    #[error(transparent)]
+    CallPerformFailed(#[from] CallPerformFailed),
+
+    /// The inter-canister call is rejected.
+    #[error(transparent)]
+    CallRejected(#[from] CallRejected),
 
     /// The response from the inter-canister call could not be decoded as Candid.
     ///
@@ -385,35 +385,55 @@ pub enum Error {
     CandidDecodeFailed(#[from] CandidDecodeFailed),
 }
 
-/// Represents errors that can occur during the execution of an inter-canister call.
-///
-/// This is the error type when awaiting a [`CallFuture`].
-///
-/// This is wrapped by the top-level [`Error::CallFailed`] variant.
+/// The error type when awaiting a [`CallFuture`].
+/// 
+/// This encapsulates all possible [`Error`] except for the [`CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
 pub enum CallFailed {
-    /// The `ic0.call_perform` operation returned a non-zero code, indicating a failure.
+    /// The liquid cycle balance is insufficient to perform the call.
     #[error(transparent)]
-    PreExecutionFailure(#[from] PreExecutionFailure),
+    InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
+
+    /// The `ic0.call_perform` operation failed.
+    #[error(transparent)]
+    CallPerformFailed(#[from] CallPerformFailed),
 
     /// The inter-canister call is rejected.
     #[error(transparent)]
     CallRejected(#[from] CallRejected),
 }
 
-/// Represents errors that can occur during the pre-execution phase (before or at `ic0.call_perform) of an inter-canister call.
-///
-/// This is the error type of [`Call::oneway`].
-///
-/// This is wrapped by the [`CallFailed::PreExecutionFailure`] variant.
+/// The error type of [`Call::oneway`].
+/// 
+/// This encapsulates all possible errors that can occur when sending a oneway call.
+/// Therefore, it includes the [`InsufficientLiquidCycleBalance`] and [`CallPerformFailed`] variants.
 #[derive(Error, Debug, Clone)]
-pub enum PreExecutionFailure {
+pub enum OnewayError {
     /// The liquid cycle balance is insufficient to perform the call.
     #[error(transparent)]
     InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
     /// The `ic0.call_perform` operation failed.
     #[error(transparent)]
     CallPerformFailed(#[from] CallPerformFailed),
+}
+
+impl From<OnewayError> for Error {
+    fn from(e: OnewayError) -> Self {
+        match e {
+            OnewayError::InsufficientLiquidCycleBalance(e) => Error::InsufficientLiquidCycleBalance(e),
+            OnewayError::CallPerformFailed(e) => Error::CallPerformFailed(e),
+        }
+    }
+}
+
+impl From<CallFailed> for Error {
+    fn from(e: CallFailed) -> Self {
+        match e {
+            CallFailed::InsufficientLiquidCycleBalance(e) => Error::InsufficientLiquidCycleBalance(e),
+            CallFailed::CallPerformFailed(e) => Error::CallPerformFailed(e),
+            CallFailed::CallRejected(e) => Error::CallRejected(e),
+        }
+    }
 }
 
 /// Represents an error that occurs when the liquid cycle balance is insufficient to perform the call.
@@ -542,22 +562,6 @@ impl CallErrorExt for CallPerformFailed {
     }
 }
 
-impl CallErrorExt for PreExecutionFailure {
-    fn is_clean_reject(&self) -> bool {
-        match self {
-            PreExecutionFailure::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
-            PreExecutionFailure::CallPerformFailed(e) => e.is_clean_reject(),
-        }
-    }
-
-    fn is_immediately_retryable(&self) -> bool {
-        match self {
-            PreExecutionFailure::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
-            PreExecutionFailure::CallPerformFailed(e) => e.is_immediately_retryable(),
-        }
-    }
-}
-
 impl CallErrorExt for CallRejected {
     fn is_clean_reject(&self) -> bool {
         // Here we apply a conservative whitelist of reject codes that are considered clean.
@@ -598,14 +602,18 @@ impl CallErrorExt for CandidDecodeFailed {
 impl CallErrorExt for Error {
     fn is_clean_reject(&self) -> bool {
         match self {
-            Error::CallFailed(e) => e.is_clean_reject(),
+            Error::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
+            Error::CallPerformFailed(e) => e.is_clean_reject(),
+            Error::CallRejected(e) => e.is_clean_reject(),
             Error::CandidDecodeFailed(e) => e.is_clean_reject(),
         }
     }
 
     fn is_immediately_retryable(&self) -> bool {
         match self {
-            Error::CallFailed(e) => e.is_immediately_retryable(),
+            Error::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
+            Error::CallPerformFailed(e) => e.is_immediately_retryable(),
+            Error::CallRejected(e) => e.is_immediately_retryable(),
             Error::CandidDecodeFailed(e) => e.is_immediately_retryable(),
         }
     }
@@ -614,15 +622,33 @@ impl CallErrorExt for Error {
 impl CallErrorExt for CallFailed {
     fn is_clean_reject(&self) -> bool {
         match self {
-            CallFailed::PreExecutionFailure(e) => e.is_clean_reject(),
+            CallFailed::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
+            CallFailed::CallPerformFailed(e) => e.is_clean_reject(),
             CallFailed::CallRejected(e) => e.is_clean_reject(),
         }
     }
 
     fn is_immediately_retryable(&self) -> bool {
         match self {
-            CallFailed::PreExecutionFailure(e) => e.is_immediately_retryable(),
+            CallFailed::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
+            CallFailed::CallPerformFailed(e) => e.is_immediately_retryable(),
             CallFailed::CallRejected(e) => e.is_immediately_retryable(),
+        }
+    }
+}
+
+impl CallErrorExt for OnewayError {
+    fn is_clean_reject(&self) -> bool {
+        match self {
+            OnewayError::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
+            OnewayError::CallPerformFailed(e) => e.is_clean_reject(),
+        }
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        match self {
+            OnewayError::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
+            OnewayError::CallPerformFailed(e) => e.is_immediately_retryable(),
         }
     }
 }
@@ -646,7 +672,7 @@ impl<'m, 'a> IntoFuture for Call<'m, 'a> {
 // Execution
 impl Call<'_, '_> {
     /// Sends the call and ignores the reply.
-    pub fn oneway(&self) -> Result<(), PreExecutionFailure> {
+    pub fn oneway(&self) -> Result<(), OnewayError> {
         self.check_liquid_cycle_balance_sufficient()?;
         match self.perform(None) {
             0 => Ok(()),
@@ -823,10 +849,8 @@ impl std::future::Future for CallFuture<'_, '_> {
         match mem::take(&mut *state) {
             CallFutureState::Prepared { call } => {
                 if let Err(e) = call.check_liquid_cycle_balance_sufficient() {
-                    let pre_execution_failure: PreExecutionFailure = e.into();
-                    let result = Err(pre_execution_failure.into());
                     *state = CallFutureState::PostComplete;
-                    Poll::Ready(result)
+                    Poll::Ready(Err(e.into()))
                 } else {
                     match call.perform(Some(self_ref.state.clone())) {
                         0 => {
@@ -837,11 +861,8 @@ impl std::future::Future for CallFuture<'_, '_> {
                             Poll::Pending
                         }
                         _ => {
-                            let pre_execution_failure: PreExecutionFailure =
-                                CallPerformFailed.into();
-                            let result = Err(pre_execution_failure.into());
                             *state = CallFutureState::PostComplete;
-                            Poll::Ready(result)
+                            Poll::Ready(Err(CallPerformFailed.into()))
                         }
                     }
                 }

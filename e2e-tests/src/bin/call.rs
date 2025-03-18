@@ -232,13 +232,7 @@ async fn insufficient_liquid_cycle_balance_error() {
         .with_cycles(liquid_cycle_balance)
         .await
         .unwrap_err();
-    use ic_cdk::call::{CallFailed, InsufficientLiquidCycleBalance, PreExecutionFailure};
-    assert!(matches!(
-        err,
-        CallFailed::PreExecutionFailure(PreExecutionFailure::InsufficientLiquidCycleBalance(
-            InsufficientLiquidCycleBalance
-        ))
-    ));
+    assert!(matches!(err, ic_cdk::call::CallFailed::InsufficientLiquidCycleBalance(_)));
 }
 
 #[update]
