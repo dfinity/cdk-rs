@@ -386,7 +386,7 @@ pub enum Error {
 }
 
 /// The error type when awaiting a [`CallFuture`].
-/// 
+///
 /// This encapsulates all possible [`Error`] except for the [`CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
 pub enum CallFailed {
@@ -404,7 +404,7 @@ pub enum CallFailed {
 }
 
 /// The error type of [`Call::oneway`].
-/// 
+///
 /// This encapsulates all possible errors that can occur when sending a oneway call.
 /// Therefore, it includes the [`InsufficientLiquidCycleBalance`] and [`CallPerformFailed`] variants.
 #[derive(Error, Debug, Clone)]
@@ -420,7 +420,9 @@ pub enum OnewayError {
 impl From<OnewayError> for Error {
     fn from(e: OnewayError) -> Self {
         match e {
-            OnewayError::InsufficientLiquidCycleBalance(e) => Error::InsufficientLiquidCycleBalance(e),
+            OnewayError::InsufficientLiquidCycleBalance(e) => {
+                Error::InsufficientLiquidCycleBalance(e)
+            }
             OnewayError::CallPerformFailed(e) => Error::CallPerformFailed(e),
         }
     }
@@ -429,7 +431,9 @@ impl From<OnewayError> for Error {
 impl From<CallFailed> for Error {
     fn from(e: CallFailed) -> Self {
         match e {
-            CallFailed::InsufficientLiquidCycleBalance(e) => Error::InsufficientLiquidCycleBalance(e),
+            CallFailed::InsufficientLiquidCycleBalance(e) => {
+                Error::InsufficientLiquidCycleBalance(e)
+            }
             CallFailed::CallPerformFailed(e) => Error::CallPerformFailed(e),
             CallFailed::CallRejected(e) => Error::CallRejected(e),
         }
@@ -443,8 +447,13 @@ impl From<CallFailed> for Error {
 ///
 /// The call won't be performed if the former is less than the latter.
 #[derive(Error, Debug, Clone)]
-#[error("Insufficient liquid cycles balance")]
-pub struct InsufficientLiquidCycleBalance;
+#[error("insufficient liquid cycles balance, available: {available}, required: {required}")]
+pub struct InsufficientLiquidCycleBalance {
+    /// The liquid cycle balance available in the canister.
+    pub available: u128,
+    /// The required cycles to perform the call.
+    pub required: u128,
+}
 
 /// Represents an error that occurs when the `ic0.call_perform` operation fails.
 ///
@@ -453,7 +462,7 @@ pub struct InsufficientLiquidCycleBalance;
 ///
 /// This is wrapped by the [`PreExecutionFailure::CallPerformFailed`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Call perform failed")]
+#[error("call perform failed")]
 pub struct CallPerformFailed;
 
 /// Represents an error that occurs when an inter-canister call is rejected.
@@ -463,7 +472,7 @@ pub struct CallPerformFailed;
 ///
 /// This is wrapped by the [`CallFailed::CallRejected`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Call rejected: {raw_reject_code} - {reject_message}")]
+#[error("call rejected: {raw_reject_code} - {reject_message}")]
 pub struct CallRejected {
     /// All fields are private so we will be able to change the implementation without breaking the API.
     /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
@@ -475,7 +484,7 @@ pub struct CallRejected {
 
 /// The error type for when an unrecognized reject code is encountered.
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[error("Unrecognized reject code: {0}")]
+#[error("unrecognized reject code: {0}")]
 pub struct UnrecognizedRejectCode(u32);
 
 impl CallRejected {
@@ -519,7 +528,7 @@ impl CallRejected {
 ///
 /// It is wrapped by the top-level [`Error::CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Candid decode failed for type: {type_name}, candid error: {candid_error}")]
+#[error("candid decode failed for type: {type_name}, candid error: {candid_error}")]
 pub struct CandidDecodeFailed {
     type_name: String,
     candid_error: String,
@@ -682,12 +691,15 @@ impl Call<'_, '_> {
 
     /// Checks if the liquid cycle balance is sufficient to perform the call.
     fn check_liquid_cycle_balance_sufficient(&self) -> Result<(), InsufficientLiquidCycleBalance> {
-        let cost = self.get_cost();
-        let liquid_balance = crate::api::canister_liquid_cycle_balance();
-        if liquid_balance >= cost {
+        let required = self.get_cost();
+        let available = crate::api::canister_liquid_cycle_balance();
+        if available >= required {
             Ok(())
         } else {
-            Err(InsufficientLiquidCycleBalance)
+            Err(InsufficientLiquidCycleBalance {
+                available,
+                required,
+            })
         }
     }
 
