@@ -36,7 +36,7 @@ async fn execute_non_query_methods(network: Network) {
         network,
     };
     let err = bitcoin_send_transaction(&arg).await.unwrap_err();
-    assert!(matches!(err, Error::CallFailed { .. }));
+    assert!(matches!(err, Error::CallRejected { .. }));
 }
 
 fn main() {}

@@ -18,6 +18,7 @@
     ic0.canister_self_size : () -> I;                                                     // *
     ic0.canister_self_copy : (dst : I, offset : I, size : I) -> ();                       // *
     ic0.canister_cycle_balance128 : (dst : I) -> ();                                      // *
+    ic0.canister_liquid_cycle_balance128 : (dst : I) -> ();                               // *
     ic0.canister_status : () -> i32;                                                      // *
     ic0.canister_version : () -> i64;                                                     // *
     ic0.subnet_self_size : () -> I;                                                       // *

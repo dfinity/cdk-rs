@@ -224,6 +224,21 @@ async fn join_calls() {
 }
 
 #[update]
+async fn insufficient_liquid_cycle_balance_error() {
+    // Attach the current liquid cycle balance to the call
+    // to ensure that the call will fail with an InsufficientLiquidCycleBalance error.
+    let liquid_cycle_balance = ic_cdk::api::canister_cycle_balance();
+    let err = Call::unbounded_wait(canister_self(), "foo")
+        .with_cycles(liquid_cycle_balance)
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        ic_cdk::call::CallFailed::InsufficientLiquidCycleBalance(_)
+    ));
+}
+
+#[update]
 async fn call_error_ext() {
     // The trait need to be in scope so that the provided methods can be called.
     use ic_cdk::call::CallErrorExt;

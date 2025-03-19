@@ -26,5 +26,5 @@ cargo_metadata = "0.19"
 flate2 = "1.1"
 futures = "0.3"
 hex.workspace = true
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-02-27_03-09-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-03-14_03-10-base" }
 reqwest = "0.12"

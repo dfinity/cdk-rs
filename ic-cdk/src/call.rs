@@ -22,19 +22,15 @@
 //!
 //! The module defines various error types to handle different failure scenarios during inter-canister calls:
 //!
-//! - [`enum@Error`]: The top-level error type encapsulating all possible errors.
-//! - [`CallFailed`]: Errors related to the execution of the call itself.
-//! - [`CallRejected`]: Errors when an inter-canister call is rejected.
-//! - [`CallPerformFailed`]: Errors when the `ic0.call_perform` operation fails.
-//! - [`CandidDecodeFailed`]: Errors when the response cannot be decoded as Candid.
-//!
-//! ```text
-//! Error
-//! ├── CallFailed
-//! │   ├── CallPerformFailed
-//! │   └── CallRejected
-//! └── CandidDecodeFailed
-//! ```
+//! - The base error cases:
+//!   - [`InsufficientLiquidCycleBalance`]: Errors when the liquid cycle balance is insufficient to perform the call.
+//!   - [`CallPerformFailed`]: Errors when the `ic0.call_perform` operation fails.
+//!   - [`CallRejected`]: Errors when an inter-canister call is rejected.
+//!   - [`CandidDecodeFailed`]: Errors when the response cannot be decoded as Candid.
+//! - The composite error types:
+//!   - [`enum@Error`]: The top-level error type encapsulating all possible errors.
+//!   - [`CallFailed`]: Errors related to the execution of the call itself, i.e. all the errors except for the Candid decoding failure.
+//!   - [`OnewayError`]: The error type for when sending a [`oneway`](Call::oneway) call.
 //!
 //! # Internal Details
 //!
@@ -270,7 +266,8 @@ impl<'a> Call<'_, 'a> {
     }
 
     /// Returns the amount of cycles a canister needs to be above the freezing threshold in order to
-    /// successfully perform this call. Takes into account the attached cycles as well as
+    /// successfully perform this call. Takes into account the attached cycles ([`with_cycles`](Self::with_cycles))
+    /// as well as
     /// - the method name byte length
     /// - the payload length
     /// - the cost of transmitting the request
@@ -362,15 +359,23 @@ impl std::borrow::Borrow<[u8]> for Response {
 /// This is the top-level error type for the inter-canister call API.
 ///
 /// This encapsulates all possible errors that can arise, including:
-/// - Call failures (e.g., `ic0.call_perform` failed or asynchronously rejected).
-/// - Candid decoding failures (e.g.,  the response cannot be decoded).
+/// - Insufficient liquid cycle balance.
+/// - `ic0.call_perform` failed.
+/// - Asynchronously rejected.
+/// - Candid decoding of the response failed.
 #[derive(Error, Debug, Clone)]
 pub enum Error {
-    /// The inter-canister call failed.
-    ///
-    /// This variant wraps errors related to the execution of the call itself.
+    /// The liquid cycle balance is insufficient to perform the call.
     #[error(transparent)]
-    CallFailed(#[from] CallFailed),
+    InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
+
+    /// The `ic0.call_perform` operation failed.
+    #[error(transparent)]
+    CallPerformFailed(#[from] CallPerformFailed),
+
+    /// The inter-canister call is rejected.
+    #[error(transparent)]
+    CallRejected(#[from] CallRejected),
 
     /// The response from the inter-canister call could not be decoded as Candid.
     ///
@@ -380,14 +385,16 @@ pub enum Error {
     CandidDecodeFailed(#[from] CandidDecodeFailed),
 }
 
-/// Represents errors that can occur during the execution of an inter-canister call.
+/// The error type when awaiting a [`CallFuture`].
 ///
-/// This is the error type when awaiting a [`CallFuture`].
-///
-/// This is wrapped by the top-level [`Error::CallFailed`] variant.
+/// This encapsulates all possible [`enum@Error`] except for the [`CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
 pub enum CallFailed {
-    /// The `ic0.call_perform` operation returned a non-zero code, indicating a failure.
+    /// The liquid cycle balance is insufficient to perform the call.
+    #[error(transparent)]
+    InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
+
+    /// The `ic0.call_perform` operation failed.
     #[error(transparent)]
     CallPerformFailed(#[from] CallPerformFailed),
 
@@ -396,6 +403,66 @@ pub enum CallFailed {
     CallRejected(#[from] CallRejected),
 }
 
+/// The error type of [`Call::oneway`].
+///
+/// This encapsulates all possible errors that can occur when sending a oneway call.
+/// Therefore, it includes the [`InsufficientLiquidCycleBalance`] and [`CallPerformFailed`] variants.
+#[derive(Error, Debug, Clone)]
+pub enum OnewayError {
+    /// The liquid cycle balance is insufficient to perform the call.
+    #[error(transparent)]
+    InsufficientLiquidCycleBalance(#[from] InsufficientLiquidCycleBalance),
+    /// The `ic0.call_perform` operation failed.
+    #[error(transparent)]
+    CallPerformFailed(#[from] CallPerformFailed),
+}
+
+impl From<OnewayError> for Error {
+    fn from(e: OnewayError) -> Self {
+        match e {
+            OnewayError::InsufficientLiquidCycleBalance(e) => {
+                Error::InsufficientLiquidCycleBalance(e)
+            }
+            OnewayError::CallPerformFailed(e) => Error::CallPerformFailed(e),
+        }
+    }
+}
+
+impl From<CallFailed> for Error {
+    fn from(e: CallFailed) -> Self {
+        match e {
+            CallFailed::InsufficientLiquidCycleBalance(e) => {
+                Error::InsufficientLiquidCycleBalance(e)
+            }
+            CallFailed::CallPerformFailed(e) => Error::CallPerformFailed(e),
+            CallFailed::CallRejected(e) => Error::CallRejected(e),
+        }
+    }
+}
+
+/// Represents an error that occurs when the liquid cycle balance is insufficient to perform the call.
+///
+/// The liquid cycle balance is determined by [`canister_liquid_cycle_balance`](crate::api::canister_liquid_cycle_balance).
+/// The cost of the call is determined by [`Call::get_cost`].
+///
+/// The call won't be performed if the former is less than the latter.
+#[derive(Error, Debug, Clone)]
+#[error("insufficient liquid cycles balance, available: {available}, required: {required}")]
+pub struct InsufficientLiquidCycleBalance {
+    /// The liquid cycle balance available in the canister.
+    pub available: u128,
+    /// The required cycles to perform the call.
+    pub required: u128,
+}
+
+/// Represents an error that occurs when the `ic0.call_perform` operation fails.
+///
+/// This error type indicates that the underlying `ic0.call_perform` operation
+/// returned a non-zero code, signaling a failure.
+#[derive(Error, Debug, Clone)]
+#[error("call perform failed")]
+pub struct CallPerformFailed;
+
 /// Represents an error that occurs when an inter-canister call is rejected.
 ///
 /// The [`reject_code`][`Self::reject_code`] and [`reject_message`][`Self::reject_message`]
@@ -403,7 +470,7 @@ pub enum CallFailed {
 ///
 /// This is wrapped by the [`CallFailed::CallRejected`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Call rejected: {raw_reject_code} - {reject_message}")]
+#[error("call rejected: {raw_reject_code} - {reject_message}")]
 pub struct CallRejected {
     /// All fields are private so we will be able to change the implementation without breaking the API.
     /// Once we have `ic0.msg_error_code` system API, we will only store the `error_code` in this struct.
@@ -415,7 +482,7 @@ pub struct CallRejected {
 
 /// The error type for when an unrecognized reject code is encountered.
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[error("Unrecognized reject code: {0}")]
+#[error("unrecognized reject code: {0}")]
 pub struct UnrecognizedRejectCode(u32);
 
 impl CallRejected {
@@ -449,18 +516,6 @@ impl CallRejected {
     }
 }
 
-/// Represents an error that occurs when the `ic0.call_perform` operation fails.
-///
-/// This error type indicates that the underlying `ic0.call_perform` operation
-/// returned a non-zero code, signaling a failure in the call execution.
-///
-/// This is the only possible error that can occur in [`Call::oneway`].
-///
-/// This is wrapped by the [`CallFailed::CallPerformFailed`] variant.
-#[derive(Error, Debug, Clone)]
-#[error("Call perform failed")]
-pub struct CallPerformFailed;
-
 /// Represents an error that occurs when the response from an inter-canister call
 /// cannot be decoded as Candid.
 ///
@@ -471,7 +526,7 @@ pub struct CallPerformFailed;
 ///
 /// It is wrapped by the top-level [`Error::CandidDecodeFailed`] variant.
 #[derive(Error, Debug, Clone)]
-#[error("Candid decode failed for type: {type_name}, candid error: {candid_error}")]
+#[error("candid decode failed for type: {type_name}, candid error: {candid_error}")]
 pub struct CandidDecodeFailed {
     type_name: String,
     candid_error: String,
@@ -492,13 +547,24 @@ pub trait CallErrorExt {
     fn is_immediately_retryable(&self) -> bool;
 }
 
+impl CallErrorExt for InsufficientLiquidCycleBalance {
+    fn is_clean_reject(&self) -> bool {
+        // The call was not performed.
+        true
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        // Caller should top up cycles before retrying.
+        false
+    }
+}
+
 impl CallErrorExt for CallPerformFailed {
     fn is_clean_reject(&self) -> bool {
         true
     }
 
     fn is_immediately_retryable(&self) -> bool {
-        // TODO: check if this is correct
         false
     }
 }
@@ -543,14 +609,18 @@ impl CallErrorExt for CandidDecodeFailed {
 impl CallErrorExt for Error {
     fn is_clean_reject(&self) -> bool {
         match self {
-            Error::CallFailed(e) => e.is_clean_reject(),
+            Error::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
+            Error::CallPerformFailed(e) => e.is_clean_reject(),
+            Error::CallRejected(e) => e.is_clean_reject(),
             Error::CandidDecodeFailed(e) => e.is_clean_reject(),
         }
     }
 
     fn is_immediately_retryable(&self) -> bool {
         match self {
-            Error::CallFailed(e) => e.is_immediately_retryable(),
+            Error::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
+            Error::CallPerformFailed(e) => e.is_immediately_retryable(),
+            Error::CallRejected(e) => e.is_immediately_retryable(),
             Error::CandidDecodeFailed(e) => e.is_immediately_retryable(),
         }
     }
@@ -559,6 +629,7 @@ impl CallErrorExt for Error {
 impl CallErrorExt for CallFailed {
     fn is_clean_reject(&self) -> bool {
         match self {
+            CallFailed::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
             CallFailed::CallPerformFailed(e) => e.is_clean_reject(),
             CallFailed::CallRejected(e) => e.is_clean_reject(),
         }
@@ -566,8 +637,25 @@ impl CallErrorExt for CallFailed {
 
     fn is_immediately_retryable(&self) -> bool {
         match self {
+            CallFailed::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
             CallFailed::CallPerformFailed(e) => e.is_immediately_retryable(),
             CallFailed::CallRejected(e) => e.is_immediately_retryable(),
+        }
+    }
+}
+
+impl CallErrorExt for OnewayError {
+    fn is_clean_reject(&self) -> bool {
+        match self {
+            OnewayError::InsufficientLiquidCycleBalance(e) => e.is_clean_reject(),
+            OnewayError::CallPerformFailed(e) => e.is_clean_reject(),
+        }
+    }
+
+    fn is_immediately_retryable(&self) -> bool {
+        match self {
+            OnewayError::InsufficientLiquidCycleBalance(e) => e.is_immediately_retryable(),
+            OnewayError::CallPerformFailed(e) => e.is_immediately_retryable(),
         }
     }
 }
@@ -591,10 +679,25 @@ impl<'m, 'a> IntoFuture for Call<'m, 'a> {
 // Execution
 impl Call<'_, '_> {
     /// Sends the call and ignores the reply.
-    pub fn oneway(&self) -> Result<(), CallPerformFailed> {
+    pub fn oneway(&self) -> Result<(), OnewayError> {
+        self.check_liquid_cycle_balance_sufficient()?;
         match self.perform(None) {
             0 => Ok(()),
-            _ => Err(CallPerformFailed),
+            _ => Err(CallPerformFailed.into()),
+        }
+    }
+
+    /// Checks if the liquid cycle balance is sufficient to perform the call.
+    fn check_liquid_cycle_balance_sufficient(&self) -> Result<(), InsufficientLiquidCycleBalance> {
+        let required = self.get_cost();
+        let available = crate::api::canister_liquid_cycle_balance();
+        if available >= required {
+            Ok(())
+        } else {
+            Err(InsufficientLiquidCycleBalance {
+                available,
+                required,
+            })
         }
     }
 
@@ -755,18 +858,22 @@ impl std::future::Future for CallFuture<'_, '_> {
         let mut state = self_ref.state.write().unwrap();
         match mem::take(&mut *state) {
             CallFutureState::Prepared { call } => {
-                match call.perform(Some(self_ref.state.clone())) {
-                    0 => {
-                        // call_perform returns 0 means the call was successfully enqueued.
-                        *state = CallFutureState::Executing {
-                            waker: context.waker().clone(),
-                        };
-                        Poll::Pending
-                    }
-                    _ => {
-                        let result = Err(CallPerformFailed.into());
-                        *state = CallFutureState::PostComplete;
-                        Poll::Ready(result)
+                if let Err(e) = call.check_liquid_cycle_balance_sufficient() {
+                    *state = CallFutureState::PostComplete;
+                    Poll::Ready(Err(e.into()))
+                } else {
+                    match call.perform(Some(self_ref.state.clone())) {
+                        0 => {
+                            // call_perform returns 0 means the call was successfully enqueued.
+                            *state = CallFutureState::Executing {
+                                waker: context.waker().clone(),
+                            };
+                            Poll::Pending
+                        }
+                        _ => {
+                            *state = CallFutureState::PostComplete;
+                            Poll::Ready(Err(CallPerformFailed.into()))
+                        }
                     }
                 }
             }
