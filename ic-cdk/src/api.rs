@@ -21,14 +21,16 @@
 use candid::Principal;
 use std::{convert::TryFrom, num::NonZeroU64};
 
-#[doc(hidden)]
 #[deprecated(
     since = "0.18.0",
     note = "The `api::call` module is deprecated. Individual items within this module have their own deprecation notices with specific migration guidance."
 )]
 pub mod call;
+#[deprecated(
+    since = "0.18.0",
+    note = "The `api::management_canister` module is deprecated. Please use the `management_canister` and `bitcoin_canister` modules at the crate root."
+)]
 pub mod management_canister;
-#[doc(hidden)]
 #[deprecated(
     since = "0.18.0",
     note = "The `api::stable` module has been moved to `stable` (crate root)."
