@@ -10,12 +10,12 @@ This guide will go through the major features and changes and help you migrate y
 Update your `Cargo.toml` to use the alpha version of the library:
 ```toml
 [dependencies]
-ic-cdk = "0.18.0-alpha.1"
+ic-cdk = "0.18.0-alpha.2"
 ```
 
 > [!NOTE]
 > The new version relies on the “Bounded-Wait Calls” feature that is not yet fully enabled on the mainnet.
-> To allow users to start experimenting with the new features and provide feedback, we are releasing this version as an alpha (v0.18.0-alpha.1).
+> To allow users to start experimenting with the new features and provide feedback, we are releasing this version as an alpha.
 > A stable release will follow once the “Bounded-Wait Calls” feature is fully enabled on the mainnet.
 >
 > The Canister module built with the new Rust CDK is compatible with:
@@ -79,21 +79,20 @@ rustup component add rust-src --toolchain nightly
 cargo +nightly build -Z build-std=std,panic_abort --target wasm64-unknown-unknown
 ```
 
-### Custom Decoders in `update`/`query`/`init` Macros
+### Custom Encoders/Decoders in `update`/`query`/`init` Macros
 
 The macros are enhanced to accept custom decoders.
 
 ```rust
-// The update method specifies a custom decoder function by its name
-#[update(decode_with = "decode_two_u32")]
-fn expect_two_u32(a: u32, b: u32) {
-    ...
+#[update(decode_with = "decode_args", encode_with = "encode_result")]
+fn update_methods(a: u32, b: u32) -> (u32, u32) {
+    // ...
 }
-// The decoder function should have empty arguments
-// and return the same type(s) that the update method expects.
-fn decode_two_u32() -> (u32, u32) {
-    let arg_bytes = msg_arg_data();
-    decode_args(&arg_bytes).unwrap() // decode with any data format not limited to Candid
+fn decode_args(arg_bytes: Vec<u8>) -> (u32, u32) {
+    // ...
+}
+fn encode_result(result: (u32, u32)) -> Vec<u8> {
+    // ...
 }
 ```
 

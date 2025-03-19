@@ -6,17 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## Changes since [0.18.0-alpha.1]
+## [0.18.0-alpha.2] - 2025-03-19
 
-- Downgrade MSRV to 1.75.0 which is the same as `ic-cdk` v0.17.
-- `update`/`query` macros now support custom result encoders via `encode_with`.
+### Changes since [0.18.0-alpha.1]
+
 - Implemented the `bitcoin_canister.rs` module.
-- Switch `RejectCode` to `ic-error-types`.
-- `CallReject` provides `reject_code()` and `raw_reject_code()` methods.
-- Added System API `cost_*` bindings in `api.rs`.
+- `Call::bounded_wait` default with 300s timeout.
+- Added System API in `ic0` and bindings in `api.rs`.
+  - `cost_*`
+  - `subnet_self`
+  - `canister_liquid_cycle_balance`
 - Removed the `_with_cycles` suffix from some Management canister methods
   - They no longer takes `cycles` as an argument.
   - The cycles cost is calculated using the new `cost_*` API.
+- Upgrade `ic-management-canister-types` to 0.3.0.
+- Switch `RejectCode` to `ic-error-types`.
+- `CallReject` provides `reject_code()` and `raw_reject_code()` methods.
+- `update`/`query` macros now support custom result encoders via `encode_with`.
+- Downgrade MSRV to 1.75.0 which is the same as `ic-cdk` v0.17.
 
 ## [0.18.0-alpha.1] - 2025-02-25
 
@@ -37,7 +44,7 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
 - Simplified module hierarchy with one level under the crate root.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
-  - `bitcoin_canister` module for direct Bitcoin Canisters calls (coming soon).
+  - `bitcoin_canister` module for direct Bitcoin Canisters calls.
 
 ### Changed
 
