@@ -1,4 +1,5 @@
 use candid::Principal;
+use prost::Message;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -26,5 +27,23 @@ fn call_macros() {
         .update_call(canister_id, sender, "ret2", vec![])
         .unwrap();
     assert_eq!(res, vec![1, 2]);
+    let res = pic
+        .update_call(
+            canister_id,
+            sender,
+            "protobuf_onwire1",
+            1u32.encode_to_vec(),
+        )
+        .unwrap();
+    assert_eq!(res, 43u32.encode_to_vec());
+    let res = pic
+        .update_call(
+            canister_id,
+            sender,
+            "protobuf_onwire2",
+            "Hello".to_string().encode_to_vec(),
+        )
+        .unwrap();
+    assert_eq!(res, "Hello world!".to_string().encode_to_vec());
     let _: (u32,) = update(&pic, canister_id, "manual_reply", ()).unwrap();
 }

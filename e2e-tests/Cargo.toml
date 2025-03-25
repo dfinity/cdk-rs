@@ -19,6 +19,7 @@ ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 sha2.workspace = true
+prost = "0.13.5"
 
 [dev-dependencies]
 candid_parser.workspace = true

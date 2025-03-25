@@ -1,8 +1,9 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
 use std::fmt::Formatter;
+use syn::punctuated::Punctuated;
 use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
@@ -153,6 +154,7 @@ fn dfn_macro(
     // 1. function name(s)
     let name = &signature.ident;
     let outer_function_ident = format_ident!("__canister_method_{name}");
+    let candid_method_name = format_ident!("__candid_method_{name}");
     let function_name = if let Some(custom_name) = attrs.name {
         if method.is_lifecycle() {
             return Err(Error::new(
@@ -221,8 +223,8 @@ fn dfn_macro(
             ));
         }
     }
-    let arg_decode = if let Some(decode_with) = attrs.decode_with {
-        let decode_with_ident = syn::Ident::new(&decode_with, Span::call_site());
+    let arg_decode = if let Some(decode_with) = &attrs.decode_with {
+        let decode_with_ident = syn::Ident::new(decode_with, Span::call_site());
         if arg_tuple.len() == 1 {
             let arg_one = &arg_tuple[0];
             quote! {
@@ -278,8 +280,8 @@ fn dfn_macro(
     let return_encode = if method.is_lifecycle() || attrs.manual_reply {
         quote! {}
     } else {
-        let return_bytes = if let Some(encode_with) = attrs.encode_with {
-            let encode_with_ident = syn::Ident::new(&encode_with, Span::call_site());
+        let return_bytes = if let Some(encode_with) = &attrs.encode_with {
+            let encode_with_ident = syn::Ident::new(encode_with, Span::call_site());
             match return_length {
                 0 => quote! { #encode_with_ident()},
                 _ => quote! { #encode_with_ident(result)},
@@ -301,7 +303,7 @@ fn dfn_macro(
     let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
-        match method {
+        let annotation = match method {
             MethodType::Query if attrs.composite => {
                 quote! { #[::candid::candid_method(composite_query, rename = #function_name)] }
             }
@@ -313,11 +315,24 @@ fn dfn_macro(
             }
             MethodType::Init => quote! { #[::candid::candid_method(init)] },
             _ => quote! {},
+        };
+        let mut dummy_fun = fun.clone();
+        dummy_fun.sig.ident = candid_method_name;
+        dummy_fun.block = Box::new(syn::parse_quote!({ unreachable!() }));
+        if attrs.decode_with.is_some() {
+            let mut inputs = Punctuated::new();
+            inputs.push(syn::parse_quote!(arg_bytes: Vec<u8>));
+            dummy_fun.sig.inputs = inputs;
         }
-    };
-    let item = quote! {
-        #candid_method_attr
-        #item
+        if attrs.encode_with.is_some() {
+            dummy_fun.sig.output = syn::parse_quote!(-> Vec<u8>);
+        }
+        let dummy_fun = dummy_fun.into_token_stream();
+        quote! {
+            #annotation
+            #[allow(unused_variables)]
+            #dummy_fun
+        }
     };
 
     // 7. exported function body
@@ -354,6 +369,8 @@ fn dfn_macro(
         fn #outer_function_ident() {
             #body
         }
+
+        #candid_method_attr
 
         #item
     })
@@ -411,6 +428,8 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        // 0. The exported function
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
@@ -428,9 +447,20 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+        // 1. The #[candid_method] over a dummy function
+        let expected = quote! {
+            #[::candid::candid_method(query, rename = "query")]
+            #[allow(unused_variables)]
+            fn __candid_method_query() { unreachable!() }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[1] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
             }
@@ -448,11 +478,12 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        // 0. The exported function
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
         };
-
         let expected = quote! {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
@@ -465,8 +496,6 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
@@ -485,6 +514,7 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
@@ -502,8 +532,6 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
@@ -522,11 +550,11 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
         };
-
         let expected = quote! {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
@@ -541,8 +569,6 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
@@ -561,11 +587,11 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
         };
-
         let expected = quote! {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
@@ -580,8 +606,6 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
@@ -600,6 +624,7 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
@@ -618,8 +643,6 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
@@ -638,11 +661,11 @@ mod test {
         )
         .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
             syn::Item::Fn(ref f) => &f.sig.ident,
             _ => panic!("Incorrect parsed AST."),
         };
-
         let expected = quote! {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
@@ -655,9 +678,107 @@ mod test {
             }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
-
-        assert!(parsed.items.len() == 2);
         match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_custom_decoder() {
+        let generated = ic_query(
+            quote!(decode_with = "custom_decoder"),
+            quote! {
+                fn query(a: u32) {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        // 0. The exported function
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let a = custom_decoder(arg_bytes);
+                    let result = query(a);
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+        // 1. The #[candid_method] over a dummy function
+        let expected = quote! {
+            #[::candid::candid_method(query, rename = "query")]
+            #[allow(unused_variables)]
+            fn __candid_method_query(arg_bytes: Vec<u8>) { unreachable!() }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[1] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_query_custom_encoder() {
+        let generated = ic_query(
+            quote!(encode_with = "custom_encoder"),
+            quote! {
+                fn query() -> u32 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        // 0. The exported function
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = custom_encoder(result);
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+        // 1. The #[candid_method] over a dummy function
+        let expected = quote! {
+            #[::candid::candid_method(query, rename = "query")]
+            #[allow(unused_variables)]
+            fn __candid_method_query() -> Vec<u8> { unreachable!() }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[1] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
             }

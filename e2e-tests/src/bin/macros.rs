@@ -1,5 +1,5 @@
-use candid::utils::{decode_args, decode_one};
 use ic_cdk::{export_candid, update};
+use prost::Message;
 use std::marker::PhantomData;
 
 #[update(decode_with = "decode_arg0")]
@@ -11,7 +11,7 @@ fn arg1(a: u32) {
     assert_eq!(a, 1)
 }
 fn decode_arg1(arg_bytes: Vec<u8>) -> u32 {
-    decode_one(&arg_bytes).unwrap()
+    candid::utils::decode_one(&arg_bytes).unwrap()
 }
 
 #[update(decode_with = "decode_arg2")]
@@ -20,7 +20,7 @@ fn arg2(a: u32, b: u32) {
     assert_eq!(b, 2);
 }
 fn decode_arg2(arg_bytes: Vec<u8>) -> (u32, u32) {
-    decode_args(&arg_bytes).unwrap()
+    candid::utils::decode_args(&arg_bytes).unwrap()
 }
 
 #[update(encode_with = "encode_ret0")]
@@ -45,6 +45,24 @@ fn encode_ret2(ret: (u32, u32)) -> Vec<u8> {
     vec![ret.0 as u8, ret.1 as u8]
 }
 
+/// The following two endpoints demonstrate how to use generic decode/encode functions.
+/// The endpoints take different types of arguments and return values.
+/// While the decode/encode functions are generic and can be used for both endpoints.
+#[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
+fn protobuf_onwire1(a: u32) -> u32 {
+    a + 42
+}
+#[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
+fn protobuf_onwire2(a: String) -> String {
+    (a + " world!").to_string()
+}
+fn to_proto_bytes<T: Message>(msg: T) -> Vec<u8> {
+    msg.encode_to_vec()
+}
+fn from_proto_bytes<T: Message + Default>(msg: Vec<u8>) -> T {
+    Message::decode(&msg[..]).unwrap()
+}
+
 #[update(manual_reply = true)]
 fn manual_reply() -> PhantomData<u32> {
     let v: u32 = 1;
@@ -65,13 +83,17 @@ mod tests {
 
     #[test]
     fn candid_equality_test() {
+        // If `decode_with` is specified, the argument type would be `blob` in Candid.
+        // If `encode_with` is specified, the return type would be `blob` in Candid.
         let expected = "service : {
-            arg0 : () -> ();
-            arg1 : (nat32) -> ();
-            arg2 : (nat32, nat32) -> ();
-            ret0 : () -> ();
-            ret1 : () -> (nat32);
-            ret2 : () -> (nat32, nat32);
+            arg0 : (blob) -> ();
+            arg1 : (blob) -> ();
+            arg2 : (blob) -> ();
+            ret0 : () -> (blob);
+            ret1 : () -> (blob);
+            ret2 : () -> (blob);
+            protobuf_onwire1 : (blob) -> (blob);
+            protobuf_onwire2 : (blob) -> (blob);
             manual_reply : () -> (nat32);
           }";
         let expected_candid = CandidSource::Text(expected);
