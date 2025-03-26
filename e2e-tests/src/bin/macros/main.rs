@@ -45,16 +45,26 @@ fn encode_ret2(ret: (u32, u32)) -> Vec<u8> {
     vec![ret.0 as u8, ret.1 as u8]
 }
 
+mod canister {
+    include!(concat!(env!("OUT_DIR"), "/canister.rs"));
+}
+use canister::*;
+
 /// The following two endpoints demonstrate how to use generic decode/encode functions.
 /// The endpoints take different types of arguments and return values.
 /// While the decode/encode functions are generic and can be used for both endpoints.
 #[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
-fn protobuf_onwire1(a: u32) -> u32 {
-    a + 42
+fn method_one(arg: MethodOneRequest) -> MethodOneResponse {
+    MethodOneResponse {
+        result: arg.input.len() as i32,
+    }
 }
 #[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
-fn protobuf_onwire2(a: String) -> String {
-    (a + " world!").to_string()
+fn method_two(arg: MethodTwoRequest) -> MethodTwoResponse {
+    MethodTwoResponse {
+        success: arg.values.iter().sum::<f32>() > 0.0,
+        message: "Hello world!".to_string(),
+    }
 }
 fn to_proto_bytes<T: Message>(msg: T) -> Vec<u8> {
     msg.encode_to_vec()
@@ -92,8 +102,8 @@ mod tests {
             ret0 : () -> (blob);
             ret1 : () -> (blob);
             ret2 : () -> (blob);
-            protobuf_onwire1 : (blob) -> (blob);
-            protobuf_onwire2 : (blob) -> (blob);
+            method_one : (blob) -> (blob);
+            method_two : (blob) -> (blob);
             manual_reply : () -> (nat32);
           }";
         let expected_candid = CandidSource::Text(expected);
