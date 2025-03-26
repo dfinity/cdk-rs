@@ -125,6 +125,8 @@ fn to_proto_bytes<T: Message>(message: T) -> Vec<u8> {
 }
 ```
 
+Please check the [macros end-to-end test](../e2e-tests/src/bin/macros/) for more details.
+
 ### Simplified Module Structure
 
 The module hierarchy has been flattened to improve usability and consistency:
