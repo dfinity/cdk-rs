@@ -1,13 +1,12 @@
 # Version 0.18 Guide
 
 ## Introduction
-
-`ic-cdk` v0.18 introduces many new features and changes that improve the user experience.
-This guide will go through the major features and changes and help you migrate your code from version 0.17 or before.
+`ic-cdk` v0.18 introduces many new features and changes that improve the developer experience.
+This guide covers the major features and changes and provides migration guidance for code written with version 0.17 or earlier.
 
 ### How to Upgrade
 
-Update your `Cargo.toml` to use the alpha version of the library:
+Update the `Cargo.toml` to use the alpha version of the library:
 ```toml
 [dependencies]
 ic-cdk = "0.18.0-alpha.2"
@@ -79,22 +78,54 @@ rustup component add rust-src --toolchain nightly
 cargo +nightly build -Z build-std=std,panic_abort --target wasm64-unknown-unknown
 ```
 
-### Custom Encoders/Decoders in `update`/`query`/`init` Macros
+### Custom Decoders/Encoders in Macros
 
-The macros are enhanced to accept custom decoders.
+The `update` and `query` macros now support custom argument decoders and return value encoders, while the `init` macro supports custom argument decoders only. This gives full control over how data is serialized and deserialized for canister endpoints.
 
 ```rust
 #[update(decode_with = "decode_args", encode_with = "encode_result")]
-fn update_methods(a: u32, b: u32) -> (u32, u32) {
+fn custom_serialization(a: u32, b: u32) -> (u32, u32) {
     // ...
 }
+
+// Custom decoder transforms raw bytes into the function's parameter types
 fn decode_args(arg_bytes: Vec<u8>) -> (u32, u32) {
-    // ...
+    // Custom deserialization logic here ...
 }
+
+// Custom encoder transforms the function's return value into bytes
 fn encode_result(result: (u32, u32)) -> Vec<u8> {
-    // ...
+    // Custom serialization logic here ...
 }
 ```
+
+It's possible to define generic custom decoders/encoders for use across multiple endpoints, enabling alternative serialization formats. The example below demonstrates using Protocol Buffers instead of Candid for wire format:
+
+```rust
+use prost::Message;
+
+#[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
+fn protobuf_onwire1(a: u32) -> u32 {
+    a + 42
+}
+
+#[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
+fn protobuf_onwire2(a: String) -> String {
+    format!("{} world!", a)
+}
+
+// Generic decoder function that works with any Protobuf message
+fn from_proto_bytes<T: Message + Default>(bytes: Vec<u8>) -> T {
+    T::decode(&bytes[..]).unwrap_or_default()
+}
+
+// Generic encoder function that works with any Protobuf message
+fn to_proto_bytes<T: Message>(message: T) -> Vec<u8> {
+    message.encode_to_vec()
+}
+```
+
+Please check the [macros end-to-end test](../e2e-tests/src/bin/macros/) for more details.
 
 ### Simplified Module Structure
 

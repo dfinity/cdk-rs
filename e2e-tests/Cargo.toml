@@ -19,6 +19,7 @@ ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 sha2.workspace = true
+prost = "0.13.5"
 
 [dev-dependencies]
 candid_parser.workspace = true
@@ -28,3 +29,6 @@ futures = "0.3"
 hex.workspace = true
 pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-03-14_03-10-base" }
 reqwest = "0.12"
+
+[build-dependencies]
+prost-build = "0.13.5"

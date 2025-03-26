@@ -1,4 +1,10 @@
 use candid::Principal;
+use prost::Message;
+
+mod canister {
+    include!(concat!(env!("OUT_DIR"), "/canister.rs"));
+}
+use canister::*;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -26,5 +32,33 @@ fn call_macros() {
         .update_call(canister_id, sender, "ret2", vec![])
         .unwrap();
     assert_eq!(res, vec![1, 2]);
+    let res = pic
+        .update_call(
+            canister_id,
+            sender,
+            "method_one",
+            MethodOneRequest {
+                input: "Hello".to_string(),
+            }
+            .encode_to_vec(),
+        )
+        .unwrap();
+    assert_eq!(res, MethodOneResponse { result: 5i32 }.encode_to_vec());
+    let res = pic
+        .update_call(
+            canister_id,
+            sender,
+            "method_two",
+            MethodTwoRequest { values: vec![1.0] }.encode_to_vec(),
+        )
+        .unwrap();
+    assert_eq!(
+        res,
+        MethodTwoResponse {
+            success: true,
+            message: "Hello world!".to_string()
+        }
+        .encode_to_vec()
+    );
     let _: (u32,) = update(&pic, canister_id, "manual_reply", ()).unwrap();
 }
