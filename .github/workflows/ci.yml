@@ -72,6 +72,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-test-
             ${{ runner.os }}-
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
       - name: Run tests
         run:
           | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
@@ -106,6 +108,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-wasm64-
             ${{ runner.os }}-
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
       - name: Run tests
         run: WASM64=1 cargo test --package ic-cdk-e2e-tests --no-fail-fast
 
@@ -155,6 +159,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-clippy-
             ${{ runner.os }}-
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
       - name: Run clippy
         run: |
           cargo clippy --tests --benches -- -D warnings
@@ -180,6 +186,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-doc-
             ${{ runner.os }}-
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
       - name: Run doc
         run: |
           RUSTDOCFLAGS="-D warnings" cargo doc
