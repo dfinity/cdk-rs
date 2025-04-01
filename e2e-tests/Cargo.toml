@@ -24,6 +24,7 @@ prost = "0.13.5"
 [dev-dependencies]
 candid_parser.workspace = true
 cargo_metadata = "0.19"
+fd-lock = "4.0.4"
 flate2 = "1.1"
 futures = "0.3"
 hex.workspace = true
