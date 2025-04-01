@@ -45,7 +45,6 @@ use std::borrow::Cow;
 use std::future::IntoFuture;
 use std::mem;
 use std::pin::Pin;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 use thiserror::Error;
@@ -951,38 +950,40 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
 ///
 /// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
-    // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
-    let state = unsafe { Arc::from_raw(state_ptr) };
-    // We set the call result, even though it won't be read on the
-    // default executor, because we can't guarantee it was called on
-    // our executor. However, we are not allowed to inspect
-    // reject_code() inside of a cleanup callback, so always set the
-    // result to a reject.
-    //
-    // Borrowing does not trap - the rollback from the
-    // previous trap ensures that the RwLock can be borrowed again.
-    let err_state = CallFutureState::Complete {
-        result: Err(CallFailed::CallRejected(CallRejected {
-            raw_reject_code: RejectCode::CanisterReject as u32,
-            reject_message: "cleanup".into(),
-        })),
-    };
-    let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
-        CallFutureState::Executing { waker } => waker,
-        CallFutureState::Trapped => {
-            // The future has already been canceled and dropped. There is nothing
-            // more to clean up except for the CallFutureState.
-            return;
-        }
-        _ => {
-            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
-        }
-    };
     // Flag that we do not want to actually wake the task - we
     // want to drop it *without* executing it.
-    crate::futures::CLEANUP.store(true, Ordering::Relaxed);
-    waker.wake();
-    crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+    crate::futures::in_callback_cancellation_context(|| {
+        // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
+        let state = unsafe { Arc::from_raw(state_ptr) };
+        // We set the call result, even though it won't be read on the
+        // default executor, because we can't guarantee it was called on
+        // our executor. However, we are not allowed to inspect
+        // reject_code() inside of a cleanup callback, so always set the
+        // result to a reject.
+        //
+        // Borrowing does not trap - the rollback from the
+        // previous trap ensures that the RwLock can be borrowed again.
+        let err_state = CallFutureState::Complete {
+            result: Err(CallFailed::CallRejected(CallRejected {
+                raw_reject_code: RejectCode::CanisterReject as u32,
+                reject_message: "cleanup".into(),
+            })),
+        };
+        let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
+            CallFutureState::Executing { waker } => waker,
+            CallFutureState::Trapped => {
+                // The future has already been canceled and dropped. There is nothing
+                // more to clean up except for the CallFutureState.
+                return;
+            }
+            _ => {
+                unreachable!(
+                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                )
+            }
+        };
+        waker.wake();
+    });
 }
 
 // # Internal END =============================================================

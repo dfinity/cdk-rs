@@ -60,7 +60,6 @@ use std::collections::VecDeque;
 use std::future::Future;
 use std::mem;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll, Wake, Waker};
 
@@ -72,7 +71,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let in_query = match CONTEXT.get() {
         AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
         AsyncContext::Query => true,
-        AsyncContext::Update => false,
+        AsyncContext::Update | AsyncContext::Cancel => false,
         AsyncContext::FromTask => unreachable!("FromTask"),
     };
     let pinned_future = Box::pin(future);
@@ -118,6 +117,11 @@ pub(crate) fn in_callback_executor_context(f: impl FnOnce()) {
     poll_all();
 }
 
+pub(crate) fn in_callback_cancellation_context(f: impl FnOnce()) {
+    let _guard = ContextGuard::new(AsyncContext::Cancel);
+    f();
+}
+
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
 ///
 /// In a destructor, `is_recovering_from_trap` serves the same purpose as
@@ -126,13 +130,13 @@ pub(crate) fn in_callback_executor_context(f: impl FnOnce()) {
 ///
 /// For information about when and how this occurs, see [the module docs](self).
 pub fn is_recovering_from_trap() -> bool {
-    crate::futures::CLEANUP.load(Ordering::Relaxed)
+    matches!(CONTEXT.get(), AsyncContext::Cancel)
 }
 
 fn poll_all() {
     let in_query = match CONTEXT.get() {
         AsyncContext::Query => true,
-        AsyncContext::Update => false,
+        AsyncContext::Update | AsyncContext::Cancel => false,
         AsyncContext::None => panic!("tasks can only be polled in an executor context"),
         AsyncContext::FromTask => unreachable!("FromTask"),
     };
@@ -177,8 +181,6 @@ fn poll_all() {
     }
 }
 
-pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
-
 new_key_type! {
     struct TaskId;
 }
@@ -196,6 +198,7 @@ enum AsyncContext {
     Update,
     Query,
     FromTask,
+    Cancel,
 }
 
 struct Task {
@@ -245,11 +248,10 @@ struct TaskWaker {
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        if CLEANUP.load(Ordering::Relaxed) {
+        if matches!(CONTEXT.get(), AsyncContext::Cancel) {
             // This task is recovering from a trap. We cancel it to run destructors.
-            TASKS.with_borrow_mut(|tasks| {
-                tasks.remove(self.task_id);
-            })
+            let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(self.task_id));
+            // _task must be dropped *outside* with_borrow_mut - its destructor may (inadvisably) schedule tasks
         } else {
             WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
             CONTEXT.with(|context| {
