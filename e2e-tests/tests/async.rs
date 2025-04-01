@@ -44,6 +44,24 @@ fn panic_after_async_frees_resources() {
 }
 
 #[test]
+fn panic_after_async_destructors_can_schedule_tasks() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+    let err = update::<_, ()>(&pic, canister_id, "schedule_on_panic", ()).unwrap_err();
+    assert!(err.reject_message.contains("testing"));
+    let (pre_bg_notifs,): (u64,) =
+        query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(pre_bg_notifs, 1);
+    update::<_, ()>(&pic, canister_id, "on_notify", ()).unwrap();
+    let (post_bg_notifs,): (u64,) =
+        query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(post_bg_notifs, 5);
+}
+
+#[test]
 fn notify_calls() {
     let pic = pic_base().build();
     let wasm = cargo_build_canister("async");

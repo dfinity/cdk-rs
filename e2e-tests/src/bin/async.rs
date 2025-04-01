@@ -123,4 +123,23 @@ async fn await_channel_completion() -> String {
     greeting.unwrap()
 }
 
+#[update]
+async fn schedule_on_panic() {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            for _ in 0..3 {
+                ic_cdk::futures::spawn(async {
+                    on_notify();
+                })
+            }
+        }
+    }
+    let _guard = Guard;
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    ic_cdk::trap("testing");
+}
+
 fn main() {}
