@@ -1,11 +1,12 @@
 use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
 use cargo_metadata::MetadataCommand;
+use fd_lock::RwLock as FdLock;
 use flate2::read::GzDecoder;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, PocketIc, PocketIcBuilder, RejectResponse};
-use std::fs::Permissions;
-use std::io::Read;
+use std::fs::{OpenOptions, Permissions};
+use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -129,13 +130,27 @@ fn cache_pocket_ic_server() -> PathBuf {
     let target_dir = metadata.target_directory;
     let artifact_dir = target_dir.join("e2e-tests-artifacts");
     std::fs::create_dir_all(&artifact_dir).expect("failed to create artifact directory");
-    let tag_file = artifact_dir.join("pocket-ic-tag");
+    let tag_path = artifact_dir.join("pocket-ic-tag");
+    let mut tag_file = FdLock::new(
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            // same handle used for both reading and writing - the truncation is done with set_len below
+            .truncate(false)
+            .open(&tag_path)
+            .unwrap(),
+    );
+    let mut tag_file = tag_file.write().unwrap();
     let pocket_ic_server = artifact_dir.join("pocket-ic-server");
-    if let Ok(tag) = std::fs::read_to_string(&tag_file) {
-        if tag == pocket_ic_tag && pocket_ic_server.exists() {
-            return pocket_ic_server.into();
-        }
+    let mut tag = String::new();
+    if tag_file.read_to_string(&mut tag).is_ok()
+        && tag == pocket_ic_tag
+        && pocket_ic_server.exists()
+    {
+        return pocket_ic_server.into();
     }
+
     let uname_sys = match std::env::consts::OS {
         "macos" => "darwin",
         "linux" => "linux",
@@ -156,7 +171,10 @@ fn cache_pocket_ic_server() -> PathBuf {
     std::fs::write(&pocket_ic_server, decompressed_data).expect("failed to write pocket-ic-server");
     let permissions = Permissions::from_mode(0o755); // Make the file executable
     std::fs::set_permissions(&pocket_ic_server, permissions).expect("failed to set permissions");
-    std::fs::write(tag_file, pocket_ic_tag).expect("failed to write pocket-ic-tag");
+    tag_file
+        .write_all(pocket_ic_tag.as_bytes())
+        .expect("failed to write pocket-ic-tag");
+    tag_file.set_len(pocket_ic_tag.len() as _).unwrap();
     pocket_ic_server.into()
 }
 
