@@ -36,6 +36,12 @@
 //! itself cannot await anything triggered by another canister method, or you will get an error that it 'failed to reply'.)
 //! It will also take from that call's instruction limit, which can introduce hidden sources of instruction limit based traps.
 //!
+//! Most importantly, a background task that runs in other call contexts must never trap. When it traps, it will cancel
+//! (see below) the execution of the call whose context it's in, even though that call didn't do anything wrong, and it
+//! may not undo whatever caused it to trap, meaning the canister could end up bricked. Tasks that you expect to complete
+//! before the canister method ends are safe, but traps/panics in tasks that are expected to continue running into other
+//! calls/timers may produce surprising results and behavioral errors.
+//!
 //! ## Automatic cancellation
 //!
 //! Asynchronous tasks can be *canceled*, meaning that a partially completed function will halt at an
