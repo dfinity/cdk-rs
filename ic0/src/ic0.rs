@@ -48,6 +48,8 @@ extern "C" {
     pub fn stable64_grow(new_pages: u64) -> u64;
     pub fn stable64_write(offset: u64, src: u64, size: u64);
     pub fn stable64_read(dst: u64, offset: u64, size: u64);
+    pub fn root_key_size() -> usize;
+    pub fn root_key_copy(dst: usize, offset: usize, size: usize);
     pub fn certified_data_set(src: usize, size: usize);
     pub fn data_certificate_present() -> u32;
     pub fn data_certificate_size() -> usize;
@@ -193,6 +195,12 @@ mod non_wasm {
     }
     pub unsafe fn stable64_read(dst: u64, offset: u64, size: u64) {
         panic!("stable64_read should only be called inside canisters.");
+    }
+    pub unsafe fn root_key_size() -> usize {
+        panic!("root_key_size should only be called inside canisters.");
+    }
+    pub unsafe fn root_key_copy(dst: usize, offset: usize, size: usize) {
+        panic!("root_key_copy should only be called inside canisters.");
     }
     pub unsafe fn certified_data_set(src: usize, size: usize) {
         panic!("certified_data_set should only be called inside canisters.");
