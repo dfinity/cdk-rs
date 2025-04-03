@@ -356,6 +356,22 @@ pub fn stable_read(offset: u64, buf: &mut [u8]) {
     }
 }
 
+/// Gets the public key (a DER-encoded BLS key) of the root key of this instance of the Internet Computer Protocol.
+///
+/// # Note
+///
+/// This traps in non-replicated mode.
+pub fn root_key() -> Principal {
+    // SAFETY: `ic0.root_key_size` is always safe to call.
+    let len = unsafe { ic0::root_key_size() };
+    let mut buf = vec![0u8; len];
+    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.root_key_copy` with a 0-offset.
+    unsafe {
+        ic0::root_key_copy(buf.as_mut_ptr() as usize, 0, len);
+    }
+    Principal::try_from(&buf).unwrap()
+}
+
 /// Sets the certified data of this canister.
 ///
 /// Canisters can store up to 32 bytes of data that is certified by
