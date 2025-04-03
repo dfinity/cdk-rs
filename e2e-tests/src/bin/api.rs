@@ -138,6 +138,13 @@ fn call_stable() {
     msg_reply(vec![]);
 }
 
+#[export_name = "canister_update call_root_key"]
+fn call_root_key() {
+    let root_key = root_key();
+    assert_eq!(root_key.as_slice().len(), 32);
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_certified_data_set"]
 fn call_certified_data_set() {
     certified_data_set(vec![42]);
