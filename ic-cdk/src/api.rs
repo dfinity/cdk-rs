@@ -361,7 +361,7 @@ pub fn stable_read(offset: u64, buf: &mut [u8]) {
 /// # Note
 ///
 /// This traps in non-replicated mode.
-pub fn root_key() -> Principal {
+pub fn root_key() -> Vec<u8> {
     // SAFETY: `ic0.root_key_size` is always safe to call.
     let len = unsafe { ic0::root_key_size() };
     let mut buf = vec![0u8; len];
@@ -369,7 +369,7 @@ pub fn root_key() -> Principal {
     unsafe {
         ic0::root_key_copy(buf.as_mut_ptr() as usize, 0, len);
     }
-    Principal::try_from(&buf).unwrap()
+    buf
 }
 
 /// Sets the certified data of this canister.

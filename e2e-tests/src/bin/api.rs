@@ -141,7 +141,7 @@ fn call_stable() {
 #[export_name = "canister_update call_root_key"]
 fn call_root_key() {
     let root_key = root_key();
-    assert_eq!(root_key.as_slice().len(), 32);
+    assert!(!root_key.is_empty());
     msg_reply(vec![]);
 }
 
