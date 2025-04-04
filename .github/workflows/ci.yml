@@ -72,6 +72,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-test-
             ${{ runner.os }}-
+      - name: Download pocket-ic server
+        run: bash scripts/download_pocket_ic_server.sh
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
       - name: Run tests
@@ -108,6 +110,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-wasm64-
             ${{ runner.os }}-
+      - name: Download pocket-ic server
+        run: bash scripts/download_pocket_ic_server.sh
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
       - name: Run tests
