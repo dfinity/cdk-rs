@@ -92,6 +92,10 @@ fn call_api() {
         .unwrap();
     assert!(res.is_empty());
     let res = pic
+        .update_call(canister_id, sender, "call_root_key", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
         .update_call(canister_id, sender, "call_certified_data_set", vec![])
         .unwrap();
     assert!(res.is_empty());
