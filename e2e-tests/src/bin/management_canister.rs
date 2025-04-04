@@ -13,7 +13,8 @@ async fn basic() {
             controllers: Some(vec![self_id]),
             compute_allocation: Some(0u8.into()),
             memory_allocation: Some(0u8.into()),
-            freezing_threshold: Some(0u8.into()),
+            // Since around 2025-04, the freezing threshold is enforced to be at least 604800 seconds (7 days).
+            freezing_threshold: Some(604_800u32.into()),
             reserved_cycles_limit: Some(0u8.into()),
             log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(0u8.into()),
@@ -36,7 +37,7 @@ async fn basic() {
     assert_eq!(definite_canister_setting.controllers, vec![self_id]);
     assert_eq!(definite_canister_setting.compute_allocation, 0u8);
     assert_eq!(definite_canister_setting.memory_allocation, 0u8);
-    assert_eq!(definite_canister_setting.freezing_threshold, 0u8);
+    assert_eq!(definite_canister_setting.freezing_threshold, 604_800u32);
     assert_eq!(definite_canister_setting.reserved_cycles_limit, 0u8);
     assert_eq!(
         definite_canister_setting.log_visibility,
@@ -49,7 +50,7 @@ async fn basic() {
     let arg = UpdateSettingsArgs {
         canister_id,
         settings: CanisterSettings {
-            freezing_threshold: Some(0u16.into()),
+            freezing_threshold: Some(2_592_000u32.into()),
             log_visibility: Some(LogVisibility::AllowedViewers(vec![self_id])),
             ..Default::default()
         },

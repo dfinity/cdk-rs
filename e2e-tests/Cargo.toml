@@ -24,11 +24,9 @@ prost = "0.13.5"
 [dev-dependencies]
 candid_parser.workspace = true
 cargo_metadata = "0.19"
-fd-lock = "4.0.4"
-flate2 = "1.1"
 futures = "0.3"
 hex.workspace = true
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-03-14_03-10-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-04-03_03-15-base" }
 reqwest = "0.12"
 
 [build-dependencies]
