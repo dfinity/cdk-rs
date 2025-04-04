@@ -74,8 +74,14 @@ jobs:
             ${{ runner.os }}-
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
+      - name: Install protoc (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+      - name: Install protoc (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
       - name: Run tests
         run:
           | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
@@ -112,8 +118,14 @@ jobs:
             ${{ runner.os }}-
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
+      - name: Install protoc (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+      - name: Install protoc (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
       - name: Run tests
         run: WASM64=1 cargo test --package ic-cdk-e2e-tests --no-fail-fast
 
@@ -163,8 +175,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-clippy-
             ${{ runner.os }}-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
+      - name: Install protoc (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
       - name: Run clippy
         run: |
           cargo clippy --tests --benches -- -D warnings
@@ -190,8 +205,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-doc-
             ${{ runner.os }}-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
+      - name: Install protoc (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
       - name: Run doc
         run: |
           RUSTDOCFLAGS="-D warnings" cargo doc
