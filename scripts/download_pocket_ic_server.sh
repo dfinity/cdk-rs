@@ -14,13 +14,7 @@ ARTIFACTS_DIR="$SCRIPTS_DIR/../target/e2e-tests-artifacts"
 mkdir -p "$ARTIFACTS_DIR"
 cd "$ARTIFACTS_DIR"
 echo -n "$tag" > pocket-ic-tag
-
-if [ "$uname_sys" = "linux" ]; then
-    # TODO: this is a temporary link to the pocket-ic binary that supports the ic0.root_key_* API (linux only)
-    curl -sL "https://download.dfinity.systems/ic/ab123e32fefce0953bc2bae615f7fff3a9ec7d30/binaries/x86_64-linux/pocket-ic.gz" --output pocket-ic.gz
-else
-    curl -sL "https://github.com/dfinity/ic/releases/download/$tag/pocket-ic-x86_64-$uname_sys.gz" --output pocket-ic.gz
-fi
+curl -sL "https://github.com/dfinity/ic/releases/download/$tag/pocket-ic-x86_64-$uname_sys.gz" --output pocket-ic.gz
 gzip -df pocket-ic.gz
 chmod a+x pocket-ic
 ./pocket-ic --version
