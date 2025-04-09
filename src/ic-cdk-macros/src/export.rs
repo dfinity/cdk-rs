@@ -9,7 +9,11 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 #[derive(Default, Deserialize)]
 struct ExportAttributes {
     pub name: Option<String>,
+    #[deprecated(note = "use `guards` instead")]
     pub guard: Option<String>,
+    /// guards are processed by the order they are defined.
+    #[serde(default)]
+    pub guards: Vec<String>,
     #[serde(default)]
     pub manual_reply: bool,
     #[serde(default)]
@@ -101,6 +105,7 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
     Ok(args)
 }
 
+#[allow(deprecated)]
 fn dfn_macro(
     method: MethodType,
     attr: TokenStream,
@@ -216,25 +221,35 @@ fn dfn_macro(
         quote! { let ( #( #arg_tuple, )* ) = ic_cdk::api::call::arg_data(#config); }
     };
 
-    let guard = if let Some(guard_name) = attrs.guard {
-        // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
-        if method.is_lifecycle() {
-            return Err(Error::new(
-                attr.span(),
-                format!("#[{}] cannot have a guard function.", method),
-            ));
-        }
-        let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
+    let mut guard_funtions = attrs.guards.clone();
+    // The guard function is deprecated, but we still want to support it for a while.
+    if attrs.guard.is_some() {
+        guard_funtions.insert(0, attrs.guard.unwrap());
+    }
 
-        quote! {
-            let r: Result<(), String> = #guard_ident ();
-            if let Err(e) = r {
-                ic_cdk::api::call::reject(&e);
-                return;
-            }
-        }
-    } else {
-        quote! {}
+    // ic_cdk::api::call::reject calls ic0::msg_reject which is only allowed in update/query
+    if guard_funtions.len() > 0 && method.is_lifecycle() {
+        return Err(Error::new(
+            attr.span(),
+            format!("#[{}] cannot have a guard function.", method),
+        ));
+    }
+
+    let guards = {
+        let guards: Vec<_> = guard_funtions
+            .iter()
+            .map(|guard_name| {
+                let guard_ident = syn::Ident::new(guard_name, Span::call_site());
+                quote! {
+                    let r: Result<(), String> = #guard_ident ();
+                    if let Err(e) = r {
+                        ic_cdk::api::call::reject(&e);
+                        return;
+                    }
+                }
+            })
+            .collect();
+        quote! { #(#guards)* }
     };
 
     let candid_method_attr = if attrs.hidden {
@@ -265,7 +280,7 @@ fn dfn_macro(
         fn #outer_function_ident() {
             ic_cdk::setup();
 
-            #guard
+            #guards
 
             ic_cdk::spawn(async {
                 #arg_decode
@@ -606,6 +621,177 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
                 ic_cdk::setup();
+                ic_cdk::spawn(async {
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guard() {
+        let generated = ic_query(
+            quote!(guard = "custom_guard"),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ic_cdk::setup();
+
+                let r: Result<(), String> = custom_guard();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+
+                ic_cdk::spawn(async {
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guards() {
+        let generated = ic_query(
+            quote!(guards = [custom_guard1, custom_guard2]),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ic_cdk::setup();
+
+                let r: Result<(), String> = custom_guard1();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = custom_guard2();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+
+                ic_cdk::spawn(async {
+                    let () = ic_cdk::api::call::arg_data(
+                        ic_cdk::api::call::ArgDecoderConfig {
+                            decoding_quota: None,
+                            skipping_quota: Some(10000usize),
+                            debug: false,
+                        }
+                    );
+                    let result = query();
+                    ic_cdk::api::call::reply(())
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+
+        assert!(parsed.items.len() == 2);
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guard_and_guards() {
+        let generated = ic_query(
+            quote!(
+                guard = "custom_guard",
+                guards = [custom_guard1, custom_guard2]
+            ),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ic_cdk::setup();
+
+                let r: Result<(), String> = custom_guard();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = custom_guard1();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = custom_guard2();
+                if let Err(e) = r {
+                    ic_cdk::api::call::reject(&e);
+                    return;
+                }
+
                 ic_cdk::spawn(async {
                     let () = ic_cdk::api::call::arg_data(
                         ic_cdk::api::call::ArgDecoderConfig {
