@@ -57,7 +57,27 @@ pub use ic_cdk_macros::export_candid;
 ///     // ...
 /// # unimplemented!()
 /// }
+///
+/// You can specify several guards and they will be executed in the order.
+/// When a guard function returns an error, the query function will not proceed.
+/// ```rust
+/// # use ic_cdk::query;
+/// fn guard_function_1() -> Result<(), String> {
+///    // ...
+/// # unimplemented!()
+/// }
+/// fn guard_function_2() -> Result<(), String> {
+///   // ...
+/// # unimplemented!()
+/// }
+/// #[query(guards = ["guard_function_1", "guard_function_2"])]
+/// fn query_function() {
+///     // ...
+/// # unimplemented!()
+/// }   
 /// ```
+///
+/// In case the both `guard` and `guards` are specified, the `guard` will be executed first and the guard functions specified in the `guards` will be executed.
 ///
 /// To be able to make inter-canister calls from a query call, it must be a *composite* query (which cannot be executed in replicated mode).
 ///
@@ -140,6 +160,26 @@ pub use ic_cdk_macros::query;
 /// # unimplemented!()
 /// }
 /// ```
+///
+/// You can specify several guards and they will be executed in the order.
+/// When a guard function returns an error, the update function will not proceed.
+/// ```rust
+/// # use ic_cdk::update;
+/// fn guard_function_1() -> Result<(), String> {
+///    // ...
+/// # unimplemented!()
+/// }
+/// fn guard_function_2() -> Result<(), String> {
+///   // ...
+/// # unimplemented!()
+/// }
+/// #[update(guards = ["guard_function_1", "guard_function_2"])]
+/// fn update_function() {
+///     // ...
+/// # unimplemented!()
+/// }   
+///
+/// In case the both `guard` and `guards` are specified, the `guard` will be executed first and the guard functions specified in the `guards` will be executed.
 ///
 /// If you would rather call the [`reply()`](crate::api::call::reply) function than return a value,
 /// you will need to set `manual_reply` to `true` so that the canister does not trap.
