@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `cargo build` should no longer give a confusing linkage error on Linux.
 
+### Added
+
+- Add multiple `guards` to `#[update]` and `#[query]` macros. (#590)
+
+    ```rust
+    #[update(guards = ["only_admin", "non_reentrant"])]
+    fn do_something() {
+      ...
+    }
+    ```
+
 ## [0.13.2] - 2024-04-08
 
 ### Changed
