@@ -485,6 +485,21 @@ pub struct CallRejected {
 pub struct UnrecognizedRejectCode(u32);
 
 impl CallRejected {
+    /// Constructs a [`CallRejected`] instance with the reject code and message.
+    ///
+    /// # Note
+    ///
+    /// This constructor is primarily intended for testing scenarios where you need to simulate
+    /// rejected inter-canister calls. In production code, instances of this error are typically
+    /// created by the system when actual rejections occur during inter-canister communication.
+    /// Use this constructor with caution outside of test environments.
+    pub fn with_rejection(raw_reject_code: u32, reject_message: String) -> Self {
+        Self {
+            raw_reject_code,
+            reject_message,
+        }
+    }
+
     /// Gets the [`RejectCode`].
     ///
     /// The value is converted from [`api::msg_reject_code`](`msg_reject_code`).
