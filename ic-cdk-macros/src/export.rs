@@ -1,4 +1,5 @@
 use proc_macro2::{Ident, Span, TokenStream};
+// use proc_macro_warning::Warning;
 use quote::{format_ident, quote, ToTokens};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
@@ -11,6 +12,8 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
+    #[serde(default)]
+    pub guards: Vec<String>,
     /// The name of the function to use for decoding arguments.
     /// If not provided, the arguments are decoded as Candid.
     ///
@@ -182,22 +185,45 @@ fn dfn_macro(
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
     // 2. guard
-    let guard = if let Some(guard_name) = attrs.guard {
+    let mut guard_names = attrs.guards.clone();
+    let deprecate_guard = if let Some(guard_name) = attrs.guard {
+        guard_names.insert(0, guard_name);
+        quote!(
+            fn deprecation() {
+                #[deprecated(
+                    note = "The `guard` attribute is deprecated. Please use `guards` instead."
+                )]
+                const GUARD: () = ();
+                let _ = GUARD;
+            }
+        )
+    } else {
+        quote! {}
+    };
+    let guards = if !guard_names.is_empty() {
         // ic0.msg_reject is only allowed in update/query
         if method.is_lifecycle() {
             return Err(Error::new(
                 attr.span(),
-                format!("#[{}] cannot have a guard function.", method),
+                format!("#[{}] cannot have guard function(s).", method),
             ));
         }
-        let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
-
+        let guards: Vec<_> = guard_names
+            .iter()
+            .map(|guard_name| {
+                let guard_ident = syn::Ident::new(guard_name, Span::call_site());
+                quote! {
+                    let r: Result<(), String> = #guard_ident ();
+                    if let Err(e) = r {
+                        ::ic_cdk::api::msg_reject(&e);
+                        return;
+                    }
+                }
+            })
+            .collect();
         quote! {
-            let r: Result<(), String> = #guard_ident ();
-            if let Err(e) = r {
-                ::ic_cdk::api::msg_reject(&e);
-                return;
-            }
+            #deprecate_guard
+            #(#guards)*
         }
     } else {
         quote! {}
@@ -344,7 +370,7 @@ fn dfn_macro(
     let body = if signature.asyncness.is_some() {
         quote! {
             ::ic_cdk::futures::#async_context_name(|| {
-                #guard
+                #guards
                 ::ic_cdk::futures::spawn(async {
                     #arg_decode
                     let result = #function_call;
@@ -354,7 +380,7 @@ fn dfn_macro(
         }
     } else {
         quote! {
-            #guard
+            #guards
             ::ic_cdk::futures::#async_context_name(|| {
                 #arg_decode
                 let result = #function_call;
@@ -779,6 +805,155 @@ mod test {
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guard_deprecated() {
+        let generated = ic_query(
+            quote!(guard = "custom_guard"),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                fn deprecation() {
+                    #[deprecated(
+                        note = "The `guard` attribute is deprecated. Please use `guards` instead."
+                    )]
+                    const GUARD: () = ();
+                    let _ = GUARD;
+                }
+                let r: Result<(), String> = custom_guard ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guards() {
+        let generated = ic_query(
+            quote!(guards = ["guard1", "guard2"]),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                let r: Result<(), String> = guard1 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = guard2 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guard_and_guards() {
+        let generated = ic_query(
+            quote!(guard = "custom_guard", guards = ["guard1", "guard2"]),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                fn deprecation() {
+                    #[deprecated(
+                        note = "The `guard` attribute is deprecated. Please use `guards` instead."
+                    )]
+                    const GUARD: () = ();
+                    let _ = GUARD;
+                }
+                let r: Result<(), String> = custom_guard ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = guard1 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = guard2 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
             }
