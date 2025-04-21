@@ -82,6 +82,27 @@ fn manual_reply() -> PhantomData<u32> {
     PhantomData
 }
 
+#[update(guards = ["guard1", "guard2"])]
+fn with_guards() {}
+
+fn guard1() -> Result<(), String> {
+    let input = ic_cdk::api::msg_arg_data();
+    if input[0] % 3 != 0 {
+        Err("guard1 failed".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn guard2() -> Result<(), String> {
+    let input = ic_cdk::api::msg_arg_data();
+    if input[0] % 5 != 0 {
+        Err("guard2 failed".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 export_candid! {}
 
 fn main() {
@@ -106,6 +127,7 @@ mod tests {
             method_one : (blob) -> (blob);
             method_two : (blob) -> (blob);
             manual_reply : () -> (nat32);
+            with_guards : () -> ();
           }";
         let expected_candid = CandidSource::Text(expected);
 
