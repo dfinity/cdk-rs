@@ -65,7 +65,7 @@ pub use ic_cdk_macros::export_candid;
 ///     // ...
 /// # unimplemented!()
 /// }
-/// #[query(guard = ["guard1", "guard2"])]
+/// #[query(guards = ["guard1", "guard2"])]
 /// fn query_function() {
 ///     // ...
 /// # unimplemented!()
@@ -129,11 +129,13 @@ pub use ic_cdk_macros::export_candid;
 ///
 /// ## Manual Reply
 ///
-/// The query macro defaults to replying with the Candid payload encoded from the return value.
-/// If you want to manually reply with a custom payload, you can:
-/// - set `manual_reply` to `true`;
+/// The query macro defaults to invoke [`msg_reply()`](crate::api::msg_reply) after the function execution.
+/// If you want to execute other code after [`msg_reply()`](crate::api::msg_reply), you can:
+/// - set `manual_reply` to `true` in macro attribute;
+/// - set the return type to `PhantomData<T>` where `T` is the return type of the update method;
 /// - call the [`msg_reply()`](crate::api::msg_reply) function explicitly;
-/// - return a `PhantomData` wrapping the return value.
+/// - do other stuff;
+/// - return `PhantomData`;
 ///
 /// ```rust
 /// # fn calculate_result() {}
@@ -143,7 +145,7 @@ pub use ic_cdk_macros::export_candid;
 /// #[query(manual_reply = true)]
 /// fn query_function() -> PhantomData<MyResult> {
 ///     let result = calculate_result();
-///     let reply_bytes = candid::encode_one(v).unwrap();
+///     let reply_bytes = candid::encode_one(result).unwrap();
 ///     ic_cdk::api::msg_reply(reply_bytes);
 ///     PhantomData
 /// }
@@ -211,7 +213,7 @@ pub use ic_cdk_macros::query;
 ///     // ...
 /// # unimplemented!()
 /// }
-/// #[update(guard = ["guard1", "guard2"])]
+/// #[update(guards = ["guard1", "guard2"])]
 /// fn update_function() {
 ///     // ...
 /// # unimplemented!()
@@ -262,11 +264,13 @@ pub use ic_cdk_macros::query;
 ///
 /// ## Manual Reply
 ///
-/// The update macro defaults to replying with the Candid payload encoded from the return value.
-/// If you want to manually reply with a custom payload, you can:
-/// - set `manual_reply` to `true`;
+/// The update macro defaults to invoke [`msg_reply()`](crate::api::msg_reply) after the function execution.
+/// If you want to execute other code after [`msg_reply()`](crate::api::msg_reply), you can:
+/// - set `manual_reply` to `true` in macro attribute;
+/// - set the return type to `PhantomData<T>` where `T` is the return type of the update method;
 /// - call the [`msg_reply()`](crate::api::msg_reply) function explicitly;
-/// - return a `PhantomData` wrapping the return value.
+/// - do other stuff;
+/// - return `PhantomData`;
 ///
 /// ```rust
 /// # fn calculate_result() {}
@@ -276,7 +280,7 @@ pub use ic_cdk_macros::query;
 /// #[update(manual_reply = true)]
 /// fn update_function() -> PhantomData<MyResult> {
 ///     let result = calculate_result();
-///     let reply_bytes = candid::encode_one(v).unwrap();
+///     let reply_bytes = candid::encode_one(result).unwrap();
 ///     ic_cdk::api::msg_reply(reply_bytes);
 ///     PhantomData
 /// }
