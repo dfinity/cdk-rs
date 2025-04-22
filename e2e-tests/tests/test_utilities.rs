@@ -96,7 +96,6 @@ pub fn pic_base() -> PocketIcBuilder {
     PocketIcBuilder::new()
         .with_server_binary(pocket_ic_server)
         .with_application_subnet()
-        .with_nonmainnet_features(true)
 }
 
 fn check_pocket_ic_server() -> PathBuf {

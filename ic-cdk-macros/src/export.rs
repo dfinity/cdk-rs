@@ -1,5 +1,4 @@
 use proc_macro2::{Ident, Span, TokenStream};
-// use proc_macro_warning::Warning;
 use quote::{format_ident, quote, ToTokens};
 use serde::Deserialize;
 use serde_tokenstream::from_tokenstream;
