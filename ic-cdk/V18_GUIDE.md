@@ -1,25 +1,17 @@
 # Version 0.18 Guide
 
 ## Introduction
+
 `ic-cdk` v0.18 introduces many new features and changes that improve the developer experience.
 This guide covers the major features and changes and provides migration guidance for code written with version 0.17 or earlier.
 
 ### How to Upgrade
 
-Update the `Cargo.toml` to use the alpha version of the library:
+Update `Cargo.toml`:
 ```toml
 [dependencies]
-ic-cdk = "0.18.0-alpha.2"
+ic-cdk = "0.18.0"
 ```
-
-> [!NOTE]
-> The new version relies on the “Bounded-Wait Calls” feature that is not yet fully enabled on the mainnet.
-> To allow users to start experimenting with the new features and provide feedback, we are releasing this version as an alpha.
-> A stable release will follow once the “Bounded-Wait Calls” feature is fully enabled on the mainnet.
->
-> The Canister module built with the new Rust CDK is compatible with:
-> - `dfx start`: defaults to enable the “Bounded-Wait Calls” feature.
-> - `PocketIC`: enable the feature with `PocketIcBuilder::with_nonmainnet_features(true)`.
 
 ## Features
 
@@ -38,7 +30,7 @@ let res: u32 = Call::bounded_wait(id, method) // Choose the "bounded-wait" const
     .candid()?;                               // Decode the response bytes as Candid value
 ```
 
-Please check the [docs](https://docs.rs/ic-cdk/0.18.0-alpha.1/ic_cdk/call/struct.Call.html) for more details.
+Please check the [docs](https://docs.rs/ic-cdk/0.18.0/ic_cdk/call/struct.Call.html) for more details.
 
 #### Migration
 
