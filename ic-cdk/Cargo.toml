@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.18.0-alpha.2" # sync with ic-cdk-macros and the doc comment in README.md
+version = "0.18.0" # sync with ic-cdk-macros and the doc comment in README.md
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -27,7 +27,7 @@ ic0.workspace = true
 # Dependents won't accidentaly upgrading ic-cdk-macros only but not ic-cdk.
 # ic-cdk-macros is a hidden dependency, re-exported by ic-cdk.
 # It should not be included by users direcly.
-ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.18.0-alpha.2" }
+ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.18.0" }
 ic-error-types = "0.1.0"
 ic-management-canister-types.workspace = true
 serde.workspace = true
