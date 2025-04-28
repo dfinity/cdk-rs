@@ -61,4 +61,15 @@ fn call_macros() {
         .encode_to_vec()
     );
     let _: (u32,) = update(&pic, canister_id, "manual_reply", ()).unwrap();
+    let rej = pic
+        .update_call(canister_id, sender, "with_guards", vec![1])
+        .unwrap_err();
+    assert_eq!(rej.reject_message, "guard1 failed");
+    let rej = pic
+        .update_call(canister_id, sender, "with_guards", vec![3])
+        .unwrap_err();
+    assert_eq!(rej.reject_message, "guard2 failed");
+    let _res = pic
+        .update_call(canister_id, sender, "with_guards", vec![15])
+        .unwrap();
 }
