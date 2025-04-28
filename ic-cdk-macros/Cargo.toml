@@ -24,8 +24,7 @@ proc-macro = true
 
 [dependencies]
 candid.workspace = true
+darling = "0.20.11"
 proc-macro2 = "1.0"
 quote.workspace = true
-serde.workspace = true
-serde_tokenstream = "0.2.0"
 syn = { workspace = true, features = ["fold", "full", "extra-traits"] }

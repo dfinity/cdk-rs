@@ -1,13 +1,13 @@
+use darling::ast::NestedMeta;
+use darling::FromMeta;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use serde::Deserialize;
-use serde_tokenstream::from_tokenstream;
 use std::fmt::Formatter;
 use syn::punctuated::Punctuated;
 use syn::Error;
 use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
-#[derive(Default, Deserialize)]
+#[derive(Default, FromMeta)]
 struct ExportAttributes {
     pub name: Option<String>,
     pub guard: Option<String>,
@@ -21,11 +21,11 @@ struct ExportAttributes {
     ///
     /// If the endpoint returns a tuple, this custom encoder function should take the tuple as an argument.
     pub encode_with: Option<String>,
-    #[serde(default)]
+    #[darling(default)]
     pub manual_reply: bool,
-    #[serde(default)]
+    #[darling(default)]
     pub composite: bool,
-    #[serde(default)]
+    #[darling(default)]
     pub hidden: bool,
 }
 
@@ -129,8 +129,9 @@ fn dfn_macro(
     attr: TokenStream,
     item: TokenStream,
 ) -> Result<TokenStream, Error> {
-    let attrs = from_tokenstream::<ExportAttributes>(&attr)
-        .map_err(|e| Error::new(attr.span(), format!("Failed to deserialize {attr}. \n{e}")))?;
+    let attr_span = attr.span();
+    let attr_args = NestedMeta::parse_meta_list(attr)?;
+    let attrs = ExportAttributes::from_list(&attr_args)?;
 
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Error::new(
@@ -158,13 +159,13 @@ fn dfn_macro(
     let function_name = if let Some(custom_name) = attrs.name {
         if method.is_lifecycle() {
             return Err(Error::new(
-                attr.span(),
+                attr_span,
                 format!("#[{0}] cannot have a custom name.", method),
             ));
         }
         if custom_name.starts_with("<ic-cdk internal>") {
             return Err(Error::new(
-                attr.span(),
+                attr_span,
                 "Functions starting with `<ic-cdk internal>` are reserved for CDK internal use.",
             ));
         }
@@ -186,7 +187,7 @@ fn dfn_macro(
         // ic0.msg_reject is only allowed in update/query
         if method.is_lifecycle() {
             return Err(Error::new(
-                attr.span(),
+                attr_span,
                 format!("#[{}] cannot have a guard function.", method),
             ));
         }
@@ -215,7 +216,7 @@ fn dfn_macro(
         }
         if attrs.decode_with.is_some() {
             return Err(Error::new(
-                attr.span(),
+                attr_span,
                 format!(
                     "#[{}] function cannot have a decode_with attribute.",
                     method
@@ -269,7 +270,7 @@ fn dfn_macro(
         }
         if attrs.encode_with.is_some() {
             return Err(Error::new(
-                attr.span(),
+                attr_span,
                 format!(
                     "#[{}] function cannot have an encode_with attribute.",
                     method
