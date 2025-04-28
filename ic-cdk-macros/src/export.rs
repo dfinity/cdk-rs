@@ -10,7 +10,8 @@ use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, S
 #[derive(Default, FromMeta)]
 struct ExportAttributes {
     pub name: Option<String>,
-    pub guard: Option<String>,
+    #[darling(multiple)]
+    pub guard: Vec<String>,
     /// The name of the function to use for decoding arguments.
     /// If not provided, the arguments are decoded as Candid.
     ///
@@ -160,7 +161,7 @@ fn dfn_macro(
         if method.is_lifecycle() {
             return Err(Error::new(
                 attr_span,
-                format!("#[{0}] cannot have a custom name.", method),
+                format!("#[{0}] cannot have a custom name", method),
             ));
         }
         if custom_name.starts_with("<ic-cdk internal>") {
@@ -182,26 +183,29 @@ fn dfn_macro(
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
-    // 2. guard
-    let guard = if let Some(guard_name) = attrs.guard {
-        // ic0.msg_reject is only allowed in update/query
-        if method.is_lifecycle() {
-            return Err(Error::new(
-                attr_span,
-                format!("#[{}] cannot have a guard function.", method),
-            ));
-        }
-        let guard_ident = syn::Ident::new(&guard_name, Span::call_site());
-
-        quote! {
-            let r: Result<(), String> = #guard_ident ();
-            if let Err(e) = r {
-                ::ic_cdk::api::msg_reject(&e);
-                return;
+    // 2. guard(s)
+    if !attrs.guard.is_empty() && method.is_lifecycle() {
+        return Err(Error::new(
+            attr_span,
+            format!("#[{0}] cannot have guard function(s).", method),
+        ));
+    }
+    let guards: Vec<_> = attrs
+        .guard
+        .iter()
+        .map(|guard_name| {
+            let guard_ident = syn::Ident::new(guard_name, Span::call_site());
+            quote! {
+                let r: Result<(), String> = #guard_ident ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
             }
-        }
-    } else {
-        quote! {}
+        })
+        .collect();
+    let guard = quote! {
+        #(#guards)*
     };
 
     // 3. decode arguments
@@ -780,6 +784,51 @@ mod test {
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn ic_guards() {
+        let generated = ic_query(
+            quote!(guard = "guard1", guard = "guard2"),
+            quote! {
+                fn query() {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                let r: Result<(), String> = guard1 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                let r: Result<(), String> = guard2 ();
+                if let Err(e) = r {
+                    ::ic_cdk::api::msg_reject(&e);
+                    return;
+                }
+                ::ic_cdk::futures::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
+                    ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
             syn::Item::Fn(f) => {
                 assert_eq!(*f, expected);
             }
