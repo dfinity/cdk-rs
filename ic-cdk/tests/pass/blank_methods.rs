@@ -14,17 +14,53 @@ fn post_upgrade() {}
 #[update]
 fn update() {}
 
-#[update(hidden = true)]
+#[update(hidden)]
 fn update_hidden() {}
+
+#[update(hidden = true)]
+fn update_hidden_true() {}
+
+#[update(hidden = false)]
+fn update_hidden_false() {}
+
+#[update(manual_reply)]
+fn update_manual_reply() {}
+
+#[update(manual_reply = true)]
+fn update_manual_reply_true() {}
+
+#[update(manual_reply = false)]
+fn update_manual_reply_false() {}
 
 #[query]
 fn query() {}
 
-#[query(hidden = true)]
+#[query(hidden)]
 fn query_hidden() {}
 
+#[query(hidden = true)]
+fn query_hidden_true() {}
+
+#[query(hidden = false)]
+fn query_hidden_false() {}
+
+#[query(manual_reply)]
+fn query_manual_reply() {}
+
+#[query(manual_reply = true)]
+fn query_manual_reply_true() {}
+
+#[query(manual_reply = false)]
+fn query_manual_reply_false() {}
+
+#[query(composite)]
+fn query_composite() {}
+
 #[query(composite = true)]
-fn composite_query() {}
+fn query_composite_true() {}
+
+#[query(composite = false)]
+fn query_composite_false() {}
 
 #[heartbeat]
 fn heartbeat() {}
