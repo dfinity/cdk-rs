@@ -1,4 +1,4 @@
-use ic_cdk::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade};
+use ic_cdk::{heartbeat, init, inspect_message, on_low_wasm_memory, post_upgrade, pre_upgrade};
 
 fn guard_function() -> Result<(), String> {
     unimplemented!()
@@ -18,5 +18,8 @@ fn heartbeat() {}
 
 #[inspect_message(guard = "guard_function")]
 fn inspect_message() {}
+
+#[on_low_wasm_memory(guard = "guard_function")]
+fn on_low_wasm_memory() {}
 
 fn main() {}
