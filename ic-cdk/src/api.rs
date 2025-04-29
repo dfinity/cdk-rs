@@ -646,6 +646,36 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     sign_cost_result(dst, code)
 }
 
+/// Gets the cycle cost of the Management canister method [`vetkd_derive_key`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-vetkd_derive_encrypted_key).
+///
+/// # Note
+///
+/// Alternatively, [`management_canister::cost_vetkd_derive_key`](crate::management_canister::cost_vetkd_derive_key) provides a higher-level API that wraps this function.
+///
+/// # Errors
+///
+/// This function will return an error if the `key_name` or the `vetkd_curve` is invalid.
+/// The error type [`SignCostError`] provides more information about the reason of the error.
+pub fn cost_vetkd_derive_key<T: AsRef<str>>(
+    key_name: T,
+    vetkd_curve: u32,
+) -> Result<u128, SignCostError> {
+    let buf = key_name.as_ref();
+    let mut dst = 0u128;
+    // SAFETY:
+    // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_vetkd_derive_key`.
+    // `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_vetkd_derive_key`.
+    let code = unsafe {
+        ic0::cost_vetkd_derive_encrypted_key(
+            buf.as_ptr() as usize,
+            buf.len(),
+            vetkd_curve,
+            &mut dst as *mut u128 as usize,
+        )
+    };
+    sign_cost_result(dst, code)
+}
+
 /// Emits textual trace messages.
 ///
 /// On the "real" network, these do not do anything.

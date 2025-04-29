@@ -57,7 +57,8 @@
 use crate::api::{
     canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
     cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
-    cost_sign_with_schnorr as ic0_cost_sign_with_schnorr, SignCostError,
+    cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
+    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key, SignCostError,
 };
 use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
@@ -80,7 +81,8 @@ pub use ic_management_canister_types::{
     SignWithSchnorrResult, Snapshot, SnapshotId, StartCanisterArgs, StopCanisterArgs,
     StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
     TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
-    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, WasmMemoryPersistence,
+    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, VetKDDeriveKeyReply,
+    VetKDDeriveKeyRequest, VetKDPublicKeyReply, VetKDPublicKeyRequest, WasmMemoryPersistence,
     WasmModule,
 };
 // Following Args types contain `sender_canister_version` field which is set automatically in the corresponding functions.
@@ -759,6 +761,71 @@ pub async fn sign_with_schnorr(
     let cycles = cost_sign_with_schnorr(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "sign_with_schnorr")
+            .with_arg(arg)
+            .with_cycles(cycles)
+            .await?
+            .candid()?,
+    )
+}
+
+/// Gets a VetKD public key.
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `vetkd_public_key`](https://github.com/dfinity/portal/pull/3763).
+///
+/// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_public_key).
+pub async fn vetkd_public_key(arg: &VetKDPublicKeyRequest) -> CallResult<VetKDPublicKeyReply> {
+    Ok(
+        Call::bounded_wait(Principal::management_canister(), "vetkd_public_key")
+            .with_arg(arg)
+            .await?
+            .candid()?,
+    )
+}
+
+/// Calculates the cost of VetKD key derivation with the given [`VetKDDeriveKeyRequest`].
+///
+/// [`vetkd_derive_key`] invokes this method internally and attaches the required cycles to the call.
+///
+/// # Note
+///
+/// Alternatively, [`api::cost_vetkd_derive_key`][ic0_cost_vetkd_derive_key] takes the numeric representation of the algorithm.
+pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyRequest) -> Result<u128, SignCostError> {
+    ic0_cost_vetkd_derive_key(&arg.key_id.name, arg.key_id.curve.into())
+}
+
+/// Derives a key from the given input.
+///
+/// **Unbounded-wait call**
+///
+/// The returned encrypted key can be separately decrypted using the private secret key corresponding to the transport public key provided in the request, and the derivation correctness can be verified against the input and context provided in the request. See the [`ic_vetkeys` frontend library](https://github.com/dfinity/vetkd-devkit/tree/main/frontend/ic_vetkeys) for more details.
+///
+/// See [IC method `vetkd_derive_key`](https://github.com/dfinity/portal/pull/3763) for the API specification.
+///
+/// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_derive_key).
+///
+/// # Errors
+///
+/// This method returns an error of type [`SignCallError`].
+///
+/// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
+///
+/// Since the call argument is constructed as [`VetKDDeriveKeyRequest`], the `curve` field is guaranteed to be valid.
+/// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
+///
+/// # Note
+///
+/// VetKD key derivation costs cycles which varies for different algorithms and key names.
+/// This method attaches the required cycles (detemined by [`cost_vetkd_derive_key`]) to the call.
+///
+/// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
+pub async fn vetkd_derive_key(
+    arg: &VetKDDeriveKeyRequest,
+) -> Result<VetKDDeriveKeyReply, SignCallError> {
+    let cycles = cost_vetkd_derive_key(arg)?;
+    Ok(
+        Call::unbounded_wait(Principal::management_canister(), "vetkd_derive_key")
             .with_arg(arg)
             .with_cycles(cycles)
             .await?
