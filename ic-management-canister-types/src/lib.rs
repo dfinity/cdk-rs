@@ -1056,7 +1056,9 @@ pub struct SignWithSchnorrResult {
 }
 
 /// # The curve used for key derivation.
-#[derive(CandidType, Clone, Copy, Deserialize, Eq, PartialEq)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
 pub enum VetKDCurve {
     /// BLS12-381 G2
     #[serde(rename = "bls12_381_g2")]
@@ -1072,7 +1074,9 @@ impl From<VetKDCurve> for u32 {
     }
 }
 
-#[derive(CandidType, Clone, Deserialize, Eq, PartialEq)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct VetKDKeyId {
     /// The curve used for key derivation.
     pub curve: VetKDCurve,
@@ -1081,7 +1085,9 @@ pub struct VetKDKeyId {
 }
 
 /// # VetKD public key request.
-#[derive(CandidType, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct VetKDPublicKeyRequest {
     /// Canister id, defaults to the canister id of the caller if `None`.
     pub canister_id: Option<CanisterId>,
@@ -1092,14 +1098,18 @@ pub struct VetKDPublicKeyRequest {
 }
 
 /// # VetKD public key reply.
-#[derive(CandidType, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct VetKDPublicKeyReply {
     /// The public key.
     pub public_key: Vec<u8>,
 }
 
 /// # VetKD derive key request.
-#[derive(CandidType, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub struct VetKDDeriveKeyRequest {
     /// The input of the key derivation.
     pub input: Vec<u8>,
@@ -1112,7 +1122,9 @@ pub struct VetKDDeriveKeyRequest {
 }
 
 /// # VetKD derive key reply.
-#[derive(CandidType, Deserialize)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
 pub struct VetKDDeriveKeyReply {
     /// The derived key encrypted with the transport public key.
     pub encrypted_key: Vec<u8>,
