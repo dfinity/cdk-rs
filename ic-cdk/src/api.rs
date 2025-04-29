@@ -646,7 +646,9 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     sign_cost_result(dst, code)
 }
 
-/// Gets the cycle cost of the Management canister method [`vetkd_derive_key`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-vetkd_derive_encrypted_key).
+/// Gets the cycle cost of the Management canister method [`vetkd_derive_key`](https://github.com/dfinity/portal/pull/3763).
+///
+/// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_derive_key).
 ///
 /// # Note
 ///
