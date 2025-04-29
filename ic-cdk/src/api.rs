@@ -668,7 +668,7 @@ pub fn cost_vetkd_derive_key<T: AsRef<str>>(
     // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_vetkd_derive_key`.
     // `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_vetkd_derive_key`.
     let code = unsafe {
-        ic0::cost_vetkd_derive_encrypted_key(
+        ic0::cost_vetkd_derive_key(
             buf.as_ptr() as usize,
             buf.len(),
             vetkd_curve,

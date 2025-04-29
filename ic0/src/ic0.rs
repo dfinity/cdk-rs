@@ -62,12 +62,7 @@ extern "C" {
     pub fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize);
     pub fn cost_sign_with_ecdsa(src: usize, size: usize, ecdsa_curve: u32, dst: usize) -> u32;
     pub fn cost_sign_with_schnorr(src: usize, size: usize, algorithm: u32, dst: usize) -> u32;
-    pub fn cost_vetkd_derive_encrypted_key(
-        src: usize,
-        size: usize,
-        vetkd_curve: u32,
-        dst: usize,
-    ) -> u32;
+    pub fn cost_vetkd_derive_key(src: usize, size: usize, vetkd_curve: u32, dst: usize) -> u32;
     pub fn debug_print(src: usize, size: usize);
     pub fn trap(src: usize, size: usize);
 }
@@ -246,13 +241,13 @@ mod non_wasm {
     ) -> u32 {
         panic!("cost_sign_with_schnorr should only be called inside canisters.");
     }
-    pub unsafe fn cost_vetkd_derive_encrypted_key(
+    pub unsafe fn cost_vetkd_derive_key(
         src: usize,
         size: usize,
         vetkd_curve: u32,
         dst: usize,
     ) -> u32 {
-        panic!("cost_vetkd_derive_encrypted_key should only be called inside canisters.");
+        panic!("cost_vetkd_derive_key should only be called inside canisters.");
     }
     pub unsafe fn debug_print(src: usize, size: usize) {
         panic!("debug_print should only be called inside canisters.");
