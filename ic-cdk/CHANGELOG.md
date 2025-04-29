@@ -26,6 +26,7 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
   - `bitcoin_canister` module for direct Bitcoin Canisters calls.
+- Support VetKD management canister API. (#597)
 
 ### Changed
 
