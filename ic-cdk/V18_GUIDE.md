@@ -34,7 +34,7 @@ Please check the [docs](https://docs.rs/ic-cdk/0.18.0/ic_cdk/call/struct.Call.ht
 
 #### Migration
 
-The functions for inter-canister calls in the `ic_cdk::api::call` module are deprecated in favor of the new `Call` API. These functions were created before the introduction of the "Bounded-Wait Calls" feature. To maintain the same behavior, use the `Call::unbounded_wait()` constructor. You can later evaluate if a specific call should switch to `Call::bounded_wait()`.
+The functions for inter-canister calls in the `ic_cdk::api::call` module are deprecated in favor of the new `Call` API. These functions were created before the introduction of the [Bounded-Wait Calls](https://internetcomputer.org/docs/references/async-code#ic-call-types) feature. To maintain the same behavior, use the `Call::unbounded_wait()` constructor. You can later evaluate if a specific call should switch to `Call::bounded_wait()`.
 
 | Before                                             | After                                                                                    |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
