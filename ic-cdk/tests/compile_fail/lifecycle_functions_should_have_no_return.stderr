@@ -37,3 +37,11 @@ error: #[inspect_message] function cannot have a return value.
    | ^^^^^^^^^^^^^^^^^^
    |
    = note: this error originates in the attribute macro `inspect_message` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: #[on_low_wasm_memory] function cannot have a return value.
+  --> tests/compile_fail/lifecycle_functions_should_have_no_return.rs:18:1
+   |
+18 | #[on_low_wasm_memory]
+   | ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `on_low_wasm_memory` (in Nightly builds, run with -Z macro-backtrace for more info)
