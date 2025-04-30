@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Support VetKD management canister API. (#597)
+
 ## [0.18.0] - 2025-04-22
 
 Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
@@ -26,7 +28,6 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
   - `bitcoin_canister` module for direct Bitcoin Canisters calls.
-- Support VetKD management canister API. (#597)
 
 ### Changed
 
