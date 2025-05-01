@@ -772,6 +772,9 @@ pub async fn sign_with_schnorr(
 ///
 /// **Bounded-wait call**
 ///
+/// As of 2025-05-01, the vetKD feature is not yet available on the IC mainnet.
+/// The lastest PocketIC with the `with_nonmainnet_features(true)` flag can be used to test it.
+///
 /// See [IC method `vetkd_public_key`](https://github.com/dfinity/portal/pull/3763).
 ///
 /// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_public_key).
@@ -800,6 +803,9 @@ pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyArgs) -> Result<u128, SignCostE
 /// **Unbounded-wait call**
 ///
 /// The returned encrypted key can be separately decrypted using the private secret key corresponding to the transport public key provided in the request, and the derivation correctness can be verified against the input and context provided in the request. See the [`ic_vetkeys` frontend library](https://github.com/dfinity/vetkd-devkit/tree/main/frontend/ic_vetkeys) for more details.
+///
+/// As of 2025-05-01, the vetKD feature is not yet available on the IC mainnet.
+/// The lastest PocketIC with the `with_nonmainnet_features(true)` flag can be used to test it.
 ///
 /// See [IC method `vetkd_derive_key`](https://github.com/dfinity/portal/pull/3763) for the API specification.
 ///
