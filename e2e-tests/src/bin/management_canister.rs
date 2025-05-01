@@ -171,6 +171,31 @@ async fn schnorr() {
 }
 
 #[update]
+async fn vetkd(transport_public_key: Vec<u8>) {
+    // vetkd_public_key
+    let key_id = VetKDKeyId {
+        curve: VetKDCurve::Bls12_381_G2,
+        name: "test_key_1".to_string(),
+    };
+    let arg = VetKDPublicKeyArgs {
+        canister_id: None,
+        context: vec![],
+        key_id: key_id.clone(),
+    };
+    let VetKDPublicKeyResult { public_key } = vetkd_public_key(&arg).await.unwrap();
+    assert!(public_key.len() > 0);
+    // vetkd_derive_key
+    let arg = VetKDDeriveKeyArgs {
+        input: vec![],
+        context: vec![],
+        transport_public_key,
+        key_id,
+    };
+    let VetKDDeriveKeyResult { encrypted_key } = vetkd_derive_key(&arg).await.unwrap();
+    assert!(encrypted_key.len() > 0);
+}
+
+#[update]
 async fn metrics(subnet_id: Principal) {
     // node_metrics_history
     let arg = NodeMetricsHistoryArgs {
