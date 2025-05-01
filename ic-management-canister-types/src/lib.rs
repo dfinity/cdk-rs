@@ -1088,7 +1088,7 @@ pub struct VetKDKeyId {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct VetKDPublicKeyRequest {
+pub struct VetKDPublicKeyArgs {
     /// Canister id, defaults to the canister id of the caller if `None`.
     pub canister_id: Option<CanisterId>,
     /// The context of the key derivation.
@@ -1101,7 +1101,7 @@ pub struct VetKDPublicKeyRequest {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-pub struct VetKDPublicKeyReply {
+pub struct VetKDPublicKeyResult {
     /// The public key.
     pub public_key: Vec<u8>,
 }
@@ -1110,7 +1110,7 @@ pub struct VetKDPublicKeyReply {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-pub struct VetKDDeriveKeyRequest {
+pub struct VetKDDeriveKeyArgs {
     /// The input of the key derivation.
     pub input: Vec<u8>,
     /// The context of the key derivation.
@@ -1125,7 +1125,7 @@ pub struct VetKDDeriveKeyRequest {
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
-pub struct VetKDDeriveKeyReply {
+pub struct VetKDDeriveKeyResult {
     /// The derived key encrypted with the transport public key.
     pub encrypted_key: Vec<u8>,
 }

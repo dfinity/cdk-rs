@@ -81,9 +81,9 @@ pub use ic_management_canister_types::{
     SignWithSchnorrResult, Snapshot, SnapshotId, StartCanisterArgs, StopCanisterArgs,
     StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
     TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
-    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, VetKDDeriveKeyReply,
-    VetKDDeriveKeyRequest, VetKDPublicKeyReply, VetKDPublicKeyRequest, WasmMemoryPersistence,
-    WasmModule,
+    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, VetKDCurve,
+    VetKDDeriveKeyArgs, VetKDDeriveKeyResult, VetKDKeyId, VetKDPublicKeyArgs, VetKDPublicKeyResult,
+    WasmMemoryPersistence, WasmModule,
 };
 // Following Args types contain `sender_canister_version` field which is set automatically in the corresponding functions.
 // We provide reduced versions of these types to avoid duplication of the field.
@@ -775,7 +775,7 @@ pub async fn sign_with_schnorr(
 /// See [IC method `vetkd_public_key`](https://github.com/dfinity/portal/pull/3763).
 ///
 /// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_public_key).
-pub async fn vetkd_public_key(arg: &VetKDPublicKeyRequest) -> CallResult<VetKDPublicKeyReply> {
+pub async fn vetkd_public_key(arg: &VetKDPublicKeyArgs) -> CallResult<VetKDPublicKeyResult> {
     Ok(
         Call::bounded_wait(Principal::management_canister(), "vetkd_public_key")
             .with_arg(arg)
@@ -791,7 +791,7 @@ pub async fn vetkd_public_key(arg: &VetKDPublicKeyRequest) -> CallResult<VetKDPu
 /// # Note
 ///
 /// Alternatively, [`api::cost_vetkd_derive_key`][ic0_cost_vetkd_derive_key] takes the numeric representation of the algorithm.
-pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyRequest) -> Result<u128, SignCostError> {
+pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyArgs) -> Result<u128, SignCostError> {
     ic0_cost_vetkd_derive_key(&arg.key_id.name, arg.key_id.curve.into())
 }
 
@@ -821,8 +821,8 @@ pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyRequest) -> Result<u128, SignCo
 ///
 /// Check [Threshold signatures](https://internetcomputer.org/docs/current/references/t-sigs-how-it-works/#api-fees) for more details.
 pub async fn vetkd_derive_key(
-    arg: &VetKDDeriveKeyRequest,
-) -> Result<VetKDDeriveKeyReply, SignCallError> {
+    arg: &VetKDDeriveKeyArgs,
+) -> Result<VetKDDeriveKeyResult, SignCallError> {
     let cycles = cost_vetkd_derive_key(arg)?;
     Ok(
         Call::unbounded_wait(Principal::management_canister(), "vetkd_derive_key")
