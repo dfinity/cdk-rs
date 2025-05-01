@@ -1055,6 +1055,81 @@ pub struct SignWithSchnorrResult {
     pub signature: Vec<u8>,
 }
 
+/// # The curve used for key derivation.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
+pub enum VetKDCurve {
+    /// BLS12-381 G2
+    #[serde(rename = "bls12_381_g2")]
+    #[allow(non_camel_case_types)]
+    Bls12_381_G2,
+}
+
+impl From<VetKDCurve> for u32 {
+    fn from(val: VetKDCurve) -> Self {
+        match val {
+            VetKDCurve::Bls12_381_G2 => 0,
+        }
+    }
+}
+
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct VetKDKeyId {
+    /// The curve used for key derivation.
+    pub curve: VetKDCurve,
+    /// The name of the key.
+    pub name: String,
+}
+
+/// # VetKD public key request.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct VetKDPublicKeyArgs {
+    /// Canister id, defaults to the canister id of the caller if `None`.
+    pub canister_id: Option<CanisterId>,
+    /// The context of the key derivation.
+    pub context: Vec<u8>,
+    /// The key id.
+    pub key_id: VetKDKeyId,
+}
+
+/// # VetKD public key reply.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct VetKDPublicKeyResult {
+    /// The public key.
+    pub public_key: Vec<u8>,
+}
+
+/// # VetKD derive key request.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct VetKDDeriveKeyArgs {
+    /// The input of the key derivation.
+    pub input: Vec<u8>,
+    /// The context of the key derivation.
+    pub context: Vec<u8>,
+    /// The transport public key used to encrypt the derived key.
+    pub transport_public_key: Vec<u8>,
+    /// The id of the key deployed on the Internet Computer.
+    pub key_id: VetKDKeyId,
+}
+
+/// # VetKD derive key reply.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct VetKDDeriveKeyResult {
+    /// The derived key encrypted with the transport public key.
+    pub encrypted_key: Vec<u8>,
+}
+
 /// # Node Metrics History Args.
 ///
 /// Argument type of [`node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node_metrics_history).

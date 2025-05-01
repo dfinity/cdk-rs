@@ -59,6 +59,6 @@
     ic0.cost_http_request : (request_size : i64, max_res_bytes : i64, dst : I) -> ();     // * s
     ic0.cost_sign_with_ecdsa : (src : I, size : I, ecdsa_curve: i32, dst : I) -> i32;     // * s
     ic0.cost_sign_with_schnorr : (src : I, size : I, algorithm: i32, dst : I) -> i32;     // * s
-    ic0.cost_vetkd_derive_encrypted_key : (src : I, size : I, vetkd_curve: i32, dst : I) -> i32;  // * s
+    ic0.cost_vetkd_derive_key : (src : I, size : I, vetkd_curve: i32, dst : I) -> i32;  // * s
     ic0.debug_print : (src : I, size : I) -> ();                                          // * s
     ic0.trap : (src : I, size : I) -> ();                                                 // * s
