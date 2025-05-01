@@ -784,7 +784,7 @@ pub async fn vetkd_public_key(arg: &VetKDPublicKeyArgs) -> CallResult<VetKDPubli
     )
 }
 
-/// Calculates the cost of VetKD key derivation with the given [`VetKDDeriveKeyRequest`].
+/// Calculates the cost of VetKD key derivation with the given [`VetKDDeriveKeyArgs`].
 ///
 /// [`vetkd_derive_key`] invokes this method internally and attaches the required cycles to the call.
 ///
@@ -811,7 +811,7 @@ pub fn cost_vetkd_derive_key(arg: &VetKDDeriveKeyArgs) -> Result<u128, SignCostE
 ///
 /// The signature cost calculation may fail before the inter-canister call is made, resulting in a [`SignCallError::SignCostError`].
 ///
-/// Since the call argument is constructed as [`VetKDDeriveKeyRequest`], the `curve` field is guaranteed to be valid.
+/// Since the call argument is constructed as [`VetKDDeriveKeyArgs`], the `curve` field is guaranteed to be valid.
 /// Therefore, [`SignCostError::InvalidCurveOrAlgorithm`] should not occur. If it does, it is likely an issue with the IC. Please report it.
 ///
 /// # Note

@@ -183,7 +183,7 @@ async fn vetkd(transport_public_key: Vec<u8>) {
         key_id: key_id.clone(),
     };
     let VetKDPublicKeyResult { public_key } = vetkd_public_key(&arg).await.unwrap();
-    assert!(public_key.len() > 0);
+    assert!(!public_key.is_empty());
     // vetkd_derive_key
     let arg = VetKDDeriveKeyArgs {
         input: vec![],
@@ -192,7 +192,7 @@ async fn vetkd(transport_public_key: Vec<u8>) {
         key_id,
     };
     let VetKDDeriveKeyResult { encrypted_key } = vetkd_derive_key(&arg).await.unwrap();
-    assert!(encrypted_key.len() > 0);
+    assert!(!encrypted_key.is_empty());
 }
 
 #[update]
