@@ -4,8 +4,10 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use std::fmt::Formatter;
 use syn::punctuated::Punctuated;
-use syn::Error;
-use syn::{spanned::Spanned, FnArg, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
+use syn::spanned::Spanned;
+use syn::{
+    parse_str, Error, FnArg, ItemFn, Pat, PatIdent, PatType, Path, ReturnType, Signature, Type,
+};
 
 #[derive(Default, FromMeta)]
 struct ExportAttributes {
@@ -190,20 +192,20 @@ fn dfn_macro(
             format!("#[{0}] cannot have guard function(s).", method),
         ));
     }
-    let guards: Vec<_> = attrs
+    let guards = attrs
         .guard
         .iter()
-        .map(|guard_name| {
-            let guard_ident = syn::Ident::new(guard_name, Span::call_site());
-            quote! {
-                let r: Result<(), String> = #guard_ident ();
+        .map(|guard_name| -> Result<_, Error> {
+            let guard_path = parse_str::<Path>(guard_name)?;
+            Ok(quote! {
+                let r: Result<(), String> = #guard_path ();
                 if let Err(e) = r {
                     ::ic_cdk::api::msg_reject(&e);
                     return;
                 }
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, Error>>()?;
     let guard = quote! {
         #(#guards)*
     };
@@ -229,7 +231,7 @@ fn dfn_macro(
         }
     }
     let arg_decode = if let Some(decode_with) = &attrs.decode_with {
-        let decode_with_ident = syn::Ident::new(decode_with, Span::call_site());
+        let decode_with_ident = parse_str::<Path>(decode_with)?;
         if arg_tuple.len() == 1 {
             let arg_one = &arg_tuple[0];
             quote! {
@@ -286,7 +288,7 @@ fn dfn_macro(
         quote! {}
     } else {
         let return_bytes = if let Some(encode_with) = &attrs.encode_with {
-            let encode_with_ident = syn::Ident::new(encode_with, Span::call_site());
+            let encode_with_ident = parse_str::<Path>(encode_with)?;
             match return_length {
                 0 => quote! { #encode_with_ident()},
                 _ => quote! { #encode_with_ident(result)},

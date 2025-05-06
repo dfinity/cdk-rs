@@ -61,6 +61,9 @@ fn call_macros() {
         .encode_to_vec()
     );
     let _: (u32,) = update(&pic, canister_id, "manual_reply", ()).unwrap();
+    let (res,): (u32,) = update(&pic, canister_id, "generic", (1u32,)).unwrap();
+    assert_eq!(res, 2);
+
     let rej = pic
         .update_call(canister_id, sender, "with_guards", vec![1])
         .unwrap_err();
