@@ -74,6 +74,42 @@ fn from_proto_bytes<T: Message + Default>(msg: Vec<u8>) -> T {
     Message::decode(&msg[..]).unwrap()
 }
 
+/// The following method demonstrates how to specify guard/decode_with/encode_with attributes with generic parameters.
+#[update(
+    guard = "generic_guard::<0>", // N = 0, any input length is accepted
+    decode_with = "custom_candid_decode::<10000,_>",
+    encode_with = "custom_candid_encode::<100,_>"
+)]
+fn generic(a: u32) -> u32 {
+    a + 1
+}
+
+// A guard to verify the length of the input data is at least N bytes (N is specified as a const generic parameter).
+fn generic_guard<const N: usize>() -> Result<(), String> {
+    let input = ic_cdk::api::msg_arg_data();
+    if input.len() < N {
+        Err("generic_guard failed".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+// A Candid decode function that uses a custom decoding quota N which is specified as a const generic parameter.
+fn custom_candid_decode<const N: usize, T: for<'a> candid::Deserialize<'a> + candid::CandidType>(
+    bytes: Vec<u8>,
+) -> T {
+    let mut config = candid::de::DecoderConfig::new();
+    config.set_decoding_quota(N);
+    candid::utils::decode_one_with_config(&bytes[..], &config).unwrap()
+}
+
+// A Candid encode function that checks the length of the encoded bytes is less than N which is specified as a const generic parameter.
+fn custom_candid_encode<const N: usize, T: candid::CandidType>(v: T) -> Vec<u8> {
+    let bytes = candid::utils::encode_one(v).unwrap();
+    assert!(bytes.len() < N);
+    bytes
+}
+
 #[update(manual_reply = true)]
 fn manual_reply() -> PhantomData<u32> {
     let v: u32 = 1;
@@ -126,6 +162,7 @@ mod tests {
             ret2 : () -> (blob);
             method_one : (blob) -> (blob);
             method_two : (blob) -> (blob);
+            generic : (blob) -> (blob);
             manual_reply : () -> (nat32);
             with_guards : () -> ();
           }";
