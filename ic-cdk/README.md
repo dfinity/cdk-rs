@@ -16,7 +16,7 @@ Canisters expose entry points which can be called both by other canisters and by
 
 This library aims to provide a Rust-ergonomic abstraction to implement Canister entry points.
 
-## Using `ic-cdk`
+## Getting Started
 
 In Cargo.toml:
 
@@ -39,6 +39,31 @@ fn hello() -> String {
 ```
 
 This will register a **query** entry point named `hello`.
+
+## Compilation
+
+### Stable Target: `wasm32-unknown-unknown`
+
+```sh
+cargo build --target wasm32-unknown-unknown
+```
+
+### Experimental Target: `wasm64-unknown-unknown`
+
+No changes to the source code are required. However, setting up the Rust toolchain for Wasm64 support requires some additional steps.
+
+1. Install nightly toolchain: 
+```bash
+rustup toolchain install nightly
+```
+2. Add rust-src component:
+```bash
+rustup component add rust-src --toolchain nightly
+```
+3. Build with necessary flags:
+```bash
+cargo +nightly build -Z build-std=std,panic_abort --target wasm64-unknown-unknown
+```
 
 ## Macros
 
