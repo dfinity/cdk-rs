@@ -93,6 +93,11 @@ async fn call_echo() {
         .await
         .unwrap();
     assert_eq!(res, bytes);
+    let res = Call::unbounded_wait(canister_self(), "echo")
+        .take_raw_args(bytes.clone())
+        .await
+        .unwrap();
+    assert_eq!(res, bytes);
     let res: u32 = Call::unbounded_wait(canister_self(), "echo")
         .with_arg(n)
         .await
@@ -131,6 +136,11 @@ async fn call_echo() {
     assert_eq!(res, bytes);
     let res = Call::bounded_wait(canister_self(), "echo")
         .with_raw_args(&bytes)
+        .await
+        .unwrap();
+    assert_eq!(res, bytes);
+    let res = Call::bounded_wait(canister_self(), "echo")
+        .take_raw_args(bytes.clone())
         .await
         .unwrap();
     assert_eq!(res, bytes);
