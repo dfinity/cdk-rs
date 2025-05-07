@@ -215,9 +215,35 @@ impl<'a> Call<'_, 'a> {
     }
 
     /// Sets the arguments for the call as raw bytes.
+    ///
+    /// # Note
+    ///
+    /// This method just borrows the bytes, so it is useful when making multiple calls with the same argument data.
+    ///
+    /// The `Call` object will be tied to the lifetime of the argument bytes,
+    /// which may prevent storing the call in collections or returning it from functions
+    /// if the arguments don't live long enough.
+    ///
+    /// For cases where you need to transfer ownership of the arguments bytes consider using [`Self::take_raw_args`] instead.
     pub fn with_raw_args(self, raw_args: &'a [u8]) -> Self {
         Self {
             encoded_args: Cow::Borrowed(raw_args),
+            ..self
+        }
+    }
+
+    /// Sets the arguments for the call as raw bytes and consumes the bytes.
+    ///
+    /// # Note
+    ///
+    /// This method takes ownership of the arguments bytes, so it is useful
+    /// when you want to store the call in collections or return a `Call` from functions.
+    ///
+    /// For cases where you want to make multiple calls with the same argument data,
+    /// consider using [`Self::with_raw_args`] instead to avoid unnecessary cloning.
+    pub fn take_raw_args(self, raw_args: Vec<u8>) -> Self {
+        Self {
+            encoded_args: Cow::Owned(raw_args),
             ..self
         }
     }

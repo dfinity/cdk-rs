@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support VetKD management canister API. (#597)
+- Add `Call::take_raw_args` which owns the bytes. (#601)
 
 ## [0.18.0] - 2025-04-22
 
