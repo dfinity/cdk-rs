@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.1] - 2025-05-09
+
 ### Added
 
 - Support VetKD management canister API. (#597)
