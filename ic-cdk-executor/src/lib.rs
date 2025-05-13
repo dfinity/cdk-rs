@@ -1,142 +1,196 @@
 //! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
 
 use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::future::Future;
+use std::mem;
 use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
-use std::task::Context;
+use std::sync::Arc;
+use std::task::{Context, Poll, Wake, Waker};
 
-use self::waker::WakerState;
+use slotmap::{new_key_type, SlotMap};
 
-/// Must be called on every top-level future corresponding to a method call of a
-/// canister by the IC, other than async functions marked `#[update]` or similar.
-#[cfg_attr(not(target_arch = "wasm32"), allow(unused_variables, unreachable_code))]
+/// Spawn an asynchronous task to run in the background.
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
-    #[cfg(not(target_arch = "wasm32"))]
-    panic!("Cannot be run outside of wasm!"); // really, just cannot be run in a multi-threaded environment
+    let in_query = match CONTEXT.get() {
+        AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
+        AsyncContext::Query => true,
+        AsyncContext::Update | AsyncContext::Cancel => false,
+        AsyncContext::FromTask => unreachable!("FromTask"),
+    };
     let pinned_future = Box::pin(future);
-    let waker_state = Rc::new(WakerState {
-        future: RefCell::new(pinned_future),
-        previous_trap: Cell::new(false),
-    });
-    let waker = waker::waker(Rc::clone(&waker_state));
-    let _ = waker_state
-        .future
-        .borrow_mut()
-        .as_mut()
-        .poll(&mut Context::from_waker(&waker));
+    let task = Task {
+        future: pinned_future,
+        query: in_query,
+    };
+    let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
+    WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(task_id));
 }
 
-/// In a cleanup callback, this is set to `true` before calling `wake`, and `false` afterwards.
-/// This ensures that `wake` will not actually run the future, but instead cancel it and run its destructor.
-pub static CLEANUP: AtomicBool = AtomicBool::new(false);
+/// Execute an update function in a context that allows calling [`spawn`].
+pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    let _guard = ContextGuard::new(AsyncContext::Update);
+    let res = f();
+    poll_all();
+    res
+}
 
-// This module contains the implementation of a waker we're using for waking
-// top-level futures (the ones returned by canister methods). Rc handles the
-// heap management for us. Hence, it will be deallocated once we exit the scope and
-// we're not interested in the result, as it can only be a unit `()` if the
-// waker was used as intended.
-// Sizable unsafe code is mandatory here; Future::poll cannot be executed without implementing
-// RawWaker in terms of raw pointers.
-mod waker {
-    use super::*;
-    use std::{
-        rc::Rc,
-        sync::atomic::Ordering,
-        task::{RawWaker, RawWakerVTable, Waker},
+/// Execute a composite query function in a context that allows calling [`spawn`].
+pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    let _guard = ContextGuard::new(AsyncContext::Query);
+    let res = f();
+    poll_all();
+    res
+}
+
+/// Execute an inter-canister-call callback in a context that allows calling [`spawn`].
+pub fn in_callback_executor_context(f: impl FnOnce()) {
+    let _guard = ContextGuard::new(AsyncContext::FromTask);
+    f();
+    poll_all();
+}
+
+/// Execute an inter-canister-call callback in a context that allows calling [`spawn`], but will cancel every awoken future.
+pub fn in_callback_cancellation_context(f: impl FnOnce()) {
+    let _guard = ContextGuard::new(AsyncContext::Cancel);
+    f();
+}
+
+/// Tells you whether the current async fn is being canceled due to a trap/panic.
+pub fn is_recovering_from_trap() -> bool {
+    matches!(CONTEXT.get(), AsyncContext::Cancel)
+}
+
+fn poll_all() {
+    let in_query = match CONTEXT.get() {
+        AsyncContext::Query => true,
+        AsyncContext::Update | AsyncContext::Cancel => false,
+        AsyncContext::None => panic!("tasks can only be polled in an executor context"),
+        AsyncContext::FromTask => unreachable!("FromTask"),
     };
-
-    // The fields have separate RefCells in order to be modified separately.
-    pub(crate) struct WakerState {
-        pub future: RefCell<Pin<Box<dyn Future<Output = ()>>>>,
-        pub previous_trap: Cell<bool>,
-    }
-
-    static MY_VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
-
-    /// # Safety
-    ///
-    /// The pointer must be an owning (i.e. represented in the refcount), Rc-allocated pointer to a `WakerState`.
-    unsafe fn raw_waker(ptr: *const ()) -> RawWaker {
-        // SAFETY: All the function pointers in MY_VTABLE correctly operate on the pointer in question.
-        RawWaker::new(ptr, &MY_VTABLE)
-    }
-
-    /// # Safety
-    ///
-    /// This function should only be called by a [Waker] created by [`waker`].
-    unsafe fn clone(ptr: *const ()) -> RawWaker {
-        // SAFETY: The function's contract guarantees that this pointer is an Rc to a WakerState, and borrows the data from ptr.
-        unsafe {
-            Rc::increment_strong_count(ptr);
-            raw_waker(ptr)
-        }
-    }
-
-    // Our waker will be called if one of the response callbacks is triggered.
-    // Then, the waker will restore the future from the pointer we passed into the
-    // waker inside the `spawn` function and poll the future again. Rc takes care of
-    // the heap management for us. If CLEANUP is set, then we're recovering from
-    // a callback trap, and want to drop the future without executing any more of it;
-    // if previous_trap is set, then we already recovered from a callback trap in a
-    // different callback, and should immediately trap again in this one.
-    //
-    /// # Safety
-    ///
-    /// This function should only be called by a [Waker] created by [`waker`].
-    unsafe fn wake(ptr: *const ()) {
-        // SAFETY: The function's contract guarantees that the pointer is an Rc to a WakerState, and that this call takes ownership of the data.
-        let state = unsafe { Rc::from_raw(ptr as *const WakerState) };
-        // Must check CLEANUP *before* previous_trap, as we may be recovering from the following immediate trap.
-        if super::CLEANUP.load(Ordering::Relaxed) {
-            state.previous_trap.set(true);
-        } else if state.previous_trap.get() {
+    let mut ineligible = vec![];
+    while let Some(task_id) = WAKEUP.with_borrow_mut(|queue| queue.pop_front()) {
+        // Temporarily remove the task from the table. We need to execute it while `TASKS` is not borrowed, because it may schedule more tasks.
+        let Some(mut task) = TASKS.with_borrow_mut(|tasks| tasks.get_mut(task_id).map(mem::take))
+        else {
+            // The task is dropped on the first callback that panics, but the last callback is the one that sets the flag.
+            // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
+            // This should be the only possible case in which this happens.
             panic!("Call already trapped");
+            // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
+        };
+        if in_query && !task.query {
+            TASKS.with_borrow_mut(|tasks| tasks[task_id] = task);
+            ineligible.push(task_id);
+            continue;
+        }
+        let waker = Waker::from(Arc::new(TaskWaker {
+            task_id,
+            query: task.query,
+        }));
+        let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
+        match poll {
+            Poll::Pending => {
+                // more to do, put the task back in the table
+                TASKS.with_borrow_mut(|tasks| {
+                    if let Some(t) = tasks.get_mut(task_id) {
+                        *t = task;
+                    }
+                });
+            }
+            Poll::Ready(()) => {
+                // task complete, remove its entry from the table fully
+                TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
+            }
+        }
+    }
+    if !ineligible.is_empty() {
+        WAKEUP.with_borrow_mut(|wakeup| wakeup.extend(ineligible));
+    }
+}
+
+new_key_type! {
+    struct TaskId;
+}
+
+thread_local! {
+    static TASKS: RefCell<SlotMap<TaskId, Task>> = <_>::default();
+    static WAKEUP: RefCell<VecDeque<TaskId>> = <_>::default();
+    static CONTEXT: Cell<AsyncContext> = <_>::default();
+}
+
+#[derive(Default, Copy, Clone)]
+enum AsyncContext {
+    #[default]
+    None,
+    Update,
+    Query,
+    FromTask,
+    Cancel,
+}
+
+struct Task {
+    future: Pin<Box<dyn Future<Output = ()>>>,
+    query: bool,
+}
+
+impl Default for Task {
+    fn default() -> Self {
+        Self {
+            future: Box::pin(std::future::pending()),
+            query: false,
+        }
+    }
+}
+
+struct ContextGuard(());
+
+impl ContextGuard {
+    fn new(context: AsyncContext) -> Self {
+        CONTEXT.with(|context_var| {
+            assert!(
+                matches!(context_var.get(), AsyncContext::None),
+                "in_*_context called within an existing async context"
+            );
+            context_var.set(context);
+            Self(())
+        })
+    }
+}
+
+impl Drop for ContextGuard {
+    fn drop(&mut self) {
+        CONTEXT.set(AsyncContext::None);
+    }
+}
+
+/// Waker implementation for executing futures produced by `call`/`call_raw`/etc.
+///
+/// *Almost* a do-nothing executor, i.e. wake directly calls poll with no scheduler, except it attempts to clean up tasks
+/// whose execution has trapped - see `call::is_recovering_from_trap`.
+#[derive(Clone)]
+struct TaskWaker {
+    task_id: TaskId,
+    query: bool,
+}
+
+impl Wake for TaskWaker {
+    fn wake(self: Arc<Self>) {
+        if matches!(CONTEXT.get(), AsyncContext::Cancel) {
+            // This task is recovering from a trap. We cancel it to run destructors.
+            let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(self.task_id));
+            // _task must be dropped *outside* with_borrow_mut - its destructor may (inadvisably) schedule tasks
         } else {
-            let waker = waker(Rc::clone(&state));
-            let Ok(mut borrow) = state.future.try_borrow_mut() else {
-                // If this is already borrowed, then wake was called from inside poll. There's not a lot we can do about this - we are not
-                // a true scheduler and so cannot immediately schedule another poll, nor can we reentrantly lock the future. So we ignore it.
-                // This will be disappointing to types like FuturesUnordered that expected this to work, but since the only source of asynchrony
-                // and thus a guaranteed source of wakeup notifications is the ic0.call_new callback, this shouldn't cause any actual problems.
-                return;
-            };
-            let pinned_future = borrow.as_mut();
-            let _ = pinned_future.poll(&mut Context::from_waker(&waker));
+            WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
+            CONTEXT.with(|context| {
+                if matches!(context.get(), AsyncContext::FromTask) {
+                    if self.query {
+                        context.set(AsyncContext::Query)
+                    } else {
+                        context.set(AsyncContext::Update)
+                    }
+                }
+            })
         }
-    }
-
-    /// # Safety
-    ///
-    /// This function should only be called by a [Waker] created by [waker].
-    unsafe fn wake_by_ref(ptr: *const ()) {
-        // SAFETY:
-        // The function's contract guarantees that the pointer is an Rc to a WakerState, and that this call borrows the data.
-        // wake has the same contract, except it takes ownership instead of borrowing. Which just requires incrementing the refcount.
-        unsafe {
-            Rc::increment_strong_count(ptr as *const WakerState);
-            wake(ptr);
-        }
-    }
-
-    /// # Safety
-    ///
-    /// This function should only be called by a [Waker] created by [waker].
-    unsafe fn drop(ptr: *const ()) {
-        // SAFETY: The function contract guarantees that the pointer is an Rc to a WakerState, and that this call takes ownership of the data.
-        unsafe {
-            Rc::from_raw(ptr as *const WakerState);
-        }
-    }
-
-    /// Creates a new Waker.
-    pub(crate) fn waker(state: Rc<WakerState>) -> Waker {
-        let ptr = Rc::into_raw(state);
-        // SAFETY:
-        // The pointer is an owning, Rc-allocated pointer to a WakerState, and therefore can be passed to raw_waker
-        // The functions in the vtable are passed said ptr
-        // The functions in the vtable uphold RawWaker's contract
-        unsafe { Waker::from_raw(raw_waker(ptr as *const ())) }
     }
 }
