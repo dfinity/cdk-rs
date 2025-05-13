@@ -167,8 +167,8 @@ impl Drop for ContextGuard {
 
 /// Waker implementation for executing futures produced by `call`/`call_raw`/etc.
 ///
-/// *Almost* a do-nothing executor, i.e. wake directly calls poll with no scheduler, except it attempts to clean up tasks
-/// whose execution has trapped - see `call::is_recovering_from_trap`.
+/// *Almost* a straightforward executor, i.e. wakeups are addressed immediately for everything,
+/// except it attempts to clean up tasks whose execution has trapped - see `call::is_recovering_from_trap`.
 #[derive(Clone)]
 struct TaskWaker {
     task_id: TaskId,
