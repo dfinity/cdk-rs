@@ -1,3 +1,5 @@
+//! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
+
 use std::cell::{Cell, RefCell};
 use std::future::Future;
 use std::pin::Pin;
@@ -26,7 +28,9 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
         .poll(&mut Context::from_waker(&waker));
 }
 
-pub(crate) static CLEANUP: AtomicBool = AtomicBool::new(false);
+/// In a cleanup callback, this is set to `true` before calling `wake`, and `false` afterwards.
+/// This ensures that `wake` will not actually run the future, but instead cancel it and run its destructor.
+pub static CLEANUP: AtomicBool = AtomicBool::new(false);
 
 // This module contains the implementation of a waker we're using for waking
 // top-level futures (the ones returned by canister methods). Rc handles the
@@ -88,7 +92,7 @@ mod waker {
         if super::CLEANUP.load(Ordering::Relaxed) {
             state.previous_trap.set(true);
         } else if state.previous_trap.get() {
-            crate::trap("Call already trapped");
+            panic!("Call already trapped");
         } else {
             let waker = waker(Rc::clone(&state));
             let Ok(mut borrow) = state.future.try_borrow_mut() else {

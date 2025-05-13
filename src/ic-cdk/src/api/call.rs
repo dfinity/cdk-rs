@@ -182,9 +182,9 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
         if let Some(waker) = w {
             // Flag that we do not want to actually wake the task - we
             // want to drop it *without* executing it.
-            crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+            ic_cdk_executor::CLEANUP.store(true, Ordering::Relaxed);
             waker.wake();
-            crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+            ic_cdk_executor::CLEANUP.store(false, Ordering::Relaxed);
         }
     }
 }
@@ -873,5 +873,5 @@ where
 /// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
 pub fn is_recovering_from_trap() -> bool {
-    crate::futures::CLEANUP.load(Ordering::Relaxed)
+    ic_cdk_executor::CLEANUP.load(Ordering::Relaxed)
 }
