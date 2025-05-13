@@ -1,0 +1,20 @@
+[package]
+name = "ic-cdk-executor"
+version = "0.1.0"
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2021"
+description = "Canister Developer Kit for the Internet Computer."
+homepage = "https://docs.rs/ic-cdk"
+documentation = "https://docs.rs/ic-cdk"
+license = "Apache-2.0"
+readme = "README.md"
+categories = ["asynchronous", "rust-patterns"]
+keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+repository = "https://github.com/dfinity/cdk-rs"
+rust-version = "1.65.0"
+# DO NOT change this field, not even to update the link, unless you are updating every existing version of the package.
+# Update the link by updating the links-pin tag.
+links = "ic-cdk async executor, see https://github.com/dfinity/cdk-rs/blob/links-pin/TROUBLESHOOTING.md"
+
+[dependencies]

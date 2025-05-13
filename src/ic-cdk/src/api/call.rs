@@ -180,9 +180,9 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFuture
         if let Some(waker) = w {
             // Flag that we do not want to actually wake the task - we
             // want to drop it *without* executing it.
-            crate::futures::CLEANUP.store(true, Ordering::Relaxed);
+            ic_cdk_executor::CLEANUP.store(true, Ordering::Relaxed);
             waker.wake();
-            crate::futures::CLEANUP.store(false, Ordering::Relaxed);
+            ic_cdk_executor::CLEANUP.store(false, Ordering::Relaxed);
         }
     }
 }

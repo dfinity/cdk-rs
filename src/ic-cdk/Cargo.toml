@@ -22,6 +22,7 @@ rust-version = "1.65.0"
 [dependencies]
 candid = "0.8"
 ic0 = { path = "../ic0", version = "0.18.10" }
+ic-cdk-executor = { path = "../ic-cdk-executor", version = "0.1.0" }
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "0.6.7" }
 serde = "1.0.110"
 serde_bytes = "0.11.7"
