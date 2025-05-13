@@ -27,7 +27,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(task_id));
 }
 
-/// Execute an update function in a context that allows calling [`spawn`].
+/// Execute an update function in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
     let _guard = ContextGuard::new(AsyncContext::Update);
     let res = f();
@@ -35,7 +35,7 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
     res
 }
 
-/// Execute a composite query function in a context that allows calling [`spawn`].
+/// Execute a composite query function in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     let _guard = ContextGuard::new(AsyncContext::Query);
     let res = f();
@@ -43,14 +43,15 @@ pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     res
 }
 
-/// Execute an inter-canister-call callback in a context that allows calling [`spawn`].
+/// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_callback_executor_context(f: impl FnOnce()) {
     let _guard = ContextGuard::new(AsyncContext::FromTask);
     f();
     poll_all();
 }
 
-/// Execute an inter-canister-call callback in a context that allows calling [`spawn`], but will cancel every awoken future.
+/// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers,
+/// but will cancel every awoken future.
 pub fn in_callback_cancellation_context(f: impl FnOnce()) {
     let _guard = ContextGuard::new(AsyncContext::Cancel);
     f();
