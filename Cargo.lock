@@ -1164,6 +1164,7 @@ version = "0.17.1"
 dependencies = [
  "anyhow",
  "candid",
+ "ic-cdk-executor",
  "ic-cdk-macros",
  "ic0",
  "rstest",
@@ -1199,6 +1200,10 @@ dependencies = [
  "serde_bytes",
  "sha2",
 ]
+
+[[package]]
+name = "ic-cdk-executor"
+version = "0.1.0"
 
 [[package]]
 name = "ic-cdk-macros"
