@@ -22,3 +22,5 @@ You have two incompatible versions of `ic-cdk` in your dependency tree. There ar
 First, a dependency may be using an older (or newer) version of the CDK. Many versions are compatible with each other, but versions 0.17 and earlier are incompatible with versions 0.18 or later. You will have to wait for those dependencies to update, or patch them yourself.
 
 Second, a dependency may be using a nominally compatible version of the CDK, but you are using a GitHub prerelease of the CDK with `ic-cdk = { git =`. Git dependencies are automatically incompatible with everything, even if nothing changed. You will need to create a [patch table](https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html) that replaces `ic-cdk` with a Git dependency at the same commit (you may also need to replace `ic-cdk-executor`).
+
+You can find the dependencies responsible with the command `cargo tree -i ic-cdk`.
