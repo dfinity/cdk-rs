@@ -54,17 +54,17 @@ The macros fall into two categories:
 
 These macros are directly related to the [Internet Computer Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#entry-points).
 
-* [`init`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.init.html)
-* [`pre_upgrade`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.pre_upgrade.html)
-* [`post_upgrade`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.post_upgrade.html)
-* [`inspect_message`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.inspect_message.html)
-* [`heartbeat`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.heartbeat.html)
-* [`update`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.update.html)
-* [`query`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/attr.query.html)
+* [`init`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.init.html)
+* [`pre_upgrade`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.pre_upgrade.html)
+* [`post_upgrade`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.post_upgrade.html)
+* [`inspect_message`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.inspect_message.html)
+* [`heartbeat`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.heartbeat.html)
+* [`update`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.update.html)
+* [`query`](https://docs.rs/ic-cdk/latest/ic_cdk/attr.query.html)
 
 ### Export Candid definitions
 
-* [`export_candid`](https://docs.rs/ic-cdk-macros/latest/ic_cdk_macros/macro.export_candid.html)
+* [`export_candid`](https://docs.rs/ic-cdk/latest/ic_cdk/macro.export_candid.html)
 
 Check [Generating Candid files for Rust canisters](https://internetcomputer.org/docs/current/developer-docs/backend/candid/generating-candid/) for more details.
 

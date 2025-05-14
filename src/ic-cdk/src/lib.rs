@@ -12,10 +12,8 @@
 #[cfg(target_feature = "atomics")]
 compile_error!("This version of the CDK does not support multithreading.");
 
-#[doc(inline)]
-pub use ic_cdk_macros::*;
-
 pub mod api;
+mod macros;
 mod printer;
 pub mod storage;
 
@@ -27,6 +25,9 @@ pub use api::call::call;
 pub use api::call::notify;
 #[doc(inline)]
 pub use api::{caller, id, print, trap};
+
+#[doc(inline)]
+pub use macros::*;
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
