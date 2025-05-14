@@ -12,7 +12,7 @@ concurrency:
 
 env:
   rust-version: 1.66.1
-  dfx-version: 0.13.1
+  dfx-version: 0.14.1
 
 jobs:
   test:

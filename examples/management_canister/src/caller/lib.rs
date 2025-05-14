@@ -13,16 +13,11 @@ mod main {
                 freezing_threshold: Some(10000.into()),
             }),
         };
-        create_canister(arg).await.unwrap();
-
-        let canister_id = create_canister_with_extra_cycles(
-            CreateCanisterArgument::default(),
-            1_000_000_000_000u128,
-        )
-        .await
-        .unwrap()
-        .0
-        .canister_id;
+        let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
+            .await
+            .unwrap()
+            .0
+            .canister_id;
 
         let arg = UpdateSettingsArgument {
             canister_id,
@@ -86,6 +81,18 @@ mod http_request {
     use super::*;
     use ic_cdk::api::management_canister::http_request::*;
 
+    fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
+        let max_response_bytes = match arg.max_response_bytes {
+            Some(ref n) => *n as u128,
+            None => 2 * 1024 * 1024u128, // default 2MiB
+        };
+        let arg_raw = ic_cdk::export::candid::utils::encode_args((arg,))
+            .expect("Failed to encode arguments.");
+        400_000_000u128 / 13
+            + 100_000u128 / 13
+                * (arg_raw.len() as u128 + "http_request".len() as u128 + max_response_bytes)
+    }
+
     #[update]
     async fn http_request_example() {
         let url = "https://example.com".to_string();
@@ -101,19 +108,8 @@ mod http_request {
             name: "custom-header".to_string(),
             value: "test".to_string(),
         };
-        let response = http_request_with(arg.clone(), {
-            let header = header.clone();
-            move |mut response| {
-                response.headers = vec![header];
-                response
-            }
-        })
-        .await
-        .unwrap()
-        .0;
-        assert_eq!(response.status, 200);
-        assert_eq!(response.headers.get(0), Some(&header));
-        let response = http_request_with_cycles_with(arg, 718500000u128, {
+        let cycles = http_request_required_cycles(&arg);
+        let response = http_request_with_closure(arg.clone(), cycles, {
             let header = header.clone();
             move |mut response| {
                 response.headers = vec![header];
