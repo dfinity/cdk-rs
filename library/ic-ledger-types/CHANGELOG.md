@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+- from_hex/from_slice/to_hex methods to AccountIdentifier in ic-ledger-types
+
+### Changed
+- Upgrade `ic-cdk` to v0.10 and `candid` to v0.9.
+
 ## [0.6.0] - 2023-06-20
 ### Changed
 - Upgrade `ic-cdk` to v0.9.

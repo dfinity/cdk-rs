@@ -1,7 +1,5 @@
-use ic_cdk::{
-    api::call::ManualReply, export::Principal, init, post_upgrade, pre_upgrade, query, storage,
-    update,
-};
+use candid::Principal;
+use ic_cdk::{api::call::ManualReply, init, post_upgrade, pre_upgrade, query, storage, update};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -54,3 +52,5 @@ fn post_upgrade() {
     let (old_users,): (BTreeSet<Principal>,) = storage::stable_restore().unwrap();
     USERS.with(|users| *users.borrow_mut() = old_users);
 }
+
+ic_cdk::export_candid!();
