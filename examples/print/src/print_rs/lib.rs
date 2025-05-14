@@ -3,4 +3,4 @@ fn print() {
     ic_cdk::print("Hello World");
 }
 
-ic_cdk::export_candid!(::ic_cdk::export::candid);
+ic_cdk::export_candid!();

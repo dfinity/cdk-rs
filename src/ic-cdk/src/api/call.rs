@@ -530,7 +530,7 @@ pub fn arg_data_raw() -> Vec<u8> {
     bytes
 }
 
-/// Get the len of the raw-argument-data-bytes.
+/// Gets the len of the raw-argument-data-bytes.
 pub fn arg_data_raw_size() -> usize {
     // SAFETY: ic0.msg_arg_data_size is always safe to call.
     unsafe { ic0::msg_arg_data_size() as usize }
@@ -577,10 +577,13 @@ pub fn method_name() -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// Get the value of specified performance counter
+/// Gets the value of specified performance counter
 ///
-/// Supported counter type:
-/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+/// See [`crate::api::performance_counter`].
+#[deprecated(
+    since = "0.11.3",
+    note = "This method conceptually doesn't belong to this module. Please use `ic_cdk::api::performance_counter` instead."
+)]
 pub fn performance_counter(counter_type: u32) -> u64 {
     // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }

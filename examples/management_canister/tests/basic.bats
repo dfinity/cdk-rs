@@ -1,22 +1,29 @@
 # Executed before each test.
 setup() {
   cd examples/management_canister
-  bitcoind -regtest -daemonwait
-  # Make sure the directory is clean.
-  dfx start --clean --background
 }
 
 # executed after each test
 teardown() {
   dfx stop
-  bitcoin-cli -regtest stop
 }
 
-@test "All management canister methods succeed" {
+@test "http_request example succeed" {
+  dfx start --clean --background --enable-canister-http
   dfx deploy
-  run dfx canister call caller execute_main_methods
-  run dfx canister call caller execute_provisional_methods
-  run dfx canister call caller http_request_example
-  run dfx canister call caller execute_ecdsa_methods
-  run dfx canister call caller execute_bitcoin_methods
+  dfx canister call caller http_request_example
+}
+
+@test "ecdsa methods succeed" {
+  dfx start --clean --background
+  dfx deploy
+  dfx canister call caller execute_ecdsa_methods
+}
+
+@test "bitcoin methods succeed" {
+  bitcoind -regtest -daemonwait
+  dfx start --clean --background --enable-bitcoin
+  dfx deploy
+  dfx canister call caller execute_bitcoin_methods
+  bitcoin-cli -regtest stop
 }

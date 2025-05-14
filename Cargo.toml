@@ -1,15 +1,15 @@
 [workspace]
-members = [
-    "src/ic0",
-    "src/ic-cdk",
-    "src/ic-cdk-bindgen",
-    "src/ic-cdk-executor",
-    "src/ic-cdk-macros",
-    "src/ic-cdk-timers",
-    "library/ic-certified-map",
-    "library/ic-ledger-types",
-    "e2e-tests",
-]
+members = ["src/*", "library/*", "e2e-tests"]
+
+[workspace.package]
+authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
+edition = "2021"
+repository = "https://github.com/dfinity/cdk-rs"
+# MSRV
+# Avoid updating this field unless we use new Rust features
+# Sync with rust-toolchain.toml
+rust-version = "1.66.0"
+license = "Apache-2.0"
 
 [profile.canister-release]
 inherits = "release"
@@ -19,4 +19,17 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-candid = "0.9"
+ic0 = { path = "src/ic0", version = "0.21.1" }
+ic-cdk = { path = "src/ic-cdk", version = "0.11.4" }
+ic-cdk-executor = { path = "src/ic-cdk-executor", version = "0.1.0" }
+ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.5.1" }
+
+candid = "0.9.6"
+futures = "0.3"
+hex = "0.4"
+quote = "1"
+serde = "1"
+serde_bytes = "0.11"
+sha2 = "0.10"
+slotmap = "1"
+syn = "1"

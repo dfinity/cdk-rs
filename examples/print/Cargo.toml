@@ -1,4 +1,6 @@
 [workspace]
-members = [
-    "src/print_rs",
-]
+members = ["src/print_rs"]
+
+[workspace.dependencies]
+ic-cdk = { path = "../../src/ic-cdk" }
+candid = "0.9"
