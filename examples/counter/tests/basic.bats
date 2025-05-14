@@ -56,3 +56,9 @@ teardown() {
   run dfx canister call counter_rs read
   [ "$output" == '(6 : nat)' ]
 }
+
+@test "counter_rs generated Candid excludes hidden methods" {
+  dfx build --check counter_rs
+  ! grep -q update_hidden src/counter_rs/counter.did
+  ! grep -q query_hidden src/counter_rs/counter.did
+}
