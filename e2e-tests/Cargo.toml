@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 candid.workspace = true
-cargo_metadata = "0.14.2"
+cargo_metadata = "0.18"
 escargot = { version = "0.5.7", features = ["print"] }
 ic-cdk.workspace = true
 ic-cdk-timers.workspace = true
@@ -53,4 +53,4 @@ path = "canisters/chunk.rs"
 
 [dev-dependencies]
 hex.workspace = true
-ic-test-state-machine-client = "3"
+pocket-ic = "3"

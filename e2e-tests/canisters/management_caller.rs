@@ -12,16 +12,17 @@ mod main {
             settings: Some(CanisterSettings {
                 controllers: Some(vec![ic_cdk::id()]),
                 // There is no canister in the subnet, so we can set it to 100.
-                compute_allocation: Some(100u8.into()),
+                compute_allocation: Some(1u8.into()),
                 // Though the upper limit is 256TiB, the actual subnet may have less memory resource (e.g. local replica).
                 // Here we set it to 10KiB for testing.
                 memory_allocation: Some(10000u16.into()),
                 freezing_threshold: Some(u64::MAX.into()),
                 reserved_cycles_limit: Some(u128::MAX.into()),
+                log_visibility: Some(LogVisibility::Public),
                 wasm_memory_limit: Some((2u64.pow(48) - 1).into()),
             }),
         };
-        let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
+        let canister_id = create_canister(arg, 200_000_000_000_000_000_000_000_000u128)
             .await
             .unwrap()
             .0
@@ -33,10 +34,14 @@ mod main {
         assert_eq!(response.reserved_cycles.0, 0u128.into());
         let definite_canister_setting = response.settings;
         assert_eq!(definite_canister_setting.controllers, vec![ic_cdk::id()]);
-        assert_eq!(definite_canister_setting.compute_allocation, 100u8);
+        assert_eq!(definite_canister_setting.compute_allocation, 1u8);
         assert_eq!(definite_canister_setting.memory_allocation, 10000u16);
         assert_eq!(definite_canister_setting.freezing_threshold, u64::MAX);
         assert_eq!(definite_canister_setting.reserved_cycles_limit, u128::MAX);
+        assert_eq!(
+            definite_canister_setting.log_visibility,
+            LogVisibility::Public
+        );
         assert_eq!(
             definite_canister_setting.wasm_memory_limit,
             2u64.pow(48) - 1
@@ -72,6 +77,7 @@ mod main {
 
 mod provisional {
     use super::*;
+    use api::management_canister::main::LogVisibility;
     use ic_cdk::api::management_canister::provisional::*;
 
     #[update]
@@ -82,10 +88,11 @@ mod provisional {
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
             reserved_cycles_limit: Some(10000u16.into()),
+            log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
-            amount: Some(1_000_000_000u64.into()),
+            amount: Some(10_000_000_000_000u64.into()),
             settings: Some(settings),
         };
         let canister_id = provisional_create_canister_with_cycles(arg)
