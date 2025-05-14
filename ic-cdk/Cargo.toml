@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk"
-version = "0.18.1" # sync with ic-cdk-macros and the doc comment in README.md
+version = "0.18.2-alpha.1" # sync with ic-cdk-macros and the doc comment in README.md
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
