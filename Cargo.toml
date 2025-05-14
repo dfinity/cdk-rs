@@ -2,6 +2,7 @@
 members = [
     "ic-cdk",
     "ic-cdk-bindgen",
+    "ic-cdk-executor",
     "ic-cdk-macros",
     "ic-cdk-timers",
     "ic-management-canister-types",
@@ -33,6 +34,7 @@ opt-level = 'z'
 ic0 = { path = "ic0", version = "0.25.0" }
 ic-cdk = { path = "ic-cdk", version = "0.18.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.0" }
+ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.0" }
 ic-management-canister-types = { path = "ic-management-canister-types", version = "0.3.1" }
 
 candid = "0.10.13"      # sync with the doc comment in ic-cdk/README.md

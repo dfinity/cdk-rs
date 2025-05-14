@@ -192,7 +192,7 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
 unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
-    crate::futures::in_callback_executor_context(|| {
+    ic_cdk_executor::in_callback_executor_context(|| {
         // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
         let state = unsafe { Arc::from_raw(state_ptr) };
         let completed_state = CallFutureState::Complete {
@@ -227,7 +227,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
 unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
     // Flag that we do not want to actually wake the task - we
     // want to drop it *without* executing it.
-    crate::futures::in_callback_cancellation_context(|| {
+    ic_cdk_executor::in_callback_cancellation_context(|| {
         // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
         let state = unsafe { Arc::from_raw(state_ptr) };
         // We set the call result, even though it won't be read on the
