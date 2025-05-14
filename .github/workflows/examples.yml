@@ -5,18 +5,48 @@ on:
     branches:
       - main
   pull_request:
+  schedule:
+    - cron: "0 4 * * 0,3" # 4 a.m. UTC every Sun and Wed, keep actions-cache available
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  rust-version: 1.66.1
-  dfx-version: 0.13.1
+  ic-wasm-version: 0.4.0
 
 jobs:
+  build-candid-extractor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-candid-extractor-
+            ${{ runner.os }}-
+
+      - name: Build candid-extractor
+        run: cargo build -p candid-extractor --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candid-extractor
+          path: target/release/candid-extractor
+
   test:
     runs-on: ubuntu-latest
+    needs: build-candid-extractor
     strategy:
       fail-fast: false
       matrix:
@@ -25,10 +55,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -36,35 +68,30 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             examples/${{ matrix.project-name }}/target/
-          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-${{ matrix.project-name }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.project-name }}-
             ${{ runner.os }}-
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-          target: wasm32-unknown-unknown
-          components: rustfmt
-
       - name: Install ic-wasm
         # might already in cache
         run: |
-          if ! [ -x "$(command -v ic-wasm)" ]; then
-            cargo install ic-wasm
-          fi
+          wget https://github.com/dfinity/ic-wasm/releases/download/${{env.ic-wasm-version }}/ic-wasm-linux64
+          chmod 755 ic-wasm-linux64
+          mv ic-wasm-linux64 /usr/local/bin/ic-wasm
+
+      - name: Download candid-extractor
+        uses: actions/download-artifact@v4
+        with:
+          name: candid-extractor
+
+      - name: Install candid-extractor
+        run: |
+          chmod 755 candid-extractor
+          mv candid-extractor /usr/local/bin/candid-extractor
 
       - name: Install DFX
-        run: |
-          export DFX_VERSION=${{env.dfx-version }}
-          echo Install DFX v$DFX_VERSION
-          yes | sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
-
-      - name: Setup BATS
-        uses: mig4/setup-bats@v1.0.2
-        with:
-          bats-version: 1.2.1
+        uses: dfinity/setup-dfx@main
 
       - name: Install bitcoin
         if: ${{ matrix.project-name == 'management_canister' }}
@@ -84,11 +111,11 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          bats -r examples/${{ matrix.project-name }}
+          ./examples/bats/bats-core/bin/bats -r examples/${{ matrix.project-name }}
         env:
           RUST_BACKTRACE: 1
 
-      - name: cargo fmt # no clippy because #[import] makes it fail
+      - name: cargo fmt # no clippy because build.rs using ic-cdk-bindgen would fail
         run: |
           pushd examples/${{ matrix.project-name }}
           cargo fmt --check

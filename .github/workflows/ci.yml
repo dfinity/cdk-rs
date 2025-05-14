@@ -5,13 +5,12 @@ on:
     branches:
       - main
   pull_request:
+  schedule:
+    - cron: "0 4 * * 0,3" # 4 a.m. UTC every Sun and Wed, keep actions-cache available
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  rust-version: 1.66.1
 
 jobs:
   build:
@@ -19,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -29,29 +28,27 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-build-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-          target: wasm32-unknown-unknown
       - name: Run builds
         run: |
-          cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
-          cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown --release
+          cargo build --workspace --exclude ic-cdk-e2e-tests --exclude candid-extractor --target wasm32-unknown-unknown
+          cargo build --workspace --exclude ic-cdk-e2e-tests --exclude candid-extractor --target wasm32-unknown-unknown --release
           cargo build --example=work
 
   test:
     name: cargo test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-12]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -59,32 +56,27 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-test-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-      - name: Install protoc
+      - name: Download pocket-ic
         run: |
-          sudo apt-get install -y protobuf-compiler
-      - name: Download ic-test-state-machine
-        run: |
-          bash scripts/download_state_machine_binary.sh
+          bash scripts/download_pocket_ic.sh
       - name: Run tests
-        run: |
+        run:
+          | # https://github.com/rust-lang/cargo/issues/6669 we have to run ALL tests with two commands
           cargo test --all-targets
+          cargo test --doc
 
   fmt:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -92,15 +84,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-fmt-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-fmt-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-fmt-
             ${{ runner.os }}-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-          components: rustfmt
       - name: Check formatting
         run: |
           cargo fmt --all -- --check
@@ -110,9 +97,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -120,26 +107,41 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-clippy-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-clippy-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-clippy-
             ${{ runner.os }}-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.rust-version }}
-          components: clippy
-      - name: Install protoc
-        run: |
-          sudo apt-get install -y protobuf-compiler
       - name: Run clippy
         run: |
           cargo clippy --tests --benches -- -D warnings
 
+  doc:
+    name: cargo doc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-doc-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-doc-
+            ${{ runner.os }}-
+      - name: Run doc
+        run: |
+          RUSTDOCFLAGS="-D warnings" cargo doc
+
   aggregate:
     name: ci:required
     if: ${{ always() }}
-    needs: [build, test, fmt, clippy]
+    needs: [build, test, fmt, clippy, doc]
     runs-on: ubuntu-latest
     steps:
       - name: check build result

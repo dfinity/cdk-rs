@@ -4,20 +4,19 @@ Internet Computer System API binding.
 
 ## What
 
-`ic0` is simply an unsafe Rust translation of Internet Computer System API as described in the [Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-imports).
+`ic0` is simply an unsafe Rust translation of the System API as described in the [IC interface specification][1].
 
 ## Update and Version Strategy
 
-`ic0` keeps in step with [interface-spec][1]. Particularly, `ic0` is directly generated from [ic0.txt][2] in that repo.
+`ic0` keeps in step with the IC interface specification. Particularly, `ic0` is directly generated from [system API][1] in that repo.
 
-When interface-spec releases a new version that modify [ic0.txt][2]:
+When interface-spec releases a new version that modify [system API][1]:
 
-1. replace `ic0.txt` in the root of this crate;
+1. replace `ic0.txt` in the root of this project;
 2. execute `cargo run --example=ic0build`;
 
 `src/ic0.rs` should be updated.
 
-The version of `ic0` crate will also bump to the same version as [interface-spec][1].
+The version of `ic0` crate will also bump to the same version as the IC interface specification.
 
-[1]: https://github.com/dfinity/interface-spec
-[2]: https://github.com/dfinity/interface-spec/blob/master/spec/ic0.txt
+[1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-imports

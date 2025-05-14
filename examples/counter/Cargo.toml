@@ -1,6 +1,8 @@
 [workspace]
-members = [
-    "src/counter_rs",
-    "src/inter_rs",
-    "src/inter2_rs",
-]
+members = ["src/counter_rs", "src/inter_rs", "src/inter2_rs"]
+resolver = "2"
+
+[workspace.dependencies]
+candid = "0.10"
+ic-cdk = { path = "../../src/ic-cdk" }
+ic-cdk-bindgen = { path = "../../src/ic-cdk-bindgen" }

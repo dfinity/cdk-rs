@@ -1,0 +1,4 @@
+[toolchain]
+channel = "stable" # intentionally not pinned to a specific version
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]

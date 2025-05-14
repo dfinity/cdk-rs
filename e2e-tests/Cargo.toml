@@ -6,16 +6,18 @@ edition = "2021"
 description = "End-to-end tests for the Rust Canister Development Kit"
 license = "Apache-2.0"
 repository = "https://github.com/dfinity/cdk-rs"
+publish = false
 
 [dependencies]
-cargo_metadata = "0.14.2"
+candid.workspace = true
+cargo_metadata = "0.18"
 escargot = { version = "0.5.7", features = ["print"] }
-ic-cdk = { path = "../src/ic-cdk" }
-ic-cdk-macros = { path = "../src/ic-cdk-macros" }
-ic-cdk-timers = { path = "../src/ic-cdk-timers" }
+ic-cdk.workspace = true
+ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
-serde_bytes = "0.11"
-futures = "0.3"
+serde_bytes.workspace = true
+futures.workspace = true
+sha2.workspace = true
 
 [[bin]]
 name = "simple-kv-store"
@@ -37,6 +39,18 @@ path = "canisters/api_call.rs"
 name = "timers"
 path = "canisters/timers.rs"
 
+[[bin]]
+name = "canister_info"
+path = "canisters/canister_info.rs"
+
+[[bin]]
+name = "management_caller"
+path = "canisters/management_caller.rs"
+
+[[bin]]
+name = "chunk"
+path = "canisters/chunk.rs"
+
 [dev-dependencies]
-candid = "0.8"
-ic-test-state-machine-client = "1"
+hex.workspace = true
+pocket-ic = "4"

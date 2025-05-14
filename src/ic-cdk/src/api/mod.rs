@@ -24,7 +24,7 @@ pub fn trap(message: &str) -> ! {
     unreachable!()
 }
 
-/// Get current timestamp, in nanoseconds since the epoch (1970-01-01)
+/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01)
 pub fn time() -> u64 {
     // SAFETY: ic0.time is always safe to call.
     unsafe { ic0::time() as u64 }
@@ -54,13 +54,13 @@ pub fn id() -> Principal {
     Principal::try_from(&bytes).unwrap()
 }
 
-/// Get the amount of funds available in the canister.
+/// Gets the amount of funds available in the canister.
 pub fn canister_balance() -> u64 {
     // SAFETY: ic0.canister_cycle_balance is always safe to call.
     unsafe { ic0::canister_cycle_balance() as u64 }
 }
 
-/// Get the amount of funds available in the canister.
+/// Gets the amount of funds available in the canister.
 pub fn canister_balance128() -> u128 {
     let mut recv = 0u128;
     // SAFETY: recv is writable and the size expected by ic0.canister_cycle_balance128.
@@ -118,25 +118,90 @@ pub fn instruction_counter() -> u64 {
     performance_counter(0)
 }
 
-/// Get the value of specified performance counter.
+/// Returns the number of WebAssembly instructions the canister has executed
+/// within the call context of the current Message execution since
+/// Call context creation.
 ///
-/// Supported counter type:
-/// 0 : instruction counter. The number of WebAssembly instructions the system has determined that the canister has executed.
+/// The counter monotonically increases across all message executions
+/// in the call context until the corresponding call context is removed.
+#[inline]
+pub fn call_context_instruction_counter() -> u64 {
+    performance_counter(1)
+}
+
+/// Gets the value of specified performance counter.
+///
+/// Supported counter types:
+/// * `0` : current execution instruction counter. The number of WebAssembly
+///         instructions the canister has executed since the beginning of the
+///         current Message execution.
+/// * `1` : call context instruction counter. The number of WebAssembly
+///         instructions the canister has executed within the call context
+///         of the current Message execution since Call context creation.
+///         The counter monotonically increases across all message executions
+///         in the call context until the corresponding call context is removed.
 #[inline]
 pub fn performance_counter(counter_type: u32) -> u64 {
     // SAFETY: ic0.performance_counter is always safe to call.
     unsafe { ic0::performance_counter(counter_type as i32) as u64 }
 }
 
-/// Get the value of canister version.
+/// Gets the value of canister version.
 pub fn canister_version() -> u64 {
     // SAFETY: ic0.canister_version is always safe to call.
     unsafe { ic0::canister_version() as u64 }
 }
 
-/// Determine if a Principal is a controller of the canister.
+/// Determines if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
     // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
     unsafe { ic0::is_controller(slice.as_ptr() as i32, slice.len() as i32) != 0 }
+}
+
+/// Burns cycles from the canister.
+///
+/// Returns the amount of cycles that were actually burned.
+pub fn cycles_burn(amount: u128) -> u128 {
+    let amount_high = (amount >> 64) as u64;
+    let amount_low = (amount & u64::MAX as u128) as u64;
+    let mut dst = 0u128;
+    // SAFETY: `dst` is writable and sixteen bytes wide, and therefore safe to pass to ic0.cycles_burn128
+    unsafe {
+        ic0::cycles_burn128(
+            amount_high as i64,
+            amount_low as i64,
+            &mut dst as *mut u128 as i32,
+        )
+    }
+    dst
+}
+
+/// Sets global timer.
+///
+/// The canister can set a global timer to make the system
+/// schedule a call to the exported canister_global_timer
+/// Wasm method after the specified time.
+/// The time must be provided as nanoseconds since 1970-01-01.
+///
+/// The function returns the previous value of the timer.
+/// If no timer is set before invoking the function, then the function returns zero.
+///
+/// Passing zero as an argument to the function deactivates the timer and thus
+/// prevents the system from scheduling calls to the canister's canister_global_timer Wasm method.
+pub fn set_global_timer(timestamp: u64) -> u64 {
+    // SAFETY: ic0.global_timer_set is always safe to call.
+    unsafe { ic0::global_timer_set(timestamp as i64) as u64 }
+}
+
+/// Checks if in replicated execution.
+///
+/// The canister can check whether it is currently running in replicated or non replicated execution.
+pub fn in_replicated_execution() -> bool {
+    // SAFETY: ic0.in_replicated_execution is always safe to call.
+    match unsafe { ic0::in_replicated_execution() } {
+        0 => false,
+        1 => true,
+        _ => unreachable!(),
+    }
 }

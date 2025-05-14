@@ -19,6 +19,7 @@ extern "C" {
     pub fn msg_cycles_refunded128(dst: i32);
     pub fn msg_cycles_accept(max_amount: i64) -> i64;
     pub fn msg_cycles_accept128(max_amount_high: i64, max_amount_low: i64, dst: i32);
+    pub fn cycles_burn128(amount_high: i64, amount_low: i64, dst: i32);
     pub fn canister_self_size() -> i32;
     pub fn canister_self_copy(dst: i32, offset: i32, size: i32);
     pub fn canister_cycle_balance() -> i64;
@@ -59,6 +60,7 @@ extern "C" {
     pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn performance_counter(counter_type: i32) -> i64;
     pub fn is_controller(src: i32, size: i32) -> i32;
+    pub fn in_replicated_execution() -> i32;
     pub fn debug_print(src: i32, size: i32);
     pub fn trap(src: i32, size: i32);
 }
@@ -115,6 +117,9 @@ mod non_wasm {
     }
     pub unsafe fn msg_cycles_accept128(max_amount_high: i64, max_amount_low: i64, dst: i32) {
         panic!("msg_cycles_accept128 should only be called inside canisters.");
+    }
+    pub unsafe fn cycles_burn128(amount_high: i64, amount_low: i64, dst: i32) {
+        panic!("cycles_burn128 should only be called inside canisters.");
     }
     pub unsafe fn canister_self_size() -> i32 {
         panic!("canister_self_size should only be called inside canisters.");
@@ -217,6 +222,9 @@ mod non_wasm {
     }
     pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
         panic!("is_controller should only be called inside canisters.");
+    }
+    pub unsafe fn in_replicated_execution() -> i32 {
+        panic!("in_replicated_execution should only be called inside canisters.");
     }
     pub unsafe fn debug_print(src: i32, size: i32) {
         panic!("debug_print should only be called inside canisters.");
