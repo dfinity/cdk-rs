@@ -870,7 +870,7 @@ where
 /// When this happens the CDK will cancel the task, causing destructors to be run. If you need any functions to be run
 /// no matter what happens, they should happen in a destructor; the [`scopeguard`](https://docs.rs/scopeguard) crate
 /// provides a convenient wrapper for this. In a destructor, `is_recovering_from_trap` serves the same purpose as
-/// [`is_panicking`](std::thread::is_panicking) - it tells you whether the destructor is executing *because* of a trap,
+/// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
 pub fn is_recovering_from_trap() -> bool {
     ic_cdk_executor::CLEANUP.load(Ordering::Relaxed)
