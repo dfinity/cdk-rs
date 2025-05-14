@@ -18,6 +18,7 @@ mod main {
                 memory_allocation: Some(10000u16.into()),
                 freezing_threshold: Some(u64::MAX.into()),
                 reserved_cycles_limit: Some(u128::MAX.into()),
+                wasm_memory_limit: Some((2u64.pow(48) - 1).into()),
             }),
         };
         let canister_id = create_canister(arg, 100_000_000_000u128 / 13)
@@ -36,6 +37,10 @@ mod main {
         assert_eq!(definite_canister_setting.memory_allocation, 10000u16);
         assert_eq!(definite_canister_setting.freezing_threshold, u64::MAX);
         assert_eq!(definite_canister_setting.reserved_cycles_limit, u128::MAX);
+        assert_eq!(
+            definite_canister_setting.wasm_memory_limit,
+            2u64.pow(48) - 1
+        );
 
         let arg = UpdateSettingsArgument {
             canister_id,
@@ -77,6 +82,7 @@ mod provisional {
             memory_allocation: Some(10000u16.into()),
             freezing_threshold: Some(10000u16.into()),
             reserved_cycles_limit: Some(10000u16.into()),
+            wasm_memory_limit: Some(10000u16.into()),
         };
         let arg = ProvisionalCreateCanisterWithCyclesArgument {
             amount: Some(1_000_000_000u64.into()),

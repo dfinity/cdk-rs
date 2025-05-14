@@ -21,9 +21,9 @@ opt-level = 'z'
 
 [workspace.dependencies]
 ic0 = { path = "src/ic0", version = "0.23.0" }
-ic-cdk = { path = "src/ic-cdk", version = "0.13.3" }
+ic-cdk = { path = "src/ic-cdk", version = "0.14.0" }
 ic-cdk-executor = { path = "src/ic-cdk-executor", version = "0.1.0" }
-ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.7.0" }
+ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.8.0" }
 
 candid = "0.10.4"
 candid_parser = "0.1.4"
@@ -34,4 +34,4 @@ serde = "1"
 serde_bytes = "0.11"
 sha2 = "0.10"
 slotmap = "1"
-syn = "1"
+syn = "2"
