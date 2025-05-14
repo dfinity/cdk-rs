@@ -6,9 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.2] - 2025-05-14
+
 ### Added
 
 - New CDK library `ic-cdk-executor` containing the low-level async executor primitives previously in `ic-cdk`. Most users will never need to use this library and should continue using the interface from `ic-cdk`.
+
+### Changed
+
+- Bump `ic-error-types` to v0.2.0 from which we re-export the `RejectCode` type.
 
 ## [0.18.1] - 2025-05-09
 
