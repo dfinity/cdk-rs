@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- New CDK library `ic-cdk-executor` containing the low-level async executor primitives previously in `ic-cdk`. Most users will never need to use this library and should continue using the interface from `ic-cdk`.
+
 ## [0.18.1] - 2025-05-09
 
 ### Added
