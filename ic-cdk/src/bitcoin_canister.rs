@@ -230,7 +230,7 @@ pub fn cost_get_utxos(arg: &GetUtxosRequest) -> u128 {
     match arg.network {
         Network::Mainnet => GET_UTXO_MAINNET,
         Network::Testnet => GET_UTXO_TESTNET,
-        Network::Regtest => 0,
+        Network::Regtest => GET_UTXO_MAINNET,
     }
 }
 
@@ -274,7 +274,7 @@ pub fn cost_get_balance(arg: &GetBalanceRequest) -> u128 {
     match arg.network {
         Network::Mainnet => GET_BALANCE_MAINNET,
         Network::Testnet => GET_BALANCE_TESTNET,
-        Network::Regtest => 0,
+        Network::Regtest => GET_BALANCE_MAINNET,
     }
 }
 
@@ -334,7 +334,7 @@ pub fn cost_get_current_fee_percentiles(arg: &GetCurrentFeePercentilesRequest) -
     match arg.network {
         Network::Mainnet => GET_CURRENT_FEE_PERCENTILES_MAINNET,
         Network::Testnet => GET_CURRENT_FEE_PERCENTILES_TESTNET,
-        Network::Regtest => 0,
+        Network::Regtest => GET_CURRENT_FEE_PERCENTILES_MAINNET,
     }
 }
 
@@ -392,7 +392,7 @@ pub fn cost_get_block_headers(arg: &GetBlockHeadersRequest) -> u128 {
     match arg.network {
         Network::Mainnet => GET_BLOCK_HEADERS_MAINNET,
         Network::Testnet => GET_BLOCK_HEADERS_TESTNET,
-        Network::Regtest => 0,
+        Network::Regtest => GET_BLOCK_HEADERS_MAINNET,
     }
 }
 
@@ -440,7 +440,10 @@ pub fn cost_send_transaction(arg: &SendTransactionRequest) -> u128 {
             SEND_TRANSACTION_SUBMISSION_TESTNET,
             SEND_TRANSACTION_PAYLOAD_TESTNET,
         ),
-        Network::Regtest => (0, 0),
+        Network::Regtest => (
+            SEND_TRANSACTION_SUBMISSION_MAINNET,
+            SEND_TRANSACTION_PAYLOAD_MAINNET,
+        ),
     };
     submission + payload * arg.transaction.len() as u128
 }
