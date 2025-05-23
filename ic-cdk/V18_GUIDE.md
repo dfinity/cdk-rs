@@ -77,7 +77,7 @@ spawn(async {
 runs_third();
 ```
 
-Please check all the places you call `spawn` to ensure that you do not depend on the code in the spawned future running before the code below the `spawn` call. Note that most `spawn` calls are the entire body of timers - if there is no code after `spawn`, the behavior has not changed.
+Please check all the places you call `spawn` to ensure that you do not depend on the code in the spawned future running before the code below the `spawn` call. Note that most `spawn` calls are the entire body of timers - if there is no code after `spawn` in the timer, the behavior has not changed.
 
 ### Wasm64 Compilation
 
