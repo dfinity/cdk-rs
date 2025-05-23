@@ -94,6 +94,11 @@ pub fn spawn<F: 'static + Future<Output = ()>>(fut: F) {
                 Notice: Code execution order will change, see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes")
         }
     }
+    // Emulated behavior: A spawned future is polled once immediately, then backgrounded and run at a normal pace.
+    // We poll it once with an unimplemented waker, then spawn it, which will poll it again with the real waker.
+    // In a correctly implemented future, this second poll should overwrite the fake waker with the real one.
+    // The only way to hit the fake waker's wake function is if the first poll calls wake.
+    // A more complex compat adapter will be needed to handle this case.
     let mut pin = Box::pin(fut);
     let poll = pin
         .as_mut()
