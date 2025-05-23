@@ -3,6 +3,7 @@ use ic_cdk::call::Call;
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
+use std::time::Duration;
 
 lazy_static! {
     static ref RESOURCE: RwLock<u64> = RwLock::new(0);
@@ -132,6 +133,27 @@ async fn schedule_on_panic() {
                 ic_cdk::futures::spawn(async {
                     on_notify();
                 })
+            }
+        }
+    }
+    let _guard = Guard;
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    ic_cdk::trap("testing");
+}
+
+#[update]
+async fn timer_on_panic() {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            for _ in 0..3 {
+                ic_cdk_timers::set_timer(Duration::ZERO, || {
+                    ic_cdk::futures::spawn(async {
+                        on_notify();
+                    })
+                });
             }
         }
     }
