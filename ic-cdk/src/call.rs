@@ -779,10 +779,15 @@ impl Call<'_, '_> {
                 //      cleanup fn for ic0.call_on_cleanup.
                 // - `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for
                 //      `callback` and `cleanup`.
-                // - if-and-only-if ic0.call_perform returns 0, exactly one of `callback` or `cleanup` will be called, exactly once,
-                //      and therefore `state_ptr`'s ownership can be passed to both functions.
+                // - if-and-only-if ic0.call_perform returns 0, exactly one(‡) of `callback` or `cleanup` will be called,
+                //      exactly once, and therefore `state_ptr`'s ownership can be passed to both functions.
                 // - both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
                 //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
+                //
+                // ‡ The flow from outside the WASM runtime is that the callback runs, it traps, state is rolled back,
+                //   and the cleanup callback runs afterwards. Inside the runtime, there is no difference between
+                //   'state is rolled back to before the callback was called' and 'the callback was never called'.
+                //   So from the code's perspective, exactly one function is called.
                 unsafe {
                     ic0::call_new(
                         callee.as_ptr() as usize,
@@ -805,8 +810,8 @@ impl Call<'_, '_> {
                 // - `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
                 // - `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
                 // - `reply_fun` and `reject_fun`: `usize::MAX` is a function pointer the wasm module cannot possibly contain.
-                // - `reply_env` and `reject_env`: Since the callback functions will never be called, any value can be passed
-                //      as their context parameters.
+                // - `reply_env` and `reject_env`: Since the callback functions do not exist and therefore will never be called,
+                //      any value can be passed as their context parameters.
                 //
                 // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
                 unsafe {
@@ -821,6 +826,10 @@ impl Call<'_, '_> {
                         usize::MAX,
                     );
                 }
+                // There is no `call_on_cleanup` invocation because:
+                // - the callback does not exist, and so cannot trap to require cleanup
+                // - under the current behavior of the IC, this produces an error,
+                //   which would unconditionally call the cleanup callback
             }
         };
         if !arg.is_empty() {
