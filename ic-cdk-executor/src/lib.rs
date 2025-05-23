@@ -15,7 +15,8 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let in_query = match CONTEXT.get() {
         AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
         AsyncContext::Query => true,
-        AsyncContext::Update | AsyncContext::Cancel => false,
+        AsyncContext::Update => false,
+        AsyncContext::Cancel => panic!("`spawn` cannot be called during panic recovery"),
         AsyncContext::FromTask => unreachable!("FromTask"),
     };
     let pinned_future = Box::pin(future);
@@ -120,7 +121,7 @@ thread_local! {
     static CONTEXT: Cell<AsyncContext> = <_>::default();
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, PartialEq, Eq)]
 enum AsyncContext {
     #[default]
     None,
@@ -177,21 +178,24 @@ struct TaskWaker {
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        if matches!(CONTEXT.get(), AsyncContext::Cancel) {
+        let context = CONTEXT.get();
+        assert!(
+            context != AsyncContext::None,
+            "wakers cannot be called outside an executor context"
+        );
+        if context == AsyncContext::Cancel {
             // This task is recovering from a trap. We cancel it to run destructors.
             let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(self.task_id));
             // _task must be dropped *outside* with_borrow_mut - its destructor may (inadvisably) schedule tasks
         } else {
             WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
-            CONTEXT.with(|context| {
-                if matches!(context.get(), AsyncContext::FromTask) {
-                    if self.query {
-                        context.set(AsyncContext::Query)
-                    } else {
-                        context.set(AsyncContext::Update)
-                    }
+            if context == AsyncContext::FromTask {
+                if self.query {
+                    CONTEXT.set(AsyncContext::Query)
+                } else {
+                    CONTEXT.set(AsyncContext::Update)
                 }
-            })
+            }
         }
     }
 }
