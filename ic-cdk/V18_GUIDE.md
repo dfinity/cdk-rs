@@ -37,7 +37,7 @@ Please check the [docs](https://docs.rs/ic-cdk/0.18.0/ic_cdk/call/struct.Call.ht
 The functions for inter-canister calls in the `ic_cdk::api::call` module are deprecated in favor of the new `Call` API. These functions were created before the introduction of the [Bounded-Wait Calls](https://internetcomputer.org/docs/references/async-code#ic-call-types) feature. To maintain the same behavior, use the `Call::unbounded_wait()` constructor. You can later evaluate if a specific call should switch to `Call::bounded_wait()`.
 
 | Before                                             | After                                                                                    |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+|----------------------------------------------------|------------------------------------------------------------------------------------------|
 | `call(id, method, arg)`                            | `Call::unbounded_wait(id, method).with_arg(arg).await?.candid()?`                        |
 | `call_raw(id, method, args_raw, payment)`          | `Call::unbounded_wait(id, method).with_raw_args(args_raw).with_cycles(payment).await?`   |
 | `call_raw128(id, method, args_raw, payment)`       | `Call::unbounded_wait(id, method).with_raw_args(args_raw).with_cycles(payment).await?`   |
@@ -52,6 +52,32 @@ The functions for inter-canister calls in the `ic_cdk::api::call` module are dep
 > Some deprecated APIs expected a tuple of Candid values as input arguments. Often, there is a single Candid value that needs to be wrapped in parentheses. Therefore, it is recommended to use the `with_arg()` method, which accepts a single `CandidType` value. Use `with_args()` when specifying a Candid tuple.
 >
 > Similarly, for response decoding, it is recommended to use `candid()`, which decodes to a single `CandidType`. Use `candid_tuple()` when decoding the response as a Candid tuple.
+
+### Futures Ordering Changes
+
+In 0.18, the execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_third().await;
+	runs_fourth();
+});
+runs_second();
+```
+
+In contrast, the 0.17 execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_second().await;
+	runs_fourth();
+});
+runs_third();
+```
+
+Please check all the places you call `spawn` to ensure that you do not depend on the code in the spawned future running before the code below the `spawn` call. Note that most `spawn` calls are the entire body of timers - if there is no code after `spawn`, the behavior has not changed.
 
 ### Wasm64 Compilation
 

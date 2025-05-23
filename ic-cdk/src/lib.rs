@@ -22,7 +22,11 @@ mod printer;
 pub mod stable;
 pub mod storage;
 
-use std::sync::Once;
+use std::{
+    future::Future,
+    sync::{Arc, Once},
+    task::{Context, Poll, Wake, Waker},
+};
 
 #[doc(inline)]
 pub use api::trap;
@@ -74,4 +78,28 @@ macro_rules! eprintln {
 macro_rules! eprintln {
     ($fmt:expr) => (std::eprintln!($fmt));
     ($fmt:expr, $($arg:tt)*) => (std::eprintln!($fmt, $($arg)*));
+}
+
+#[doc(hidden)]
+#[deprecated(
+    since = "0.18.0",
+    note = "Use ic_cdk::futures::spawn. Compatibility notice: Code execution order will change, \
+        see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
+)]
+pub fn spawn<F: 'static + Future<Output = ()>>(fut: F) {
+    struct DummyWaker;
+    impl Wake for DummyWaker {
+        fn wake(self: Arc<Self>) {
+            panic!("Your code is incompatible with the ic_cdk::spawn compatibility adapter. Migrate to ic_cdk::futures::spawn. \
+                Notice: Code execution order will change, see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes")
+        }
+    }
+    let mut pin = Box::pin(fut);
+    let poll = pin
+        .as_mut()
+        .poll(&mut Context::from_waker(&Waker::from(Arc::new(DummyWaker))));
+    match poll {
+        Poll::Ready(()) => {}
+        Poll::Pending => crate::futures::spawn(pin),
+    }
 }
