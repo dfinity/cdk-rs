@@ -15,7 +15,8 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let in_query = match CONTEXT.get() {
         AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
         AsyncContext::Query => true,
-        AsyncContext::Update | AsyncContext::Cancel => false,
+        AsyncContext::Update => false,
+        AsyncContext::Cancel => panic!("`spawn` cannot be called during panic recovery"),
         AsyncContext::FromTask => unreachable!("FromTask"),
     };
     let pinned_future = Box::pin(future);
