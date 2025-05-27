@@ -66,9 +66,10 @@ pub fn is_recovering_from_trap() -> bool {
 fn poll_all() {
     let in_query = match CONTEXT.get() {
         AsyncContext::Query => true,
-        AsyncContext::Update | AsyncContext::Cancel => false,
+        AsyncContext::Update => false,
         AsyncContext::None => panic!("tasks can only be polled in an executor context"),
         AsyncContext::FromTask => unreachable!("FromTask"),
+        AsyncContext::Cancel => unreachable!("poll_all should not be called during panic recovery"),
     };
     let mut ineligible = vec![];
     while let Some(task_id) = WAKEUP.with_borrow_mut(|queue| queue.pop_front()) {
