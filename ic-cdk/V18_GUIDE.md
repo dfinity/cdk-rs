@@ -53,6 +53,32 @@ The functions for inter-canister calls in the `ic_cdk::api::call` module are dep
 >
 > Similarly, for response decoding, it is recommended to use `candid()`, which decodes to a single `CandidType`. Use `candid_tuple()` when decoding the response as a Candid tuple.
 
+### Futures Ordering Changes
+
+In 0.18, the execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_third().await;
+	runs_fourth();
+});
+runs_second();
+```
+
+In contrast, the 0.17 execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_second().await;
+	runs_fourth();
+});
+runs_third();
+```
+
+Please check all the places you call `spawn` to ensure that you do not depend on the code in the spawned future running before the code below the `spawn` call. Note that most `spawn` calls are the entire body of timers - if there is no code after `spawn` in the timer, the behavior has not changed.
+
 ### Wasm64 Compilation
 
 No changes to the source code are required. However, setting up the Rust toolchain for Wasm64 support requires some additional steps.
