@@ -158,3 +158,26 @@ Submodules in `api` are now deprecated in favor of root-level modules.
 - `api/call` -> `call`
 - `api/management_canister` -> `management_canister` & `bitcoin_canister`
 - `api/stable` -> `stable`
+
+### Custom Exports (advanced)
+
+For those who exported canister entry points with their own `#[export_name]` calls instead of using the attribute macros, the required boilerplate has changed:
+
+```rs
+#[unsafe(export_name = "canister_global_timer")]
+pub extern "C" fn canister_global_timer() {
+    ic_cdk::futures::in_executor_context(|| {
+        /* code goes here */
+    });
+}
+#[unsafe(export_name = "canister_inspect_message")]
+pub extern "C" fn canister_inspect_message() {
+    ic_cdk::futures::in_query_executor_context(|| {
+        /* code goes here */
+    })
+}
+```
+
+Every entry point must encase its code in `in_executor_context` (or for query methods or inspect_message callbacks, `in_query_executor_context`). This sets the panic hook (otherwise every panic message will be `[TRAP] unreachable`) and creates the ability to call `spawn` (which will otherwise panic).
+
+The attribute macros insert this call for you; it is only needed when exporting your own entry points. If you attempt to create a context inside another context it will panic; it is only necessary at the top level.
