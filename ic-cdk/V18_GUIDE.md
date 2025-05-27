@@ -37,7 +37,7 @@ Please check the [docs](https://docs.rs/ic-cdk/0.18.0/ic_cdk/call/struct.Call.ht
 The functions for inter-canister calls in the `ic_cdk::api::call` module are deprecated in favor of the new `Call` API. These functions were created before the introduction of the [Bounded-Wait Calls](https://internetcomputer.org/docs/references/async-code#ic-call-types) feature. To maintain the same behavior, use the `Call::unbounded_wait()` constructor. You can later evaluate if a specific call should switch to `Call::bounded_wait()`.
 
 | Before                                             | After                                                                                    |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+|----------------------------------------------------|------------------------------------------------------------------------------------------|
 | `call(id, method, arg)`                            | `Call::unbounded_wait(id, method).with_arg(arg).await?.candid()?`                        |
 | `call_raw(id, method, args_raw, payment)`          | `Call::unbounded_wait(id, method).with_raw_args(args_raw).with_cycles(payment).await?`   |
 | `call_raw128(id, method, args_raw, payment)`       | `Call::unbounded_wait(id, method).with_raw_args(args_raw).with_cycles(payment).await?`   |
@@ -52,6 +52,32 @@ The functions for inter-canister calls in the `ic_cdk::api::call` module are dep
 > Some deprecated APIs expected a tuple of Candid values as input arguments. Often, there is a single Candid value that needs to be wrapped in parentheses. Therefore, it is recommended to use the `with_arg()` method, which accepts a single `CandidType` value. Use `with_args()` when specifying a Candid tuple.
 >
 > Similarly, for response decoding, it is recommended to use `candid()`, which decodes to a single `CandidType`. Use `candid_tuple()` when decoding the response as a Candid tuple.
+
+### Futures Ordering Changes
+
+In 0.18, the execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_third().await;
+	runs_fourth();
+});
+runs_second();
+```
+
+In contrast, the 0.17 execution order of `spawn` looks like this:
+
+```rs
+runs_first();
+spawn(async {
+	runs_second().await;
+	runs_fourth();
+});
+runs_third();
+```
+
+Please check all the places you call `spawn` to ensure that you do not depend on the code in the spawned future running before the code below the `spawn` call. Note that most `spawn` calls are the entire body of timers - if there is no code after `spawn` in the timer, the behavior has not changed.
 
 ### Wasm64 Compilation
 
@@ -132,3 +158,26 @@ Submodules in `api` are now deprecated in favor of root-level modules.
 - `api/call` -> `call`
 - `api/management_canister` -> `management_canister` & `bitcoin_canister`
 - `api/stable` -> `stable`
+
+### Custom Exports (advanced)
+
+For those who exported canister entry points with their own `#[export_name]` calls instead of using the attribute macros, the required boilerplate has changed:
+
+```rs
+#[unsafe(export_name = "canister_global_timer")]
+pub extern "C" fn canister_global_timer() {
+    ic_cdk::futures::in_executor_context(|| {
+        /* code goes here */
+    });
+}
+#[unsafe(export_name = "canister_inspect_message")]
+pub extern "C" fn canister_inspect_message() {
+    ic_cdk::futures::in_query_executor_context(|| {
+        /* code goes here */
+    })
+}
+```
+
+Every entry point must encase its code in `in_executor_context` (or for query methods or inspect_message callbacks, `in_query_executor_context`). This sets the panic hook (otherwise every panic message will be `[TRAP] unreachable`) and creates the ability to call `spawn` (which will otherwise panic).
+
+The attribute macros insert this call for you; it is only needed when exporting your own entry points. If you attempt to create a context inside another context it will panic; it is only necessary at the top level.
