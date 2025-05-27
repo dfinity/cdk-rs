@@ -75,6 +75,18 @@ impl MethodType {
             | MethodType::OnLowWasmMemory => false,
         }
     }
+
+    pub fn is_state_persistent(&self) -> bool {
+        match self {
+            Self::Query | Self::InspectMessage => false,
+            Self::Update
+            | Self::Heartbeat
+            | Self::Init
+            | Self::PreUpgrade
+            | Self::PostUpgrade
+            | Self::OnLowWasmMemory => true,
+        }
+    }
 }
 
 impl std::fmt::Display for MethodType {
@@ -343,10 +355,10 @@ fn dfn_macro(
     };
 
     // 7. exported function body
-    let async_context_name = if method == MethodType::Query {
-        format_ident!("in_query_executor_context")
-    } else {
+    let async_context_name = if method.is_state_persistent() {
         format_ident!("in_executor_context")
+    } else {
+        format_ident!("in_query_executor_context")
     };
     let body = if signature.asyncness.is_some() {
         quote! {
