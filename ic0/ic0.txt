@@ -55,6 +55,8 @@
     ic0.stable64_write : (offset : i64, src : i64, size : i64) -> ();                     // * s
     ic0.stable64_read : (dst : i64, offset : i64, size : i64) -> ();                      // * s
 
+    ic0.root_key_size : () -> I;                                                          // I G U RQ Ry Rt C T
+    ic0.root_key_copy : (dst : I, offset : I, size : I) -> ();                            // I G U RQ Ry Rt C T
     ic0.certified_data_set : (src : I, size : I) -> ();                                   // I G U Ry Rt T
     ic0.data_certificate_present : () -> i32;                                             // *
     ic0.data_certificate_size : () -> I;                                                  // NRQ CQ
