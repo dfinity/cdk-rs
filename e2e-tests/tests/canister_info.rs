@@ -6,7 +6,6 @@ use ic_cdk::management_canister::{
     FromUserRecord, InstallCodeArgs, UninstallCodeArgs,
 };
 use pocket_ic::{call_candid_as, common::rest::RawEffectivePrincipal};
-use std::time::UNIX_EPOCH;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -17,13 +16,7 @@ fn test_canister_info() {
     let wasm = cargo_build_canister("canister_info");
     // As of PocketIC server v5.0.0 and client v4.0.0, the first canister creation happens at (time0+4).
     // Each operation advances the Pic by 2 nanos, except for the last operation which advances only by 1 nano.
-    let time0: u64 = pic
-        .get_time()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos()
-        .try_into()
-        .unwrap();
+    let time0: u64 = pic.get_time().as_nanos_since_unix_epoch();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
