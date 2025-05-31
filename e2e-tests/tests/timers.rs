@@ -1,6 +1,5 @@
 use pocket_ic::{query_candid, PocketIc};
 use std::time::Duration;
-use std::time::SystemTime;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -105,11 +104,7 @@ fn test_set_global_timers() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     // Set a 9s timer at t0, it expires at t1 = t0 + 9s
-    let t0 = pic
-        .get_time()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64;
+    let t0 = pic.get_time().as_nanos_since_unix_epoch();
     let t1 = t0 + 9_000_000_000;
     update::<_, ()>(&pic, canister_id, "schedule_long", ()).expect("Failed to call schedule_long");
 
