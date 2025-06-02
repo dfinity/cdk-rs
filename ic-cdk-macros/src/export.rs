@@ -22,7 +22,7 @@ struct ExportAttributes {
     /// The name of the function to use for encoding the return value.
     /// If not provided, the return value is encoded as Candid.
     ///
-    /// If the endpoint returns a tuple, this custom encoder function should take the tuple as an argument.
+    /// If the method returns a tuple, this custom encoder function should take the tuple as an argument.
     pub encode_with: Option<String>,
     #[darling(default)]
     pub manual_reply: bool,

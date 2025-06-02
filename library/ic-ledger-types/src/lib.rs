@@ -507,7 +507,7 @@ pub struct Transaction {
     pub operation: Option<Operation>,
     /// The time at which the client of the ledger constructed the transaction.
     pub created_at_time: Timestamp,
-    /// The memo that was provided to the icrc1_transfer endpoint.
+    /// The memo that was provided to the icrc1_transfer method.
     pub icrc1_memo: Option<ByteBuf>,
 }
 

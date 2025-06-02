@@ -33,7 +33,7 @@
 //!
 //! ## Cycle Cost
 //!
-//! All the Bitcoin canister endpoints require cycles to be attached to the call.
+//! All the Bitcoin canister methods require cycles to be attached to the call.
 //! The helper functions in this module automatically calculate the required cycles and attach them to the call.
 //!
 //! For completeness, this module also provides functions to calculate the cycle cost:

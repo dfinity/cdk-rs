@@ -51,9 +51,9 @@ mod canister {
 }
 use canister::*;
 
-/// The following two endpoints demonstrate how to use generic decode/encode functions.
-/// The endpoints take different types of arguments and return values.
-/// While the decode/encode functions are generic and can be used for both endpoints.
+/// The following two methods demonstrate how to use generic decode/encode functions.
+/// They take different types of arguments and return values.
+/// While the decode/encode functions are generic and can be used for both entry points.
 #[update(decode_with = "from_proto_bytes", encode_with = "to_proto_bytes")]
 fn method_one(arg: MethodOneRequest) -> MethodOneResponse {
     MethodOneResponse {

@@ -2,7 +2,7 @@
 //!
 //! # Type Definitions
 //!
-//! This module defines the types of arguments and results for the management canister endpoints.
+//! This module defines the types of arguments and results for the management canister entry points.
 //! Most of these types are re-exported from the `ic-management-canister-types` crate.
 //!
 //! The only exception is that for the argument types that has a `sender_canister_version` field, this module provides reduced versions instead.
@@ -16,7 +16,7 @@
 //!
 //! Interacting with the IC management canister involves making inter-canister calls,
 //! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
-//! This module selects the appropriate type of wait call for each method based on the characteristics of the endpoint.
+//! This module selects the appropriate type of wait call for each method based on the characteristics of the entry point.
 //!
 //! The strategy for choosing the type of wait call is as follows:
 //! - Unbounded-wait call by default because the management canister is universally trusted.
@@ -46,7 +46,7 @@
 //!
 //! ## Cycle Cost
 //!
-//! Some management canister endpoints require cycles to be attached to the call.
+//! Some management canister entry points require cycles to be attached to the call.
 //! The functions for calling management canister automatically calculate the required cycles and attach them to the call.
 //!
 //! For completeness, this module also provides functions to calculate the cycle cost:

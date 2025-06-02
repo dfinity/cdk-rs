@@ -160,11 +160,11 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
 ### Added
 
 - Add `is_recovering_from_trap` function for implementing trap cleanup logic. (#456)
-- Allow setting decoding quota for canister endpoints and inter-canister calls. (#465)
-  * When defining canister endpoints, we add the following attributes: `#[update(decoding_quota = 10000, skipping_quota = 100, debug = true)]`
+- Allow setting decoding quota for canister entry points and inter-canister calls. (#465)
+  * When defining canister entry points, we add the following attributes: `#[update(decoding_quota = 10000, skipping_quota = 100, debug = true)]`
     - `skipping_quota` limits the amount of work allowed for skipping unneeded data on the wire. If this attributes is not present, we set a default quota of `10_000`. This affects ALL existing canisters, and is mainly used to improve canister throughput. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_skipping_quota) to understand the skipping cost.
     - `decoding_quota` limits the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.
-    - `debug = true` prints the instruction count and the decoding/skipping cost to the replica log, after a successful deserialization. The decoding/skipping cost is logged only when you have already set a quota in the attributes. The debug mode is useful to determine the right quotas above. Developers can send a few large payloads to the debugging endpoint and know the actual decoding cost.
+    - `debug = true` prints the instruction count and the decoding/skipping cost to the replica log, after a successful deserialization. The decoding/skipping cost is logged only when you have already set a quota in the attributes. The debug mode is useful to determine the right quotas above. Developers can send a few large payloads to the debugging entry point and know the actual decoding cost.
   * When making inter-canister calls, we have a new function `call_with_config` to config the same decoding quotas described above. It's strongly recommended to use `call_with_config` when calling third-party untrusted canisters.
 
 ### Changed
