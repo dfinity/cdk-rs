@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Support `root_key` API. (#619)
+
 ### Changed
 
 - Update bitcoin `regtest` cycles cost to be same as the bitcoin `mainnet`.
