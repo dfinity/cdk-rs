@@ -763,12 +763,25 @@ pub fn id() -> Principal {
 }
 
 /// Gets the amount of funds available in the canister.
+///
+/// # Panic
+///
+/// When the cycle balance is greater than `u64::MAX`, this function will panic.
+/// As this function is deprecated, it is recommended to use [`canister_cycle_balance`].
+#[deprecated(since = "0.18.0", note = "Use `canister_cycle_balance` instead")]
+pub fn canister_balance() -> u64 {
+    // ic0 no longer provides `ic0.canister_cycle_balance` which returns a u64,
+    // so we use the u128 version and convert it to u64.
+    // When the cycle balance is greater than `u64::MAX`, `ic0.canister_cycle_balance` also panics.
+    canister_cycle_balance()
+        .try_into()
+        .expect("the cycle balance is greater than u64::MAX, please use canister_cycle_balance which returns u128")
+}
+
+/// Gets the amount of funds available in the canister.
 #[deprecated(since = "0.18.0", note = "Use `canister_cycle_balance` instead")]
 pub fn canister_balance128() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: dst is writable and the size expected by ic0.canister_cycle_balance128.
-    unsafe { ic0::canister_cycle_balance128(&mut dst as *mut u128 as usize) }
-    dst
+    canister_cycle_balance()
 }
 
 /// Sets the certified data of this canister.
