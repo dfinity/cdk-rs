@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.2] - 2025-06-04
+
 ### Added
 
 - Support `root_key` API. (#619)
@@ -76,6 +78,7 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
 - Introduces a new task scheduler-based executor.
   - Capable of scheduling any async task, not limited to inter-canister calls.
   - The `futures` module is now public to expose functionalities related to the async executor.
+  - The new implementation enables code to have (intended) surprising behavior - it is recommended to read the [module docs](https://docs.rs/ic-cdk/0.18.3/ic_cdk/futures/index.html)
 
 ### Deprecated
 
