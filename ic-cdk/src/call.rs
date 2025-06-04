@@ -582,7 +582,7 @@ pub trait CallErrorExt {
     ///
     /// A return value of `true` indicates that an immediate retry *might* succeed, i.e., not result in another error.
     /// However, the caller is responsible for ensuring that retries are safe in their specific context.
-    /// For idempotent endpoints, immediate retries are generally safe. For non-idempotent ones,
+    /// For idempotent methods, immediate retries are generally safe. For non-idempotent ones,
     /// checking [`is_clean_reject`](CallErrorExt::is_clean_reject) before retrying is recommended.
     fn is_immediately_retryable(&self) -> bool;
 }
@@ -635,7 +635,7 @@ impl CallErrorExt for CallRejected {
 impl CallErrorExt for CandidDecodeFailed {
     fn is_clean_reject(&self) -> bool {
         // Decoding failure suggests that the inter-canister call was successfully processed by the callee.
-        // Therefore, the callee state is likely changed (unless the callee endpoint doesn't change its own state).
+        // Therefore, the callee state is likely changed (unless the method doesn't change its own state).
         false
     }
 

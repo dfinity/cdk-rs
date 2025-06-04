@@ -98,7 +98,7 @@ cargo +nightly build -Z build-std=std,panic_abort --target wasm64-unknown-unknow
 
 ### Custom Decoders/Encoders in Macros
 
-The `update` and `query` macros now support custom argument decoders and return value encoders, while the `init` macro supports custom argument decoders only. This gives full control over how data is serialized and deserialized for canister endpoints.
+The `update` and `query` macros now support custom argument decoders and return value encoders, while the `init` macro supports custom argument decoders only. This gives full control over how data is serialized and deserialized for canister entry points.
 
 ```rust
 #[update(decode_with = "decode_args", encode_with = "encode_result")]
@@ -117,7 +117,7 @@ fn encode_result(result: (u32, u32)) -> Vec<u8> {
 }
 ```
 
-It's possible to define generic custom decoders/encoders for use across multiple endpoints, enabling alternative serialization formats. The example below demonstrates using Protocol Buffers instead of Candid for wire format:
+It's possible to define generic custom decoders/encoders for use across multiple entry points, enabling alternative serialization formats. The example below demonstrates using Protocol Buffers instead of Candid for wire format:
 
 ```rust
 use prost::Message;

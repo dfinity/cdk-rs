@@ -883,7 +883,7 @@ pub fn reply_raw(buf: &[u8]) {
     note = "Please use `candid::de::DecoderConfig` instead."
 )]
 #[derive(Debug)]
-/// Config to control the behavior of decoding canister endpoint arguments.
+/// Config to control the behavior of decoding canister entry point arguments.
 pub struct ArgDecoderConfig {
     /// Limit the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.
     pub decoding_quota: Option<usize>,
