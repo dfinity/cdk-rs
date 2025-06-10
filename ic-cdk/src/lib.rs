@@ -22,11 +22,7 @@ mod printer;
 pub mod stable;
 pub mod storage;
 
-use std::{
-    future::Future,
-    sync::{Arc, Once},
-    task::{Context, Poll, Wake, Waker},
-};
+use std::{future::Future, sync::Once};
 
 #[doc(inline)]
 pub use api::trap;
@@ -83,28 +79,9 @@ macro_rules! eprintln {
 #[doc(hidden)]
 #[deprecated(
     since = "0.18.0",
-    note = "Use ic_cdk::futures::spawn. Compatibility notice: Code execution order will change, \
-        see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
+    note = "Use ic_cdk::futures::spawn_017_compat, or migrate to ic_cdk::futures::spawn. Code execution order will change, \
+    see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
 )]
 pub fn spawn<F: 'static + Future<Output = ()>>(fut: F) {
-    struct DummyWaker;
-    impl Wake for DummyWaker {
-        fn wake(self: Arc<Self>) {
-            panic!("Your code is incompatible with the ic_cdk::spawn compatibility adapter. Migrate to ic_cdk::futures::spawn. \
-                Notice: Code execution order will change, see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes")
-        }
-    }
-    // Emulated behavior: A spawned future is polled once immediately, then backgrounded and run at a normal pace.
-    // We poll it once with an unimplemented waker, then spawn it, which will poll it again with the real waker.
-    // In a correctly implemented future, this second poll should overwrite the fake waker with the real one.
-    // The only way to hit the fake waker's wake function is if the first poll calls wake.
-    // A more complex compat adapter will be needed to handle this case.
-    let mut pin = Box::pin(fut);
-    let poll = pin
-        .as_mut()
-        .poll(&mut Context::from_waker(&Waker::from(Arc::new(DummyWaker))));
-    match poll {
-        Poll::Ready(()) => {}
-        Poll::Pending => crate::futures::spawn(pin),
-    }
+    crate::futures::spawn_017_compat(fut);
 }
