@@ -39,14 +39,9 @@ pub mod stable;
 
 /// Gets the message argument data.
 pub fn msg_arg_data() -> Vec<u8> {
-    // SAFETY: `ic0.msg_arg_data`_size is always safe to call.
-    let len = unsafe { ic0::msg_arg_data_size() };
+    let len = ic0::msg_arg_data_size();
     let mut buf = vec![0u8; len];
-    // SAFETY:
-    // `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_arg_data_copy` with a 0-offset.
-    unsafe {
-        ic0::msg_arg_data_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::msg_arg_data_copy(&mut buf, 0);
     buf
 }
 
@@ -55,21 +50,16 @@ pub fn msg_arg_data() -> Vec<u8> {
 /// During canister installation or upgrade, this is the id of the user or canister requesting the installation or upgrade.
 /// During a system task (heartbeat or global timer), this is the id of the management canister.
 pub fn msg_caller() -> Principal {
-    // SAFETY: `ic0.msg_caller_size` is always safe to call.
-    let len = unsafe { ic0::msg_caller_size() };
+    let len = ic0::msg_caller_size();
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_caller_copy` with a 0-offset.
-    unsafe {
-        ic0::msg_caller_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::msg_caller_copy(&mut buf, 0);
     // Trust that the system always returns a valid principal.
     Principal::try_from(&buf).unwrap()
 }
 
 /// Returns the reject code, if the current function is invoked as a reject callback.
 pub fn msg_reject_code() -> u32 {
-    // SAFETY: `ic0.msg_reject_code` is always safe to call.
-    unsafe { ic0::msg_reject_code() }
+    ic0::msg_reject_code()
 }
 
 /// Gets the reject message.
@@ -78,13 +68,9 @@ pub fn msg_reject_code() -> u32 {
 ///
 /// Traps if there is no reject message (i.e. if reject_code is 0).
 pub fn msg_reject_msg() -> String {
-    // SAFETY: `ic0.msg_reject_msg_size` is always safe to call.
-    let len = unsafe { ic0::msg_reject_msg_size() };
+    let len = ic0::msg_reject_msg_size();
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_reject_msg_copy` with a 0-offset.
-    unsafe {
-        ic0::msg_reject_msg_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::msg_reject_msg_copy(&mut buf, 0);
     String::from_utf8_lossy(&buf).into_owned()
 }
 
@@ -108,8 +94,7 @@ pub fn msg_reject_msg() -> String {
 /// Please note that the raw `msg_deadline` system API returns 0 in such cases.
 /// This function is a wrapper around the raw system API that provides more semantic information through the return type.
 pub fn msg_deadline() -> Option<NonZeroU64> {
-    // SAFETY: `ic0.msg_deadline` is always safe to call.
-    let nano_seconds = unsafe { ic0::msg_deadline() };
+    let nano_seconds = ic0::msg_deadline();
     match nano_seconds {
         0 => None,
         _ => Some(NonZeroU64::new(nano_seconds).unwrap()),
@@ -120,30 +105,20 @@ pub fn msg_deadline() -> Option<NonZeroU64> {
 pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
     if !buf.is_empty() {
-        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to `ic0.msg_reply`.
-        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len()) }
+        ic0::msg_reply_data_append(buf);
     };
-    // SAFETY: `ic0.msg_reply` is always safe to call.
-    unsafe { ic0::msg_reply() };
+    ic0::msg_reply();
 }
 
 /// Rejects the call with a diagnostic message.
 pub fn msg_reject<T: AsRef<str>>(message: T) {
-    let buf = message.as_ref();
-    // SAFETY: `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.msg_reject`.
-    unsafe {
-        ic0::msg_reject(buf.as_ptr() as usize, buf.len());
-    }
+    let message = message.as_ref();
+    ic0::msg_reject(message.as_bytes());
 }
 
 /// Gets the number of cycles transferred by the caller of the current call, still available in this message.
 pub fn msg_cycles_available() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.msg_cycles_available128`.
-    unsafe {
-        ic0::msg_cycles_available128(&mut dst as *mut u128 as usize);
-    }
-    dst
+    ic0::msg_cycles_available128()
 }
 
 /// Gets the amount of cycles that came back with the response as a refund
@@ -151,67 +126,40 @@ pub fn msg_cycles_available() -> u128 {
 /// This function can only be used in a callback handler (reply or reject).
 /// The refund has already been added to the canister balance automatically.
 pub fn msg_cycles_refunded() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.msg_cycles_refunded128`.
-    unsafe {
-        ic0::msg_cycles_refunded128(&mut dst as *mut u128 as usize);
-    }
-    dst
+    ic0::msg_cycles_refunded128()
 }
 
 /// Moves cycles from the call to the canister balance.
 ///
 /// The actual amount moved will be returned.
 pub fn msg_cycles_accept(max_amount: u128) -> u128 {
-    let high = (max_amount >> 64) as u64;
-    let low = (max_amount & u64::MAX as u128) as u64;
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.msg_cycles_accept128`.
-    unsafe {
-        ic0::msg_cycles_accept128(high, low, &mut dst as *mut u128 as usize);
-    }
-    dst
+    ic0::msg_cycles_accept128(max_amount)
 }
 
 /// Burns cycles from the canister.
 ///
 /// Returns the amount of cycles that were actually burned.
 pub fn cycles_burn(amount: u128) -> u128 {
-    let amount_high = (amount >> 64) as u64;
-    let amount_low = (amount & u64::MAX as u128) as u64;
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cycles_burn128`.
-    unsafe { ic0::cycles_burn128(amount_high, amount_low, &mut dst as *mut u128 as usize) }
-    dst
+    ic0::cycles_burn128(amount)
 }
 
 /// Gets canister's own identity.
 pub fn canister_self() -> Principal {
-    // SAFETY: `ic0.canister_self_size` is always safe to call.
-    let len = unsafe { ic0::canister_self_size() };
+    let len = ic0::canister_self_size();
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
-    unsafe {
-        ic0::canister_self_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::canister_self_copy(&mut buf, 0);
     // Trust that the system always returns a valid principal.
     Principal::try_from(&buf).unwrap()
 }
 
 /// Gets the current cycle balance of the canister.
 pub fn canister_cycle_balance() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.canister_cycle_balance128`.
-    unsafe { ic0::canister_cycle_balance128(&mut dst as *mut u128 as usize) }
-    dst
+    ic0::canister_cycle_balance128()
 }
 
 /// Gets the current amount of cycles that is available for spending in calls and execution.
 pub fn canister_liquid_cycle_balance() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.canister_liquid_cycle_balance128`.
-    unsafe { ic0::canister_liquid_cycle_balance128(&mut dst as *mut u128 as usize) }
-    dst
+    ic0::canister_liquid_cycle_balance128()
 }
 
 /// Gets the status of the canister.
@@ -221,8 +169,7 @@ pub fn canister_liquid_cycle_balance() -> u128 {
 ///.- 2: Stopping
 ///.- 3: Stopped
 pub fn canister_status() -> CanisterStatusCode {
-    // SAFETY: `ic0.canister_status` is always safe to call.
-    unsafe { ic0::canister_status() }.into()
+    ic0::canister_status().into()
 }
 
 /// The status of a canister.
@@ -274,19 +221,14 @@ impl PartialEq<u32> for CanisterStatusCode {
 ///
 /// See [Canister version](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-canister-version).
 pub fn canister_version() -> u64 {
-    // SAFETY: `ic0.canister_version` is always safe to call.
-    unsafe { ic0::canister_version() }
+    ic0::canister_version()
 }
 
 /// Gets the ID of the subnet on which the canister is running.
 pub fn subnet_self() -> Principal {
-    // SAFETY: `ic0.subnet_self_size` is always safe to call.
-    let len = unsafe { ic0::subnet_self_size() };
+    let len = ic0::subnet_self_size();
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.subnet_self_copy` with a 0-offset.
-    unsafe {
-        ic0::subnet_self_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::subnet_self_copy(&mut buf, 0);
     // Trust that the system always returns a valid principal.
     Principal::try_from(&buf).unwrap()
 }
@@ -295,13 +237,9 @@ pub fn subnet_self() -> Principal {
 ///
 /// This function is only available in the `canister_inspect_message` context.
 pub fn msg_method_name() -> String {
-    // SAFETY: `ic0.msg_method_name_size` is always safe to call.
-    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
-    let mut buf = vec![0u8; len as usize];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.msg_method_name_copy` with a 0-offset.
-    unsafe {
-        ic0::msg_method_name_copy(buf.as_mut_ptr() as usize, 0, len as usize);
-    }
+    let len = ic0::msg_method_name_size();
+    let mut buf = vec![0u8; len];
+    ic0::msg_method_name_copy(&mut buf, 0);
     String::from_utf8_lossy(&buf).into_owned()
 }
 
@@ -310,16 +248,14 @@ pub fn msg_method_name() -> String {
 /// This function is only available in the `canister_inspect_message` context.
 /// This function traps if invoked twice.
 pub fn accept_message() {
-    // SAFETY: `ic0.accept_message` is always safe to call.
-    unsafe { ic0::accept_message() }
+    ic0::accept_message()
 }
 
 /// Gets the current size of the stable memory (in WebAssembly pages).
 ///
 /// One WebAssembly page is 64KiB.
 pub fn stable_size() -> u64 {
-    // SAFETY: `ic0.stable64_size` is always safe to call.
-    unsafe { ic0::stable64_size() }
+    ic0::stable64_size()
 }
 
 /// Attempts to grow the stable memory by `new_pages` many pages containing zeroes.
@@ -329,8 +265,7 @@ pub fn stable_size() -> u64 {
 /// If successful, returns the previous size of the memory (in pages).
 /// Otherwise, returns `u64::MAX`.
 pub fn stable_grow(new_pages: u64) -> u64 {
-    // SAFETY: `ic0.stable64_grow` is always safe to call.
-    unsafe { ic0::stable64_grow(new_pages) }
+    ic0::stable64_grow(new_pages)
 }
 
 /// Writes data to the stable memory location specified by an offset.
@@ -339,10 +274,7 @@ pub fn stable_grow(new_pages: u64) -> u64 {
 /// This will panic if `offset + buf.len()` exceeds the current size of stable memory.
 /// Call [`stable_grow`] to request more stable memory if needed.
 pub fn stable_write(offset: u64, buf: &[u8]) {
-    // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to `ic0.stable64_write`.
-    unsafe {
-        ic0::stable64_write(offset, buf.as_ptr() as u64, buf.len() as u64);
-    }
+    ic0::stable64_write(buf, offset)
 }
 
 /// Reads data from the stable memory location specified by an offset.
@@ -350,10 +282,7 @@ pub fn stable_write(offset: u64, buf: &[u8]) {
 /// # Warning
 /// This will panic if `offset + buf.len()` exceeds the current size of stable memory.
 pub fn stable_read(offset: u64, buf: &mut [u8]) {
-    // SAFETY: `buf`, being &mut [u8], is a writable sequence of bytes, and therefore valid to pass to ic0.stable64_read.
-    unsafe {
-        ic0::stable64_read(buf.as_ptr() as u64, offset, buf.len() as u64);
-    }
+    ic0::stable64_read(buf, offset);
 }
 
 /// Gets the public key (a DER-encoded BLS key) of the root key of this instance of the Internet Computer Protocol.
@@ -362,13 +291,9 @@ pub fn stable_read(offset: u64, buf: &mut [u8]) {
 ///
 /// This traps in non-replicated mode.
 pub fn root_key() -> Vec<u8> {
-    // SAFETY: `ic0.root_key_size` is always safe to call.
-    let len = unsafe { ic0::root_key_size() };
+    let len = ic0::root_key_size();
     let mut buf = vec![0u8; len];
-    // SAFETY: `buf` is a mutable reference to a `len`-byte buffer, it is safe to be passed to `ic0.root_key_copy` with a 0-offset.
-    unsafe {
-        ic0::root_key_copy(buf.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::root_key_copy(&mut buf, 0);
     buf
 }
 
@@ -392,8 +317,7 @@ pub fn root_key() -> Vec<u8> {
 ///   (e.g., from a query call).
 pub fn certified_data_set<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
-    // SAFETY: `buf` is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
-    unsafe { ic0::certified_data_set(buf.as_ptr() as usize, buf.len()) }
+    ic0::certified_data_set(buf);
 }
 
 /// When called from a query call, returns the data certificate authenticating
@@ -401,24 +325,18 @@ pub fn certified_data_set<T: AsRef<[u8]>>(data: T) {
 ///
 /// Returns `None` if called not from a query call.
 pub fn data_certificate() -> Option<Vec<u8>> {
-    // SAFETY: ic0.data_certificate_present is always safe to call.
-    if unsafe { ic0::data_certificate_present() } == 0 {
+    if ic0::data_certificate_present() == 0 {
         return None;
     }
-    // SAFETY: ic0.data_certificate_size is always safe to call.
-    let n = unsafe { ic0::data_certificate_size() };
+    let n = ic0::data_certificate_size();
     let mut buf = vec![0u8; n];
-    // SAFETY: Because `buf` is mutable and allocated to `n` bytes, it is valid to receive from ic0.data_certificate_bytes with no offset
-    unsafe {
-        ic0::data_certificate_copy(buf.as_mut_ptr() as usize, 0, n);
-    }
+    ic0::data_certificate_copy(&mut buf, 0);
     Some(buf)
 }
 
 /// Gets current timestamp, in nanoseconds since the epoch (1970-01-01)
 pub fn time() -> u64 {
-    // SAFETY: ic0.time is always safe to call.
-    unsafe { ic0::time() }
+    ic0::time()
 }
 
 /// Sets global timer.
@@ -434,8 +352,7 @@ pub fn time() -> u64 {
 /// Passing zero as an argument to the function deactivates the timer and thus
 /// prevents the system from scheduling calls to the canister's `canister_global_timer` Wasm method.
 pub fn global_timer_set(timestamp: u64) -> u64 {
-    // SAFETY: ic0.global_timer_set is always safe to call.
-    unsafe { ic0::global_timer_set(timestamp) }
+    ic0::global_timer_set(timestamp)
 }
 
 /// Gets the value of specified performance counter.
@@ -444,8 +361,7 @@ pub fn global_timer_set(timestamp: u64) -> u64 {
 #[inline]
 pub fn performance_counter(counter_type: impl Into<PerformanceCounterType>) -> u64 {
     let counter_type: u32 = counter_type.into().into();
-    // SAFETY: ic0.performance_counter is always safe to call.
-    unsafe { ic0::performance_counter(counter_type) }
+    ic0::performance_counter(counter_type)
 }
 
 /// The type of performance counter.
@@ -517,16 +433,14 @@ pub fn call_context_instruction_counter() -> u64 {
 /// Determines if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
-    // SAFETY: `principal.as_bytes()`, being `&[u8]`, is a readable sequence of bytes and therefore safe to pass to `ic0.is_controller`.
-    unsafe { ic0::is_controller(slice.as_ptr() as usize, slice.len()) != 0 }
+    ic0::is_controller(slice) != 0
 }
 
 /// Checks if in replicated execution.
 ///
 /// The canister can check whether it is currently running in replicated or non replicated execution.
 pub fn in_replicated_execution() -> bool {
-    // SAFETY: `ic0.in_replicated_execution` is always safe to call.
-    match unsafe { ic0::in_replicated_execution() } {
+    match ic0::in_replicated_execution() {
         0 => false,
         1 => true,
         _ => unreachable!(),
@@ -535,16 +449,7 @@ pub fn in_replicated_execution() -> bool {
 
 /// Gets the amount of cycles that a canister needs to be above the freezing threshold in order to successfully make an inter-canister call.
 pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_call`.
-    unsafe {
-        ic0::cost_call(
-            method_name_size,
-            payload_size,
-            &mut dst as *mut u128 as usize,
-        )
-    }
-    dst
+    ic0::cost_call(method_name_size, payload_size)
 }
 
 /// Gets the cycle cost of the Management canister method [`creating_canister`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-create_canister).
@@ -555,10 +460,7 @@ pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
 /// [`create_canister_with_extra_cycles`](crate::management_canister::create_canister_with_extra_cycles)
 /// invoke this function inside and attach the required cycles to the call.
 pub fn cost_create_canister() -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_create_canister`.
-    unsafe { ic0::cost_create_canister(&mut dst as *mut u128 as usize) }
-    dst
+    ic0::cost_create_canister()
 }
 
 /// Gets the cycle cost of the Management canister method [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request).
@@ -568,10 +470,7 @@ pub fn cost_create_canister() -> u128 {
 /// [`http_request`](crate::management_canister::http_request) and [`http_request_with_closure`](crate::management_canister::http_request_with_closure)
 /// invoke this function inside and attach the required cycles to the call.
 pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
-    let mut dst = 0u128;
-    // SAFETY: `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_http_request`.
-    unsafe { ic0::cost_http_request(request_size, max_res_bytes, &mut dst as *mut u128 as usize) }
-    dst
+    ic0::cost_http_request(request_size, max_res_bytes)
 }
 
 /// The error type for [`cost_sign_with_ecdsa`] and [`cost_sign_with_schnorr`].
@@ -616,20 +515,9 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
     key_name: T,
     ecdsa_curve: u32,
 ) -> Result<u128, SignCostError> {
-    let buf = key_name.as_ref();
-    let mut dst = 0u128;
-    // SAFETY:
-    // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_sign_with_ecdsa`.
-    // `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_sign_with_ecdsa`.
-    let code = unsafe {
-        ic0::cost_sign_with_ecdsa(
-            buf.as_ptr() as usize,
-            buf.len(),
-            ecdsa_curve,
-            &mut dst as *mut u128 as usize,
-        )
-    };
-    sign_cost_result(dst, code)
+    let key_name = key_name.as_ref();
+    let (cost, code) = ic0::cost_sign_with_ecdsa(key_name, ecdsa_curve);
+    sign_cost_result(cost, code)
 }
 
 /// Gets the cycle cost of the Management canister method [`sign_with_schnorr`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-sign_with_schnorr).
@@ -646,19 +534,8 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
     key_name: T,
     algorithm: u32,
 ) -> Result<u128, SignCostError> {
-    let buf = key_name.as_ref();
-    let mut dst = 0u128;
-    // SAFETY:
-    // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_sign_with_schnorr`.
-    // `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_sign_with_schnorr`.
-    let code = unsafe {
-        ic0::cost_sign_with_schnorr(
-            buf.as_ptr() as usize,
-            buf.len(),
-            algorithm,
-            &mut dst as *mut u128 as usize,
-        )
-    };
+    let key_name = key_name.as_ref();
+    let (dst, code) = ic0::cost_sign_with_schnorr(key_name, algorithm);
     sign_cost_result(dst, code)
 }
 
@@ -678,20 +555,9 @@ pub fn cost_vetkd_derive_key<T: AsRef<str>>(
     key_name: T,
     vetkd_curve: u32,
 ) -> Result<u128, SignCostError> {
-    let buf = key_name.as_ref();
-    let mut dst = 0u128;
-    // SAFETY:
-    // `buf`, being &str, is a readable sequence of UTF8 bytes and therefore can be passed to `ic0.cost_vetkd_derive_key`.
-    // `dst` is a mutable reference to a 16-byte buffer, which is the expected size for `ic0.cost_vetkd_derive_key`.
-    let code = unsafe {
-        ic0::cost_vetkd_derive_key(
-            buf.as_ptr() as usize,
-            buf.len(),
-            vetkd_curve,
-            &mut dst as *mut u128 as usize,
-        )
-    };
-    sign_cost_result(dst, code)
+    let key_name = key_name.as_ref();
+    let (cost, code) = ic0::cost_vetkd_derive_key(key_name, vetkd_curve);
+    sign_cost_result(cost, code)
 }
 
 /// Emits textual trace messages.
@@ -702,10 +568,7 @@ pub fn cost_vetkd_derive_key<T: AsRef<str>>(
 /// and logs, prints or stores it in an environment-appropriate way.
 pub fn debug_print<T: AsRef<str>>(data: T) {
     let buf = data.as_ref();
-    // SAFETY: `buf` is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
-    unsafe {
-        ic0::debug_print(buf.as_ptr() as usize, buf.len());
-    }
+    ic0::debug_print(buf.as_bytes());
 }
 
 /// Traps with the given message.
@@ -714,11 +577,7 @@ pub fn debug_print<T: AsRef<str>>(data: T) {
 /// or include it in system-generated reject messages where appropriate.
 pub fn trap<T: AsRef<str>>(data: T) -> ! {
     let buf = data.as_ref();
-    // SAFETY: `buf` is a readable sequence of bytes and therefore can be passed to ic0.trap.
-    unsafe {
-        ic0::trap(buf.as_ptr() as usize, buf.len());
-    }
-    unreachable!()
+    ic0::trap(buf.as_bytes());
 }
 
 // # Deprecated API bindings
@@ -730,35 +589,24 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
 #[deprecated(since = "0.18.0", note = "Use `debug_print` instead")]
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
-    // SAFETY: `s`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.debug_print.
-    unsafe {
-        ic0::debug_print(s.as_ptr() as usize, s.len());
-    }
+    ic0::debug_print(s.as_bytes());
 }
 
 /// Returns the caller of the current call.
 #[deprecated(since = "0.18.0", note = "Use `msg_caller` instead")]
 pub fn caller() -> Principal {
-    // SAFETY: ic0.msg_caller_size is always safe to call.
-    let len = unsafe { ic0::msg_caller_size() };
+    let len = ic0::msg_caller_size();
     let mut bytes = vec![0u8; len];
-    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.msg_caller_copy` with a 0-offset.
-    unsafe {
-        ic0::msg_caller_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::msg_caller_copy(&mut bytes, 0);
     Principal::try_from(&bytes).unwrap()
 }
 
 /// Returns the canister id as a blob.
 #[deprecated(since = "0.18.0", note = "Use `canister_self` instead")]
 pub fn id() -> Principal {
-    // SAFETY: ic0.canister_self_size is always safe to call.
-    let len = unsafe { ic0::canister_self_size() };
+    let len = ic0::canister_self_size();
     let mut bytes = vec![0u8; len];
-    // SAFETY: Because `bytes` is mutable, and allocated to `len` bytes, it is safe to be passed to `ic0.canister_self_copy` with a 0-offset.
-    unsafe {
-        ic0::canister_self_copy(bytes.as_mut_ptr() as usize, 0, len);
-    }
+    ic0::canister_self_copy(&mut bytes, 0);
     Principal::try_from(&bytes).unwrap()
 }
 
@@ -804,8 +652,7 @@ pub fn canister_balance128() -> u128 {
 ///   (e.g., from a query call).
 #[deprecated(since = "0.18.0", note = "Use `certified_data_set` instead")]
 pub fn set_certified_data(data: &[u8]) {
-    // SAFETY: because data is a slice ref, its pointer and length are valid to pass to ic0.certified_data_set.
-    unsafe { ic0::certified_data_set(data.as_ptr() as usize, data.len()) }
+    ic0::certified_data_set(data);
 }
 
 /// Sets global timer.
@@ -822,6 +669,5 @@ pub fn set_certified_data(data: &[u8]) {
 /// prevents the system from scheduling calls to the canister's canister_global_timer Wasm method.
 #[deprecated(since = "0.18.0", note = "Use `global_timer_set` instead")]
 pub fn set_global_timer(timestamp: u64) -> u64 {
-    // SAFETY: ic0.global_timer_set is always safe to call.
-    unsafe { ic0::global_timer_set(timestamp) }
+    ic0::global_timer_set(timestamp)
 }

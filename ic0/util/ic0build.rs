@@ -122,7 +122,7 @@ fn main() {
     let ic0: IC0 = syn::parse_str(&s).unwrap();
 
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    d.push("src/ic0.rs");
+    d.push("src/sys.rs");
 
     let mut f = fs::File::create(d).unwrap();
 
