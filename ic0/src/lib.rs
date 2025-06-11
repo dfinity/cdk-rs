@@ -114,7 +114,7 @@ pub fn msg_reject(message: &[u8]) {
 #[inline]
 pub fn msg_cycles_available128() -> u128 {
     let mut bytes = [0_u8; 16];
-    // SAFETY: num being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_available128
+    // SAFETY: num is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_available128
     unsafe {
         sys::msg_cycles_available128(bytes.as_mut_ptr() as usize);
     }
@@ -124,7 +124,7 @@ pub fn msg_cycles_available128() -> u128 {
 #[inline]
 pub fn msg_cycles_refunded128() -> u128 {
     let mut bytes = [0_u8; 16];
-    // SAFETY: num being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_refunded128
+    // SAFETY: num is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_refunded128
     unsafe {
         sys::msg_cycles_refunded128(bytes.as_mut_ptr() as usize);
     }
@@ -136,7 +136,7 @@ pub fn msg_cycles_accept128(max: u128) -> u128 {
     let low = (max & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF) as u64;
     let high = (max & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) as u64;
     let mut dst_bytes = [0_u8; 16];
-    // SAFETY: dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_accept128
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_accept128
     // The max_amount_high and max_amount_low parameters do not affect safety
     unsafe {
         sys::msg_cycles_accept128(high, low, dst_bytes.as_mut_ptr() as usize);
@@ -478,7 +478,7 @@ pub fn in_replicated_execution() -> u32 {
 #[inline]
 pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
     let mut dst_bytes = [0_u8; 16];
-    // SAFETY: dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_call
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_call
     // The method_name_size and payload_size parameters do not affect safety
     unsafe {
         sys::cost_call(
@@ -493,7 +493,7 @@ pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
 #[inline]
 pub fn cost_create_canister() -> u128 {
     let mut dst_bytes = [0_u8; 16];
-    // SAFETY: dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_create_canister
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_create_canister
     unsafe {
         sys::cost_create_canister(dst_bytes.as_mut_ptr() as usize);
     }
@@ -503,7 +503,7 @@ pub fn cost_create_canister() -> u128 {
 #[inline]
 pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
     let mut dst_bytes = [0_u8; 16];
-    // SAFETY: dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_http_request
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.cost_http_request
     // The request_size and max_res_bytes parameters do not affect safety
     unsafe {
         sys::cost_http_request(request_size, max_res_bytes, dst_bytes.as_mut_ptr() as usize);
@@ -516,7 +516,7 @@ pub fn cost_sign_with_ecdsa(key_name: &str, ecdsa_curve: u32) -> (u128, u32) {
     let mut dst_bytes = [0_u8; 16];
     // SAFETY:
     // - key_name is a readable string and therefore safe to pass as ptr and len src to ic0.cost_sign_with_ecdsa
-    // - dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_sign_with_ecdsa
+    // - dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_sign_with_ecdsa
     // The ecdsa_curve parameter does not affect safety
     let code = unsafe {
         sys::cost_sign_with_ecdsa(
@@ -534,7 +534,7 @@ pub fn cost_sign_with_schnorr(key_name: &str, algorithm: u32) -> (u128, u32) {
     let mut dst_bytes = [0_u8; 16];
     // SAFETY:
     // - key_name is a readable string and therefore safe to pass as ptr and len src to ic0.cost_sign_with_schnorr
-    // - dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_sign_with_schnorr
+    // - dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_sign_with_schnorr
     // The algorithm parameter does not affect safety
     let code = unsafe {
         sys::cost_sign_with_schnorr(
@@ -552,7 +552,7 @@ pub fn cost_vetkd_derive_key(key_name: &str, vetkd_curve: u32) -> (u128, u32) {
     let mut dst_bytes = [0_u8; 16];
     // SAFETY:
     // - key_name is a readable string and therefore safe to pass as ptr and len path to ic0.cost_vetkd_derive_key
-    // - dst_bytes being [u8; 16] is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_vetkd_derive_key
+    // - dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr dst to ic0.cost_vetkd_derive_key
     // The vetkd_curve parameter does not affect safety
     let code = unsafe {
         sys::cost_vetkd_derive_key(
