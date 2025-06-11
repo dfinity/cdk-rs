@@ -43,7 +43,7 @@ pub fn msg_caller_size() -> usize {
 
 #[inline]
 pub fn msg_caller_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_caller_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -53,7 +53,7 @@ pub fn msg_caller_copy(dst: &mut [u8], offset: usize) {
 /// This function will fully initialize `dst`.
 #[inline]
 pub fn msg_caller_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_caller_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -72,7 +72,7 @@ pub fn msg_reject_msg_size() -> usize {
 
 #[inline]
 pub fn msg_reject_msg_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject_msg_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject_msg_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_reject_msg_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -82,7 +82,7 @@ pub fn msg_reject_msg_copy(dst: &mut [u8], offset: usize) {
 /// This function will fully initialize `dst`.
 #[inline]
 pub fn msg_reject_msg_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject_msg_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject_msg_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_reject_msg_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -95,7 +95,7 @@ pub fn msg_deadline() -> u64 {
 
 #[inline]
 pub fn msg_reply_data_append(data: &[u8]) {
-    // SAFETY: data being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reply_data_append
+    // SAFETY: data is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reply_data_append
     unsafe { sys::msg_reply_data_append(data.as_ptr() as usize, data.len()) }
 }
 
@@ -107,7 +107,7 @@ pub fn msg_reply() {
 
 #[inline]
 pub fn msg_reject(message: &[u8]) {
-    // SAFETY: message being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject
+    // SAFETY: message is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject
     unsafe { sys::msg_reject(message.as_ptr() as usize, message.len()) }
 }
 
@@ -210,7 +210,7 @@ pub fn subnet_self_size() -> usize {
 
 #[inline]
 pub fn subnet_self_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.subnet_self_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.subnet_self_copy
     // The offset parameter does not affect safety
     unsafe { sys::subnet_self_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -320,7 +320,7 @@ pub unsafe fn call_on_cleanup(cleanup_fn: unsafe extern "C" fn(env: usize), clea
 
 #[inline]
 pub fn call_data_append(data: &[u8]) {
-    // SAFETY: data being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.call_data_append
+    // SAFETY: data is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.call_data_append
     unsafe { sys::call_data_append(data.as_ptr() as usize, data.len()) }
 }
 
@@ -365,14 +365,14 @@ pub fn stable64_grow(new_pages: u64) -> u64 {
 
 #[inline]
 pub fn stable64_write(data: &[u8], offset: u64) {
-    // SAFETY: data being &[u8] is a readable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_write
+    // SAFETY: data is a readable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_write
     // The offset parameter does not affect safety
     unsafe { sys::stable64_write(offset, data.as_ptr() as usize as u64, data.len() as u64) }
 }
 
 #[inline]
 pub fn stable64_read(dst: &mut [u8], offset: u64) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_read
+    // SAFETY: dst is a writable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_read
     // The offset parameter does not affect safety
     unsafe { sys::stable64_read(dst.as_mut_ptr() as usize as u64, offset, dst.len() as u64) }
 }
@@ -382,7 +382,7 @@ pub fn stable64_read(dst: &mut [u8], offset: u64) {
 /// This function will fully initialize `dst`.
 #[inline]
 pub fn stable64_read_uninit(dst: &mut [MaybeUninit<u8>], offset: u64) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_read
+    // SAFETY: dst is a writable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_read
     // The offset parameter does not affect safety
     unsafe { sys::stable64_read(dst.as_mut_ptr() as usize as u64, offset, dst.len() as u64) }
 }
@@ -395,7 +395,7 @@ pub fn root_key_size() -> usize {
 
 #[inline]
 pub fn root_key_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.root_key_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.root_key_copy
     // The offset parameter does not affect safety
     unsafe { sys::root_key_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -405,14 +405,14 @@ pub fn root_key_copy(dst: &mut [u8], offset: usize) {
 /// This function will fully initialize `dst`.
 #[inline]
 pub fn root_key_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
-    // SAFETY: dst being &mut [u8] is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.root_key_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.root_key_copy
     // The offset parameter does not affect safety
     unsafe { sys::root_key_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
 
 #[inline]
 pub fn certified_data_set(data: &[u8]) {
-    // SAFETY: data being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.certified_data_set
+    // SAFETY: data is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.certified_data_set
     unsafe { sys::certified_data_set(data.as_ptr() as usize, data.len()) }
 }
 
@@ -465,7 +465,7 @@ pub fn performance_counter(counter_type: u32) -> u64 {
 
 #[inline]
 pub fn is_controller(principal: &[u8]) -> u32 {
-    // SAFETY: principal being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.is_controller
+    // SAFETY: principal is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.is_controller
     unsafe { sys::is_controller(principal.as_ptr() as usize, principal.len()) }
 }
 
@@ -567,13 +567,13 @@ pub fn cost_vetkd_derive_key(key_name: &str, vetkd_curve: u32) -> (u128, u32) {
 
 #[inline]
 pub fn debug_print(message: &[u8]) {
-    // SAFETY: message being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.debug_print
+    // SAFETY: message is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.debug_print
     unsafe { sys::debug_print(message.as_ptr() as usize, message.len()) }
 }
 
 #[inline]
 pub fn trap(message: &[u8]) -> ! {
-    // SAFETY: message being &[u8] is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.trap
+    // SAFETY: message is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.trap
     unsafe { sys::trap(message.as_ptr() as usize, message.len()) }
     unreachable!()
 }
