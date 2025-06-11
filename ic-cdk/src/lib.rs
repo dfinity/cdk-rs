@@ -79,8 +79,8 @@ macro_rules! eprintln {
 #[doc(hidden)]
 #[deprecated(
     since = "0.18.0",
-    note = "Use ic_cdk::futures::spawn_017_compat, or migrate to ic_cdk::futures::spawn. Code execution order will change, \
-    see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
+    note = "Use ic_cdk::futures::spawn_017_compat. Alternatively, migrate to ic_cdk::futures::spawn;
+    code execution order will change, see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
 )]
 pub fn spawn<F: 'static + Future<Output = ()>>(fut: F) {
     crate::futures::spawn_017_compat(fut);
