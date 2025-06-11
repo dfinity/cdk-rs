@@ -19,7 +19,7 @@ pub struct SystemAPI {
 }
 
 impl Parse for SystemAPI {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let ic0_token: Ident = input.parse()?;
         if ic0_token != "ic0" {
             return Err(Error::new(ic0_token.span(), "expected `ic0`"));
@@ -101,7 +101,7 @@ pub struct IC0 {
 }
 
 impl Parse for IC0 {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             apis: {
                 let mut apis = vec![];

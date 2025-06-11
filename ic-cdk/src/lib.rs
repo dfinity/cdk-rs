@@ -1,12 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![warn(
-    elided_lifetimes_in_paths,
-    missing_debug_implementations,
-    missing_docs,
-    unsafe_op_in_unsafe_fn,
-    clippy::undocumented_unsafe_blocks,
-    clippy::missing_safety_doc
-)]
+#![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(target_feature = "atomics")]

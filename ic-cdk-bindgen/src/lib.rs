@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 mod code_generator;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub canister_name: String,
     pub candid_path: PathBuf,
@@ -93,7 +93,7 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
     (candid_path, canister_id)
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Builder {
     configs: Vec<Config>,
 }

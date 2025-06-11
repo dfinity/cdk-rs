@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 
 use candid::{CandidType, Nat, Principal};
 use serde::{Deserialize, Serialize};
@@ -1009,6 +1010,7 @@ pub struct SchnorrPublicKeyResult {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub enum SchnorrAux {
+    /// BIP-341 (Taproot)
     #[serde(rename = "bip341")]
     Bip341(Bip341),
 }
@@ -1074,6 +1076,7 @@ impl From<VetKDCurve> for u32 {
     }
 }
 
+/// VetKD key identifier
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1331,8 +1334,11 @@ pub type FetchCanisterLogsArgs = CanisterIdRecord;
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CanisterLogRecord {
+    /// Log index, unique for the canister.
     pub idx: u64,
+    /// Unix timestamp in nanoseconds at which the log message was recorded.
     pub timestamp_nanos: u64,
+    /// Contents of the log message.
     pub content: Vec<u8>,
 }
 
@@ -1343,5 +1349,6 @@ pub struct CanisterLogRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct FetchCanisterLogsResult {
+    /// A list of canister log records.
     pub canister_log_records: Vec<CanisterLogRecord>,
 }

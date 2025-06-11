@@ -1,5 +1,7 @@
 //! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
 
+#![warn(missing_docs)]
+
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::future::Future;
@@ -222,6 +224,7 @@ fn set_panic_hook() {
             };
 
             let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
+            // SAFETY: `err_info` is a readable sequence of bytes and therefore safe to pass to `ic0.debug_print` and `ic0.trap`.
             unsafe {
                 ic0::debug_print(err_info.as_ptr() as usize, err_info.len());
                 ic0::trap(err_info.as_ptr() as usize, err_info.len());

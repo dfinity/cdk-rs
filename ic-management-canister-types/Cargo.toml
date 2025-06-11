@@ -21,3 +21,6 @@ serde_bytes.workspace = true
 
 [dev-dependencies]
 candid_parser.workspace = true
+
+[lints]
+workspace = true
