@@ -5,14 +5,14 @@ use convert_case::{Case, Casing};
 use pretty::RcDoc;
 use std::collections::BTreeSet;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Target {
     CanisterCall,
     Agent,
     CanisterStub,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     candid_crate: String,
     type_attributes: String,
@@ -77,7 +77,7 @@ static KEYWORDS: [&str; 51] = [
     "while", "async", "await", "dyn", "abstract", "become", "box", "do", "final", "macro",
     "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
 ];
-fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
+fn ident_(id: &str, case: Option<Case>) -> (RcDoc<'_>, bool) {
     if id.is_empty()
         || id.starts_with(|c: char| !c.is_ascii_alphabetic() && c != '_')
         || id.chars().any(|c| !c.is_ascii_alphanumeric() && c != '_')
@@ -98,11 +98,11 @@ fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
         (RcDoc::text(id), is_rename)
     }
 }
-fn ident(id: &str, case: Option<Case>) -> RcDoc {
+fn ident(id: &str, case: Option<Case>) -> RcDoc<'_> {
     ident_(id, case).0
 }
 
-fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints) -> RcDoc<'a> {
+fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints<'_>) -> RcDoc<'a> {
     use TypeInner::*;
     match ty.as_ref() {
         Null => str("()"),
@@ -169,13 +169,13 @@ fn pp_label<'a>(id: &'a SharedLabel, is_variant: bool, vis: &'a str) -> RcDoc<'a
     }
 }
 
-fn pp_record_field<'a>(field: &'a Field, recs: &RecPoints, vis: &'a str) -> RcDoc<'a> {
+fn pp_record_field<'a>(field: &'a Field, recs: &RecPoints<'_>, vis: &'a str) -> RcDoc<'a> {
     pp_label(&field.id, false, vis)
         .append(kwd(":"))
         .append(pp_ty(&field.ty, recs))
 }
 
-fn pp_record_fields<'a>(fs: &'a [Field], recs: &RecPoints, vis: &'a str) -> RcDoc<'a> {
+fn pp_record_fields<'a>(fs: &'a [Field], recs: &RecPoints<'_>, vis: &'a str) -> RcDoc<'a> {
     if is_tuple(fs) {
         let vis = if vis.is_empty() {
             RcDoc::nil()
@@ -193,7 +193,7 @@ fn pp_record_fields<'a>(fs: &'a [Field], recs: &RecPoints, vis: &'a str) -> RcDo
     }
 }
 
-fn pp_variant_field<'a>(field: &'a Field, recs: &RecPoints) -> RcDoc<'a> {
+fn pp_variant_field<'a>(field: &'a Field, recs: &RecPoints<'_>) -> RcDoc<'a> {
     match field.ty.as_ref() {
         TypeInner::Null => pp_label(&field.id, true, ""),
         TypeInner::Record(fs) => {
@@ -203,7 +203,7 @@ fn pp_variant_field<'a>(field: &'a Field, recs: &RecPoints) -> RcDoc<'a> {
     }
 }
 
-fn pp_variant_fields<'a>(fs: &'a [Field], recs: &RecPoints) -> RcDoc<'a> {
+fn pp_variant_fields<'a>(fs: &'a [Field], recs: &RecPoints<'_>) -> RcDoc<'a> {
     let fields = concat(fs.iter().map(|f| pp_variant_field(f, recs)), ",");
     enclose_space("{", fields, "}")
 }
@@ -212,7 +212,7 @@ fn pp_defs<'a>(
     config: &'a Config,
     env: &'a TypeEnv,
     def_list: &'a [&'a str],
-    recs: &'a RecPoints,
+    recs: &'a RecPoints<'_>,
 ) -> RcDoc<'a> {
     let derive = if config.type_attributes.is_empty() {
         "#[derive(CandidType, Deserialize)]"
@@ -281,12 +281,12 @@ fn pp_defs<'a>(
     }))
 }
 
-fn pp_args(args: &[Type]) -> RcDoc {
+fn pp_args(args: &[Type]) -> RcDoc<'_> {
     let empty = RecPoints::default();
     let doc = concat(args.iter().map(|t| pp_ty(t, &empty)), ",");
     enclose("(", doc, ")")
 }
-fn pp_ty_func(f: &Function) -> RcDoc {
+fn pp_ty_func(f: &Function) -> RcDoc<'_> {
     let args = pp_args(&f.args);
     let rets = pp_args(&f.rets);
     let modes = candid::pretty::candid::pp_modes(&f.modes);
@@ -295,7 +295,7 @@ fn pp_ty_func(f: &Function) -> RcDoc {
         .append(rets.append(modes))
         .nest(INDENT_SPACE)
 }
-fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
+fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc<'_> {
     let doc = concat(
         serv.iter().map(|(id, func)| {
             let func_doc = match func.as_ref() {

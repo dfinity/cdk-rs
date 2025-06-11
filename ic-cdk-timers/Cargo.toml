@@ -28,6 +28,9 @@ serde_bytes.workspace = true
 slotmap.workspace = true
 futures.workspace = true
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
 rustc-args = ["--cfg=docsrs"]

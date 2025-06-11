@@ -28,3 +28,6 @@ darling = "0.20.11"
 proc-macro2 = "1.0"
 quote.workspace = true
 syn = { workspace = true, features = ["fold", "full", "extra-traits"] }
+
+[lints]
+workspace = true

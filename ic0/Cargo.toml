@@ -16,6 +16,9 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 quote.workspace = true
 syn = { workspace = true, features = ["parsing", "full", "extra-traits"] }
 
+[lints]
+workspace = true
+
 # This is not a real example but a utility for auto-generating ic0.rs
 [[example]]
 name = "ic0build"

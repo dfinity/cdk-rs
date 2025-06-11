@@ -30,5 +30,8 @@ ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
 pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-05-30_03-21-base" }
 reqwest = "0.12"
 
+[lints]
+workspace = true
+
 [build-dependencies]
 prost-build = "0.13.5"

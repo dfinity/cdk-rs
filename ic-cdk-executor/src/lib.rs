@@ -1,5 +1,7 @@
 //! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
 
+#![warn(missing_docs)]
+
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::future::Future;

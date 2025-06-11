@@ -47,3 +47,12 @@ serde_bytes = "0.11"
 sha2 = "0.10"
 slotmap = "1"
 syn = "2"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "warn"
+missing_safety_doc = "warn"
+
+[workspace.lints.rust]
+elided_lifetimes_in_paths = "warn"
+missing_debug_implementations = "warn"
+unsafe_op_in_unsafe_fn = "warn"

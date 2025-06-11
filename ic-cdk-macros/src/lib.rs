@@ -1,11 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![warn(
-    elided_lifetimes_in_paths,
-    missing_debug_implementations,
-    unsafe_op_in_unsafe_fn,
-    clippy::undocumented_unsafe_blocks,
-    clippy::missing_safety_doc
-)]
 
 use proc_macro::TokenStream;
 use syn::Error;
