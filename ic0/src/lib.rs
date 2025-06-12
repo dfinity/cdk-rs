@@ -113,22 +113,22 @@ pub fn msg_reject(message: &[u8]) {
 
 #[inline]
 pub fn msg_cycles_available128() -> u128 {
-    let mut bytes = [0_u8; 16];
-    // SAFETY: num is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_available128
+    let mut dst_bytes = [0_u8; 16];
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_available128
     unsafe {
-        sys::msg_cycles_available128(bytes.as_mut_ptr() as usize);
+        sys::msg_cycles_available128(dst_bytes.as_mut_ptr() as usize);
     }
-    u128::from_le_bytes(bytes)
+    u128::from_le_bytes(dst_bytes)
 }
 
 #[inline]
 pub fn msg_cycles_refunded128() -> u128 {
-    let mut bytes = [0_u8; 16];
-    // SAFETY: num is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_refunded128
+    let mut dst_bytes = [0_u8; 16];
+    // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_refunded128
     unsafe {
-        sys::msg_cycles_refunded128(bytes.as_mut_ptr() as usize);
+        sys::msg_cycles_refunded128(dst_bytes.as_mut_ptr() as usize);
     }
-    u128::from_le_bytes(bytes)
+    u128::from_le_bytes(dst_bytes)
 }
 
 #[inline]
@@ -165,7 +165,7 @@ pub fn canister_self_size() -> usize {
 
 #[inline]
 pub fn canister_self_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: target is a writable sequence of bytes and therefore safe to pass to ic0.canister_self_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass to ic0.canister_self_copy
     // The offset parameter does not affect safety
     unsafe { sys::canister_self_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
