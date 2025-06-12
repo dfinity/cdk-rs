@@ -27,7 +27,7 @@ pub fn msg_arg_data_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn msg_arg_data_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_arg_data_copy
@@ -50,7 +50,7 @@ pub fn msg_caller_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn msg_caller_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_copy
@@ -79,7 +79,7 @@ pub fn msg_reject_msg_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn msg_reject_msg_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_reject_msg_copy
@@ -215,7 +215,7 @@ pub fn subnet_self_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn subnet_self_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.subnet_self_copy
@@ -231,17 +231,17 @@ pub fn msg_method_name_size() -> usize {
 
 #[inline]
 pub fn msg_method_name_copy(dst: &mut [u8], offset: usize) {
-    // SAFETY: target is a writable sequence of bytes and therefore safe to pass to ic0.msg_method_name_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_method_name_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_method_name_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn msg_method_name_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
-    // SAFETY: target is a writable sequence of bytes and therefore safe to pass to ic0.msg_method_name_copy
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_method_name_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_method_name_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
@@ -256,7 +256,7 @@ pub fn accept_message() {
 ///
 /// - `reply_fn` is required to be safely callable as a canister entrypoint with `reply_env`.
 /// - `reject_fn` is required to be safely callable as a canister entrypoint with `reject_env`.
-/// - Ownership of `reply_env` and `reject_env` is acquired by the system.
+/// - Ownership of `reply_env` and `reject_env` is acquired by this function.
 /// - `reply_fn`, if called, will receive ownership of `reply_env`, `reject_env`, and [`cleanup_env`](call_on_cleanup).
 /// - `reject_fn`, if called, will receive ownership of `reply_env`, `reject_env`, and [`cleanup_env`](call_on_cleanup).
 #[inline]
@@ -271,12 +271,11 @@ pub unsafe fn call_new(
     // SAFETY:
     // - callee, being &[u8], is a readable sequence of bytes and therefore safe to pass as ptr and len
     //   as the callee in ic0.call_new
-    // - name, being &str, is a readable sequence of bytes and therefore safe to pass as ptr and len
-    //   as the name in ic0.call_new
+    // - name is a readable string and therefore safe to pass as ptr and len as the name in ic0.call_new
     // - reply_fn is a function with signature (env : usize) -> () and required to be a safe entrypoint if reply_env is used
     //   as the env, and is therefore safe to pass as the reply fn for ic0.call_new if reply_env is passed as the reply env
     // - reply_env is the correct env parameter for reply_fn
-    // - reject_fn is a function with signature (env : usize) -> () and required to be a safe entrypoint if reject_env is used,
+    // - reject_fn is a function with signature (env : usize) -> () and required to be a safe entrypoint if reject_env is used
     //   as the env, and is therefore safe to pass as the reject fn for ic0.call_new if reject_env is passed as the reject env
     // - reject_env is the correct env parameter for reject_fn
     unsafe {
@@ -298,12 +297,11 @@ pub fn call_new_oneway(callee: &[u8], name: &str) {
     // SAFETY:
     // - callee, being &[u8], is a readable sequence of bytes and therefore safe to pass as ptr and len
     //   as the callee in ic0.call_new
-    // - name, being &str, is a readable sequence of bytes and therefore safe to pass as ptr and len
-    //   as the name in ic0.call_new
+    // - name is a readable string and therefore safe to pass as ptr and len as the name in ic0.call_new
     // - `usize::MAX` is a function pointer the wasm module cannot possibly contain and is therefore safe to pass as
     //   `reply_fun` and `reject_fun` to ic0.call_new
-    // - When the `reply_fun` and `reject_fun` functions do not exist and therefore will never be called, any value is safe to pass
-    //   as `reply_env` and `reject_env` to `ic0.call_new`
+    // - When the `reply_fun` and `reject_fun` functions do not exist and therefore will never be called, any value
+    //   is safe to pass as `reply_env` and `reject_env` to `ic0.call_new`
     //
     // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
     unsafe {
@@ -323,7 +321,7 @@ pub fn call_new_oneway(callee: &[u8], name: &str) {
 /// # Safety
 ///
 /// - `cleanup_fn` is required to be safely callable as a canister entrypoint with `cleanup_env`.
-/// - Ownership of `cleanup_env` is acquired by the system.
+/// - Ownership of `cleanup_env` is acquired by this function.
 /// - `cleanup_fn`, if called, will receive ownership of `cleanup_env`, [`reply_env`](call_new), and [`reject_env`](call_new)
 #[inline]
 pub unsafe fn call_on_cleanup(cleanup_fn: unsafe extern "C" fn(env: usize), cleanup_env: usize) {
@@ -396,7 +394,7 @@ pub fn stable64_read(dst: &mut [u8], offset: u64) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn stable64_read_uninit(dst: &mut [MaybeUninit<u8>], offset: u64) {
     // SAFETY: dst is a writable sequence of bytes and therefore is safe to pass as ptr and len to ic0.stable64_read
@@ -419,7 +417,7 @@ pub fn root_key_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn root_key_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.root_key_copy
@@ -454,7 +452,7 @@ pub fn data_certificate_copy(dst: &mut [u8], offset: usize) {
 
 /// # Safety
 ///
-/// This function will fully initialize `dst`.
+/// This function will fully initialize `dst` (or trap if it cannot).
 #[inline]
 pub fn data_certificate_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: dst, being &mut [u8], is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.data_certificate_copy
