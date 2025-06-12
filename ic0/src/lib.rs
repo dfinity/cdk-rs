@@ -215,6 +215,16 @@ pub fn subnet_self_copy(dst: &mut [u8], offset: usize) {
     unsafe { sys::subnet_self_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
 }
 
+/// # Safety
+///
+/// This function will fully initialize `dst`.
+#[inline]
+pub fn subnet_self_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.subnet_self_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::subnet_self_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
 #[inline]
 pub fn msg_method_name_size() -> usize {
     // SAFETY: ic0.msg_method_name_size is always safe to call
@@ -223,6 +233,16 @@ pub fn msg_method_name_size() -> usize {
 
 #[inline]
 pub fn msg_method_name_copy(dst: &mut [u8], offset: usize) {
+    // SAFETY: target is a writable sequence of bytes and therefore safe to pass to ic0.msg_method_name_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::msg_method_name_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+/// # Safety
+///
+/// This function will fully initialize `dst`.
+#[inline]
+pub fn msg_method_name_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
     // SAFETY: target is a writable sequence of bytes and therefore safe to pass to ic0.msg_method_name_copy
     // The offset parameter does not affect safety
     unsafe { sys::msg_method_name_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
