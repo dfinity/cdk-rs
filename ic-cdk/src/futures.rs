@@ -124,9 +124,9 @@ pub fn spawn_017_compat<F: 'static + Future<Output = ()>>(fut: F) {
     // We poll it once with an unimplemented waker, then spawn it, which will poll it again with the real waker.
     // In a correctly implemented future, this second poll should overwrite the fake waker with the real one.
     // If the `poll` function calls `wake`, call it again until it is 'really' pending.
-    let dummy = Arc::new(DummyWaker(AtomicBool::new(false)));
     let mut pin = Box::pin(fut);
     loop {
+        let dummy = Arc::new(DummyWaker(AtomicBool::new(false)));
         let poll = pin
             .as_mut()
             .poll(&mut Context::from_waker(&Waker::from(dummy.clone())));
