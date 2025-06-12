@@ -134,7 +134,7 @@ pub fn msg_cycles_refunded128() -> u128 {
 #[inline]
 pub fn msg_cycles_accept128(max: u128) -> u128 {
     let low = (max & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF) as u64;
-    let high = (max & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) as u64;
+    let high = ((max & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64) as u64;
     let mut dst_bytes = [0_u8; 16];
     // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass as ptr to ic0.msg_cycles_accept128
     // The max_amount_high and max_amount_low parameters do not affect safety
@@ -147,7 +147,7 @@ pub fn msg_cycles_accept128(max: u128) -> u128 {
 #[inline]
 pub fn cycles_burn128(amount: u128) -> u128 {
     let low = (amount & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF) as u64;
-    let high = (amount & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) as u64;
+    let high = ((amount & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64) as u64;
     let mut dst_bytes = [0_u8; 16];
     // SAFETY: dst_bytes is a writable sequence of 16 bytes and therefore safe to pass to ic0.cycles_burn128
     // The amount_high and amount_low parameters do not affect safety
@@ -333,7 +333,7 @@ pub fn call_with_best_effort_response(timeout_seconds: u32) {
 #[inline]
 pub fn call_cycles_add128(amount: u128) {
     let low = (amount & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF) as u64;
-    let high = (amount & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) as u64;
+    let high = ((amount & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64) as u64;
     // SAFETY: ic0.call_cycles_add128 is always safe to call
     unsafe { sys::call_cycles_add128(high, low) }
 }
