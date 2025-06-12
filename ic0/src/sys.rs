@@ -112,11 +112,11 @@ extern "C" {
     pub fn cost_create_canister(dst: usize);
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of 16 bytes (LE u128). The `request_size` and `max_res_bytes` parameters do not affect safety"]
     pub fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize);
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable sqeuence of bytes with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
     pub fn cost_sign_with_ecdsa(src: usize, size: usize, ecdsa_curve: u32, dst: usize) -> u32;
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable sequence of bytes with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `algorithm` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `algorithm` parameter does not affect safety"]
     pub fn cost_sign_with_schnorr(src: usize, size: usize, algorithm: u32, dst: usize) -> u32;
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `vetkd_curve` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `vetkd_curve` parameter does not affect safety"]
     pub fn cost_vetkd_derive_key(src: usize, size: usize, vetkd_curve: u32, dst: usize) -> u32;
     #[doc = "# Safety\n\n`src` must be a pointer to a readable sequence of bytes with size `size`"]
     pub fn debug_print(src: usize, size: usize);
@@ -338,7 +338,7 @@ mod non_wasm {
     pub unsafe fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize) {
         panic!("cost_http_request should only be called inside canisters.");
     }
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable sqeuence of bytes with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
     pub unsafe fn cost_sign_with_ecdsa(
         src: usize,
         size: usize,
@@ -347,7 +347,7 @@ mod non_wasm {
     ) -> u32 {
         panic!("cost_sign_with_ecdsa should only be called inside canisters.");
     }
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable sequence of bytes with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `algorithm` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `algorithm` parameter does not affect safety"]
     pub unsafe fn cost_sign_with_schnorr(
         src: usize,
         size: usize,
@@ -356,7 +356,7 @@ mod non_wasm {
     ) -> u32 {
         panic!("cost_sign_with_schnorr should only be called inside canisters.");
     }
-    #[doc = "# Safety\n\n- `src` must be a pointer to a readable string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `vetkd_curve` parameter does not affect safety"]
+    #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `vetkd_curve` parameter does not affect safety"]
     pub unsafe fn cost_vetkd_derive_key(
         src: usize,
         size: usize,
