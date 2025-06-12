@@ -121,6 +121,7 @@ fn parse_safety_comments(file: &str) -> HashMap<String, String> {
     let mut cursor = 0;
     while cursor < lines.len() {
         if lines[cursor].is_empty() || lines[cursor].trim().starts_with("//") {
+            cursor += 1;
             continue;
         }
         let fn_name = lines[cursor]
@@ -140,11 +141,21 @@ fn parse_safety_comments(file: &str) -> HashMap<String, String> {
         }
         cursor += 1;
         let mut comment = String::new();
-        while let Some(comment_line) = lines[cursor].strip_prefix("    ") {
-            comment.push_str(comment_line.trim());
-            comment.push('\n');
-            cursor += 1;
-            if cursor >= lines.len() {
+        loop {
+            if let Some(comment_line) = lines[cursor].strip_prefix("    ") {
+                comment.push_str(comment_line.trim());
+                comment.push('\n');
+                cursor += 1;
+                if cursor >= lines.len() {
+                    break;
+                }
+            } else if lines[cursor].trim().is_empty() {
+                comment.push('\n');
+                cursor += 1;
+                if cursor >= lines.len() {
+                    break;
+                }
+            } else {
                 break;
             }
         }
