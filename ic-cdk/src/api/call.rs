@@ -110,33 +110,38 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
             } => {
                 let callee = id.as_slice();
                 let args = arg.as_ref();
-                let state_ptr = Arc::into_raw(Arc::clone(&self_ref.state));
+                let state_ptr =
+                    Arc::<RwLock<CallFutureState<T>>>::into_raw(Arc::clone(&self_ref.state));
                 // SAFETY:
-                // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-                // `callback` is a function with signature (env : usize) -> () and therefore can be called as both reply and reject fn for ic0.call_new.
-                // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `callback`.
-                // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-                // `cleanup` is a function with signature (env : usize) -> () and therefore can be called as a cleanup fn for ic0.call_on_cleanup.
-                // `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for `cleanup`.
-                // ic0.call_perform is always safe to call.
-                // callback and cleanup are safe to parameterize with T because they will always be called in the
-                //   Executing or Trapped states which do not contain a T.
+                // `callback` is intended as an entrypoint and therefore can be called as both reply and reject fn
+                //      for ic0.call_new.
+                // - `cleanup` is intended as an entrypoint and therefore can be called as cleanup fn for ic0.call_on_cleanup.
+                // - `state_ptr` is a pointer created via Arc::<RwLock<CallFutureState<T>>>::into_raw, and can therefore be passed as the userdata for
+                //      `callback` and `cleanup`.
+                // - callback and cleanup are safe to parameterize with T because they will always be called in the
+                //      Executing or Trapped states which do not contain a T.
+                // - if-and-only-if ic0.call_perform returns 0, exactly one(‡) of `callback` or `cleanup`
+                //      receive ownership of `state_ptr`
+                // - both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
+                //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
+                //
+                // ‡ The flow from outside the WASM runtime is that the callback runs, it traps, state is rolled back,
+                //   and the cleanup callback runs afterwards. Inside the runtime, there is no difference between
+                //   'state is rolled back to before the callback was called' and 'the callback was never called'.
+                //   So from the code's perspective, exactly one function is called.
                 let err_code = unsafe {
                     ic0::call_new(
-                        callee.as_ptr() as usize,
-                        callee.len(),
-                        method.as_ptr() as usize,
-                        method.len(),
-                        callback::<T> as usize as usize,
+                        callee,
+                        &method,
+                        callback::<T>,
                         state_ptr as usize,
-                        callback::<T> as usize as usize,
+                        callback::<T>,
                         state_ptr as usize,
                     );
 
-                    ic0::call_data_append(args.as_ptr() as usize, args.len());
+                    ic0::call_data_append(args);
                     add_payment(payment);
-                    ic0::call_on_cleanup(cleanup::<T> as usize as usize, state_ptr as usize);
+                    ic0::call_on_cleanup(cleanup::<T>, state_ptr as usize);
                     ic0::call_perform()
                 };
 
@@ -144,6 +149,10 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 if err_code != 0 {
                     *state = CallFutureState::PostComplete;
                     // SAFETY: We just constructed this from Arc::into_raw.
+                    // - `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
+                    // - by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
+                    //      to any functions
+                    // therefore, there is an outstanding handle to `state`, which it is safe to deallocate
                     unsafe {
                         Arc::from_raw(state_ptr);
                     }
@@ -190,8 +199,9 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
-unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState<T>>>::into_raw as userdata.
+unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
+    let state_ptr = env as *const RwLock<CallFutureState<T>>;
     ic_cdk_executor::in_callback_executor_context(|| {
         // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
         let state = unsafe { Arc::from_raw(state_ptr) };
@@ -223,8 +233,9 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutur
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
-unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(state_ptr: *const RwLock<CallFutureState<T>>) {
+/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState<T>>>::into_raw as userdata.
+unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
+    let state_ptr = env as *const RwLock<CallFutureState<T>>;
     // Flag that we do not want to actually wake the task - we
     // want to drop it *without* executing it.
     ic_cdk_executor::in_callback_cancellation_context(|| {
@@ -262,12 +273,7 @@ fn add_payment(payment: u128) {
     if payment == 0 {
         return;
     }
-    let high = (payment >> 64) as u64;
-    let low = (payment & u64::MAX as u128) as u64;
-    // SAFETY: ic0.call_cycles_add128 is always safe to call.
-    unsafe {
-        ic0::call_cycles_add128(high, low);
-    }
+    ic0::call_cycles_add128(payment);
 }
 
 /// Sends a one-way message with `payment` cycles attached to it that invokes `method` with
@@ -329,34 +335,10 @@ pub fn notify_raw(
     payment: u128,
 ) -> Result<(), RejectionCode> {
     let callee = id.as_slice();
-    // We set all callbacks to -1, which is guaranteed to be invalid callback index.
-    // The system will still deliver the reply, but it will trap immediately because the callback
-    // is not a valid function. See
-    // https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls
-    // for more context.
-
-    // SAFETY:
-    // `callee`, being &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // `method`, being &str, is a readable sequence of bytes and therefore can be passed to ic0.call_new.
-    // -1, i.e. usize::MAX, is a function pointer the wasm module cannot possibly contain, and therefore can be passed as both reply and reject fn for ic0.call_new.
-    // Since the callback function will never be called, any value can be passed as its context parameter, and therefore -1 can be passed for those values.
-    // `args`, being a &[u8], is a readable sequence of bytes and therefore can be passed to ic0.call_data_append.
-    // ic0.call_perform is always safe to call.
-    let err_code = unsafe {
-        ic0::call_new(
-            callee.as_ptr() as usize,
-            callee.len(),
-            method.as_ptr() as usize,
-            method.len(),
-            /* reply_fun = */ usize::MAX,
-            /* reply_env = */ usize::MAX,
-            /* reject_fun = */ usize::MAX,
-            /* reject_env = */ usize::MAX,
-        );
-        add_payment(payment);
-        ic0::call_data_append(args_raw.as_ptr() as usize, args_raw.len());
-        ic0::call_perform()
-    };
+    ic0::call_new_oneway(callee, method);
+    add_payment(payment);
+    ic0::call_data_append(args_raw);
+    let err_code = ic0::call_perform();
     match err_code {
         0 => Ok(()),
         c => Err(RejectionCode::from(c)),
@@ -685,8 +667,7 @@ pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
     note = "Please use `ic_cdk::api::msg_reject_code` instead."
 )]
 pub fn reject_code() -> RejectionCode {
-    // SAFETY: ic0.msg_reject_code is always safe to call.
-    let code = unsafe { ic0::msg_reject_code() };
+    let code = ic0::msg_reject_code();
     RejectionCode::from(code)
 }
 
@@ -696,13 +677,9 @@ pub fn reject_code() -> RejectionCode {
     note = "Please use `ic_cdk::api::msg_reject_msg` instead."
 )]
 pub fn reject_message() -> String {
-    // SAFETY: ic0.msg_reject_msg_size is always safe to call.
-    let len: u32 = unsafe { ic0::msg_reject_msg_size() as u32 };
-    let mut bytes = vec![0u8; len as usize];
-    // SAFETY: `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_reject_msg_copy with no offset
-    unsafe {
-        ic0::msg_reject_msg_copy(bytes.as_mut_ptr() as usize, 0, len as usize);
-    }
+    let len = ic0::msg_reject_msg_size();
+    let mut bytes = vec![0u8; len];
+    ic0::msg_reject_msg_copy(&mut bytes, 0);
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
@@ -713,10 +690,7 @@ pub fn reject_message() -> String {
 )]
 pub fn reject(message: &str) {
     let err_message = message.as_bytes();
-    // SAFETY: `err_message`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
-    unsafe {
-        ic0::msg_reject(err_message.as_ptr() as usize, err_message.len());
-    }
+    ic0::msg_reject(err_message);
 }
 
 /// An io::Write for message replies.
@@ -729,10 +703,7 @@ pub struct CallReplyWriter;
 
 impl std::io::Write for CallReplyWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        // SAFETY: buf, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reply_data_append.
-        unsafe {
-            ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len());
-        }
+        ic0::msg_reply_data_append(buf);
         Ok(buf.len())
     }
 
@@ -748,10 +719,7 @@ impl std::io::Write for CallReplyWriter {
 )]
 pub fn reply<T: ArgumentEncoder>(reply: T) {
     write_args(&mut CallReplyWriter, reply).expect("Could not encode reply.");
-    // SAFETY: ic0.msg_reply is always safe to call.
-    unsafe {
-        ic0::msg_reply();
-    }
+    ic0::msg_reply();
 }
 
 /// Returns the amount of cycles that were transferred by the caller
@@ -771,12 +739,7 @@ pub fn msg_cycles_available() -> u64 {
     note = "Please use `ic_cdk::api::msg_cycles_available` instead."
 )]
 pub fn msg_cycles_available128() -> u128 {
-    let mut recv = 0u128;
-    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_available128
-    unsafe {
-        ic0::msg_cycles_available128(&mut recv as *mut u128 as usize);
-    }
-    recv
+    ic0::msg_cycles_available128()
 }
 
 /// Returns the amount of cycles that came back with the response as a refund.
@@ -798,12 +761,7 @@ pub fn msg_cycles_refunded() -> u64 {
     note = "Please use `ic_cdk::api::msg_cycles_refunded` instead."
 )]
 pub fn msg_cycles_refunded128() -> u128 {
-    let mut recv = 0u128;
-    // SAFETY: recv is writable and sixteen bytes wide, and therefore is safe to pass to ic0.msg_cycles_refunded128
-    unsafe {
-        ic0::msg_cycles_refunded128(&mut recv as *mut u128 as usize);
-    }
-    recv
+    ic0::msg_cycles_refunded128()
 }
 
 /// Moves cycles from the call to the canister balance.
@@ -825,14 +783,7 @@ pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     note = "Please use `ic_cdk::api::msg_cycles_accept` instead."
 )]
 pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
-    let high = (max_amount >> 64) as u64;
-    let low = (max_amount & u64::MAX as u128) as u64;
-    let mut recv = 0u128;
-    // SAFETY: `recv` is writable and sixteen bytes wide, and therefore safe to pass to ic0.msg_cycles_accept128
-    unsafe {
-        ic0::msg_cycles_accept128(high, low, &mut recv as *mut u128 as usize);
-    }
-    recv
+    ic0::msg_cycles_accept128(max_amount)
 }
 
 /// Returns the argument data as bytes.
@@ -841,14 +792,11 @@ pub fn msg_cycles_accept128(max_amount: u128) -> u128 {
     note = "Please use `ic_cdk::api::msg_arg_data` instead."
 )]
 pub fn arg_data_raw() -> Vec<u8> {
-    // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    let len: usize = unsafe { ic0::msg_arg_data_size() };
+    let len: usize = ic0::msg_arg_data_size();
     let mut bytes = Vec::with_capacity(len);
-    // SAFETY:
-    // `bytes`, being mutable and allocated to `len` bytes, is safe to pass to ic0.msg_arg_data_copy with no offset
-    // ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
+    ic0::msg_arg_data_copy_uninit(&mut bytes.spare_capacity_mut()[..len], 0);
+    // SAFETY: ic0.msg_arg_data_copy writes to all of `bytes[0..len]`, so `set_len` is safe to call with the new len.
     unsafe {
-        ic0::msg_arg_data_copy(bytes.as_mut_ptr() as usize, 0, len);
         bytes.set_len(len);
     }
     bytes
@@ -860,8 +808,7 @@ pub fn arg_data_raw() -> Vec<u8> {
     note = "Please use `ic_cdk::api::msg_arg_data` instead."
 )]
 pub fn arg_data_raw_size() -> usize {
-    // SAFETY: ic0.msg_arg_data_size is always safe to call.
-    unsafe { ic0::msg_arg_data_size() }
+    ic0::msg_arg_data_size()
 }
 
 /// Replies with the bytes passed
@@ -871,11 +818,9 @@ pub fn arg_data_raw_size() -> usize {
 )]
 pub fn reply_raw(buf: &[u8]) {
     if !buf.is_empty() {
-        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.msg_reject.
-        unsafe { ic0::msg_reply_data_append(buf.as_ptr() as usize, buf.len()) }
+        ic0::msg_reply_data_append(buf);
     };
-    // SAFETY: ic0.msg_reply is always safe to call.
-    unsafe { ic0::msg_reply() };
+    ic0::msg_reply();
 }
 
 #[deprecated(
@@ -945,10 +890,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) ->
     note = "Please use `ic_cdk::api::accept_message` instead."
 )]
 pub fn accept_message() {
-    // SAFETY: ic0.accept_message is always safe to call.
-    unsafe {
-        ic0::accept_message();
-    }
+    ic0::accept_message();
 }
 
 /// Returns the name of current canister method.
@@ -957,13 +899,9 @@ pub fn accept_message() {
     note = "Please use `ic_cdk::api::msg_method_name` instead."
 )]
 pub fn method_name() -> String {
-    // SAFETY: ic0.msg_method_name_size is always safe to call.
-    let len: u32 = unsafe { ic0::msg_method_name_size() as u32 };
-    let mut bytes = vec![0u8; len as usize];
-    // SAFETY: `bytes` is writable and allocated to `len` bytes, and therefore can be safely passed to ic0.msg_method_name_copy
-    unsafe {
-        ic0::msg_method_name_copy(bytes.as_mut_ptr() as usize, 0, len as usize);
-    }
+    let len = ic0::msg_method_name_size();
+    let mut bytes = vec![0u8; len];
+    ic0::msg_method_name_copy(&mut bytes, 0);
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
@@ -975,8 +913,7 @@ pub fn method_name() -> String {
     note = "This method conceptually doesn't belong to this module. Please use `ic_cdk::api::performance_counter` instead."
 )]
 pub fn performance_counter(counter_type: u32) -> u64 {
-    // SAFETY: ic0.performance_counter is always safe to call.
-    unsafe { ic0::performance_counter(counter_type) }
+    ic0::performance_counter(counter_type)
 }
 
 /// Pretends to have the Candid type `T`, but unconditionally errors
