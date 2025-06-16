@@ -1,4 +1,12 @@
-//! Raw bindings to the [Internet Computer system API](https://internetcomputer.org/docs/current/references/ic-interface-spec#system-api-imports).
+//! Bindings to the [Internet Computer system API](https://internetcomputer.org/docs/current/references/ic-interface-spec#system-api-imports).
+//!
+//! The raw bindings can be found in the [`sys`] module. The functions in the crate root provide slightly higher-level
+//! bindings in terms of slices instead of pointers/lengths, accurately typed pointers, etc., but otherwise does not adapt
+//! the API. Where this is all that is needed for the functions to be safe, they are marked as safe, but function pointers
+//! cannot be made safe and as such `call_new` is still unsafe.
+//!
+//! Any function `ic0.foo` that would write to a user buffer has two versions, `foo` which takes `&mut [u8]` and
+//! `foo_uninit` which takes `&mut [MaybeUninit<u8>]`.
 
 #![warn(
     elided_lifetimes_in_paths,
