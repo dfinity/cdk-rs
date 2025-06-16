@@ -203,13 +203,14 @@ extern "C" {{"#,
             }
         }
 
-        r = quote! {#r;};
-        if let Some(comment) = safety_comments.get(&fn_name.to_string()) {
-            r = quote! {
-                #[doc = #comment]
-                #r
-            }
-        }
+        let Some(comment) = safety_comments.get(&fn_name.to_string()) else {
+            panic!("missing safety comment for {fn_name}")
+        };
+
+        r = quote! {
+            #[doc = #comment]
+            #r;
+        };
         writeln!(f, "{}", r).unwrap();
     }
 
@@ -241,18 +242,16 @@ mod non_wasm{{"#,
         }
 
         let panic_str = format!("{} should only be called inside canisters.", fn_name);
+        let Some(comment) = safety_comments.get(&fn_name.to_string()) else {
+            panic!("missing safety comment for {fn_name}")
+        };
 
         r = quote! {
-        #r {
-            panic!(#panic_str);
-        }};
-
-        if let Some(comment) = safety_comments.get(&fn_name.to_string()) {
-            r = quote! {
-                #[doc = #comment]
-                #r
+            #[doc = #comment]
+            #r {
+                panic!(#panic_str);
             }
-        }
+        };
         writeln!(f, "{}", r).unwrap();
     }
 
