@@ -11,7 +11,6 @@ readme = "README.md"
 categories = ["api-bindings", "development-tools::ffi"]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
-links = "ic0"
 
 [dev-dependencies]
 quote.workspace = true
