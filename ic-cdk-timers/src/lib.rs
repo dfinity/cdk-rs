@@ -303,7 +303,7 @@ extern "C" fn timer_executor() {
                 ic_cdk::futures::in_executor_context(move || {
                     ic_cdk::futures::spawn(async move {
                         func.call_mut().await;
-                        TASKS.with(|tasks: &RefCell<SlotMap<TimerId, Task>>| {
+                        TASKS.with(|tasks| {
                             tasks
                                 .borrow_mut()
                                 .get_mut(task_id)
