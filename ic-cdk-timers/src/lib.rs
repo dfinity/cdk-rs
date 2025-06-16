@@ -5,7 +5,7 @@
 //! ```rust,no_run
 //! # use std::time::Duration;
 //! # fn main() {
-//! ic_cdk_timers::set_timer(Duration::from_secs(1), || ic_cdk::println!("Hello from the future!"));
+//! ic_cdk_timers::set_timer(Duration::from_secs(1), async { ic_cdk::println!("Hello from the future!") });
 //! # }
 //! ```
 
