@@ -299,16 +299,24 @@ extern "C" fn timer_executor() {
                 ic_cdk::futures::in_executor_context(|| ic_cdk::futures::spawn(fut));
                 TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
             }
-            Task::Repeated { mut func, interval } => {
+            Task::Repeated { func, interval } => {
                 ic_cdk::futures::in_executor_context(move || {
                     ic_cdk::futures::spawn(async move {
-                        func.call_mut().await;
-                        TASKS.with(|tasks| {
-                            tasks
-                                .borrow_mut()
-                                .get_mut(task_id)
-                                .map(|slot| *slot = Task::Repeated { func, interval })
-                        });
+                        struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
+                        let mut guard = RepeatGuard(Some(func), task_id, interval);
+                        guard.0.as_mut().unwrap().call_mut().await;
+                        impl Drop for RepeatGuard {
+                            fn drop(&mut self) {
+                                TASKS.with(|tasks| {
+                                    tasks.borrow_mut().get_mut(self.1).map(|slot| {
+                                        *slot = Task::Repeated {
+                                            func: self.0.take().unwrap(),
+                                            interval: self.2,
+                                        }
+                                    })
+                                });
+                            }
+                        }
                     })
                 });
             }
