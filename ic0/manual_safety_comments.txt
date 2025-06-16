@@ -1,4 +1,6 @@
-// Paste the function header from ic0.txt, then indent a comment by four spaces on subsequent lines.
+// Paste the function header from ic0.txt with no indentation, then indent a comment by four spaces on subsequent lines.
+// If the function is in any way unsafe, the safety comment should exhaustively describe all safety preconditions for the
+// parameters that have them, and list the parameters that do not.
 ic0.msg_arg_data_size : () -> I;                                                      // I U RQ NRQ CQ Ry CRy F
     Always safe to call
 ic0.msg_arg_data_copy : (dst : I, offset : I, size : I) -> ();                        // I U RQ NRQ CQ Ry CRy F
