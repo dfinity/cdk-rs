@@ -6,6 +6,7 @@ use syn::token::Comma;
 use syn::{parenthesized, Error};
 use syn::{FnArg, Ident, Token, TypePath};
 
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -114,15 +115,67 @@ impl Parse for IC0 {
     }
 }
 
+fn parse_safety_comments(file: &str) -> HashMap<String, String> {
+    let mut comments = HashMap::new();
+    let lines = file.lines().collect::<Vec<_>>();
+    let mut cursor = 0;
+    while cursor < lines.len() {
+        if lines[cursor].is_empty() || lines[cursor].trim().starts_with("//") {
+            cursor += 1;
+            continue;
+        }
+        let fn_name = lines[cursor]
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .strip_prefix("ic0.")
+            .unwrap();
+        while !lines[cursor].contains(";") {
+            cursor += 1;
+            if cursor >= lines.len() {
+                panic!(
+                    "unexpected eof, no semicolon found for function: {}",
+                    fn_name
+                );
+            }
+        }
+        cursor += 1;
+        let mut comment = String::new();
+        loop {
+            if let Some(comment_line) = lines[cursor].strip_prefix("    ") {
+                comment.push_str(comment_line.trim());
+                comment.push('\n');
+                cursor += 1;
+                if cursor >= lines.len() {
+                    break;
+                }
+            } else if lines[cursor].trim().is_empty() {
+                comment.push('\n');
+                cursor += 1;
+                if cursor >= lines.len() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        comments.insert(
+            fn_name.to_string(),
+            format!("# Safety\n\n{}", comment.trim()),
+        );
+    }
+    comments
+}
+
 fn main() {
     let s = include_str!("../ic0.txt");
     let s = s.replace('I', "usize");
     let s = s.replace("i32", "u32");
     let s = s.replace("i64", "u64");
     let ic0: IC0 = syn::parse_str(&s).unwrap();
-
+    let safety_comments = parse_safety_comments(include_str!("../manual_safety_comments.txt"));
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    d.push("src/ic0.rs");
+    d.push("src/sys.rs");
 
     let mut f = fs::File::create(d).unwrap();
 
@@ -150,7 +203,14 @@ extern "C" {{"#,
             }
         }
 
-        r = quote! {#r;};
+        let Some(comment) = safety_comments.get(&fn_name.to_string()) else {
+            panic!("missing safety comment for {fn_name}")
+        };
+
+        r = quote! {
+            #[doc = #comment]
+            #r;
+        };
         writeln!(f, "{}", r).unwrap();
     }
 
@@ -182,11 +242,16 @@ mod non_wasm{{"#,
         }
 
         let panic_str = format!("{} should only be called inside canisters.", fn_name);
+        let Some(comment) = safety_comments.get(&fn_name.to_string()) else {
+            panic!("missing safety comment for {fn_name}")
+        };
 
         r = quote! {
-        #r {
-            panic!(#panic_str);
-        }};
+            #[doc = #comment]
+            #r {
+                panic!(#panic_str);
+            }
+        };
         writeln!(f, "{}", r).unwrap();
     }
 
