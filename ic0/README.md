@@ -16,6 +16,6 @@ When interface-spec releases a new version that modify [system API][1]:
 2. copy any new function headers to `manual_safety_comments.txt`, and add a safety comment for the function;
 3. execute `cargo run --example=ic0build`;
 
-`src/ic0.rs` should be updated.
+`src/sys.rs` should be updated.
 
 [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-imports
