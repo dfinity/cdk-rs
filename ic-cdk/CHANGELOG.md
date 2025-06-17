@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.4] - 2025-06-17
+
 ### Added
 
 - New `ic_cdk::futures` function `spawn_017_compat`. This has the code ordering behavior of 0.17, with spawned futures run immediately instead of waiting for the current code to suspend.
