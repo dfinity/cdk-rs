@@ -1,5 +1,6 @@
 use candid::Principal;
 use ic_cdk::call::Call;
+use ic_cdk::futures::{spawn, spawn_017_compat};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
@@ -162,6 +163,19 @@ async fn timer_on_panic() {
         .await
         .unwrap();
     ic_cdk::trap("testing");
+}
+
+#[update]
+async fn spawn_ordering() {
+    let notifs = notifications_received();
+    spawn_017_compat(async { on_notify() });
+    assert_eq!(
+        notifications_received(),
+        notifs + 1,
+        "spawn_017_compat should run immediately"
+    );
+    spawn(async { on_notify() });
+    assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
 }
 
 fn main() {}
