@@ -127,3 +127,16 @@ fn channels() {
     let (greeting,): (String,) = update(&pic, canister_id, "await_channel_completion", ()).unwrap();
     assert_eq!(greeting, "Hello, myself");
 }
+
+#[test]
+fn spawn_ordering() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let () = update(&pic, canister_id, "spawn_ordering", ()).unwrap();
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 2);
+}
