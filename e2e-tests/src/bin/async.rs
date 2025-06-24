@@ -1,8 +1,12 @@
 use candid::Principal;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use ic_cdk::call::Call;
 use ic_cdk::futures::{spawn, spawn_017_compat};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -55,6 +59,24 @@ async fn async_then_panic() {
         .await
         .unwrap();
     panic!();
+}
+
+#[update]
+async fn panic_then_continue() {
+    let cell = Rc::new(Cell::new(true));
+    let fut1 = async_then_panic_if_first(cell.clone());
+    let fut2 = async_then_panic_if_first(cell);
+    let mut coll = FuturesUnordered::from_iter([fut1, fut2]);
+    while (coll.next().await).is_some() {}
+}
+
+async fn async_then_panic_if_first(cell: Rc<Cell<bool>>) {
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    if cell.replace(false) {
+        panic!("first");
+    }
 }
 
 #[query]
