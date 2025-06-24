@@ -76,11 +76,8 @@ fn poll_all() {
         // Temporarily remove the task from the table. We need to execute it while `TASKS` is not borrowed, because it may schedule more tasks.
         let Some(mut task) = TASKS.with_borrow_mut(|tasks| tasks.get_mut(task_id).map(mem::take))
         else {
-            // The task is dropped on the first callback that panics, but the last callback is the one that sets the flag.
-            // So if multiple calls are sent concurrently, the waker will be asked to wake a future that no longer exists.
-            // This should be the only possible case in which this happens.
-            panic!("Call already trapped");
-            // This also should not happen because the CallFuture handles this itself. But FuturesUnordered introduces some chaos.
+            // This waker handle appears to be dead. The most likely cause is that the method returned before a canceled call came back.
+            continue;
         };
         if in_query && !task.query {
             TASKS.with_borrow_mut(|tasks| tasks[task_id] = task);
