@@ -76,8 +76,11 @@ fn poll_all() {
         // Temporarily remove the task from the table. We need to execute it while `TASKS` is not borrowed, because it may schedule more tasks.
         let Some(mut task) = TASKS.with_borrow_mut(|tasks| tasks.get_mut(task_id).map(mem::take))
         else {
-            // This waker handle appears to be dead. The most likely cause is that the method returned before a canceled call came back.
+            // This waker handle appears to be dead. The most likely cause is that the method returned before
+            // a canceled call came back.
             continue;
+            // In the case that a task panicked and that's why it's missing, but it was in an earlier callback so a later
+            // one tries to re-wake, the responsibility for re-trapping lies with CallFuture.
         };
         if in_query && !task.query {
             TASKS.with_borrow_mut(|tasks| tasks[task_id] = task);
