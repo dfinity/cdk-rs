@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.5] - 2025-06-25
+
+### Fixed
+
+- Tasks which return after canceling futures are no longer marked as trapped
+
+### Changed
+
+- Updated to `ic0` v1.0.0
+
 ## [0.18.4] - 2025-06-17
 
 ### Added
