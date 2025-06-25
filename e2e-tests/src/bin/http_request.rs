@@ -17,6 +17,7 @@ async fn get_without_transform() {
         body: Some(vec![1]),
         max_response_bytes: Some(100_000),
         transform: None,
+        is_replicated: Some(true),
     };
 
     let res = http_request(&args).await.unwrap();
