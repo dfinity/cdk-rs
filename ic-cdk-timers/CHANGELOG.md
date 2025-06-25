@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.12.2] - 2025-06-25
+
+- Upgrade `ic0` to v1.0.
+
 ## [0.12.1] - 2025-06-17
 
 - Upgrade `ic0` to v0.25.
