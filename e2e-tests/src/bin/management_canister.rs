@@ -224,12 +224,12 @@ async fn provisional() {
         log_visibility: Some(LogVisibility::Controllers),
         ..Default::default()
     };
+    // Using NNS Root Canister ID as specified_id.
+    let specified_id = Principal::from_text("r7inp-6aaaa-aaaaa-aaabq-cai").unwrap();
     let arg = ProvisionalCreateCanisterWithCyclesArgs {
         amount: Some(10_000_000_000_000u64.into()),
         settings: Some(settings),
-        specified_id: Some(Principal::from_slice(&[
-            255, 255, 255, 255, 255, 209, 0, 0, 1, 1,
-        ])),
+        specified_id: Some(specified_id),
     };
     let canister_id = provisional_create_canister_with_cycles(&arg)
         .await
