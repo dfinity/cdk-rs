@@ -362,9 +362,9 @@ fn dfn_macro(
     };
     let body = if signature.asyncness.is_some() {
         quote! {
-            ::ic_cdk::futures::#async_context_name(|| {
+            ::ic_cdk::futures::internals::#async_context_name(|| {
                 #guard
-                ::ic_cdk::futures::spawn(async {
+                ::ic_cdk::futures::internals::spawn_entering_protection_scope(async {
                     #arg_decode
                     let result = #function_call;
                     #return_encode
@@ -374,7 +374,7 @@ fn dfn_macro(
     } else {
         quote! {
             #guard
-            ::ic_cdk::futures::#async_context_name(|| {
+            ::ic_cdk::futures::internals::#async_context_name(|| {
                 #arg_decode
                 let result = #function_call;
                 #return_encode

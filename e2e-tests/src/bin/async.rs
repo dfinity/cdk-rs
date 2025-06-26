@@ -2,7 +2,7 @@ use candid::Principal;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use ic_cdk::call::Call;
-use ic_cdk::futures::{spawn, spawn_017_compat};
+use ic_cdk::futures::{spawn_017_compat, spawn_local};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::cell::Cell;
@@ -134,7 +134,7 @@ async fn invalid_reply_payload_does_not_trap() -> String {
 #[update]
 async fn await_channel_completion() -> String {
     let (tx, rx) = async_channel::bounded(1);
-    ic_cdk::futures::spawn(async move {
+    ic_cdk::futures::spawn_local(async move {
         let greeting: String = Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
             .with_arg("myself")
             .await
@@ -153,7 +153,7 @@ async fn schedule_on_panic() {
     impl Drop for Guard {
         fn drop(&mut self) {
             for _ in 0..3 {
-                ic_cdk::futures::spawn(async {
+                ic_cdk::futures::spawn_migratory(async {
                     on_notify();
                 })
             }
@@ -173,7 +173,7 @@ async fn timer_on_panic() {
         fn drop(&mut self) {
             for _ in 0..3 {
                 ic_cdk_timers::set_timer(Duration::ZERO, || {
-                    ic_cdk::futures::spawn(async {
+                    ic_cdk::futures::spawn_migratory(async {
                         on_notify();
                     })
                 });
@@ -196,7 +196,7 @@ async fn spawn_ordering() {
         notifs + 1,
         "spawn_017_compat should run immediately"
     );
-    spawn(async { on_notify() });
+    spawn_local(async { on_notify() });
     assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
 }
 

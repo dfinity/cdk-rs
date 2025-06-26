@@ -13,14 +13,14 @@
 //! }
 //! ```
 //!
-//! To run async tasks in the *background*, however, use [`spawn`]:
+//! To run async tasks in the *background*, however, use [`spawn_local`]:
 //!
 //! ```
-//! # use ic_cdk::{update, futures::spawn};
+//! # use ic_cdk::{update, futures::spawn_local};
 //! # async fn some_other_async_fn() {}
 //! #[update]
 //! async fn foo() {
-//!     spawn(async { some_other_async_fn().await; });
+//!     spawn_local(async { some_other_async_fn().await; });
 //!     // do other stuff
 //! }
 //! ```
@@ -29,18 +29,22 @@
 //! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
 //! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
 //!
+//! This task will only run as part of the canister method that spawned it, even if it is awoken from elsewhere. If the
+//! method returns before the task completes, it will trap (or cancel if you use [`spawn_weak`]).
+//!
+//! ## Running longer-lived background tasks
+//!
+//! Background tasks that can outlive the canister method can be spawned with [`spawn_migratory`].
 //! "Background" is a tricky subject on the IC. Background tasks can only run in the context of a canister message.
 //! If you await a future whose completion you manually trigger in code, such as sending to an async channel,
 //! then the code after the await will be in the call context of whatever you completed it in. This means that global state
-//! like [`caller`], [`in_replicated_execution`], and even [`canister_self`] may have changed. (The canister method
-//! itself cannot await anything triggered by another canister method, or you will get an error that it 'failed to reply'.)
-//! It will also take from that call's instruction limit, which can introduce hidden sources of instruction limit based traps.
+//! like [`in_replicated_execution`] and [`canister_self`] may have changed. It will also take from that call's instruction
+//! limit, which can introduce hidden sources of instruction limit based traps.
 //!
-//! Most importantly, a background task that runs in other call contexts must never trap. When it traps, it will cancel
+//! Most importantly, a background task that migrates between call contexts must never trap. When it traps, it will cancel
 //! (see below) the execution of the call whose context it's in, even though that call didn't do anything wrong, and it
-//! may not undo whatever caused it to trap, meaning the canister could end up bricked. Tasks that you expect to complete
-//! before the canister method ends are safe, but traps/panics in tasks that are expected to continue running into other
-//! calls/timers may produce surprising results and behavioral errors.
+//! may not undo whatever caused it to trap, meaning the canister could end up bricked. Note that calling the `msg_` functions
+//! from a migratory task will trap - if you need this data, fetch it before spawning the task.
 //!
 //! ## Automatic cancellation
 //!
@@ -57,12 +61,12 @@
 //!
 //! [`scopeguard`]: https://docs.rs/scopeguard
 //! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
-//! [`caller`]: crate::api::caller
 //! [`in_replicated_execution`]: crate::api::in_replicated_execution
 //! [`canister_self`]: crate::api::canister_self
 
 use std::{
     future::Future,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -70,32 +74,61 @@ use std::{
     task::{Context, Poll, Wake, Waker},
 };
 
-/// Spawn an asynchronous task to run in the background. For information about semantics, see
-/// [the module docs](self).
+use pin_project_lite::pin_project;
+
+pub mod internals;
+
+#[doc(hidden)]
+#[deprecated(since = "0.19.0", note = "Use spawn_local or spawn_migratory")]
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     ic_cdk_executor::spawn(future);
 }
 
-/// Execute an update function in a context that allows calling [`spawn`].
+/// Spawns an asynchronous task that will run during the current canister method.
 ///
-/// You do not need to worry about this function unless you are avoiding the attribute macros.
-///
-/// Background tasks will be polled in the process (and will not be run otherwise).
-/// Panics if called inside an existing executor context.
-pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
-    ic_cdk_executor::in_executor_context(f)
+/// If the task is not completed before the canister method returns, it will trap. If it should be canceled instead,
+/// use [`spawn_weak`].
+pub fn spawn_local<F: 'static + Future<Output = ()>>(future: F) {
+    pin_project! {
+        struct Noisy<F> {
+            #[pin] future: F
+        }
+        impl<F> PinnedDrop for Noisy<F> {
+            fn drop(_this: Pin<&mut Self>) {
+                if !ic_cdk_executor::is_recovering_from_trap() {
+                    ic0::trap(b"A local task did not complete before the canister method returned.");
+                }
+            }
+        }
+    }
+    impl<F: Future<Output = ()>> Future for Noisy<F> {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let this = self.project();
+            this.future.poll(cx)
+        }
+    }
+    ic_cdk_executor::spawn_protected(Noisy { future });
 }
 
-/// Execute a composite query function in a context that allows calling [`spawn`].
+/// Spawns an asynchronous task that will run during the current canister method.
 ///
-/// You do not need to worry about this function unless you are avoiding the attribute macros.
+/// If the task is not completed before the canister method returns, it will be canceled.
+pub fn spawn_weak<F: 'static + Future<Output = ()>>(future: F) {
+    ic_cdk_executor::spawn_protected(future);
+}
+
+/// Spawns a background task that can outlive the current method.
 ///
-/// Background composite query tasks will be polled in the process (and will not be run otherwise).
-/// Panics if called inside an existing executor context.
-pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
-    ic_cdk_executor::in_query_executor_context(f)
+/// If the task calls one of the functions beginning with `msg_`, it will trap.
+///
+/// The task will run as part of running another method. Be aware that it will contribute to that method's instruction limit;
+/// if it makes inter-canister calls that method will not return until they complete; and if it traps then that method will
+/// trap.
+pub fn spawn_migratory<F: 'static + Future<Output = ()>>(future: F) {
+    //todo actually implement the traps
+    ic_cdk_executor::spawn(future);
 }
 
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
@@ -136,7 +169,7 @@ pub fn spawn_017_compat<F: 'static + Future<Output = ()>>(fut: F) {
                 if dummy.0.load(Ordering::SeqCst) {
                     continue;
                 } else {
-                    crate::futures::spawn(pin);
+                    crate::futures::spawn_local(pin);
                     break;
                 }
             }
