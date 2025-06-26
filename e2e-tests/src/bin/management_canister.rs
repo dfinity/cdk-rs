@@ -224,8 +224,9 @@ async fn provisional() {
         log_visibility: Some(LogVisibility::Controllers),
         ..Default::default()
     };
-    // Using NNS Root Canister ID as specified_id.
-    let specified_id = Principal::from_text("r7inp-6aaaa-aaaaa-aaabq-cai").unwrap();
+    // Using Cycles Ledger (on the II subnet) Canister ID as specified_id.
+    // The test canister is deployed on the II subnet, it can provisional create a canister on the same subnet.
+    let specified_id = Principal::from_text("um5iw-rqaaa-aaaaq-qaaba-cai").unwrap();
     let arg = ProvisionalCreateCanisterWithCyclesArgs {
         amount: Some(10_000_000_000_000u64.into()),
         settings: Some(settings),
