@@ -6,9 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.19.0-beta.1] - 2025-06-25
+
 ### Changed
 
-- [BREAKING] Upgrade `ic-management-canister-types` dependency to v0.4.0 which added `is_replicated` field to `HttpRequestArgs`.
+- [BREAKING] Upgrade `ic-management-canister-types` dependency to v0.4.0:
+  - Added `is_replicated` field to `HttpRequestArgs`.
 
 ## [0.18.5] - 2025-06-25
 

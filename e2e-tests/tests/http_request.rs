@@ -6,7 +6,7 @@ use pocket_ic::common::rest::{
 use pocket_ic::PocketIc;
 
 mod test_utilities;
-use test_utilities::{cargo_build_canister, pic_base};
+use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_http_request() {
@@ -22,6 +22,20 @@ fn test_http_request() {
     test_one_http_request(&pic, canister_id, "head");
     test_one_http_request(&pic, canister_id, "get_with_transform");
     test_one_http_request(&pic, canister_id, "get_with_transform_closure");
+}
+
+// Remove this test when Pocket IC supports non-replicated HTTP requests.
+#[test]
+fn test_http_request_is_replicated_false() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("http_request");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 3_000_000_000_000u128);
+    pic.install_canister(canister_id, wasm, vec![], None);
+    let err = update::<(), ()>(&pic, canister_id, "is_replicated_false", ()).unwrap_err();
+    assert!(err
+        .reject_message
+        .contains("Canister HTTP requests with is_replicated=false are not supported"));
 }
 
 fn test_one_http_request(pic: &PocketIc, canister_id: Principal, method: &str) {

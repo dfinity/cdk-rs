@@ -32,6 +32,20 @@ async fn get_without_transform() {
     assert_eq!(res.body, vec![42]);
 }
 
+#[update]
+async fn is_replicated_false() {
+    let args = HttpRequestArgs {
+        url: "https://example.com".to_string(),
+        method: HttpMethod::GET,
+        is_replicated: Some(false),
+        ..Default::default()
+    };
+    // As of 2025-06-26, the Pocket IC does not support non-replicated HTTP requests.
+    // The following line is expected to panic with "Canister HTTP requests with is_replicated=false are not supported".
+    // Though panic, it proves that the `is_replicated` field has correct type and the IC can handle it.
+    http_request(&args).await.unwrap();
+}
+
 /// Method is POST.
 #[update]
 async fn post() {
