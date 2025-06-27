@@ -26,11 +26,13 @@
 //! ```
 //!
 //! The spawned future will not be run at the same time as the remaining code, nor will it run immediately. It will start
-//! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
-//! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
+//! running while `foo` awaits. Unlike some other libraries, `spawn` does not return a join-handle; if you want to await
+//! multiple results concurrently, use `futures`' [`join_all`] function.
 //!
 //! This task will only run as part of the canister method that spawned it, even if it is awoken from elsewhere. If the
-//! method returns before the task completes, it will trap (or cancel if you use [`spawn_weak`]).
+//! method returns before the task completes, it will trap (or cancel if you use [`spawn_weak`]). This effectively means
+//! that all awaits in local tasks must ultimately derive from an inter-canister call or run concurrently to one. You can
+//! only call [`spawn_local`] or [`spawn_weak`] from an `async fn`, if you leave the outer `fn` sync it will trap.
 //!
 //! ## Running longer-lived background tasks
 //!
