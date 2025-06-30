@@ -1016,5 +1016,5 @@ unsafe extern "C" fn cleanup(env: usize) {
 /// However, since future implementations might introduce other failure cases,
 /// we provide an informative panic message for better debuggability.
 fn panic_when_encode_fails(err: candid::error::Error) -> Vec<u8> {
-    panic!("failed to encode args: {}", err)
+    panic!("failed to encode args: {err}")
 }

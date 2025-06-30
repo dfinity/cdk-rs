@@ -16,7 +16,7 @@ pub fn set_panic_hook() {
             },
         };
 
-        let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
+        let err_info = format!("Panicked at '{msg}', {file}:{line}:{col}");
         api::debug_print(&err_info);
         api::trap(&err_info);
     }));
