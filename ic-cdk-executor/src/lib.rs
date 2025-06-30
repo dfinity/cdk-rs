@@ -1,7 +1,7 @@
 //! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
 
 use std::cell::{Cell, RefCell};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::mem;
 use std::pin::Pin;
@@ -12,12 +12,14 @@ use slotmap::{new_key_type, SlotMap};
 
 /// Spawn an asynchronous task to run in the background.
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
-    let in_query = match CONTEXT.get() {
-        AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
-        AsyncContext::Query => true,
-        AsyncContext::Update => false,
-        AsyncContext::Cancel => panic!("`spawn` cannot be called during panic recovery"),
-        AsyncContext::FromTask => unreachable!("FromTask"),
+    let Some(context) = CONTEXT.get() else {
+        panic!("`spawn` can only be called from an executor context");
+    };
+    let in_query = match context.mode {
+        AsyncMode::Query => true,
+        AsyncMode::Update => false,
+        AsyncMode::Cancel => panic!("`spawn` cannot be called during panic recovery"),
+        AsyncMode::FromTask => unreachable!("FromTask"),
     };
     let pinned_future = Box::pin(future);
     let task = Task {
@@ -29,8 +31,28 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 }
 
 /// Execute an update function in a context that allows calling [`spawn`] and notifying wakers.
+#[doc(hidden)]
+#[deprecated(note = "Use `in_tracking_executor_context` instead")]
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    let _guard = ContextGuard::new(AsyncContext::Update);
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: AsyncMode::Update,
+        method_id: None,
+    });
+    let res = f();
+    poll_all();
+    res
+}
+
+/// Execute an update function in a context that allows calling [`spawn`] and [`spawn_protected`] and notifying wakers.
+pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: AsyncMode::Update,
+        method_id: Some(NEXT_METHOD_ID.with(|next| {
+            let id = next.get();
+            next.set(id.wrapping_add(1));
+            id
+        })),
+    });
     let res = f();
     poll_all();
     res
@@ -38,38 +60,74 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute a composite query function in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    let _guard = ContextGuard::new(AsyncContext::Query);
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: AsyncMode::Query,
+        method_id: None,
+    });
     let res = f();
     poll_all();
     res
 }
 
 /// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers.
+#[doc(hidden)]
+#[deprecated(note = "Use `in_callback_executor_context_for` instead")]
 pub fn in_callback_executor_context(f: impl FnOnce()) {
-    let _guard = ContextGuard::new(AsyncContext::FromTask);
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: AsyncMode::FromTask,
+        method_id: None,
+    });
     f();
     poll_all();
+}
+
+pub fn in_callback_executor_context_for<R>(
+    context: MethodContextGuard,
+    f: impl FnOnce() -> R,
+) -> R {
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: context.mode,
+        method_id: Some(context.method_id),
+    });
+    let res = f();
+    poll_all();
+    res
 }
 
 /// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers,
 /// but will cancel every awoken future.
 pub fn in_callback_cancellation_context(f: impl FnOnce()) {
-    let _guard = ContextGuard::new(AsyncContext::Cancel);
+    let _guard = ContextGuard::new(AsyncContext {
+        mode: AsyncMode::Cancel,
+        method_id: None,
+    });
     f();
+}
+
+pub fn extend_method_context() -> MethodContextGuard {
+    MethodContextGuard::current()
 }
 
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
 pub fn is_recovering_from_trap() -> bool {
-    matches!(CONTEXT.get(), AsyncContext::Cancel)
+    matches!(
+        CONTEXT.get(),
+        Some(AsyncContext {
+            mode: AsyncMode::Cancel,
+            ..
+        })
+    )
 }
 
 fn poll_all() {
-    let in_query = match CONTEXT.get() {
-        AsyncContext::Query => true,
-        AsyncContext::Update => false,
-        AsyncContext::None => panic!("tasks can only be polled in an executor context"),
-        AsyncContext::FromTask => unreachable!("FromTask"),
-        AsyncContext::Cancel => unreachable!("poll_all should not be called during panic recovery"),
+    let Some(context) = CONTEXT.get() else {
+        panic!("tasks can only be polled in an executor context");
+    };
+    let in_query = match context.mode {
+        AsyncMode::Query => true,
+        AsyncMode::Update => false,
+        AsyncMode::FromTask => unreachable!("FromTask"),
+        AsyncMode::Cancel => unreachable!("poll_all should not be called during panic recovery"),
     };
     let mut ineligible = vec![];
     while let Some(task_id) = WAKEUP.with_borrow_mut(|queue| queue.pop_front()) {
@@ -116,20 +174,62 @@ new_key_type! {
     struct TaskId;
 }
 
+pub struct MethodContextGuard {
+    mode: AsyncMode,
+    method_id: u64,
+}
+
+impl MethodContextGuard {
+    fn current() -> Self {
+        let (mode, method_id) = match CONTEXT.get() {
+            Some(AsyncContext {
+                mode,
+                method_id: Some(method),
+            }) => (mode, method),
+            _ => panic!(
+                "`extend_method_context` can only be called within a tracking executor context"
+            ),
+        };
+        ONGOING_CONTEXTS.with_borrow_mut(|ongoing| {
+            *ongoing.entry(method_id).or_default() += 1;
+        });
+        Self { mode, method_id }
+    }
+}
+
+impl Drop for MethodContextGuard {
+    fn drop(&mut self) {
+        ONGOING_CONTEXTS.with_borrow_mut(|ongoing| {
+            if let Some(count) = ongoing.get_mut(&self.method_id) {
+                *count -= 1;
+                if *count == 0 {
+                    ongoing.remove(&self.method_id);
+                }
+            }
+        });
+    }
+}
+
 thread_local! {
     static TASKS: RefCell<SlotMap<TaskId, Task>> = <_>::default();
     static WAKEUP: RefCell<VecDeque<TaskId>> = <_>::default();
-    static CONTEXT: Cell<AsyncContext> = <_>::default();
+    static CONTEXT: Cell<Option<AsyncContext>> = <_>::default();
+    static NEXT_METHOD_ID: Cell<u64> = <_>::default();
+    static ONGOING_CONTEXTS: RefCell<HashMap<u64, usize>> = <_>::default();
 }
 
-#[derive(Default, Copy, Clone, PartialEq, Eq)]
-enum AsyncContext {
-    #[default]
-    None,
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum AsyncMode {
     Update,
     Query,
     FromTask,
     Cancel,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AsyncContext {
+    mode: AsyncMode,
+    method_id: Option<u64>,
 }
 
 struct Task {
@@ -152,10 +252,10 @@ impl ContextGuard {
     fn new(context: AsyncContext) -> Self {
         CONTEXT.with(|context_var| {
             assert!(
-                matches!(context_var.get(), AsyncContext::None),
+                context_var.get().is_none(),
                 "in_*_context called within an existing async context"
             );
-            context_var.set(context);
+            context_var.set(Some(context));
             Self(())
         })
     }
@@ -163,7 +263,7 @@ impl ContextGuard {
 
 impl Drop for ContextGuard {
     fn drop(&mut self) {
-        CONTEXT.set(AsyncContext::None);
+        CONTEXT.set(None);
     }
 }
 
@@ -179,22 +279,26 @@ struct TaskWaker {
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        let context = CONTEXT.get();
-        assert!(
-            context != AsyncContext::None,
-            "wakers cannot be called outside an executor context"
-        );
-        if context == AsyncContext::Cancel {
+        let Some(context) = CONTEXT.get() else {
+            panic!("wakers cannot be called outside an executor context");
+        };
+        if context.mode == AsyncMode::Cancel {
             // This task is recovering from a trap. We cancel it to run destructors.
             let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(self.task_id));
             // _task must be dropped *outside* with_borrow_mut - its destructor may (inadvisably) schedule tasks
         } else {
             WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
-            if context == AsyncContext::FromTask {
+            if context.mode == AsyncMode::FromTask {
                 if self.query {
-                    CONTEXT.set(AsyncContext::Query)
+                    CONTEXT.set(Some(AsyncContext {
+                        mode: AsyncMode::Query,
+                        ..context
+                    }));
                 } else {
-                    CONTEXT.set(AsyncContext::Update)
+                    CONTEXT.set(Some(AsyncContext {
+                        mode: AsyncMode::Update,
+                        ..context
+                    }));
                 }
             }
         }
