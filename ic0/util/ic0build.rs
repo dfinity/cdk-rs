@@ -133,10 +133,7 @@ fn parse_safety_comments(file: &str) -> HashMap<String, String> {
         while !lines[cursor].contains(";") {
             cursor += 1;
             if cursor >= lines.len() {
-                panic!(
-                    "unexpected eof, no semicolon found for function: {}",
-                    fn_name
-                );
+                panic!("unexpected eof, no semicolon found for function: {fn_name}");
             }
         }
         cursor += 1;
@@ -211,7 +208,7 @@ extern "C" {{"#,
             #[doc = #comment]
             #r;
         };
-        writeln!(f, "{}", r).unwrap();
+        writeln!(f, "{r}").unwrap();
     }
 
     writeln!(f, "}}").unwrap();
@@ -241,7 +238,7 @@ mod non_wasm{{"#,
             }
         }
 
-        let panic_str = format!("{} should only be called inside canisters.", fn_name);
+        let panic_str = format!("{fn_name} should only be called inside canisters.");
         let Some(comment) = safety_comments.get(&fn_name.to_string()) else {
             panic!("missing safety comment for {fn_name}")
         };
@@ -252,7 +249,7 @@ mod non_wasm{{"#,
                 panic!(#panic_str);
             }
         };
-        writeln!(f, "{}", r).unwrap();
+        writeln!(f, "{r}").unwrap();
     }
 
     writeln!(

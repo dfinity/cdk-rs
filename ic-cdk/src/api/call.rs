@@ -655,7 +655,7 @@ fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Opti
 pub fn result<T: for<'a> ArgumentDecoder<'a>>() -> Result<T, String> {
     match reject_code() {
         RejectionCode::NoError => {
-            decode_args(&arg_data_raw()).map_err(|e| format!("Failed to decode arguments: {}", e))
+            decode_args(&arg_data_raw()).map_err(|e| format!("Failed to decode arguments: {e}"))
         }
         _ => Err(reject_message()),
     }
@@ -874,7 +874,7 @@ pub fn arg_data<R: for<'a> ArgumentDecoder<'a>>(arg_config: ArgDecoderConfig) ->
     let config = arg_config.to_candid_config();
     let res = decode_args_with_config_debug(&bytes, &config);
     match res {
-        Err(e) => trap(format!("failed to decode call arguments: {:?}", e)),
+        Err(e) => trap(format!("failed to decode call arguments: {e:?}")),
         Ok((r, cost)) => {
             if arg_config.debug {
                 print_decoding_debug_info("Argument", &cost, None);

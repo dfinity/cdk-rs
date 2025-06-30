@@ -95,15 +95,14 @@ fn notify(whom: Principal, method: String) {
         .oneway()
         .unwrap_or_else(|reject| {
             ic_cdk::api::trap(format!(
-                "failed to notify (callee={}, method={}): {:?}",
-                whom, method, reject
+                "failed to notify (callee={whom}, method={method}): {reject:?}"
             ))
         });
 }
 
 #[query]
 fn greet(name: String) -> String {
-    format!("Hello, {}", name)
+    format!("Hello, {name}")
 }
 
 #[query(composite = true)]

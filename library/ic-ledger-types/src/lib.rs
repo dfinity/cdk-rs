@@ -327,7 +327,7 @@ pub enum AccountIdParseError {
 impl Display for AccountIdParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidChecksum(err) => write!(f, "{}", err),
+            Self::InvalidChecksum(err) => write!(f, "{err}"),
             Self::InvalidLength(input) => write!(
                 f,
                 "Received an invalid AccountIdentifier with length {} bytes instead of the expected 28 or 32.",
@@ -417,13 +417,12 @@ impl Display for TransferError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::BadFee { expected_fee } => {
-                write!(f, "transaction fee should be {}", expected_fee)
+                write!(f, "transaction fee should be {expected_fee}")
             }
             Self::InsufficientFunds { balance } => {
                 write!(
                     f,
-                    "the debit account doesn't have enough funds to complete the transaction, current balance: {}",
-                    balance
+                    "the debit account doesn't have enough funds to complete the transaction, current balance: {balance}",
                 )
             }
             Self::TxTooOld {
@@ -436,8 +435,7 @@ impl Display for TransferError {
             Self::TxCreatedInFuture => write!(f, "transaction's created_at_time is in future"),
             Self::TxDuplicate { duplicate_of } => write!(
                 f,
-                "transaction is a duplicate of another transaction in block {}",
-                duplicate_of
+                "transaction is a duplicate of another transaction in block {duplicate_of}"
             ),
         }
     }
@@ -625,16 +623,14 @@ impl Display for GetBlocksError {
                 first_valid_index,
             } => write!(
                 f,
-                "invalid first block index: requested block = {}, first valid block = {}",
-                requested_index, first_valid_index
+                "invalid first block index: requested block = {requested_index}, first valid block = {first_valid_index}"
             ),
             Self::Other {
                 error_code,
                 error_message,
             } => write!(
                 f,
-                "failed to query blocks (error code {}): {}",
-                error_code, error_message
+                "failed to query blocks (error code {error_code}): {error_message}"
             ),
         }
     }

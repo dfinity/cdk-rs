@@ -15,7 +15,7 @@ fn panic_after_async_frees_resources() {
         match update(&pic, canister_id, "panic_after_async", ()) {
             Ok(()) => (),
             Err(rej) => {
-                println!("Got a user error as expected: {}", rej);
+                println!("Got a user error as expected: {rej}");
 
                 assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
                 let expected_message = "Goodbye, cruel world.";
@@ -30,7 +30,7 @@ fn panic_after_async_frees_resources() {
 
         let (n,): (u64,) = update(&pic, canister_id, "invocation_count", ()).unwrap();
 
-        assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
+        assert_eq!(i, n, "expected the invocation count to be {i}, got {n}");
     }
 
     let (message,): (String,) =

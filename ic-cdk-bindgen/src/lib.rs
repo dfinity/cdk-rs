@@ -48,14 +48,14 @@ impl Config {
 /// TODO: remove the support for the old format, in the next major release (v0.2) of `ic-cdk-bindgen`.
 fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Principal) {
     fn warning_deprecated_env(deprecated_name: &str, new_name: &str) {
-        println!("cargo:warning=The environment variable {} is deprecated. Please set {} instead. Upgrading dfx may fix this issue.", deprecated_name, new_name);
+        println!("cargo:warning=The environment variable {deprecated_name} is deprecated. Please set {new_name} instead. Upgrading dfx may fix this issue.");
     }
 
     let canister_name = canister_name.replace('-', "_");
     let canister_name_upper = canister_name.to_uppercase();
 
-    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
-    let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{}", canister_name);
+    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{canister_name_upper}");
+    let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{canister_name}");
     println!("cargo:rerun-if-env-changed={candid_path_var_name}");
     println!("cargo:rerun-if-env-changed={candid_path_var_name_legacy}");
 
@@ -72,8 +72,8 @@ fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Princip
     };
     let candid_path = PathBuf::from(candid_path_str);
 
-    let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
-    let canister_id_var_name_legacy = format!("CANISTER_ID_{}", canister_name);
+    let canister_id_var_name = format!("CANISTER_ID_{canister_name_upper}");
+    let canister_id_var_name_legacy = format!("CANISTER_ID_{canister_name}");
     println!("cargo:rerun-if-env-changed={canister_id_var_name}");
     println!("cargo:rerun-if-env-changed={canister_id_var_name_legacy}");
     let canister_id_str = if let Ok(canister_id_str) = env::var(&canister_id_var_name) {

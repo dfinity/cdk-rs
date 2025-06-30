@@ -401,16 +401,15 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
     );
     let struct_name = config.service_name.to_case(Case::Pascal);
     let service_def = match config.target {
-        Target::CanisterCall => format!("pub struct {}(pub Principal);", struct_name),
-        Target::Agent => format!(
-            "pub struct {}<'a>(pub Principal, pub &'a ic_agent::Agent);",
-            struct_name
-        ),
+        Target::CanisterCall => format!("pub struct {struct_name}(pub Principal);"),
+        Target::Agent => {
+            format!("pub struct {struct_name}<'a>(pub Principal, pub &'a ic_agent::Agent);",)
+        }
         Target::CanisterStub => unimplemented!(),
     };
     let service_impl = match config.target {
-        Target::CanisterCall => format!("impl {} ", struct_name),
-        Target::Agent => format!("impl<'a> {}<'a> ", struct_name),
+        Target::CanisterCall => format!("impl {struct_name} "),
+        Target::Agent => format!("impl<'a> {struct_name}<'a> "),
         Target::CanisterStub => unimplemented!(),
     };
     let res = RcDoc::text(service_def)
@@ -426,8 +425,7 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
             .collect::<Vec<_>>()
             .join(", ");
         let id = RcDoc::text(format!(
-            "pub const CANISTER_ID : Principal = Principal::from_slice(&[{}]); // {}",
-            slice, cid
+            "pub const CANISTER_ID : Principal = Principal::from_slice(&[{slice}]); // {cid}"
         ));
         let instance = match config.target {
             Target::CanisterCall => format!(

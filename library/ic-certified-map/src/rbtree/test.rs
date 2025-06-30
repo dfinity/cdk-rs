@@ -256,10 +256,10 @@ fn test_nested_witness() {
                 HashTree::Labeled(lb, _) => {
                     assert_eq!(lb, b"bottom");
                 }
-                other => panic!("unexpected nested tree: {:?}", other),
+                other => panic!("unexpected nested tree: {other:?}"),
             }
         }
-        other => panic!("expected a labeled tree, got {:?}", other),
+        other => panic!("expected a labeled tree, got {other:?}"),
     }
 
     rb.modify(b"top", |m| m.delete(b"bottom"));

@@ -20,8 +20,7 @@ where
 {
     let bytes = stable::stable_bytes();
 
-    let mut de =
-        candid::de::IDLDeserialize::new(bytes.as_slice()).map_err(|e| format!("{:?}", e))?;
-    let res = candid::utils::ArgumentDecoder::decode(&mut de).map_err(|e| format!("{:?}", e))?;
+    let mut de = candid::de::IDLDeserialize::new(bytes.as_slice()).map_err(|e| format!("{e:?}"))?;
+    let res = candid::utils::ArgumentDecoder::decode(&mut de).map_err(|e| format!("{e:?}"))?;
     Ok(res)
 }
