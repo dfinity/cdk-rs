@@ -341,7 +341,7 @@ where
                 write!(f, ", ")?;
             }
             first = false;
-            write!(f, "({:?}, {:?})", k, v)?;
+            write!(f, "({k:?}, {v:?})")?;
         }
         write!(f, "]")
     }
