@@ -350,7 +350,7 @@ fn dfn_macro(
     };
     let body = if signature.asyncness.is_some() {
         quote! {
-            ::ic_cdk::futures::#async_context_name(|| {
+            ::ic_cdk::futures::internals::#async_context_name(|| {
                 #guard
                 ::ic_cdk::futures::spawn(async {
                     #arg_decode
@@ -362,7 +362,7 @@ fn dfn_macro(
     } else {
         quote! {
             #guard
-            ::ic_cdk::futures::#async_context_name(|| {
+            ::ic_cdk::futures::internals::#async_context_name(|| {
                 #arg_decode
                 let result = #function_call;
                 #return_encode
@@ -446,7 +446,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -495,7 +495,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -531,7 +531,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_args(result).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -566,7 +566,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a);
@@ -603,7 +603,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
@@ -640,7 +640,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
                     let result = query(a, b);
@@ -677,7 +677,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -713,7 +713,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
                     let a = custom_decoder(arg_bytes);
                     let result = query(a);
@@ -764,7 +764,7 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = custom_encoder(result);
                     ::ic_cdk::api::msg_reply(bytes);
@@ -822,7 +822,7 @@ mod test {
                     ::ic_cdk::api::msg_reject(&e);
                     return;
                 }
-                ::ic_cdk::futures::in_query_executor_context(|| {
+                ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);

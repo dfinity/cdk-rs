@@ -90,7 +90,7 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
-    ic_cdk::futures::in_executor_context(|| {
+    ic_cdk::futures::internals::in_executor_context(|| {
         ic_cdk::futures::spawn(async {
             // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
             // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
@@ -283,11 +283,11 @@ extern "C" fn timer_executor() {
     if let Some(mut task) = task {
         match task {
             Task::Once(func) => {
-                ic_cdk::futures::in_executor_context(func);
+                ic_cdk::futures::internals::in_executor_context(func);
                 TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
             }
             Task::Repeated { ref mut func, .. } => {
-                ic_cdk::futures::in_executor_context(func);
+                ic_cdk::futures::internals::in_executor_context(func);
                 TASKS.with(|tasks| tasks.borrow_mut().get_mut(task_id).map(|slot| *slot = task));
             }
         }

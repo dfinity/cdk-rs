@@ -31,6 +31,7 @@ ic-cdk-executor.workspace = true
 ic-cdk-macros = { path = "../ic-cdk-macros", version = "=0.18.5" }
 ic-error-types = "0.2.0"
 ic-management-canister-types.workspace = true
+pin-project-lite = "0.2.16"
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap.workspace = true

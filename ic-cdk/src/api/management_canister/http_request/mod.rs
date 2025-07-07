@@ -36,25 +36,33 @@ thread_local! {
 }
 
 #[cfg(feature = "transform-closure")]
-#[export_name = "canister_query <ic-cdk internal> http_transform_legacy"]
+#[cfg_attr(
+    target_family = "wasm",
+    export_name = "canister_query <ic-cdk internal> http_transform_legacy"
+)]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    export_name = "canister_query_ic_cdk_internal.http_transform_legacy"
+)]
 extern "C" fn http_transform() {
-    use crate::api::{
-        call::{arg_data, reply, ArgDecoderConfig},
-        caller,
-    };
-    if caller() != Principal::management_canister() {
-        crate::trap("This function is internal to ic-cdk and should not be called externally.");
-    }
-    crate::setup();
-    let (args,): (TransformArgs,) = arg_data(ArgDecoderConfig::default());
-    let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
-    let key = DefaultKey::from(KeyData::from_ffi(int));
-    let func = TRANSFORMS_LEGACY.with(|transforms| transforms.borrow_mut().remove(key));
-    let Some(func) = func else {
-        crate::trap(format!("Missing transform function for request {int}"));
-    };
-    let transformed = func(args.response);
-    reply((transformed,))
+    ic_cdk_executor::in_tracking_query_executor_context(|| {
+        use crate::api::{
+            call::{arg_data, reply, ArgDecoderConfig},
+            caller,
+        };
+        if caller() != Principal::management_canister() {
+            crate::trap("This function is internal to ic-cdk and should not be called externally.");
+        }
+        let (args,): (TransformArgs,) = arg_data(ArgDecoderConfig::default());
+        let int = u64::from_be_bytes(args.context[..].try_into().unwrap());
+        let key = DefaultKey::from(KeyData::from_ffi(int));
+        let func = TRANSFORMS_LEGACY.with(|transforms| transforms.borrow_mut().remove(key));
+        let Some(func) = func else {
+            crate::trap(format!("Missing transform function for request {int}"));
+        };
+        let transformed = func(args.response);
+        reply((transformed,));
+    });
 }
 
 /// Make an HTTP request to a given URL and return the HTTP response, after a transformation.

@@ -41,6 +41,7 @@ use crate::api::{cost_call, msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
 use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
 use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
+use ic_cdk_executor::MethodHandle;
 use std::borrow::Cow;
 use std::future::IntoFuture;
 use std::mem;
@@ -844,7 +845,7 @@ enum CallFutureState<'m, 'a> {
     Prepared { call: Call<'m, 'a> },
     /// The call has been performed and the message is in flight. Neither callback has been called. Polling will return `Pending`.
     /// This state will transition to `Trapped` if the future is canceled because of a trap in another future.
-    Executing { waker: Waker },
+    Executing { waker: Waker, method: MethodHandle },
     /// `callback` has been called, so the call has been completed. This completion state has not yet been read by the user.
     /// Polling will return `Ready` and transition to `PostComplete`.
     Complete {
@@ -884,6 +885,7 @@ impl std::future::Future for CallFuture<'_, '_> {
                             // call_perform returns 0 means the call was successfully enqueued.
                             *state = CallFutureState::Executing {
                                 waker: context.waker().clone(),
+                                method: ic_cdk_executor::extend_current_method_context(),
                             };
                             Poll::Pending
                         }
@@ -894,9 +896,10 @@ impl std::future::Future for CallFuture<'_, '_> {
                     }
                 }
             }
-            CallFutureState::Executing { .. } => {
+            CallFutureState::Executing { method, .. } => {
                 *state = CallFutureState::Executing {
                     waker: context.waker().clone(),
+                    method,
                 };
                 Poll::Pending
             }
@@ -930,31 +933,31 @@ impl Drop for CallFuture<'_, '_> {
 /// This function must only be passed to the IC with a pointer from `Arc::<RwLock<CallFutureState>>::into_raw` as userdata.
 unsafe extern "C" fn callback(env: usize) {
     let state_ptr = env as *const RwLock<CallFutureState<'_, '_>>;
-    ic_cdk_executor::in_callback_executor_context(|| {
-        // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
-        let state = unsafe { Arc::from_raw(state_ptr) };
-        let completed_state = CallFutureState::Complete {
-            result: match msg_reject_code() {
-                0 => Ok(Response(msg_arg_data())),
-                code => {
-                    // The conversion is safe because the code is not 0.
-                    Err(CallFailed::CallRejected(CallRejected {
-                        raw_reject_code: code,
-                        reject_message: msg_reject_msg(),
-                    }))
-                }
-            },
-        };
-        let waker = match mem::replace(&mut *state.write().unwrap(), completed_state) {
-            CallFutureState::Executing { waker } => waker,
-            // This future has already been cancelled and waking it will do nothing.
-            // All that's left is to explicitly trap in case this is the last call being multiplexed,
-            // to replace an automatic trap from not replying.
-            CallFutureState::Trapped => trap("Call already trapped"),
-            _ => unreachable!(
-                "CallFutureState for in-flight calls should only be Executing or Trapped"
-            ),
-        };
+    // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
+    let completed_state = CallFutureState::Complete {
+        result: match msg_reject_code() {
+            0 => Ok(Response(msg_arg_data())),
+            code => {
+                // The conversion is safe because the code is not 0.
+                Err(CallFailed::CallRejected(CallRejected {
+                    raw_reject_code: code,
+                    reject_message: msg_reject_msg(),
+                }))
+            }
+        },
+    };
+    let (waker, method) = match mem::replace(&mut *state.write().unwrap(), completed_state) {
+        CallFutureState::Executing { waker, method } => (waker, method),
+        // This future has already been cancelled and waking it will do nothing.
+        // All that's left is to explicitly trap in case this is the last call being multiplexed,
+        // to replace an automatic trap from not replying.
+        CallFutureState::Trapped => trap("Call already trapped"),
+        _ => {
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+        }
+    };
+    ic_cdk_executor::in_callback_executor_context_for(method, || {
         waker.wake();
     });
 }
@@ -970,39 +973,35 @@ unsafe extern "C" fn callback(env: usize) {
 /// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState>>::into_raw as userdata.
 unsafe extern "C" fn cleanup(env: usize) {
     let state_ptr = env as *const RwLock<CallFutureState<'_, '_>>;
-    // Flag that we do not want to actually wake the task - we
-    // want to drop it *without* executing it.
-    ic_cdk_executor::in_callback_cancellation_context(|| {
-        // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
-        let state = unsafe { Arc::from_raw(state_ptr) };
-        // We set the call result, even though it won't be read on the
-        // default executor, because we can't guarantee it was called on
-        // our executor. However, we are not allowed to inspect
-        // reject_code() inside of a cleanup callback, so always set the
-        // result to a reject.
-        //
-        // Borrowing does not trap - the rollback from the
-        // previous trap ensures that the RwLock can be borrowed again.
-        let err_state = CallFutureState::Complete {
-            result: Err(CallFailed::CallRejected(CallRejected {
-                raw_reject_code: RejectCode::CanisterReject as u32,
-                reject_message: "cleanup".into(),
-            })),
-        };
-        let waker = match mem::replace(&mut *state.write().unwrap(), err_state) {
-            CallFutureState::Executing { waker } => waker,
-            CallFutureState::Trapped => {
-                // The future has already been canceled and dropped. There is nothing
-                // more to clean up except for the CallFutureState.
-                return;
-            }
-            _ => {
-                unreachable!(
-                    "CallFutureState for in-flight calls should only be Executing or Trapped"
-                )
-            }
-        };
-        waker.wake();
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Arc as userdata.
+    let state = unsafe { Arc::from_raw(state_ptr) };
+    // We set the call result, even though it won't be read on the
+    // default executor, because we can't guarantee it was called on
+    // our executor. However, we are not allowed to inspect
+    // reject_code() inside of a cleanup callback, so always set the
+    // result to a reject.
+    //
+    // Borrowing does not trap - the rollback from the
+    // previous trap ensures that the RwLock can be borrowed again.
+    let err_state = CallFutureState::Complete {
+        result: Err(CallFailed::CallRejected(CallRejected {
+            raw_reject_code: RejectCode::CanisterReject as u32,
+            reject_message: "cleanup".into(),
+        })),
+    };
+    let method = match mem::replace(&mut *state.write().unwrap(), err_state) {
+        CallFutureState::Executing { method, .. } => method,
+        CallFutureState::Trapped => {
+            // The future has already been canceled and dropped. There is nothing
+            // more to clean up except for the CallFutureState.
+            return;
+        }
+        _ => {
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+        }
+    };
+    ic_cdk_executor::in_trap_recovery_context_for(method, || {
+        ic_cdk_executor::cancel_all_tasks_attached_to_current_method();
     });
 }
 
