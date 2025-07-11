@@ -88,6 +88,11 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
   - `bitcoin_canister` module for direct Bitcoin Canisters calls.
+- Enhanced cycles cost calculation for Management Canister API calls:
+  - New system APIs exposed through the `api` module:
+    - `cost_http_request`, `cost_sign_with_ecdsa`, `cost_sign_with_schnorr`, `cost_vetkd_derive_key`.
+  - High-level bindings in the `management_canister` module accept call arguments by reference.
+  - All relevant Management Canister methods now automatically attach the required cycles to calls.
 
 ### Changed
 

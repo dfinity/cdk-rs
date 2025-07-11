@@ -53,6 +53,7 @@
 //! - [`cost_http_request`]
 //! - [`cost_sign_with_ecdsa`]
 //! - [`cost_sign_with_schnorr`]
+//! - [`cost_vetkd_derive_key`]
 
 use crate::api::{
     canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
