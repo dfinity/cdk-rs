@@ -156,6 +156,7 @@ pub(crate) fn cancel_task(task_id: TaskId) {
     drop(_task); // always run task destructors outside of a refcell borrow
 }
 
+/// Returns true if tasks are being canceled due to a trap or panic.
 pub fn is_recovering_from_trap() -> bool {
     RECOVERING.get()
 }

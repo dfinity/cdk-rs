@@ -21,3 +21,8 @@ slotmap.workspace = true
 default = ["v1.0", "v1.1"]
 "v1.0" = []
 "v1.1" = []
+
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["v1.1"]
+targets = ["wasm32-unknown-unknown"]
