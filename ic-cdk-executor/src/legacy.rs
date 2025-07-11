@@ -2,7 +2,7 @@ use std::{cell::Cell, future::Future, ops::ControlFlow};
 
 use slotmap::Key;
 
-use crate::{
+use crate::machinery::{
     cancel_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
     ContextKind, MethodContext, MethodHandle, MethodId, TaskWaker, CURRENT_METHOD, METHODS,
 };
