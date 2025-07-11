@@ -1,4 +1,13 @@
+#![cfg(any(feature = "v1.0", feature = "v1.1"))]
 //! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
+//!
+//! When you depend on this crate, it is recommended that you enable only the feature with the same name as the
+//! current minor version:
+//!
+//! ```toml
+//! [dependencies]
+//! ic-cdk-executor = { version = "1.1.0", default-features = false, features = ["v1.1"] }
+//! ```
 //!
 //! ## Contexts
 //!
@@ -28,8 +37,10 @@
 //!     });
 //! }
 //! unsafe extern "C" fn cleanup(env: usize) {
-//!    let method = /* ... */;
-//!    cancel_all_tasks_attached_to_method(method);
+//!     let method = /* ... */;
+//!     in_trap_recovery_context_for(method, || {
+//!         cancel_all_tasks_attached_to_current_method();
+//!     });
 //! }
 //! ```
 //!
@@ -45,6 +56,8 @@
 //! when awoken will not resume until that method continues, and will be canceled if the method returns before they complete.
 //! Migratory tasks are not attached to any method, and will resume in whatever method wakes them.
 
+#[cfg(feature = "v1.0")]
+use std::ops::ControlFlow;
 use std::{
     cell::{Cell, RefCell},
     collections::VecDeque,
@@ -56,6 +69,12 @@ use std::{
 };
 
 use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
+
+#[cfg(feature = "v1.0")]
+use crate::legacy::v0_wake_hook;
+
+#[cfg(feature = "v1.0")]
+mod legacy;
 
 #[derive(Copy, Clone, Debug)]
 struct MethodContext {
@@ -114,7 +133,7 @@ pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
-/// Execute a function in a context that is not considered part of a method, able to call [`spawn_migratory`]
+/// Execute a function in a context that is not tracked across callbacks, able to call [`spawn_migratory`]
 /// but not [`spawn_protected`].
 pub fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
@@ -190,9 +209,8 @@ pub fn cancel_all_tasks_attached_to_current_method() {
     drop(_tasks); // always run task destructors outside of a refcell borrow
 }
 
-pub fn cancel_task(task_handle: TaskHandle) {
-    setup_panic_hook();
-    let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(task_handle.task_id));
+fn cancel_task(task_id: TaskId) {
+    let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
     drop(_task); // always run task destructors outside of a refcell borrow
 }
 
@@ -212,9 +230,12 @@ fn poll_all() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("tasks can only be polled within an executor context");
     };
-    let Some(kind) = METHODS.with_borrow(|methods| methods.get(method_id).map(|m| m.kind)) else {
-        panic!("internal error: method context deleted while in use (poll_all)");
-    };
+    let kind =
+        if let Some(kind) = METHODS.with_borrow(|methods| methods.get(method_id).map(|m| m.kind)) {
+            kind
+        } else {
+            ContextKind::Update
+        };
     fn pop_wakeup(method_id: MethodId, update: bool) -> Option<TaskId> {
         if let Some(task_id) = PROTECTED_WAKEUPS.with_borrow_mut(|wakeups| {
             wakeups
@@ -237,7 +258,11 @@ fn poll_all() {
             // In the case that a task panicked and that's why it's missing, but it was in an earlier callback so a later
             // one tries to re-wake, the responsibility for re-trapping lies with CallFuture.
         };
-        let waker = Waker::from(Arc::new(TaskWaker { task_id }));
+        let waker = Waker::from(Arc::new(TaskWaker {
+            task_id,
+            #[cfg(feature = "v1.0")]
+            source_method: method_id,
+        }));
         let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
         match poll {
             Poll::Pending => {
@@ -310,15 +335,21 @@ impl Drop for MethodHandle {
 }
 
 pub struct TaskHandle {
-    task_id: TaskId,
+    _task_id: TaskId,
 }
 
 struct TaskWaker {
     task_id: TaskId,
+    #[cfg(feature = "v1.0")]
+    source_method: MethodId,
 }
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
+        #[cfg(feature = "v1.0")]
+        if v0_wake_hook(&self) == ControlFlow::Break(()) {
+            return;
+        }
         TASKS.with_borrow_mut(|tasks| {
             if let Some(task) = tasks.get(self.task_id) {
                 if let Some(method_id) = task.method_binding {
@@ -337,7 +368,7 @@ impl Wake for TaskWaker {
     }
 }
 
-pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) {
+pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     setup_panic_hook();
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("`spawn_*` can only be called within an executor context");
@@ -346,10 +377,11 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) {
         panic!("tasks cannot be spawned while recovering from a trap");
     }
     let kind = METHODS.with_borrow(|methods| {
-        let Some(method) = methods.get(method_id) else {
-            panic!("internal error: method context deleted while in use (spawn_migratory)");
-        };
-        method.kind
+        if let Some(method) = methods.get(method_id) {
+            method.kind
+        } else {
+            ContextKind::Update
+        }
     });
     if kind == ContextKind::Query {
         panic!("unprotected spawns cannot be made within a query context");
@@ -362,9 +394,10 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) {
     MIGRATORY_WAKEUPS.with_borrow_mut(|unattached| {
         unattached.push_back(task_id);
     });
+    TaskHandle { _task_id: task_id }
 }
 
-pub fn spawn_protected(f: impl Future<Output = ()> + 'static) {
+pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     setup_panic_hook();
     if is_recovering_from_trap() {
         panic!("tasks cannot be spawned while recovering from a trap");
@@ -372,6 +405,9 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("`spawn_*` can only be called within an executor context");
     };
+    if method_id.is_null() {
+        panic!("`spawn_protected` cannot be called outside of a tracking context");
+    }
     let task = Task {
         future: Box::pin(f),
         method_binding: Some(method_id),
@@ -383,6 +419,7 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) {
         };
         entry.or_default().push_back(task_id);
     });
+    TaskHandle { _task_id: task_id }
 }
 
 fn setup_panic_hook() {
