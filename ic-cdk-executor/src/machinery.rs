@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "v1.1"), allow(dead_code))]
+
 #[cfg(feature = "v1.0")]
 use std::ops::ControlFlow;
 use std::{
@@ -11,9 +13,6 @@ use std::{
 };
 
 use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
-
-#[cfg(feature = "v1.0")]
-use crate::legacy::v0_wake_hook;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct MethodContext {
@@ -302,7 +301,7 @@ pub(crate) struct TaskWaker {
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
         #[cfg(feature = "v1.0")]
-        if v0_wake_hook(&self) == ControlFlow::Break(()) {
+        if crate::legacy::v0_wake_hook(&self) == ControlFlow::Break(()) {
             return;
         }
         TASKS.with_borrow_mut(|tasks| {
