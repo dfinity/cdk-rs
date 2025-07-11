@@ -5,6 +5,7 @@ use slotmap::Key;
 use crate::machinery::{
     cancel_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
     ContextKind, MethodContext, MethodHandle, MethodId, TaskWaker, CURRENT_METHOD, METHODS,
+    RECOVERING,
 };
 
 thread_local! {
@@ -15,6 +16,10 @@ thread_local! {
     pub(crate) static INFER_CONTEXT: Cell<Option<InferContext>> = const { Cell::new(None) };
 }
 
+#[deprecated(
+    since = "1.1.0",
+    note = "Use `spawn_migratory` or `spawn_protected` instead"
+)]
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     let Some(current) = CURRENT_METHOD.get() else {
         panic!("`spawn` can only be called within an executor context");
@@ -32,10 +37,15 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
     };
 }
 
+#[deprecated(since = "1.1.0", note = "Use `in_tracking_executor_context` instead")]
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
     in_null_context(f)
 }
 
+#[deprecated(
+    since = "1.1.0",
+    note = "Use `in_tracking_query_executor_context` instead"
+)]
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     let guard = MethodHandle::for_method(QUERY_METHOD.with(|m| *m));
     enter_current_method(guard, |_| {
@@ -45,12 +55,17 @@ pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
+#[deprecated(
+    since = "1.1.0",
+    note = "Use `in_callback_executor_context_for` instead"
+)]
 pub fn in_callback_executor_context(f: impl FnOnce()) {
     INFER_CONTEXT.set(Some(InferContext::Continue));
     in_null_context(f);
     INFER_CONTEXT.set(None);
 }
 
+#[deprecated(since = "1.1.0", note = "Use `in_trap_recovery_context_for` instead")]
 pub fn in_callback_cancellation_context(f: impl FnOnce()) {
     INFER_CONTEXT.set(Some(InferContext::Cancel));
     in_null_context(f);
@@ -71,7 +86,9 @@ pub(crate) fn v0_wake_hook(waker: &TaskWaker) -> ControlFlow<()> {
                 ControlFlow::Continue(())
             }
             Some(InferContext::Cancel) => {
+                RECOVERING.set(true);
                 cancel_task(waker.task_id);
+                RECOVERING.set(false);
                 ControlFlow::Break(())
             }
             None => ControlFlow::Continue(()),

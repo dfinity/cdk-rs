@@ -13,6 +13,7 @@
 //! The expected boilerplate for a canister method or other entrypoint (*not* including callbacks) looks like this:
 //!
 //! ```
+//! # use ic_cdk_executor::*;
 //! pub extern "C" fn function() {
 //!     in_tracking_executor_context(|| {
 //!         // method goes here
@@ -29,14 +30,16 @@
 //! The expected boilerplate for an inter-canister call callback looks like this:
 //!
 //! ```
+//! # use ic_cdk_executor::*;
+//! # fn unpack_env(env: usize) -> MethodHandle { unimplemented!() }
 //! unsafe extern "C" fn callback(env: usize) {
-//!     let method = /* ... */;
+//!     let method = unpack_env(env);
 //!     in_callback_executor_context_for(method, || {
 //!        // wake the call future
 //!     });
 //! }
 //! unsafe extern "C" fn cleanup(env: usize) {
-//!     let method = /* ... */;
+//!     let method = unpack_env(env);
 //!     in_trap_recovery_context_for(method, || {
 //!         cancel_all_tasks_attached_to_current_method();
 //!     });
@@ -61,6 +64,7 @@ mod machinery;
 
 #[cfg(feature = "v1.0")]
 #[doc(inline)]
+#[allow(deprecated)]
 pub use legacy::{
     in_callback_cancellation_context, in_callback_executor_context, in_executor_context,
     in_query_executor_context, spawn,

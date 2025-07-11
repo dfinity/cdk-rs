@@ -1,60 +1,3 @@
-//! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
-//!
-//! When you depend on this crate, it is recommended that you enable only the feature with the same name as the
-//! current minor version:
-//!
-//! ```toml
-//! [dependencies]
-//! ic-cdk-executor = { version = "1.1.0", default-features = false, features = ["v1.1"] }
-//! ```
-//!
-//! ## Contexts
-//!
-//! The expected boilerplate for a canister method or other entrypoint (*not* including callbacks) looks like this:
-//!
-//! ```
-//! pub extern "C" fn function() {
-//!     in_tracking_executor_context(|| {
-//!         // method goes here
-//!     });
-//! }
-//! ```
-//!
-//! The `in_tracking_executor_context` function permits you to call `spawn_*` functions. As little code as possible
-//! should exist outside the block, because `in_tracking_executor_context` additionally sets up the panic handler.
-//!
-//! The above applies to update contexts. Query contexts, including `inspect_message`, should use
-//! `in_tracking_query_executor_context`.
-//!
-//! The expected boilerplate for an inter-canister call callback looks like this:
-//!
-//! ```
-//! unsafe extern "C" fn callback(env: usize) {
-//!     let method = /* ... */;
-//!     in_callback_executor_context_for(method, || {
-//!        // wake the call future
-//!     });
-//! }
-//! unsafe extern "C" fn cleanup(env: usize) {
-//!     let method = /* ... */;
-//!     in_trap_recovery_context_for(method, || {
-//!         cancel_all_tasks_attached_to_current_method();
-//!     });
-//! }
-//! ```
-//!
-//! In async contexts, all scheduled tasks are run *after* the closure passed to the context function
-//! returns, but *before* the context function itself returns.
-//!
-//! The `method` parameter must be retrieved *before* making inter-canister calls via the [`extend_current_method_context`]
-//! function. Calling this function from the callback instead will trap.
-//!
-//! ## Protection
-//!
-//! Tasks can be either *protected* or *migratory*. Protected tasks are attached to the method that spawned them,
-//! when awoken will not resume until that method continues, and will be canceled if the method returns before they complete.
-//! Migratory tasks are not attached to any method, and will resume in whatever method wakes them.
-
 #[cfg(feature = "v1.0")]
 use std::ops::ControlFlow;
 use std::{
@@ -141,6 +84,7 @@ pub fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
+/// Execute a query function in a context that allows calling [`spawn_protected`] but not [`spawn_migratory`].
 pub fn in_tracking_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let method = METHODS.with_borrow_mut(|methods| {
@@ -157,6 +101,7 @@ pub fn in_tracking_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
+/// Execute an inter-canister call callback in the context of the method that made it.
 pub fn in_callback_executor_context_for<R>(
     method_handle: MethodHandle,
     f: impl FnOnce() -> R,
@@ -180,6 +125,7 @@ pub fn in_trap_recovery_context_for<R>(method: MethodHandle, f: impl FnOnce() ->
     })
 }
 
+/// Cancels all tasks made with [`spawn_protected`] attached to the current method.
 pub fn cancel_all_tasks_attached_to_current_method() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("`cancel_all_tasks_attached_to_current_method` can only be called within a method context");
@@ -214,6 +160,9 @@ pub fn is_recovering_from_trap() -> bool {
     RECOVERING.get()
 }
 
+/// Produces a handle to the current method context.
+///
+/// The method is active as long as the handle is alive.
 pub fn extend_current_method_context() -> MethodHandle {
     setup_panic_hook();
     let Some(method_id) = CURRENT_METHOD.get() else {
@@ -303,6 +252,11 @@ pub(crate) fn enter_current_method<R>(
     r
 }
 
+/// A handle to a method context. If the function returns and all handles have been dropped, the method is considered returned.
+///
+/// This should be created before performing an inter-canister call via [`extend_current_method_context`],
+/// threaded through the `env` parameter, and then used when calling [`in_callback_executor_context_for`] or
+/// [`in_trap_recovery_context_for`]. Failure to track this properly may result in unexpected cancellation of tasks.
 #[derive(Debug)]
 pub struct MethodHandle {
     method_id: MethodId,
@@ -333,6 +287,7 @@ impl Drop for MethodHandle {
     }
 }
 
+/// A handle to a spawned task.
 pub struct TaskHandle {
     _task_id: TaskId,
 }
@@ -367,6 +322,9 @@ impl Wake for TaskWaker {
     }
 }
 
+/// Spawns a task that can migrate between methods.
+///
+/// When the task is awoken, it will run in the context of the method that woke it.
 pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     setup_panic_hook();
     let Some(method_id) = CURRENT_METHOD.get() else {
@@ -396,6 +354,10 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     TaskHandle { _task_id: task_id }
 }
 
+/// Spawns a task attached to the current method.
+///
+/// When the task is awoken, if a different method is currently running, it will not run until the method
+/// it is attached to continues. If the attached method returns before the task completes, it will be canceled.
 pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     setup_panic_hook();
     if is_recovering_from_trap() {
