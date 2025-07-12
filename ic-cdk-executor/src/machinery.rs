@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "v1.1"), allow(dead_code))]
+#![cfg_attr(not(all(feature = "v1.0", feature = "v1.1")), allow(dead_code))]
 
 #[cfg(feature = "v1.0")]
 use std::ops::ControlFlow;
