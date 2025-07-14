@@ -4,149 +4,149 @@ use ic_management_canister_types::*;
 
 #[candid_method(update)]
 fn create_canister(_: CreateCanisterArgs) -> CreateCanisterResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn update_settings(_: UpdateSettingsArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn upload_chunk(_: UploadChunkArgs) -> UploadChunkResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn clear_chunk_store(_: ClearChunkStoreArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn stored_chunks(_: StoredChunksArgs) -> StoredChunksResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn install_code(_: InstallCodeArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn install_chunked_code(_: InstallChunkedCodeArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn uninstall_code(_: UninstallCodeArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn start_canister(_: StartCanisterArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn stop_canister(_: StopCanisterArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn canister_status(_: CanisterStatusArgs) -> CanisterStatusResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn canister_info(_: CanisterInfoArgs) -> CanisterInfoResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn subnet_info(_: SubnetInfoArgs) -> SubnetInfoResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn delete_canister(_: DeleteCanisterArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn deposit_cycles(_: DepositCyclesArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn raw_rand() -> RawRandResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn http_request(_: HttpRequestArgs) -> HttpRequestResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn ecdsa_public_key(_: EcdsaPublicKeyArgs) -> EcdsaPublicKeyResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn sign_with_ecdsa(_: SignWithEcdsaArgs) -> SignWithEcdsaResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn schnorr_public_key(_: SchnorrPublicKeyArgs) -> SchnorrPublicKeyResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn sign_with_schnorr(_: SignWithSchnorrArgs) -> SignWithSchnorrResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn node_metrics_history(_: NodeMetricsHistoryArgs) -> NodeMetricsHistoryResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn provisional_create_canister_with_cycles(
     _: ProvisionalCreateCanisterWithCyclesArgs,
 ) -> ProvisionalCreateCanisterWithCyclesResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn provisional_top_up_canister(_: ProvisionalTopUpCanisterArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn take_canister_snapshot(_: TakeCanisterSnapshotArgs) -> TakeCanisterSnapshotResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn load_canister_snapshot(_: LoadCanisterSnapshotArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn list_canister_snapshots(_: ListCanisterSnapshotsArgs) -> ListCanisterSnapshotsResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn delete_canister_snapshot(_: DeleteCanisterSnapshotArgs) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(query)]
 fn fetch_canister_logs(_: FetchCanisterLogsArgs) -> FetchCanisterLogsResult {
-    unreachable!()
+    unimplemented!()
 }
 
 #[cfg(test)]
