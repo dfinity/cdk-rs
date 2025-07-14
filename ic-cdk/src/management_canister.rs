@@ -565,6 +565,7 @@ mod transform_closure {
         Principal, TransformArgs,
     };
     use candid::{decode_one, encode_one};
+    use ic_cdk_executor::in_query_executor_context;
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
     use std::cell::RefCell;
 
@@ -575,22 +576,25 @@ mod transform_closure {
 
     #[export_name = "canister_query <ic-cdk internal> http_transform"]
     extern "C" fn http_transform() {
-        use crate::api::{msg_arg_data, msg_caller, msg_reply};
-        if msg_caller() != Principal::management_canister() {
-            crate::trap("This function is internal to ic-cdk and should not be called externally.");
-        }
-        crate::setup();
-        let arg_bytes = msg_arg_data();
-        let transform_args: TransformArgs = decode_one(&arg_bytes).unwrap();
-        let int = u64::from_be_bytes(transform_args.context[..].try_into().unwrap());
-        let key = DefaultKey::from(KeyData::from_ffi(int));
-        let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
-        let Some(func) = func else {
-            crate::trap(format!("Missing transform function for request {int}"));
-        };
-        let transformed = func(transform_args.response);
-        let encoded = encode_one(transformed).unwrap();
-        msg_reply(encoded);
+        in_query_executor_context(|| {
+            use crate::api::{msg_arg_data, msg_caller, msg_reply};
+            if msg_caller() != Principal::management_canister() {
+                crate::trap(
+                    "This function is internal to ic-cdk and should not be called externally.",
+                );
+            }
+            let arg_bytes = msg_arg_data();
+            let transform_args: TransformArgs = decode_one(&arg_bytes).unwrap();
+            let int = u64::from_be_bytes(transform_args.context[..].try_into().unwrap());
+            let key = DefaultKey::from(KeyData::from_ffi(int));
+            let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
+            let Some(func) = func else {
+                crate::trap(format!("Missing transform function for request {int}"));
+            };
+            let transformed = func(transform_args.response);
+            let encoded = encode_one(transformed).unwrap();
+            msg_reply(encoded);
+        });
     }
 
     /// Makes an HTTP outcall and transforms the response using a closure.

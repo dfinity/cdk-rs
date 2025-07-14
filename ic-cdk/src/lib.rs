@@ -18,11 +18,10 @@ pub mod call;
 pub mod futures;
 mod macros;
 pub mod management_canister;
-mod printer;
 pub mod stable;
 pub mod storage;
 
-use std::{future::Future, sync::Once};
+use std::future::Future;
 
 #[doc(inline)]
 pub use api::trap;
@@ -36,13 +35,6 @@ pub use api::{
 
 #[doc(inline)]
 pub use macros::*;
-
-static SETUP: Once = Once::new();
-
-/// Setup the stdlib hooks.
-fn setup() {
-    SETUP.call_once(printer::hook);
-}
 
 /// Format and then print the formatted message
 #[cfg(target_family = "wasm")]
