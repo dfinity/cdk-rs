@@ -219,7 +219,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
             CallFutureState::Trapped => trap("Call already trapped"),
             _ => {
                 unreachable!(
-                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                    "CallFutureState for in-flight calls should only be Executing or Trapped (legacy callback)"
                 )
             }
         };
@@ -261,7 +261,7 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
             }
             _ => {
                 unreachable!(
-                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                    "CallFutureState for in-flight calls should only be Executing or Trapped (legacy cleanup)"
                 )
             }
         };

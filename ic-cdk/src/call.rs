@@ -952,7 +952,7 @@ unsafe extern "C" fn callback(env: usize) {
             // to replace an automatic trap from not replying.
             CallFutureState::Trapped => trap("Call already trapped"),
             _ => unreachable!(
-                "CallFutureState for in-flight calls should only be Executing or Trapped"
+                "CallFutureState for in-flight calls should only be Executing or Trapped (callback)"
             ),
         };
         waker.wake();
@@ -998,7 +998,7 @@ unsafe extern "C" fn cleanup(env: usize) {
             }
             _ => {
                 unreachable!(
-                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                    "CallFutureState for in-flight calls should only be Executing or Trapped (cleanup)"
                 )
             }
         };
