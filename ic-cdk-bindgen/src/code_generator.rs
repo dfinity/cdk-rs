@@ -136,11 +136,11 @@ fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints) -> RcDoc<'a> {
         Vec(ref t) if matches!(t.as_ref(), Nat8) => str("serde_bytes::ByteBuf"),
         Vec(ref t) => str("Vec").append(enclose("<", pp_ty(t, recs), ">")),
         Record(ref fs) => pp_record_fields(fs, recs, ""),
-        Variant(_) => unreachable!(), // not possible after rewriting
-        Func(_) => unreachable!(),    // not possible after rewriting
-        Service(_) => unreachable!(), // not possible after rewriting
-        Class(_, _) => unreachable!(),
-        Knot(_) | Unknown | Future => unreachable!(),
+        Variant(_) => unreachable!("pp_ty variant"), // not possible after rewriting
+        Func(_) => unreachable!("pp_ty func"),       // not possible after rewriting
+        Service(_) => unreachable!("pp_ty service"), // not possible after rewriting
+        Class(_, _) => unreachable!("pp_ty class"),
+        Knot(_) | Unknown | Future => unreachable!("pp_ty imaginary type"),
     }
 }
 
@@ -301,7 +301,7 @@ fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
             let func_doc = match func.as_ref() {
                 TypeInner::Func(ref f) => enclose("candid::func!(", pp_ty_func(f), ")"),
                 TypeInner::Var(_) => pp_ty(func, &RecPoints::default()).append("::ty()"),
-                _ => unreachable!(),
+                _ => unreachable!("pp_ty_service received scalar"),
             };
             RcDoc::text("\"")
                 .append(id)

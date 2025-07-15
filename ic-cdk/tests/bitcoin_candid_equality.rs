@@ -13,29 +13,29 @@ use ic_cdk::bitcoin_canister::*;
 
 #[candid_method(update)]
 fn bitcoin_get_balance(_: GetBalanceRequest) -> Satoshi {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn bitcoin_get_utxos(_: GetUtxosRequest) -> GetUtxosResponse {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn bitcoin_get_current_fee_percentiles(
     _: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn bitcoin_get_block_headers(_: GetBlockHeadersRequest) -> GetBlockHeadersResponse {
-    unreachable!()
+    unimplemented!()
 }
 
 #[candid_method(update)]
 fn bitcoin_send_transaction(_: SendTransactionRequest) {
-    unreachable!()
+    unimplemented!()
 }
 
 #[cfg(test)]

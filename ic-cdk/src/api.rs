@@ -443,7 +443,7 @@ pub fn in_replicated_execution() -> bool {
     match ic0::in_replicated_execution() {
         0 => false,
         1 => true,
-        _ => unreachable!(),
+        _ => panic!("unexpected return value from in_replicated_execution"),
     }
 }
 
