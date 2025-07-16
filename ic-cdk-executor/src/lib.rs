@@ -5,13 +5,14 @@ use std::collections::VecDeque;
 use std::future::Future;
 use std::mem;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 use std::task::{Context, Poll, Wake, Waker};
 
 use slotmap::{new_key_type, SlotMap};
 
 /// Spawn an asynchronous task to run in the background.
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
+    set_panic_hook();
     let in_query = match CONTEXT.get() {
         AsyncContext::None => panic!("`spawn` can only be called from an executor context"),
         AsyncContext::Query => true,
@@ -30,6 +31,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 
 /// Execute an update function in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    set_panic_hook();
     let _guard = ContextGuard::new(AsyncContext::Update);
     let res = f();
     poll_all();
@@ -38,6 +40,7 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute a composite query function in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    set_panic_hook();
     let _guard = ContextGuard::new(AsyncContext::Query);
     let res = f();
     poll_all();
@@ -46,6 +49,7 @@ pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers.
 pub fn in_callback_executor_context(f: impl FnOnce()) {
+    set_panic_hook();
     let _guard = ContextGuard::new(AsyncContext::FromTask);
     f();
     poll_all();
@@ -54,6 +58,7 @@ pub fn in_callback_executor_context(f: impl FnOnce()) {
 /// Execute an inter-canister-call callback in a context that allows calling [`spawn`] and notifying wakers,
 /// but will cancel every awoken future.
 pub fn in_callback_cancellation_context(f: impl FnOnce()) {
+    set_panic_hook();
     let _guard = ContextGuard::new(AsyncContext::Cancel);
     f();
 }
@@ -179,6 +184,7 @@ struct TaskWaker {
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
+        set_panic_hook();
         let context = CONTEXT.get();
         assert!(
             context != AsyncContext::None,
@@ -199,4 +205,27 @@ impl Wake for TaskWaker {
             }
         }
     }
+}
+
+pub fn set_panic_hook() {
+    static PANIC_HOOK_SET: Once = Once::new();
+    PANIC_HOOK_SET.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            let file = info.location().unwrap().file();
+            let line = info.location().unwrap().line();
+            let col = info.location().unwrap().column();
+
+            let msg = match info.payload().downcast_ref::<&'static str>() {
+                Some(s) => *s,
+                None => match info.payload().downcast_ref::<String>() {
+                    Some(s) => &s[..],
+                    None => "Box<Any>",
+                },
+            };
+
+            let err_info = format!("Panicked at '{msg}', {file}:{line}:{col}");
+            ic0::debug_print(err_info.as_bytes());
+            ic0::trap(err_info.as_bytes());
+        }));
+    });
 }

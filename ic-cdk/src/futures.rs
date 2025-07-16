@@ -83,7 +83,6 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 /// Background tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
     ic_cdk_executor::in_executor_context(f)
 }
 
@@ -94,7 +93,6 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
 /// Background composite query tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
     ic_cdk_executor::in_query_executor_context(f)
 }
 
