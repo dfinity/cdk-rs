@@ -19,6 +19,7 @@ async fn basic() {
             log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
+            environment_variables: Some(vec![]),
         }),
     };
     // 500 B is the minimum cycles required to create a canister.

@@ -258,6 +258,33 @@ fn call_cost_sign_with_schnorr() {
     msg_reply(vec![]);
 }
 
+#[export_name = "canister_query call_env_var_count"]
+fn call_env_var_count() {
+    let count = env_var_count();
+    assert_eq!(count, 0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_env_var_name"]
+fn call_env_var_name() {
+    // This is expected to panic as no environment variables are set.
+    env_var_name(0);
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_env_var_name_exists"]
+fn call_env_var_name_exists() {
+    assert!(!env_var_name_exists("non_existent_var"));
+    msg_reply(vec![]);
+}
+
+#[export_name = "canister_query call_env_var_value"]
+fn call_env_var_value() {
+    // This is expected to panic as no environment variables are set.
+    env_var_value("non_existent_var");
+    msg_reply(vec![]);
+}
+
 #[export_name = "canister_update call_debug_print"]
 fn call_debug_print() {
     debug_print("Hello, world!");
