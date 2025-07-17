@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Support Canister Environment Variable. (#636)
+  - Add binding for `env_var_*` API.
+
+### Changed
+
+- [BREAKING] Upgrade `ic-management-canister-types` which contains the changes for Canister Environment Variable.
+
 ## [0.18.5] - 2025-06-25
 
 ### Fixed

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Added `environment_variable` field to `CanisterSettings` and `DefiniteCanisterSettings`.
+  - Added the type `EnvironmentVariable`.
+- Added `settings_change` variant to `ChangeDetails`.
+- Added `environment_variables_hash` field to `CreationRecord`.
+
 ## [0.3.1] - 2025-05-09
 
 ### Added
