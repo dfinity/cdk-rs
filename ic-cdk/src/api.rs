@@ -595,7 +595,7 @@ pub fn env_var_name_exists<T: AsRef<str>>(name: T) -> bool {
 }
 
 /// Gets the value of the environment variable with the given name.
-/// 
+///
 /// It's recommended to use [`env_var_name_exists`] to check if the variable exists before calling this function.
 ///
 /// # Panics
