@@ -118,6 +118,24 @@ extern "C" {
     pub fn cost_sign_with_schnorr(src: usize, size: usize, algorithm: u32, dst: usize) -> u32;
     #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `vetkd_curve` parameter does not affect safety"]
     pub fn cost_vetkd_derive_key(src: usize, size: usize, vetkd_curve: u32, dst: usize) -> u32;
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub fn env_var_count() -> usize;
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub fn env_var_name_size(index: usize) -> usize;
+    #[doc = "# Safety\n\n- The `index` parameter does not affect safety\n- `dst` must be a pointer to a writable sequence of bytes with size `size`\n- The `offset` parameter does not affect safety"]
+    pub fn env_var_name_copy(index: usize, dst: usize, offset: usize, size: usize);
+    #[doc = "# Safety\n\n`name_src` must be a pointer to a readable UTF-8 string with size `name_size`"]
+    pub fn env_var_name_exists(name_src: usize, name_size: usize) -> u32;
+    #[doc = "# Safety\n\n`name_src` must be a pointer to a readable UTF-8 string with size `name_size`"]
+    pub fn env_var_value_size(name_src: usize, name_size: usize) -> usize;
+    #[doc = "# Safety\n\n- `name_src` must be a pointer to a readable UTF-8 string with size `name_size`\n- `dst` must be a pointer to a writable sequence of bytes with size `size`\n- The `offset` parameter does not affect safety"]
+    pub fn env_var_value_copy(
+        name_src: usize,
+        name_size: usize,
+        dst: usize,
+        offset: usize,
+        size: usize,
+    );
     #[doc = "# Safety\n\n`src` must be a pointer to a readable sequence of bytes with size `size`"]
     pub fn debug_print(src: usize, size: usize);
     #[doc = "# Safety\n\n`src` must be a pointer to a readable sequence of bytes with size `size`"]
@@ -364,6 +382,36 @@ mod non_wasm {
         dst: usize,
     ) -> u32 {
         panic!("cost_vetkd_derive_key should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub unsafe fn env_var_count() -> usize {
+        panic!("env_var_count should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub unsafe fn env_var_name_size(index: usize) -> usize {
+        panic!("env_var_name_size should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n- The `index` parameter does not affect safety\n- `dst` must be a pointer to a writable sequence of bytes with size `size`\n- The `offset` parameter does not affect safety"]
+    pub unsafe fn env_var_name_copy(index: usize, dst: usize, offset: usize, size: usize) {
+        panic!("env_var_name_copy should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n`name_src` must be a pointer to a readable UTF-8 string with size `name_size`"]
+    pub unsafe fn env_var_name_exists(name_src: usize, name_size: usize) -> u32 {
+        panic!("env_var_name_exists should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n`name_src` must be a pointer to a readable UTF-8 string with size `name_size`"]
+    pub unsafe fn env_var_value_size(name_src: usize, name_size: usize) -> usize {
+        panic!("env_var_value_size should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n- `name_src` must be a pointer to a readable UTF-8 string with size `name_size`\n- `dst` must be a pointer to a writable sequence of bytes with size `size`\n- The `offset` parameter does not affect safety"]
+    pub unsafe fn env_var_value_copy(
+        name_src: usize,
+        name_size: usize,
+        dst: usize,
+        offset: usize,
+        size: usize,
+    ) {
+        panic!("env_var_value_copy should only be called inside canisters.");
     }
     #[doc = "# Safety\n\n`src` must be a pointer to a readable sequence of bytes with size `size`"]
     pub unsafe fn debug_print(src: usize, size: usize) {
