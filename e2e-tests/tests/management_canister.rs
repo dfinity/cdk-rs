@@ -9,14 +9,20 @@ fn test_management_canister() {
     let canister_id = pic.create_canister();
     let subnet_id = pic.get_subnet(canister_id).unwrap();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
-    pic.install_canister(canister_id, wasm, vec![], None);
+    pic.install_canister(canister_id, wasm.clone(), vec![], None);
     let () = update(&pic, canister_id, "basic", ()).unwrap();
     let () = update(&pic, canister_id, "ecdsa", ()).unwrap();
     let () = update(&pic, canister_id, "schnorr", ()).unwrap();
     let () = update(&pic, canister_id, "metrics", (subnet_id,)).unwrap();
     let () = update(&pic, canister_id, "subnet", (subnet_id,)).unwrap();
-    let () = update(&pic, canister_id, "provisional", ()).unwrap();
     let () = update(&pic, canister_id, "snapshots", ()).unwrap();
+
+    // Install the test canister on the II subnet, so that it can provisional create canisters on the same subnet.
+    let ii_subnet_id = pic.topology().get_ii().unwrap();
+    let canister_id_on_ii = pic.create_canister_on_subnet(None, None, ii_subnet_id);
+    pic.add_cycles(canister_id_on_ii, 10_000_000_000_000u128); // 10 T
+    pic.install_canister(canister_id_on_ii, wasm, vec![], None);
+    let () = update(&pic, canister_id_on_ii, "provisional", ()).unwrap();
 }
 
 #[test]

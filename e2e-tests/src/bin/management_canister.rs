@@ -225,12 +225,13 @@ async fn provisional() {
         log_visibility: Some(LogVisibility::Controllers),
         ..Default::default()
     };
+    // Using Cycles Ledger (on the II subnet) Canister ID as specified_id.
+    // The test canister is deployed on the II subnet, it can provisional create a canister on the same subnet.
+    let specified_id = Principal::from_text("um5iw-rqaaa-aaaaq-qaaba-cai").unwrap();
     let arg = ProvisionalCreateCanisterWithCyclesArgs {
         amount: Some(10_000_000_000_000u64.into()),
         settings: Some(settings),
-        specified_id: Some(Principal::from_slice(&[
-            255, 255, 255, 255, 255, 209, 0, 0, 1, 1,
-        ])),
+        specified_id: Some(specified_id),
     };
     let canister_id = provisional_create_canister_with_cycles(&arg)
         .await
