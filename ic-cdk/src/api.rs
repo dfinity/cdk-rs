@@ -433,7 +433,11 @@ pub fn call_context_instruction_counter() -> u64 {
 /// Determines if a Principal is a controller of the canister.
 pub fn is_controller(principal: &Principal) -> bool {
     let slice = principal.as_slice();
-    ic0::is_controller(slice) != 0
+    match ic0::is_controller(slice) {
+        0 => false,
+        1 => true,
+        n => panic!("unexpected return value from is_controller: {n}"),
+    }
 }
 
 /// Checks if in replicated execution.
@@ -443,7 +447,7 @@ pub fn in_replicated_execution() -> bool {
     match ic0::in_replicated_execution() {
         0 => false,
         1 => true,
-        _ => panic!("unexpected return value from in_replicated_execution"),
+        n => panic!("unexpected return value from in_replicated_execution: {n}"),
     }
 }
 
@@ -558,6 +562,53 @@ pub fn cost_vetkd_derive_key<T: AsRef<str>>(
     let key_name = key_name.as_ref();
     let (cost, code) = ic0::cost_vetkd_derive_key(key_name, vetkd_curve);
     sign_cost_result(cost, code)
+}
+
+/// Gets the number of environment variables available in the canister.
+pub fn env_var_count() -> usize {
+    ic0::env_var_count()
+}
+
+/// Gets the size of the name of the environment variable at the given index.
+///
+/// # Panics
+///
+/// This function traps if the index is out of bounds (>= than value provided by [`env_var_count`])
+pub fn env_var_name(index: usize) -> String {
+    let len = ic0::env_var_name_size(index);
+    let mut buf = vec![0u8; len];
+    ic0::env_var_name_copy(index, &mut buf, 0);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Checks if the environment variable with the given name exists.
+///
+/// # Panics
+///
+/// This function traps if the length of `name` exceeds `MAX_ENV_VAR_NAME_LENGTH`.
+pub fn env_var_name_exists<T: AsRef<str>>(name: T) -> bool {
+    match ic0::env_var_name_exists(name.as_ref()) {
+        0 => false,
+        1 => true,
+        n => panic!("unexpected return value from env_var_name_exists: {n}"),
+    }
+}
+
+/// Gets the value of the environment variable with the given name.
+/// 
+/// It's recommended to use [`env_var_name_exists`] to check if the variable exists before calling this function.
+///
+/// # Panics
+///
+/// This function traps if:
+/// - The length of `name` exceeds `MAX_ENV_VAR_NAME_LENGTH`.
+/// - The name does not match any existing environment variable.
+pub fn env_var_value<T: AsRef<str>>(name: T) -> String {
+    let name = name.as_ref();
+    let len = ic0::env_var_value_size(name);
+    let mut buf = vec![0u8; len];
+    ic0::env_var_value_copy(name, &mut buf, 0);
+    String::from_utf8_lossy(&buf).into_owned()
 }
 
 /// Emits textual trace messages.
