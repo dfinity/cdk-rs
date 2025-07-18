@@ -30,6 +30,8 @@ struct ExportAttributes {
     pub composite: bool,
     #[darling(default)]
     pub hidden: bool,
+    #[darling(rename = "crate")]
+    pub cratename: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -160,6 +162,7 @@ fn dfn_macro(
             format!("#[{method}] must be above a function with no generic parameters."),
         ));
     }
+    let cratename = format_ident!("{}", attrs.cratename.as_deref().unwrap_or("ic_cdk"));
 
     // 1. function name(s)
     let name = &signature.ident;
@@ -206,7 +209,7 @@ fn dfn_macro(
             Ok(quote! {
                 let r: Result<(), String> = #guard_path ();
                 if let Err(e) = r {
-                    ::ic_cdk::api::msg_reject(&e);
+                    ::#cratename::api::msg_reject(&e);
                     return;
                 }
             })
@@ -238,19 +241,19 @@ fn dfn_macro(
         if arg_tuple.len() == 1 {
             let arg_one = &arg_tuple[0];
             quote! {
-                let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                let arg_bytes = ::#cratename::api::msg_arg_data();
                 let #arg_one = #decode_with_ident(arg_bytes);
             }
         } else {
             quote! {
-            let arg_bytes = ::ic_cdk::api::msg_arg_data();
+            let arg_bytes = ::#cratename::api::msg_arg_data();
             let ( #( #arg_tuple, )* ) = #decode_with_ident(arg_bytes); }
         }
     } else if arg_tuple.is_empty() {
         quote! {}
     } else {
         quote! {
-            let arg_bytes = ::ic_cdk::api::msg_arg_data();
+            let arg_bytes = ::#cratename::api::msg_arg_data();
             let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap();
         }
     };
@@ -302,7 +305,7 @@ fn dfn_macro(
         };
         quote! {
             let bytes: Vec<u8> = #return_bytes;
-            ::ic_cdk::api::msg_reply(bytes);
+            ::#cratename::api::msg_reply(bytes);
         }
     };
 
@@ -352,9 +355,9 @@ fn dfn_macro(
     };
     let body = if signature.asyncness.is_some() {
         quote! {
-            ::ic_cdk::futures::internals::#async_context_name(|| {
+            ::#cratename::futures::internals::#async_context_name(|| {
                 #guard
-                ::ic_cdk::futures::spawn(async {
+                ::#cratename::futures::spawn(async {
                     #arg_decode
                     let result = #function_call;
                     #return_encode
@@ -364,7 +367,7 @@ fn dfn_macro(
     } else {
         quote! {
             #guard
-            ::ic_cdk::futures::internals::#async_context_name(|| {
+            ::#cratename::futures::internals::#async_context_name(|| {
                 #arg_decode
                 let result = #function_call;
                 #return_encode
@@ -828,6 +831,42 @@ mod test {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn alternate_crate() {
+        let generated = ic_query(
+            quote!(crate = "ic_cdk_old"),
+            quote! {
+                fn query() -> u32 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        // 0. The exported function
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
+            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            fn #fn_name() {
+                ::ic_cdk_old::futures::internals::in_query_executor_context(|| {
+                    let result = query();
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
+                    ::ic_cdk_old::api::msg_reply(bytes);
                 });
             }
         };
