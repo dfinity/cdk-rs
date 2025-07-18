@@ -1,4 +1,5 @@
 use candid::Principal;
+use ic_cdk::management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
 use pocket_ic::ErrorCode;
 
 mod test_utilities;
@@ -147,22 +148,7 @@ fn call_api() {
         .update_call(canister_id, sender, "call_cost_sign_with_schnorr", vec![])
         .unwrap();
     assert!(res.is_empty());
-    let res = pic
-        .update_call(canister_id, sender, "call_env_var_count", vec![])
-        .unwrap();
-    assert!(res.is_empty());
-    let rej = pic
-        .update_call(canister_id, sender, "call_env_var_name", vec![])
-        .unwrap_err();
-    assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
-    let res = pic
-        .update_call(canister_id, sender, "call_env_var_name_exists", vec![])
-        .unwrap();
-    assert!(res.is_empty());
-    let rej = pic
-        .update_call(canister_id, sender, "call_env_var_value", vec![])
-        .unwrap_err();
-    assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
+
     let res = pic
         .update_call(canister_id, sender, "call_debug_print", vec![])
         .unwrap();
@@ -172,4 +158,58 @@ fn call_api() {
         .unwrap_err();
     assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
     assert!(rej.reject_message.contains("It's a trap!"));
+}
+
+#[test]
+fn call_env_var() {
+    // with_ii_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
+    let pic = pic_base()
+        .with_ii_subnet()
+        .with_nonmainnet_features(true)
+        .build();
+    let wasm = cargo_build_canister("api");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 100_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+    let sender = Principal::anonymous();
+    let update_settings_arg = UpdateSettingsArgs {
+        canister_id,
+        settings: CanisterSettings {
+            environment_variables: Some(vec![
+                EnvironmentVariable {
+                    name: "key1".to_string(),
+                    value: "value1".to_string(),
+                },
+                EnvironmentVariable {
+                    name: "key2".to_string(),
+                    value: "value2".to_string(),
+                },
+            ]),
+            ..Default::default()
+        },
+    };
+    let _: () = update(
+        &pic,
+        Principal::management_canister(),
+        "update_settings",
+        (update_settings_arg,),
+    )
+    .unwrap();
+
+    let res = pic
+        .update_call(canister_id, sender, "call_env_var_count", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_env_var_name", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_env_var_name_exists", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_env_var_value", vec![])
+        .unwrap();
+    assert!(res.is_empty());
 }

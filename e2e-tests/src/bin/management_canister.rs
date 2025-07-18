@@ -19,7 +19,10 @@ async fn basic() {
             log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
-            environment_variables: Some(vec![]),
+            environment_variables: Some(vec![EnvironmentVariable {
+                name: "key1".to_string(),
+                value: "value1".to_string(),
+            }]),
         }),
     };
     // 500 B is the minimum cycles required to create a canister.
@@ -46,6 +49,13 @@ async fn basic() {
     );
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_threshold, 0u8);
+    assert_eq!(
+        definite_canister_setting.environment_variables,
+        vec![EnvironmentVariable {
+            name: "key1".to_string(),
+            value: "value1".to_string(),
+        }]
+    );
 
     // update_settings
     let arg = UpdateSettingsArgs {
@@ -53,6 +63,16 @@ async fn basic() {
         settings: CanisterSettings {
             freezing_threshold: Some(2_592_000u32.into()),
             log_visibility: Some(LogVisibility::AllowedViewers(vec![self_id])),
+            environment_variables: Some(vec![
+                EnvironmentVariable {
+                    name: "key2".to_string(),
+                    value: "value2".to_string(),
+                },
+                EnvironmentVariable {
+                    name: "key3".to_string(),
+                    value: "value3".to_string(),
+                },
+            ]),
             ..Default::default()
         },
     };
