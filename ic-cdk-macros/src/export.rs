@@ -325,7 +325,9 @@ fn dfn_macro(
         };
         let mut dummy_fun = fun.clone();
         dummy_fun.sig.ident = candid_method_name;
-        dummy_fun.block = Box::new(syn::parse_quote!({ unreachable!() }));
+        dummy_fun.block = Box::new(syn::parse_quote!({
+            panic!("candid dummy function called")
+        }));
         if attrs.decode_with.is_some() {
             let mut inputs = Punctuated::new();
             inputs.push(syn::parse_quote!(arg_bytes: Vec<u8>));
@@ -464,7 +466,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query() { unreachable!() }
+            fn __candid_method_query() { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
@@ -733,7 +735,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query(arg_bytes: Vec<u8>) { unreachable!() }
+            fn __candid_method_query(arg_bytes: Vec<u8>) { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
@@ -782,7 +784,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query() -> Vec<u8> { unreachable!() }
+            fn __candid_method_query() -> Vec<u8> { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {

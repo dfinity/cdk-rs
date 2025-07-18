@@ -108,7 +108,7 @@ fn check_pocket_ic_server() -> PathBuf {
     let e2e_tests_package = metadata
         .packages
         .iter()
-        .find(|m| m.name == "ic-cdk-e2e-tests")
+        .find(|m| m.name.as_ref() == "ic-cdk-e2e-tests")
         .expect("ic-cdk-e2e-tests not found in Cargo.toml");
     let pocket_ic_tag = e2e_tests_package
         .dependencies
@@ -118,6 +118,7 @@ fn check_pocket_ic_server() -> PathBuf {
         .source
         .as_ref()
         .expect("pocket-ic source not found in Cargo.toml")
+        .repr
         .split_once("tag=")
         .expect("`tag=` not found in pocket-ic source")
         .1;

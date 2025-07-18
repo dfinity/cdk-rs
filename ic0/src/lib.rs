@@ -598,7 +598,7 @@ pub fn debug_print(message: &[u8]) {
 pub fn trap(message: &[u8]) -> ! {
     // SAFETY: message is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.trap
     unsafe { sys::trap(message.as_ptr() as usize, message.len()) }
-    unreachable!()
+    unreachable!("trap should halt execution immediately")
 }
 
 #[inline]

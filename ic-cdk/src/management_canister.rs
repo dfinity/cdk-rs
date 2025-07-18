@@ -565,6 +565,7 @@ mod transform_closure {
         Principal, TransformArgs,
     };
     use candid::{decode_one, encode_one};
+    use ic_cdk_executor::in_query_executor_context;
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
     use std::cell::RefCell;
 

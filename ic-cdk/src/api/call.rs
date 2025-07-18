@@ -220,7 +220,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
         // to replace an automatic trap from not replying.
         CallFutureState::Trapped => trap("Call already trapped"),
         _ => {
-            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped (legacy callback)")
         }
     };
     ic_cdk_executor::in_callback_executor_context_for(method, || {
@@ -258,7 +258,7 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
             return;
         }
         _ => {
-            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped")
+            unreachable!("CallFutureState for in-flight calls should only be Executing or Trapped (legacy cleanup)")
         }
     };
     ic_cdk_executor::in_trap_recovery_context_for(method, || {
