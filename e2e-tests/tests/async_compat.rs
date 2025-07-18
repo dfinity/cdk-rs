@@ -6,7 +6,7 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 #[test]
 fn panic_after_async_frees_resources() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -46,7 +46,7 @@ fn panic_after_async_frees_resources() {
 #[test]
 fn panic_after_async_destructors_cannot_schedule_tasks() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -64,7 +64,7 @@ fn panic_after_async_destructors_cannot_schedule_tasks() {
 #[test]
 fn panic_after_async_destructors_can_schedule_timers() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -83,7 +83,7 @@ fn panic_after_async_destructors_can_schedule_timers() {
 #[test]
 fn notify_calls() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
     pic.install_canister(sender_id, wasm.clone(), vec![], None);
@@ -103,7 +103,7 @@ fn notify_calls() {
 #[test]
 fn test_composite_query() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
     pic.install_canister(sender_id, wasm.clone(), vec![], None);
@@ -119,7 +119,7 @@ fn test_composite_query() {
 #[test]
 fn channels() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -131,7 +131,7 @@ fn channels() {
 #[test]
 fn spawn_ordering() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -144,7 +144,7 @@ fn spawn_ordering() {
 #[test]
 fn early_panic_not_erased() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
