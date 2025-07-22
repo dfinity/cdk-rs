@@ -863,10 +863,10 @@ mod test {
             #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
             #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
             fn #fn_name() {
-                ::ic_cdk_old::futures::internals::in_query_executor_context(|| {
+                ic_cdk_old::futures::internals::in_query_executor_context(|| {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
-                    ::ic_cdk_old::api::msg_reply(bytes);
+                    ic_cdk_old::api::msg_reply(bytes);
                 });
             }
         };
