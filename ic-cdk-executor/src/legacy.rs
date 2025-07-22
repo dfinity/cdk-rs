@@ -76,12 +76,11 @@ pub(crate) fn v0_wake_hook(waker: &TaskWaker) -> ControlFlow<()> {
     if CURRENT_METHOD.get().is_some_and(|m| m.is_null()) {
         match INFER_CONTEXT.get() {
             Some(InferContext::Continue) => {
-                if METHODS.with_borrow(|methods| {
-                    methods
-                        .get(waker.source_method)
-                        .is_some_and(|method| method.kind == ContextKind::Query)
-                }) {
-                    CURRENT_METHOD.set(Some(QUERY_METHOD.with(|m| *m)));
+                let v0_query_method = QUERY_METHOD.with(|m| *m);
+                if waker.source_method == v0_query_method {
+                    CURRENT_METHOD.set(Some(v0_query_method));
+                } else if !waker.source_method.is_null() {
+                    panic!("waker API usage mismatch between canister method and inter-canister call; try running `cargo update -p ic-cdk`");
                 }
                 ControlFlow::Continue(())
             }

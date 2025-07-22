@@ -170,7 +170,7 @@ pub fn spawn_017_compat<F: 'static + Future<Output = ()>>(fut: F) {
                 if dummy.0.load(Ordering::SeqCst) {
                     continue;
                 } else {
-                    crate::futures::spawn(pin);
+                    spawn(pin);
                     break;
                 }
             }

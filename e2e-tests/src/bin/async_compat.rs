@@ -1,3 +1,4 @@
+extern crate ic_cdk as ic_cdk_new;
 extern crate ic_cdk_old as ic_cdk;
 
 use candid::Principal;
@@ -199,6 +200,101 @@ async fn spawn_ordering() {
     );
     spawn(async { on_notify() });
     assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
+}
+
+#[ic_cdk_new::update(crate = "ic_cdk_new")]
+async fn outer_new_inner_old() {
+    Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+}
+
+#[update]
+async fn outer_old_inner_new() {
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+}
+
+#[ic_cdk_new::query(composite = true, crate = "ic_cdk_new")]
+async fn outer_new_inner_old_q() {
+    Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
+        .with_arg("myself")
+        .await
+        .unwrap()
+        .candid::<String>()
+        .unwrap();
+}
+
+#[query(composite = true)]
+async fn outer_old_inner_new_q() {
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
+        .with_arg("myself")
+        .await
+        .unwrap()
+        .candid::<String>()
+        .unwrap();
+}
+
+#[update]
+async fn mixed_modes() {
+    ic_cdk_new::futures::spawn_migratory(async move {
+        let fut1 = async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut2 = async {
+            ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut3 = async { on_notify() };
+        futures::join!(fut1, fut2, fut3);
+    });
+    ic_cdk::futures::spawn(async move {
+        let fut1 = async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut2 = async {
+            ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut3 = async { on_notify() };
+        futures::join!(fut1, fut2, fut3);
+    });
+    let fut1 = async {
+        Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+            .await
+            .unwrap()
+    };
+    let fut2 = async {
+        ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+            .await
+            .unwrap()
+    };
+    let fut3 = async { on_notify() };
+    futures::join!(fut1, fut2, fut3);
+}
+
+#[update]
+async fn mixed_trap() {
+    struct IncOnDrop;
+    impl Drop for IncOnDrop {
+        fn drop(&mut self) {
+            if ic_cdk::futures::is_recovering_from_trap() {
+                on_notify();
+            }
+        }
+    }
+    let _guard = IncOnDrop;
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    ic_cdk::trap("intentional trap");
 }
 
 fn main() {}
