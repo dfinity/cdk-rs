@@ -204,9 +204,21 @@ async fn spawn_ordering() {
 
 #[ic_cdk_new::update(crate = "ic_cdk_new")]
 async fn outer_new_inner_old() {
-    Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
-        .await
-        .unwrap();
+    futures::join!(
+        async {
+            Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
+                .await
+                .unwrap();
+        },
+        async {
+            // dummy - if this is not present, the panic message is instead about spawn_protected outliving
+            loop {
+                ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                    .await
+                    .unwrap();
+            }
+        }
+    );
 }
 
 #[update]
@@ -218,12 +230,21 @@ async fn outer_old_inner_new() {
 
 #[ic_cdk_new::query(composite = true, crate = "ic_cdk_new")]
 async fn outer_new_inner_old_q() {
-    Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
-        .with_arg("myself")
-        .await
-        .unwrap()
-        .candid::<String>()
-        .unwrap();
+    futures::join!(
+        async {
+            Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
+                .await
+                .unwrap();
+        },
+        async {
+            // dummy - if this is not present, the panic message is instead about spawn_protected outliving
+            loop {
+                ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                    .await
+                    .unwrap();
+            }
+        }
+    );
 }
 
 #[query(composite = true)]

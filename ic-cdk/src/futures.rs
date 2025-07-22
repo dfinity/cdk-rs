@@ -92,6 +92,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
             completed: bool,
         }
         impl<F> PinnedDrop for ProtectedTask<F> {
+            #[track_caller]
             fn drop(this: Pin<&mut Self>) {
                 if !this.completed && !ic_cdk_executor::is_recovering_from_trap() {
                     panic!("protected task outlived its canister method (did you mean to use spawn_weak or spawn_migratory?)")

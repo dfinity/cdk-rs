@@ -1,4 +1,6 @@
+use async_channel::TryRecvError;
 use candid::Principal;
+use core::panic;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use ic_cdk::call::Call;
@@ -6,8 +8,11 @@ use ic_cdk::futures::{spawn, spawn_017_compat};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::cell::Cell;
+use std::future::Future;
+use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::RwLock;
+use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 lazy_static! {
@@ -197,6 +202,59 @@ async fn spawn_ordering() {
     );
     spawn(async { on_notify() });
     assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
+}
+
+#[update]
+async fn spawn_protected_with_distant_waker() {
+    let caller = ic_cdk::api::msg_caller();
+    thread_local! {
+        static WAKER: Cell<Option<Waker>> = const { Cell::new(None) };
+    }
+    struct RemoteFuture(bool);
+    impl Future for RemoteFuture {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if self.0 {
+                Poll::Ready(())
+            } else {
+                WAKER.set(Some(cx.waker().clone()));
+                self.as_mut().0 = true;
+                Poll::Pending
+            }
+        }
+    }
+    // despite the waker being awoken from a timer...
+    ic_cdk_timers::set_timer(Duration::from_secs(0), || WAKER.take().unwrap().wake());
+    let (tx, rx) = async_channel::bounded(1);
+    spawn(async move {
+        RemoteFuture(false).await;
+        // ... the msg data should still match the original task
+        tx.send(ic_cdk::api::msg_caller()).await.unwrap();
+    });
+    loop {
+        match rx.try_recv() {
+            Ok(value) => {
+                assert_eq!(value, caller);
+                break;
+            }
+            Err(TryRecvError::Empty) => {
+                // make calls to keep the method alive while the background task runs
+                Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                    .await
+                    .unwrap();
+            }
+            Err(TryRecvError::Closed) => panic!("channel closed unexpectedly"),
+        }
+    }
+}
+
+#[update]
+async fn stalled_protected_task() {
+    spawn(std::future::pending());
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
 }
 
 fn main() {}

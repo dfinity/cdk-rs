@@ -32,11 +32,17 @@ new_key_type! {
 }
 
 thread_local! {
+    // global: list of all method contexts currently active
     pub(crate) static METHODS: RefCell<SlotMap<MethodId, MethodContext>> = RefCell::default();
+    // global: list of all tasks currently spawned
     pub(crate) static TASKS: RefCell<HopSlotMap<TaskId, Task>> = RefCell::default();
+    // global: map of methods to their protected tasks that have been woken up
     pub(crate) static PROTECTED_WAKEUPS: RefCell<SecondaryMap<MethodId, VecDeque<TaskId>>> = RefCell::default();
+    // global: list of migratory tasks that have been woken up
     pub(crate) static MIGRATORY_WAKEUPS: RefCell<VecDeque<TaskId>> = const { RefCell::new(VecDeque::new()) };
+    // dynamically scoped: the current method context (can be null)
     pub(crate) static CURRENT_METHOD: Cell<Option<MethodId>> = const { Cell::new(None) };
+    // dynamically scoped: whether we are currently recovering from a trap
     pub(crate) static RECOVERING: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -73,7 +79,7 @@ pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute a function in a context that is not tracked across callbacks, able to call [`spawn_migratory`]
 /// but not [`spawn_protected`].
-pub fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
+pub(crate) fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let guard = MethodHandle::for_method(MethodId::null());
     enter_current_method(guard, |_| {
@@ -129,6 +135,10 @@ pub fn cancel_all_tasks_attached_to_current_method() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("`cancel_all_tasks_attached_to_current_method` can only be called within a method context");
     };
+    cancel_all_tasks_attached_to_method(method_id);
+}
+
+fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
     let _tasks = TASKS.with(|tasks| {
         let Ok(mut tasks) = tasks.try_borrow_mut() else {
             panic!(
@@ -245,6 +255,7 @@ pub(crate) fn enter_current_method<R>(
             if let Some(method) = methods.get(method_id) {
                 if method.handles == 0 {
                     methods.remove(method_id);
+                    cancel_all_tasks_attached_to_method(method_id);
                 }
             }
         });

@@ -1,3 +1,4 @@
+use candid::Principal;
 use pocket_ic::{query_candid, ErrorCode};
 
 mod test_utilities;
@@ -181,14 +182,32 @@ fn outer_new_inner_old_panics() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     let err = update::<_, ()>(&pic, canister_id, "outer_new_inner_old", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("usage mismatch between canister method and inter-canister call"));
+    assert!(
+        err.reject_message
+            .contains("usage mismatch between canister method and inter-canister call")
+            || (err.reject_message.contains("Call already trapped")
+                && pic
+                    .fetch_canister_logs(canister_id, Principal::anonymous())
+                    .unwrap()
+                    .iter()
+                    .any(|log| str::from_utf8(&log.content).unwrap().contains(
+                        "usage mismatch between canister method and inter-canister call"
+                    )))
+    );
 
     let err = query_candid::<_, ()>(&pic, canister_id, "outer_new_inner_old_q", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("usage mismatch between canister method and inter-canister call"));
+    assert!(
+        err.reject_message
+            .contains("usage mismatch between canister method and inter-canister call")
+            || (err.reject_message.contains("Call already trapped")
+                && pic
+                    .fetch_canister_logs(canister_id, Principal::anonymous())
+                    .unwrap()
+                    .iter()
+                    .any(|log| str::from_utf8(&log.content).unwrap().contains(
+                        "usage mismatch between canister method and inter-canister call"
+                    )))
+    );
 }
 
 #[test]
