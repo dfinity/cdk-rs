@@ -1387,7 +1387,7 @@ pub enum OnLowWasmMemoryHookStatus {
     Executed,
 }
 
-/// # Return type of [`ManagementCanister::read_canister_snapshot_metadata`].
+/// # Canister snapshot metadata.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct SnapshotMetadata {
     /// The source of the snapshot.
