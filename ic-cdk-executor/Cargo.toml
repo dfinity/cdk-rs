@@ -16,6 +16,7 @@ links = "ic-cdk async executor, see https://github.com/dfinity/cdk-rs/blob/links
 [dependencies]
 ic0.workspace = true
 slotmap.workspace = true
+smallvec = "1.15.1"
 
 [features]
 default = ["v1.0", "v1.1"]

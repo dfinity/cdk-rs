@@ -13,11 +13,13 @@ use std::{
 };
 
 use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
+use smallvec::SmallVec;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct MethodContext {
     pub(crate) kind: ContextKind,
     pub(crate) handles: usize,
+    pub(crate) tasks: SmallVec<[TaskId; 4]>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -67,6 +69,7 @@ pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
         methods.insert(MethodContext {
             kind: ContextKind::Update,
             handles: 0,
+            tasks: SmallVec::new(),
         })
     });
     let guard = MethodHandle::for_method(method);
@@ -96,6 +99,7 @@ pub fn in_tracking_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
         methods.insert(MethodContext {
             kind: ContextKind::Query,
             handles: 0,
+            tasks: SmallVec::new(),
         })
     });
     let guard = MethodHandle::for_method(method);
@@ -139,18 +143,18 @@ pub fn cancel_all_tasks_attached_to_current_method() {
 }
 
 fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
+    let to_cancel = METHODS.with_borrow_mut(|methods| {
+        let Some(method) = methods.get_mut(method_id) else {
+            panic!("internal error: method context deleted while in use (cancel_all_tasks_attached_to_method)");
+        };
+        take(&mut method.tasks)
+    });
     let _tasks = TASKS.with(|tasks| {
         let Ok(mut tasks) = tasks.try_borrow_mut() else {
             panic!(
                 "`cancel_all_tasks_attached_to_current_method` cannot be called from an async task"
             );
         };
-        let mut to_cancel = vec![];
-        for (task_id, task) in tasks.iter_mut() {
-            if task.method_binding == Some(method_id) {
-                to_cancel.push(task_id);
-            }
-        }
         let mut canceled = Vec::with_capacity(to_cancel.len());
         for task_id in to_cancel {
             canceled.push(tasks.remove(task_id));
@@ -251,14 +255,11 @@ pub(crate) fn enter_current_method<R>(
     drop(method_guard); // drop the guard *before* the method freeing logic, but *after* the in-context code
     let method_id = CURRENT_METHOD.replace(None);
     if let Some(method_id) = method_id {
-        METHODS.with_borrow_mut(|methods| {
-            if let Some(method) = methods.get(method_id) {
-                if method.handles == 0 {
-                    methods.remove(method_id);
-                    cancel_all_tasks_attached_to_method(method_id);
-                }
-            }
-        });
+        let handles = METHODS.with_borrow_mut(|methods| methods.get(method_id).map(|m| m.handles));
+        if handles == Some(0) {
+            cancel_all_tasks_attached_to_method(method_id);
+            METHODS.with_borrow_mut(|methods| methods.remove(method_id));
+        }
     }
     r
 }
@@ -385,6 +386,12 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         method_binding: Some(method_id),
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
+    METHODS.with_borrow_mut(|methods| {
+        let Some(method) = methods.get_mut(method_id) else {
+            panic!("internal error: method context deleted while in use (spawn_protected)");
+        };
+        method.tasks.push(task_id);
+    });
     PROTECTED_WAKEUPS.with_borrow_mut(|wakeups| {
         let Some(entry) = wakeups.entry(method_id) else {
             panic!("internal error: method context deleted while in use (spawn_protected)");

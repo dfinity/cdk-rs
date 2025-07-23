@@ -1,6 +1,7 @@
 use std::{cell::Cell, future::Future, ops::ControlFlow};
 
 use slotmap::Key;
+use smallvec::SmallVec;
 
 use crate::machinery::{
     cancel_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
@@ -12,6 +13,7 @@ thread_local! {
     pub(crate) static QUERY_METHOD: MethodId = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext {
         handles: 1,
         kind: ContextKind::Query,
+        tasks: SmallVec::new(),
     }));
     pub(crate) static INFER_CONTEXT: Cell<Option<InferContext>> = const { Cell::new(None) };
 }
