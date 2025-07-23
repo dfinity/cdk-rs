@@ -397,12 +397,6 @@ pub struct CanisterStatusResult {
     pub query_stats: QueryStats,
 }
 
-impl std::fmt::Display for CanisterStatusResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
-
 /// # Canister Status Type
 ///
 /// Status of a canister.
@@ -421,12 +415,6 @@ pub enum CanisterStatusType {
     /// The canister is stopped.
     #[serde(rename = "stopped")]
     Stopped,
-}
-
-impl std::fmt::Display for CanisterStatusType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
 }
 
 /// # Memory Metrics
