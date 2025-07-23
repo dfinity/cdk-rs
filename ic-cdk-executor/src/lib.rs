@@ -8,6 +8,10 @@
 //! ic-cdk-executor = { version = "1.1.0", default-features = false, features = ["v1.1"] }
 //! ```
 //!
+//! This is due to the API having multiple 'generations', but desiring to release as few major versions as possible.
+//! Idiomatic usage of previous generations of the API is made compatible with idiomatic usage of later generations
+//! on a best-effort basis, but mixing them in the same abstraction is not recommended.
+//!
 //! ## Contexts
 //!
 //! The expected boilerplate for a canister method or other entrypoint (*not* including callbacks) looks like this:

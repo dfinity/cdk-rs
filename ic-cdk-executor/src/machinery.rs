@@ -16,11 +16,32 @@ use pin_project_lite::pin_project;
 use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
 use smallvec::SmallVec;
 
+/// Represents an active canister method.
 #[derive(Clone, Debug)]
 pub(crate) struct MethodContext {
+    /// Whether this method is an update or a query.
     pub(crate) kind: ContextKind,
+    /// The number of handles to this method context. When this drops to zero, the method context gets deleted.
     pub(crate) handles: usize,
+    /// An index for Task.method_binding; all protected tasks attached to this method.
     pub(crate) tasks: SmallVec<[TaskId; 4]>,
+}
+
+impl MethodContext {
+    pub(crate) fn new_update() -> Self {
+        Self {
+            kind: ContextKind::Update,
+            handles: 0,
+            tasks: SmallVec::new(),
+        }
+    }
+    pub(crate) fn new_query() -> Self {
+        Self {
+            kind: ContextKind::Query,
+            handles: 0,
+            tasks: SmallVec::new(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -29,6 +50,8 @@ pub(crate) enum ContextKind {
     Query,
 }
 
+// Null method ID corresponds to 'null context', used for migratory tasks (and legacy code).
+// Null task ID is an error.
 new_key_type! {
     pub(crate) struct MethodId;
     pub(crate) struct TaskId;
@@ -43,17 +66,23 @@ thread_local! {
     pub(crate) static PROTECTED_WAKEUPS: RefCell<SecondaryMap<MethodId, VecDeque<TaskId>>> = RefCell::default();
     // global: list of migratory tasks that have been woken up
     pub(crate) static MIGRATORY_WAKEUPS: RefCell<VecDeque<TaskId>> = const { RefCell::new(VecDeque::new()) };
-    // dynamically scoped: the current method context (can be null)
+    // dynamically scoped: the current method context. None means a context function was not called (which is a user error),
+    // vs null which means no method in particular.
     pub(crate) static CURRENT_METHOD: Cell<Option<MethodId>> = const { Cell::new(None) };
     // dynamically scoped: whether we are currently recovering from a trap
     pub(crate) static RECOVERING: Cell<bool> = const { Cell::new(false) };
 }
 
+/// A registered task in the executor.
 pub(crate) struct Task {
+    /// Should be `TaskFuture` in all cases
     future: Pin<Box<dyn Future<Output = ()>>>,
+    /// If Some, this task will always resume during that method, regardless of where the waker is woken from.
+    /// If None, this task will resume wherever it is awoken from.
     method_binding: Option<MethodId>,
 }
 
+// Actually using the default value would be a memory leak. This only exists for `take`.
 impl Default for Task {
     fn default() -> Self {
         Self {
@@ -64,9 +93,11 @@ impl Default for Task {
 }
 
 pin_project! {
+    /// Future at the top level in `Task`. Exists to dynamically scope `CURRENT_METHOD`.
     struct TaskFuture<F: Future> {
         #[pin]
         inner: F,
+        // While this task is executing, `CURRENT_METHOD` will be set to this value.
         current_method_var: MethodId,
     }
 }
@@ -88,13 +119,7 @@ impl<F: Future> Future for TaskFuture<F> {
 /// Execute an update function in a context that allows calling [`spawn_protected`] and [`spawn_migratory`]
 pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
-    let method = METHODS.with_borrow_mut(|methods| {
-        methods.insert(MethodContext {
-            kind: ContextKind::Update,
-            handles: 0,
-            tasks: SmallVec::new(),
-        })
-    });
+    let method = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext::new_update()));
     let guard = MethodHandle::for_method(method);
     enter_current_method(guard, |_| {
         let res = f();
@@ -118,13 +143,7 @@ pub(crate) fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
 /// Execute a query function in a context that allows calling [`spawn_protected`] but not [`spawn_migratory`].
 pub fn in_tracking_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
-    let method = METHODS.with_borrow_mut(|methods| {
-        methods.insert(MethodContext {
-            kind: ContextKind::Query,
-            handles: 0,
-            tasks: SmallVec::new(),
-        })
-    });
+    let method = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext::new_query()));
     let guard = MethodHandle::for_method(method);
     enter_current_method(guard, |_| {
         let res = f();
@@ -165,6 +184,7 @@ pub fn cancel_all_tasks_attached_to_current_method() {
     cancel_all_tasks_attached_to_method(method_id);
 }
 
+/// Cancels all tasks made with [`spawn_protected`] attached to the given method.
 fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
     let to_cancel = METHODS.with_borrow_mut(|methods| {
         let Some(method) = methods.get_mut(method_id) else {
@@ -187,6 +207,7 @@ fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
     drop(_tasks); // always run task destructors outside of a refcell borrow
 }
 
+/// Cancels a specific task. Use this instead of `remove` for guaranteed drop order.
 pub(crate) fn cancel_task(task_id: TaskId) {
     let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
     drop(_task); // always run task destructors outside of a refcell borrow
@@ -208,6 +229,7 @@ pub fn extend_current_method_context() -> MethodHandle {
     MethodHandle::for_method(method_id)
 }
 
+/// Polls all tasks that have been woken up. Called after all context closures besides cancelation.
 pub(crate) fn poll_all() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("tasks can only be polled within an executor context");
@@ -257,12 +279,13 @@ pub(crate) fn poll_all() {
             }
             Poll::Ready(()) => {
                 // task complete, remove its entry from the table fully
-                TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
+                cancel_task(task_id);
             }
         }
     }
 }
 
+/// Begin a context closure for the given method. Destroys the method afterwards if there are no outstanding handles.
 pub(crate) fn enter_current_method<R>(
     method_guard: MethodHandle,
     f: impl FnOnce(MethodId) -> R,
@@ -298,6 +321,7 @@ pub struct MethodHandle {
 }
 
 impl MethodHandle {
+    /// Creates a live handle for the given method.
     pub(crate) fn for_method(method_id: MethodId) -> Self {
         if method_id.is_null() {
             return Self { method_id };
@@ -329,6 +353,8 @@ pub struct TaskHandle {
 
 pub(crate) struct TaskWaker {
     pub(crate) task_id: TaskId,
+    /// The method that originally spawned this task.
+    /// Needed for the 1.0 pattern of inferring the context from which task got awoken.
     #[cfg(feature = "v1.0")]
     pub(crate) source_method: MethodId,
 }

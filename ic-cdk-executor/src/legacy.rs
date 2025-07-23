@@ -10,11 +10,14 @@ use crate::machinery::{
 };
 
 thread_local! {
+    /// global: 1.0 queries are implemented as a single known query method context that is never freed
     pub(crate) static QUERY_METHOD: MethodId = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext {
+        // 1 handle will always be outstanding
         handles: 1,
         kind: ContextKind::Query,
         tasks: SmallVec::new(),
     }));
+    /// dynamically scoped: set in 1.0 callback contexts to indicate that the context should be inferred from the waker.
     pub(crate) static INFER_CONTEXT: Cell<Option<InferContext>> = const { Cell::new(None) };
 }
 
@@ -23,6 +26,8 @@ thread_local! {
     note = "Use `spawn_migratory` or `spawn_protected` instead"
 )]
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
+    // 1.0 update spawns are represented as migratory tasks.
+    // 1.0 query spawns are represented as protected tasks within QUERY_METHOD.
     let Some(current) = CURRENT_METHOD.get() else {
         panic!("`spawn` can only be called within an executor context");
     };
@@ -41,6 +46,7 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 
 #[deprecated(since = "1.1.0", note = "Use `in_tracking_executor_context` instead")]
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    // 1.0 update contexts are represented as null contexts.
     in_null_context(f)
 }
 
@@ -49,6 +55,7 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
     note = "Use `in_tracking_query_executor_context` instead"
 )]
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
+    // 1.0 query contexts are represented as tracking contexts for QUERY_METHOD.
     let guard = MethodHandle::for_method(QUERY_METHOD.with(|m| *m));
     enter_current_method(guard, |_| {
         let res = f();
@@ -62,6 +69,7 @@ pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     note = "Use `in_callback_executor_context_for` instead"
 )]
 pub fn in_callback_executor_context(f: impl FnOnce()) {
+    // 1.0 callback contexts are inferred using v0_wake_hook.
     INFER_CONTEXT.set(Some(InferContext::Continue));
     in_null_context(f);
     INFER_CONTEXT.set(None);
@@ -69,6 +77,7 @@ pub fn in_callback_executor_context(f: impl FnOnce()) {
 
 #[deprecated(since = "1.1.0", note = "Use `in_trap_recovery_context_for` instead")]
 pub fn in_callback_cancellation_context(f: impl FnOnce()) {
+    // 1.0 cancellation contexts are inferred using v0_wake_hook.
     INFER_CONTEXT.set(Some(InferContext::Cancel));
     in_null_context(f);
     INFER_CONTEXT.set(None);
@@ -82,6 +91,10 @@ pub(crate) fn v0_wake_hook(waker: &TaskWaker) -> ControlFlow<()> {
                 if waker.source_method == v0_query_method {
                     CURRENT_METHOD.set(Some(v0_query_method));
                 } else if !waker.source_method.is_null() {
+                    // It cannot be permitted to have 1.0 waker usage in 1.1 methods. The wake callsite is responsible
+                    // for propagating method lifetime; without tracking it properly, protected tasks could leak
+                    // or cancel early. This cannot be caught before the call, but we know whether it has occurred if a
+                    // task spawned in a tracking context is woken from an inferred context.
                     panic!("waker API usage mismatch between canister method and inter-canister call; try running `cargo update -p ic-cdk`");
                 }
                 ControlFlow::Continue(())
