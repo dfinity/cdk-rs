@@ -12,6 +12,7 @@ use std::{
     task::{Context, Poll, Wake, Waker},
 };
 
+use pin_project_lite::pin_project;
 use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
 use smallvec::SmallVec;
 
@@ -59,6 +60,28 @@ impl Default for Task {
             future: Box::pin(std::future::pending()),
             method_binding: None,
         }
+    }
+}
+
+pin_project! {
+    struct TaskFuture<F: Future> {
+        #[pin]
+        inner: F,
+        current_method_var: MethodId,
+    }
+}
+
+impl<F: Future> Future for TaskFuture<F> {
+    type Output = F::Output;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // This is more generic than the current implementation needs. CURRENT_METHOD, if Some, is already the right value.
+        // The real point is to ensure that migratory tasks get null context.
+        let this = self.project();
+        let method = CURRENT_METHOD.replace(Some(*this.current_method_var));
+        let result = this.inner.poll(cx);
+        CURRENT_METHOD.set(method);
+        result
     }
 }
 
@@ -356,7 +379,10 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         panic!("unprotected spawns cannot be made within a query context");
     }
     let task = Task {
-        future: Box::pin(f),
+        future: Box::pin(TaskFuture {
+            inner: f,
+            current_method_var: MethodId::null(),
+        }),
         method_binding: None,
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
@@ -379,10 +405,13 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         panic!("`spawn_*` can only be called within an executor context");
     };
     if method_id.is_null() {
-        panic!("`spawn_protected` cannot be called outside of a tracking context");
+        panic!("`spawn_protected` cannot be called outside of a tracked method context");
     }
     let task = Task {
-        future: Box::pin(f),
+        future: Box::pin(TaskFuture {
+            inner: f,
+            current_method_var: method_id,
+        }),
         method_binding: Some(method_id),
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));

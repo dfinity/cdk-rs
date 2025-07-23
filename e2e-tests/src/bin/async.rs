@@ -4,7 +4,7 @@ use core::panic;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use ic_cdk::call::Call;
-use ic_cdk::futures::{spawn, spawn_017_compat};
+use ic_cdk::futures::{spawn, spawn_017_compat, spawn_migratory};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::cell::Cell;
@@ -255,6 +255,15 @@ async fn stalled_protected_task() {
     Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
         .await
         .unwrap();
+}
+
+#[update]
+async fn migratory_from_protected() {
+    spawn_migratory(async {
+        spawn(async {
+            on_notify();
+        });
+    });
 }
 
 fn main() {}
