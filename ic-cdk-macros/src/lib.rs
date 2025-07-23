@@ -26,7 +26,7 @@ where
 {
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--- IC_CDK_MACROS DEBUG ---");
-        eprintln!("{}\n    attr: {}\n    item: {}", name, attr, item);
+        eprintln!("{name}\n    attr: {attr}\n    item: {item}");
     }
 
     let result = cb(attr.into(), item.into());
@@ -34,7 +34,7 @@ where
     if std::env::var_os("IC_CDK_DEBUG").is_some() {
         eprintln!("--------- RESULT  ---------");
         if let Ok(ref stream) = result {
-            eprintln!("{}", stream);
+            eprintln!("{stream}");
         }
         eprintln!("---------------------------");
     }

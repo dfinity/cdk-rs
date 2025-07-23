@@ -1,6 +1,6 @@
 [package]
 name = "ic-cdk-executor"
-version = "1.0.0"
+version = "1.0.1"
 authors.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -15,3 +15,4 @@ links = "ic-cdk async executor, see https://github.com/dfinity/cdk-rs/blob/links
 
 [dependencies]
 slotmap.workspace = true
+ic0.workspace = true

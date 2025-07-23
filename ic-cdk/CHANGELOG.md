@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.18.5] - 2025-06-25
+
+### Fixed
+
+- Tasks which return after canceling futures are no longer marked as trapped
+
+### Changed
+
+- Updated to `ic0` v1.0.0
+
+## [0.18.4] - 2025-06-17
+
+### Added
+
+- New `ic_cdk::futures` function `spawn_017_compat`. This has the code ordering behavior of 0.17, with spawned futures run immediately instead of waiting for the current code to suspend.
+
 ## [0.18.3] - 2025-06-04
 
 ### Added
@@ -72,6 +88,11 @@ Please check [Version 0.18 Guide](V18_GUIDE.md) for more details.
   - `api` module offers consistent System API bindings.
   - `management_canister` module for convenient Management Canister calls.
   - `bitcoin_canister` module for direct Bitcoin Canisters calls.
+- Enhanced cycles cost calculation for Management Canister API calls:
+  - New system APIs exposed through the `api` module:
+    - `cost_http_request`, `cost_sign_with_ecdsa`, `cost_sign_with_schnorr`, `cost_vetkd_derive_key`.
+  - High-level bindings in the `management_canister` module accept call arguments by reference.
+  - All relevant Management Canister methods now automatically attach the required cycles to calls.
 
 ### Changed
 

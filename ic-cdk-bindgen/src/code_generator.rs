@@ -136,11 +136,11 @@ fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints) -> RcDoc<'a> {
         Vec(ref t) if matches!(t.as_ref(), Nat8) => str("serde_bytes::ByteBuf"),
         Vec(ref t) => str("Vec").append(enclose("<", pp_ty(t, recs), ">")),
         Record(ref fs) => pp_record_fields(fs, recs, ""),
-        Variant(_) => unreachable!(), // not possible after rewriting
-        Func(_) => unreachable!(),    // not possible after rewriting
-        Service(_) => unreachable!(), // not possible after rewriting
-        Class(_, _) => unreachable!(),
-        Knot(_) | Unknown | Future => unreachable!(),
+        Variant(_) => unreachable!("pp_ty variant"), // not possible after rewriting
+        Func(_) => unreachable!("pp_ty func"),       // not possible after rewriting
+        Service(_) => unreachable!("pp_ty service"), // not possible after rewriting
+        Class(_, _) => unreachable!("pp_ty class"),
+        Knot(_) | Unknown | Future => unreachable!("pp_ty imaginary type"),
     }
 }
 
@@ -301,7 +301,7 @@ fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
             let func_doc = match func.as_ref() {
                 TypeInner::Func(ref f) => enclose("candid::func!(", pp_ty_func(f), ")"),
                 TypeInner::Var(_) => pp_ty(func, &RecPoints::default()).append("::ty()"),
-                _ => unreachable!(),
+                _ => unreachable!("pp_ty_service received scalar"),
             };
             RcDoc::text("\"")
                 .append(id)
@@ -401,16 +401,15 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
     );
     let struct_name = config.service_name.to_case(Case::Pascal);
     let service_def = match config.target {
-        Target::CanisterCall => format!("pub struct {}(pub Principal);", struct_name),
-        Target::Agent => format!(
-            "pub struct {}<'a>(pub Principal, pub &'a ic_agent::Agent);",
-            struct_name
-        ),
+        Target::CanisterCall => format!("pub struct {struct_name}(pub Principal);"),
+        Target::Agent => {
+            format!("pub struct {struct_name}<'a>(pub Principal, pub &'a ic_agent::Agent);",)
+        }
         Target::CanisterStub => unimplemented!(),
     };
     let service_impl = match config.target {
-        Target::CanisterCall => format!("impl {} ", struct_name),
-        Target::Agent => format!("impl<'a> {}<'a> ", struct_name),
+        Target::CanisterCall => format!("impl {struct_name} "),
+        Target::Agent => format!("impl<'a> {struct_name}<'a> "),
         Target::CanisterStub => unimplemented!(),
     };
     let res = RcDoc::text(service_def)
@@ -426,8 +425,7 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
             .collect::<Vec<_>>()
             .join(", ");
         let id = RcDoc::text(format!(
-            "pub const CANISTER_ID : Principal = Principal::from_slice(&[{}]); // {}",
-            slice, cid
+            "pub const CANISTER_ID : Principal = Principal::from_slice(&[{slice}]); // {cid}"
         ));
         let instance = match config.target {
             Target::CanisterCall => format!(

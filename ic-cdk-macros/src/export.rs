@@ -112,10 +112,7 @@ fn get_args(method: MethodType, signature: &Signature) -> Result<Vec<(Ident, Box
             FnArg::Receiver(r) => {
                 return Err(Error::new(
                     r.span(),
-                    format!(
-                        "#[{}] cannot be above functions with `self` as a parameter.",
-                        method
-                    ),
+                    format!("#[{method}] cannot be above functions with `self` as a parameter."),
                 ));
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
@@ -151,7 +148,7 @@ fn dfn_macro(
     let fun: ItemFn = syn::parse2::<syn::ItemFn>(item.clone()).map_err(|e| {
         Error::new(
             item.span(),
-            format!("#[{0}] must be above a function. \n{1}", method, e),
+            format!("#[{method}] must be above a function. \n{e}"),
         )
     })?;
     let signature = &fun.sig;
@@ -160,10 +157,7 @@ fn dfn_macro(
     if !generics.params.is_empty() {
         return Err(Error::new(
             generics.span(),
-            format!(
-                "#[{}] must be above a function with no generic parameters.",
-                method
-            ),
+            format!("#[{method}] must be above a function with no generic parameters."),
         ));
     }
 
@@ -175,7 +169,7 @@ fn dfn_macro(
         if method.is_lifecycle() {
             return Err(Error::new(
                 attr_span,
-                format!("#[{0}] cannot have a custom name", method),
+                format!("#[{method}] cannot have a custom name"),
             ));
         }
         if custom_name.starts_with("<ic-cdk internal>") {
@@ -189,7 +183,7 @@ fn dfn_macro(
         name.to_string()
     };
     let export_name = if method.is_lifecycle() {
-        format!("canister_{}", method)
+        format!("canister_{method}")
     } else if method == MethodType::Query && attrs.composite {
         format!("canister_composite_query {function_name}",)
     } else {
@@ -201,7 +195,7 @@ fn dfn_macro(
     if !attrs.guard.is_empty() && method.is_lifecycle() {
         return Err(Error::new(
             attr_span,
-            format!("#[{0}] cannot have guard function(s).", method),
+            format!("#[{method}] cannot have guard function(s)."),
         ));
     }
     let guards = attrs
@@ -229,16 +223,13 @@ fn dfn_macro(
         if !arg_tuple.is_empty() {
             return Err(Error::new(
                 Span::call_site(),
-                format!("#[{}] function cannot have arguments.", method),
+                format!("#[{method}] function cannot have arguments."),
             ));
         }
         if attrs.decode_with.is_some() {
             return Err(Error::new(
                 attr_span,
-                format!(
-                    "#[{}] function cannot have a decode_with attribute.",
-                    method
-                ),
+                format!("#[{method}] function cannot have a decode_with attribute."),
             ));
         }
     }
@@ -283,16 +274,13 @@ fn dfn_macro(
         if return_length > 0 {
             return Err(Error::new(
                 Span::call_site(),
-                format!("#[{}] function cannot have a return value.", method),
+                format!("#[{method}] function cannot have a return value."),
             ));
         }
         if attrs.encode_with.is_some() {
             return Err(Error::new(
                 attr_span,
-                format!(
-                    "#[{}] function cannot have an encode_with attribute.",
-                    method
-                ),
+                format!("#[{method}] function cannot have an encode_with attribute."),
             ));
         }
     }
@@ -337,7 +325,9 @@ fn dfn_macro(
         };
         let mut dummy_fun = fun.clone();
         dummy_fun.sig.ident = candid_method_name;
-        dummy_fun.block = Box::new(syn::parse_quote!({ unreachable!() }));
+        dummy_fun.block = Box::new(syn::parse_quote!({
+            panic!("candid dummy function called")
+        }));
         if attrs.decode_with.is_some() {
             let mut inputs = Punctuated::new();
             inputs.push(syn::parse_quote!(arg_bytes: Vec<u8>));
@@ -476,7 +466,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query() { unreachable!() }
+            fn __candid_method_query() { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
@@ -745,7 +735,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query(arg_bytes: Vec<u8>) { unreachable!() }
+            fn __candid_method_query(arg_bytes: Vec<u8>) { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {
@@ -794,7 +784,7 @@ mod test {
         let expected = quote! {
             #[::candid::candid_method(query, rename = "query")]
             #[allow(unused_variables)]
-            fn __candid_method_query() -> Vec<u8> { unreachable!() }
+            fn __candid_method_query() -> Vec<u8> { panic!("candid dummy function called") }
         };
         let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
         match &parsed.items[1] {

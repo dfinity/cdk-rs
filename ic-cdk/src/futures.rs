@@ -61,7 +61,14 @@
 //! [`in_replicated_execution`]: crate::api::in_replicated_execution
 //! [`canister_self`]: crate::api::canister_self
 
-use std::future::Future;
+use std::{
+    future::Future,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    task::{Context, Poll, Wake, Waker},
+};
 
 /// Spawn an asynchronous task to run in the background. For information about semantics, see
 /// [the module docs](self).
@@ -76,7 +83,6 @@ pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
 /// Background tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
     ic_cdk_executor::in_executor_context(f)
 }
 
@@ -87,7 +93,6 @@ pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
 /// Background composite query tasks will be polled in the process (and will not be run otherwise).
 /// Panics if called inside an existing executor context.
 pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    crate::setup();
     ic_cdk_executor::in_query_executor_context(f)
 }
 
@@ -100,4 +105,39 @@ pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
 /// For information about when and how this occurs, see [the module docs](self).
 pub fn is_recovering_from_trap() -> bool {
     ic_cdk_executor::is_recovering_from_trap()
+}
+
+/// Like `spawn`, but preserves the code ordering behavior of `ic-cdk` 0.17 and before.
+///
+/// Namely, the spawned future will start executing immediately, with control returning to the surrounding code
+/// after the first `await`.
+pub fn spawn_017_compat<F: 'static + Future<Output = ()>>(fut: F) {
+    struct DummyWaker(AtomicBool);
+    impl Wake for DummyWaker {
+        fn wake(self: Arc<Self>) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+    // Emulated behavior: A spawned future is polled once immediately, then backgrounded and run at a normal pace.
+    // We poll it once with an unimplemented waker, then spawn it, which will poll it again with the real waker.
+    // In a correctly implemented future, this second poll should overwrite the fake waker with the real one.
+    // If the `poll` function calls `wake`, call it again until it is 'really' pending.
+    let mut pin = Box::pin(fut);
+    loop {
+        let dummy = Arc::new(DummyWaker(AtomicBool::new(false)));
+        let poll = pin
+            .as_mut()
+            .poll(&mut Context::from_waker(&Waker::from(dummy.clone())));
+        match poll {
+            Poll::Ready(()) => break,
+            Poll::Pending => {
+                if dummy.0.load(Ordering::SeqCst) {
+                    continue;
+                } else {
+                    crate::futures::spawn(pin);
+                    break;
+                }
+            }
+        }
+    }
 }

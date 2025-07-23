@@ -765,22 +765,19 @@ impl Call<'_, '_> {
             Cow::Owned(vec) => vec,
             Cow::Borrowed(r) => *r,
         };
-        let state_ptr_opt = state_opt.map(Arc::into_raw);
+        let state_ptr_opt = state_opt.map(Arc::<RwLock<CallFutureState<'_, '_>>>::into_raw);
         match state_ptr_opt {
             Some(state_ptr) => {
                 // asynchronous execution
                 //
                 // # SAFETY:
-                // - `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-                // - `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-                // - `callback` is a function with signature `(env : usize) -> ()` and therefore can be called as
-                //      both reply and reject fn for ic0.call_new.
-                // - `cleanup` is a function with signature `(env : usize) -> ()` and therefore can be called as
-                //      cleanup fn for ic0.call_on_cleanup.
-                // - `state_ptr` is a pointer created via Arc::into_raw, and can therefore be passed as the userdata for
+                // - `callback` is intended as an entrypoint and therefore can be called as both reply and reject fn
+                //      for ic0.call_new.
+                // - `cleanup` is intended as an entrypoint and therefore can be called as cleanup fn for ic0.call_on_cleanup.
+                // - `state_ptr` is a pointer created via Arc::<RwLock<CallFutureState>>::into_raw, and can therefore be passed as the userdata for
                 //      `callback` and `cleanup`.
-                // - if-and-only-if ic0.call_perform returns 0, exactly one(‡) of `callback` or `cleanup` will be called,
-                //      exactly once, and therefore `state_ptr`'s ownership can be passed to both functions.
+                // - if-and-only-if ic0.call_perform returns 0, exactly one(‡) of `callback` or `cleanup`
+                //      receive ownership of `state_ptr`
                 // - both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
                 //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
                 //
@@ -790,42 +787,19 @@ impl Call<'_, '_> {
                 //   So from the code's perspective, exactly one function is called.
                 unsafe {
                     ic0::call_new(
-                        callee.as_ptr() as usize,
-                        callee.len(),
-                        method.as_ptr() as usize,
-                        method.len(),
-                        callback as usize,
+                        callee,
+                        method,
+                        callback,
                         state_ptr as usize,
-                        callback as usize,
+                        callback,
                         state_ptr as usize,
                     );
-                    ic0::call_on_cleanup(cleanup as usize, state_ptr as usize);
+                    ic0::call_on_cleanup(cleanup, state_ptr as usize);
                 }
             }
 
             None => {
-                // oneway execution
-                //
-                // # SAFETY:
-                // - `callee_src` and `callee_size`: `callee` being &[u8], is a readable sequence of bytes.
-                // - `name_src` and `name_size`: `method`, being &str, is a readable sequence of bytes.
-                // - `reply_fun` and `reject_fun`: `usize::MAX` is a function pointer the wasm module cannot possibly contain.
-                // - `reply_env` and `reject_env`: Since the callback functions do not exist and therefore will never be called,
-                //      any value can be passed as their context parameters.
-                //
-                // See https://www.joachim-breitner.de/blog/789-Zero-downtime_upgrades_of_Internet_Computer_canisters#one-way-calls for more context.
-                unsafe {
-                    ic0::call_new(
-                        callee.as_ptr() as usize,
-                        callee.len(),
-                        method.as_ptr() as usize,
-                        method.len(),
-                        usize::MAX,
-                        usize::MAX,
-                        usize::MAX,
-                        usize::MAX,
-                    );
-                }
+                ic0::call_new_oneway(callee, method);
                 // There is no `call_on_cleanup` invocation because:
                 // - the callback does not exist, and so cannot trap to require cleanup
                 // - under the current behavior of the IC, this produces an error,
@@ -833,21 +807,15 @@ impl Call<'_, '_> {
             }
         };
         if !arg.is_empty() {
-            // SAFETY: `args`, being a &[u8], is a readable sequence of bytes.
-            unsafe { ic0::call_data_append(arg.as_ptr() as usize, arg.len()) };
+            ic0::call_data_append(arg);
         }
         if self.cycles > 0 {
-            let high = (self.cycles >> 64) as u64;
-            let low = (self.cycles & u64::MAX as u128) as u64;
-            // SAFETY: ic0.call_cycles_add128 is always safe to call.
-            unsafe { ic0::call_cycles_add128(high, low) };
+            ic0::call_cycles_add128(self.cycles);
         }
         if let Some(timeout_seconds) = self.timeout_seconds {
-            // SAFETY: ic0.call_with_best_effort_response is always safe to call.
-            unsafe { ic0::call_with_best_effort_response(timeout_seconds) };
+            ic0::call_with_best_effort_response(timeout_seconds);
         }
-        // SAFETY: ic0.call_perform is always safe to call
-        let res = unsafe { ic0::call_perform() };
+        let res = ic0::call_perform();
         if res != 0 {
             if let Some(state_ptr) = state_ptr_opt {
                 // SAFETY:
@@ -959,8 +927,9 @@ impl Drop for CallFuture<'_, '_> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from `Arc::into_raw` as userdata.
-unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
+/// This function must only be passed to the IC with a pointer from `Arc::<RwLock<CallFutureState>>::into_raw` as userdata.
+unsafe extern "C" fn callback(env: usize) {
+    let state_ptr = env as *const RwLock<CallFutureState<'_, '_>>;
     ic_cdk_executor::in_callback_executor_context(|| {
         // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
         let state = unsafe { Arc::from_raw(state_ptr) };
@@ -983,7 +952,7 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
             // to replace an automatic trap from not replying.
             CallFutureState::Trapped => trap("Call already trapped"),
             _ => unreachable!(
-                "CallFutureState for in-flight calls should only be Executing or Trapped"
+                "CallFutureState for in-flight calls should only be Executing or Trapped (callback)"
             ),
         };
         waker.wake();
@@ -998,8 +967,9 @@ unsafe extern "C" fn callback(state_ptr: *const RwLock<CallFutureState<'_, '_>>)
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::into_raw as userdata.
-unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) {
+/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState>>::into_raw as userdata.
+unsafe extern "C" fn cleanup(env: usize) {
+    let state_ptr = env as *const RwLock<CallFutureState<'_, '_>>;
     // Flag that we do not want to actually wake the task - we
     // want to drop it *without* executing it.
     ic_cdk_executor::in_callback_cancellation_context(|| {
@@ -1028,7 +998,7 @@ unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) 
             }
             _ => {
                 unreachable!(
-                    "CallFutureState for in-flight calls should only be Executing or Trapped"
+                    "CallFutureState for in-flight calls should only be Executing or Trapped (cleanup)"
                 )
             }
         };
@@ -1046,5 +1016,5 @@ unsafe extern "C" fn cleanup(state_ptr: *const RwLock<CallFutureState<'_, '_>>) 
 /// However, since future implementations might introduce other failure cases,
 /// we provide an informative panic message for better debuggability.
 fn panic_when_encode_fails(err: candid::error::Error) -> Vec<u8> {
-    panic!("failed to encode args: {}", err)
+    panic!("failed to encode args: {err}")
 }

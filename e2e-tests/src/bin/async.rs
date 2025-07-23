@@ -1,7 +1,12 @@
 use candid::Principal;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use ic_cdk::call::Call;
+use ic_cdk::futures::{spawn, spawn_017_compat};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -56,6 +61,24 @@ async fn async_then_panic() {
     panic!();
 }
 
+#[update]
+async fn panic_then_continue() {
+    let cell = Rc::new(Cell::new(true));
+    let fut1 = async_then_panic_if_first(cell.clone());
+    let fut2 = async_then_panic_if_first(cell);
+    let mut coll = FuturesUnordered::from_iter([fut1, fut2]);
+    while (coll.next().await).is_some() {}
+}
+
+async fn async_then_panic_if_first(cell: Rc<Cell<bool>>) {
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    if cell.replace(false) {
+        panic!("first");
+    }
+}
+
 #[query]
 fn notifications_received() -> u64 {
     *NOTIFICATIONS_RECEIVED.read().unwrap()
@@ -72,15 +95,14 @@ fn notify(whom: Principal, method: String) {
         .oneway()
         .unwrap_or_else(|reject| {
             ic_cdk::api::trap(format!(
-                "failed to notify (callee={}, method={}): {:?}",
-                whom, method, reject
+                "failed to notify (callee={whom}, method={method}): {reject:?}"
             ))
         });
 }
 
 #[query]
 fn greet(name: String) -> String {
-    format!("Hello, {}", name)
+    format!("Hello, {name}")
 }
 
 #[query(composite = true)]
@@ -160,6 +182,19 @@ async fn timer_on_panic() {
         .await
         .unwrap();
     ic_cdk::trap("testing");
+}
+
+#[update]
+async fn spawn_ordering() {
+    let notifs = notifications_received();
+    spawn_017_compat(async { on_notify() });
+    assert_eq!(
+        notifications_received(),
+        notifs + 1,
+        "spawn_017_compat should run immediately"
+    );
+    spawn(async { on_notify() });
+    assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
 }
 
 fn main() {}

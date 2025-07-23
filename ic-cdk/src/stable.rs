@@ -64,32 +64,22 @@ pub struct CanisterStableMemory {}
 
 impl StableMemory for CanisterStableMemory {
     fn stable_size(&self) -> u64 {
-        // SAFETY: ic0.stable64_size is always safe to call.
-        unsafe { ic0::stable64_size() }
+        ic0::stable64_size()
     }
 
     fn stable_grow(&self, new_pages: u64) -> Result<u64, StableMemoryError> {
-        // SAFETY: ic0.stable64_grow is always safe to call.
-        unsafe {
-            match ic0::stable64_grow(new_pages) {
-                u64::MAX => Err(StableMemoryError::OutOfMemory),
-                x => Ok(x),
-            }
+        match ic0::stable64_grow(new_pages) {
+            u64::MAX => Err(StableMemoryError::OutOfMemory),
+            x => Ok(x),
         }
     }
 
     fn stable_write(&self, offset: u64, buf: &[u8]) {
-        // SAFETY: `buf`, being &[u8], is a readable sequence of bytes, and therefore valid to pass to ic0.stable64_write.
-        unsafe {
-            ic0::stable64_write(offset, buf.as_ptr() as u64, buf.len() as u64);
-        }
+        ic0::stable64_write(buf, offset);
     }
 
     fn stable_read(&self, offset: u64, buf: &mut [u8]) {
-        // SAFETY: `buf`, being &mut [u8], is a writable sequence of bytes, and therefore valid to pass to ic0.stable64_read.
-        unsafe {
-            ic0::stable64_read(buf.as_ptr() as u64, offset, buf.len() as u64);
-        }
+        ic0::stable64_read(buf, offset);
     }
 }
 
@@ -133,11 +123,9 @@ pub fn stable_bytes() -> Vec<u8> {
         .try_into()
         .expect("overflow: stable memory too large to read in one go");
     let mut vec = Vec::with_capacity(size);
-    // SAFETY:
-    // `vec`, being mutable and allocated to `size` bytes, is safe to pass to ic0.stable_read with no offset.
-    // ic0.stable_read writes to all of `vec[0..size]`, so `set_len` is safe to call with the new size.
+    ic0::stable64_read_uninit(&mut vec.spare_capacity_mut()[..size], 0);
+    // SAFETY: ic0::stable64_read writes to all of `vec[0..size]`, so `set_len` is safe to call with the new size.
     unsafe {
-        ic0::stable64_read(vec.as_ptr() as u64, 0, size as u64);
         vec.set_len(size);
     }
     vec

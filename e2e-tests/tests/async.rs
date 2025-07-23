@@ -15,7 +15,7 @@ fn panic_after_async_frees_resources() {
         match update(&pic, canister_id, "panic_after_async", ()) {
             Ok(()) => (),
             Err(rej) => {
-                println!("Got a user error as expected: {}", rej);
+                println!("Got a user error as expected: {rej}");
 
                 assert_eq!(rej.error_code, ErrorCode::CanisterCalledTrap);
                 let expected_message = "Goodbye, cruel world.";
@@ -30,7 +30,7 @@ fn panic_after_async_frees_resources() {
 
         let (n,): (u64,) = update(&pic, canister_id, "invocation_count", ()).unwrap();
 
-        assert_eq!(i, n, "expected the invocation count to be {}, got {}", i, n);
+        assert_eq!(i, n, "expected the invocation count to be {i}, got {n}");
     }
 
     let (message,): (String,) =
@@ -126,4 +126,33 @@ fn channels() {
 
     let (greeting,): (String,) = update(&pic, canister_id, "await_channel_completion", ()).unwrap();
     assert_eq!(greeting, "Hello, myself");
+}
+
+#[test]
+fn spawn_ordering() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let () = update(&pic, canister_id, "spawn_ordering", ()).unwrap();
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 2);
+}
+
+#[test]
+fn early_panic_not_erased() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let err = update::<_, ()>(&pic, canister_id, "panic_then_continue", ()).unwrap_err();
+    assert!(err.reject_message.contains("already trapped"));
+
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 2);
+    let _: (u64,) = query_candid(&pic, canister_id, "invocation_count", ()).unwrap();
 }
