@@ -144,6 +144,26 @@ fn delete_canister_snapshot(_: DeleteCanisterSnapshotArgs) {
     unimplemented!()
 }
 
+#[candid_method(update)]
+fn read_canister_snapshot_metadata(_: ReadCanisterSnapshotMetadataArgs) -> ReadCanisterSnapshotMetadataResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn read_canister_snapshot_data(_: ReadCanisterSnapshotDataArgs) -> ReadCanisterSnapshotDataResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn upload_canister_snapshot_metadata(_: UploadCanisterSnapshotMetadataArgs) -> UploadCanisterSnapshotMetadataResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn upload_canister_snapshot_data(_: UploadCanisterSnapshotDataArgs) {
+    unimplemented!()
+}
+
 #[candid_method(query)]
 fn fetch_canister_logs(_: FetchCanisterLogsArgs) -> FetchCanisterLogsResult {
     unimplemented!()
