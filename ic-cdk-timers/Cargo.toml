@@ -29,6 +29,9 @@ serde.workspace = true
 serde_bytes.workspace = true
 slotmap.workspace = true
 
+[dev-dependencies]
+ic-cdk.workspace = true
+
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
 rustc-args = ["--cfg=docsrs"]
