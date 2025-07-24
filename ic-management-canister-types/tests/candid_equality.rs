@@ -145,7 +145,9 @@ fn delete_canister_snapshot(_: DeleteCanisterSnapshotArgs) {
 }
 
 #[candid_method(update)]
-fn read_canister_snapshot_metadata(_: ReadCanisterSnapshotMetadataArgs) -> ReadCanisterSnapshotMetadataResult {
+fn read_canister_snapshot_metadata(
+    _: ReadCanisterSnapshotMetadataArgs,
+) -> ReadCanisterSnapshotMetadataResult {
     unimplemented!()
 }
 
@@ -155,7 +157,9 @@ fn read_canister_snapshot_data(_: ReadCanisterSnapshotDataArgs) -> ReadCanisterS
 }
 
 #[candid_method(update)]
-fn upload_canister_snapshot_metadata(_: UploadCanisterSnapshotMetadataArgs) -> UploadCanisterSnapshotMetadataResult {
+fn upload_canister_snapshot_metadata(
+    _: UploadCanisterSnapshotMetadataArgs,
+) -> UploadCanisterSnapshotMetadataResult {
     unimplemented!()
 }
 

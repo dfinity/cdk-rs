@@ -1508,6 +1508,8 @@ pub struct UploadCanisterSnapshotDataArgs {
     pub snapshot_id: SnapshotId,
     /// The kind of data to be read.
     pub kind: SnapshotDataOffset,
+    /// The chunk of data to be uploaded.
+    pub chunk: Vec<u8>,
 }
 
 /// # Snapshot data offset.
