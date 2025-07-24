@@ -234,12 +234,9 @@ pub(crate) fn poll_all() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("tasks can only be polled within an executor context");
     };
-    let kind =
-        if let Some(kind) = METHODS.with_borrow(|methods| methods.get(method_id).map(|m| m.kind)) {
-            kind
-        } else {
-            ContextKind::Update
-        };
+    let kind = METHODS
+        .with_borrow(|methods| methods.get(method_id).map(|m| m.kind))
+        .unwrap_or(ContextKind::Update);
     fn pop_wakeup(method_id: MethodId, update: bool) -> Option<TaskId> {
         if let Some(task_id) = PROTECTED_WAKEUPS.with_borrow_mut(|wakeups| {
             wakeups
@@ -394,13 +391,9 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     if is_recovering_from_trap() {
         panic!("tasks cannot be spawned while recovering from a trap");
     }
-    let kind = METHODS.with_borrow(|methods| {
-        if let Some(method) = methods.get(method_id) {
-            method.kind
-        } else {
-            ContextKind::Update
-        }
-    });
+    let kind = METHODS
+        .with_borrow(|methods| methods.get(method_id).map(|m| m.kind))
+        .unwrap_or(ContextKind::Update);
     if kind == ContextKind::Query {
         panic!("unprotected spawns cannot be made within a query context");
     }
