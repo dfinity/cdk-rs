@@ -1459,7 +1459,7 @@ pub enum SnapshotDataKind {
     },
 }
 
-/// # Snapshot reading result.
+/// # Read Canister Snapshot Data Result.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct ReadCanisterSnapshotDataResult {
     /// The returned chunk of data.
