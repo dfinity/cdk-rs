@@ -289,11 +289,13 @@ unsafe extern "C" fn timer_scope_cleanup(env: usize) {
     ic0::debug_print(b"[ic-cdk-timers] internal error: trap in scope callback");
 }
 
-/// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
+/// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`] is more than [`u64::MAX`] nanoseconds.
 ///
 /// To cancel the timer before it executes, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
+///
+/// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
     let delay_ns = u64::try_from(delay.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
@@ -312,11 +314,13 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
     key
 }
 
-/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
+/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`] is more than [`u64::MAX`] nanoseconds.
 ///
 /// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
+///
+/// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static) -> TimerId {
     let interval_ns = u64::try_from(interval.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
