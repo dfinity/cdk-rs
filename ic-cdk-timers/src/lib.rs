@@ -120,8 +120,8 @@ extern "C" fn global_timer() {
             loop {
                 if let Some(timer) = timers.peek() {
                     if timer.time <= now {
-                        let timer = timers.pop().unwrap();
-                        if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
+                        let timer: Timer = timers.pop().unwrap();
+                        if TASKS.with_borrow(|tasks| tasks.contains_key(timer.task)) {
                             // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
                             // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
                             // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
@@ -191,7 +191,7 @@ extern "C" fn global_timer() {
         });
         if Rc::strong_count(&batch) == 1 {
             // nothing scheduled
-            MOST_RECENT.with(|recent| recent.set(None));
+            MOST_RECENT.set(None);
             update_ic0_timer();
         }
     });
@@ -219,9 +219,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         0 => {} // success
         2 => {
             // Try to execute the timer again later.
-            TIMERS.with(|timers| {
-                timers.borrow_mut().push(timer);
-            });
+            TIMERS.with_borrow_mut(|timers| timers.push(timer));
             return;
         }
         x => {
@@ -256,8 +254,8 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 // reschedule any repeating tasks
                 Task::Repeated { interval, .. } => {
                     match gt_timestamp.checked_add(interval.as_nanos() as u64) {
-                        Some(time) => TIMERS.with(|timers| {
-                            timers.borrow_mut().push(Timer {
+                        Some(time) => TIMERS.with_borrow_mut(|timers| {
+                            timers.push(Timer {
                                 task: task_id,
                                 time,
                             })
@@ -275,7 +273,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
     });
     if Rc::strong_count(&batch) == 1 {
         // last timer in the batch
-        MOST_RECENT.with(|recent| recent.set(None));
+        MOST_RECENT.set(None);
         update_ic0_timer();
     }
 }
@@ -303,12 +301,12 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
     let scheduled_time = ic0::time().checked_add(delay_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let key = TASKS.with(|tasks| tasks.borrow_mut().insert(Task::Once(Box::pin(future))));
-    TIMERS.with(|timers| {
-        timers.borrow_mut().push(Timer {
+    let key = TASKS.with_borrow_mut(|tasks| tasks.insert(Task::Once(Box::pin(future))));
+    TIMERS.with_borrow_mut(|timers| {
+        timers.push(Timer {
             task: key,
             time: scheduled_time,
-        });
+        })
     });
     update_ic0_timer();
     key
@@ -326,14 +324,14 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
     let scheduled_time = ic0::time().checked_add(interval_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let key = TASKS.with(|tasks| {
-        tasks.borrow_mut().insert(Task::Repeated {
+    let key = TASKS.with_borrow_mut(|tasks| {
+        tasks.insert(Task::Repeated {
             func: Box::new(func),
             interval,
         })
     });
-    TIMERS.with(|timers| {
-        timers.borrow_mut().push(Timer {
+    TIMERS.with_borrow_mut(|timers| {
+        timers.push(Timer {
             task: key,
             time: scheduled_time,
         })
@@ -344,22 +342,21 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
 
 /// Cancels an existing timer. Does nothing if the timer has already been canceled.
 pub fn clear_timer(id: TimerId) {
-    TASKS.with(|tasks| tasks.borrow_mut().remove(id));
+    TASKS.with_borrow_mut(|tasks| tasks.remove(id));
 }
 
 /// Calls `ic0.global_timer_set` with the soonest timer in [`TIMERS`]. This is needed after inserting a timer, and after executing one.
 fn update_ic0_timer() {
-    TIMERS.with(|timers| {
-        let timers = timers.borrow();
+    TIMERS.with_borrow(|timers| {
         let soonest_timer = timers.peek().map(|timer| timer.time);
-        let should_change = match (soonest_timer, MOST_RECENT.with(|recent| recent.get())) {
+        let should_change = match (soonest_timer, MOST_RECENT.get()) {
             (Some(timer), Some(recent)) => timer < recent,
             (Some(_), None) => true,
             _ => false,
         };
         if should_change {
             ic0::global_timer_set(soonest_timer.unwrap());
-            MOST_RECENT.with(|recent| recent.set(soonest_timer));
+            MOST_RECENT.set(soonest_timer);
         }
     });
 }
@@ -402,15 +399,12 @@ extern "C" fn timer_executor() {
 
         // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
         // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
-        let task = TASKS.with(|tasks| {
-            let mut tasks = tasks.borrow_mut();
-            tasks.get_mut(task_id).map(mem::take)
-        });
+        let task = TASKS.with_borrow_mut(|tasks| tasks.get_mut(task_id).map(mem::take));
         if let Some(task) = task {
             match task {
                 Task::Once(fut) => {
                     ic_cdk_executor::spawn(fut);
-                    TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
+                    TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
                 }
                 Task::Repeated { func, interval } => {
                     ic_cdk_executor::spawn(async move {
@@ -419,8 +413,8 @@ extern "C" fn timer_executor() {
                         guard.0.as_mut().unwrap().call_mut().await;
                         impl Drop for RepeatGuard {
                             fn drop(&mut self) {
-                                TASKS.with(|tasks| {
-                                    tasks.borrow_mut().get_mut(self.1).map(|slot| {
+                                TASKS.with_borrow_mut(|tasks| {
+                                    tasks.get_mut(self.1).map(|slot| {
                                         *slot = Task::Repeated {
                                             func: self.0.take().unwrap(),
                                             interval: self.2,
