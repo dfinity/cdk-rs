@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.3.2-beta.1] - 2025-07-24
+
 ### Added
 - Types for canister snapshot download/upload.
 
