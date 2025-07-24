@@ -23,7 +23,6 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 candid.workspace = true
 futures.workspace = true
 ic0.workspace = true
-ic-cdk.workspace = true
 ic-cdk-executor.workspace = true
 ic_principal.workspace = true
 serde.workspace = true

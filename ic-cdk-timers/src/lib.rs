@@ -71,6 +71,7 @@ new_key_type! {
     pub struct TimerId;
 }
 
+#[derive(Debug)]
 struct Timer {
     task: TimerId,
     time: u64,
@@ -102,95 +103,97 @@ impl Eq for Timer {}
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
     ic_cdk_executor::in_executor_context(|| {
-        ic_cdk_executor::spawn(async {
-            let batch = Rc::new(());
-            let canister_self = {
-                let mut canister_self = [0; 32];
-                let sz = ic0::canister_self_size();
-                ic0::canister_self_copy(&mut canister_self[..sz], 0);
-                Principal::from_slice(&canister_self[..sz])
-            };
-            // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
-            // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
-            // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
-            let now = ic0::time();
-            TIMERS.with(|timers| {
-                // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
-                loop {
-                    let mut timers = timers.borrow_mut();
-                    if let Some(timer) = timers.peek() {
-                        if timer.time <= now {
-                            let timer = timers.pop().unwrap();
-                            if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
-                                // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
-                                // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
-                                // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
-                                // become available, this code should be rewritten.
-                                let task_id = timer.task;
-                                let env = Box::new(CallEnv {
-                                    timer,
-                                    gt_timestamp: now,
-                                    batch: batch.clone(),
-                                });
-                                const METHOD_NAME: &str = "<ic-cdk-timers> timer_executor";
-                                let liquid_cycles = ic0::canister_liquid_cycle_balance128();
-                                let cost = ic0::cost_call(METHOD_NAME.len() as u64, 8);
-                                // --- no allocations between the liquid cycles check and call_perform
-                                if liquid_cycles < cost {
-                                    ic0::debug_print(
-                                        b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles",
-                                    );
-                                    return;
-                                }
-                                let env = Box::<CallEnv>::into_raw(env) as usize;
-                                // SAFETY:
-                                // - `timer_scope_callback` is intended as an entrypoint and therefore can be called as both
-                                //      reply and reject fn for ic0.call_new.
-                                // - `timer_scope_cleanup` is intended as an entrypoint and therefore can be called as
-                                //      cleanup fn for ic0.call_on_cleanup.
-                                // - `state_ptr` is a pointer created via Box::<CallEnv>::into_raw, and can therefore
-                                //      be passed as the userdata for `callback` and `cleanup`.
-                                // - if-and-only-if ic0.call_perform returns 0, exactly one of `timer_scope_callback` or
-                                //      `timer_scope_cleanup` receive ownership of `state_ptr`
-                                // - both functions deallocate `state_ptr`, and this enclosing function deallocates
-                                //      `state_ptr` if ic0.call_perform returns !=0, and therefore `state_ptr`'s ownership
-                                //      can be passed to FFI without leaking memory.
-                                unsafe {
-                                    ic0::call_new(
-                                        canister_self.as_slice(),
-                                        METHOD_NAME,
-                                        timer_scope_callback,
-                                        env,
-                                        timer_scope_callback,
-                                        env,
-                                    );
-                                    ic0::call_on_cleanup(timer_scope_cleanup, env);
-                                }
-                                ic0::call_with_best_effort_response(300);
-                                ic0::call_data_append(task_id.0.as_ffi().to_be_bytes().as_ref());
-                                let errcode = ic0::call_perform();
-                                // ---allocations resumed
-                                if errcode != 0 {
-                                    // SAFETY:
-                                    // * We just created this from a Box<CallEnv>
-                                    // * A nonzero error code from call_perform releases ownership back to us
-                                    let env = unsafe { Box::from_raw(env as *mut CallEnv) };
-                                    ic0::debug_print(
-                                        format!("[ic-cdk-timers] canister_global_timer: call_perform failed with error code {errcode}").as_bytes(),
-                                    );
-                                    // If the attempted call failed, we will try to execute the timer again later.
-                                    TIMERS.with(|timers| {
-                                        timers.borrow_mut().push(env.timer);
-                                    });
-                                }
+        let batch = Rc::new(());
+        let canister_self = {
+            let mut canister_self = [0; 32];
+            let sz = ic0::canister_self_size();
+            ic0::canister_self_copy(&mut canister_self[..sz], 0);
+            Principal::from_slice(&canister_self[..sz])
+        };
+        // All the calls are made concurrently, according only to the timestamp we *started* with.
+        // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
+        // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
+        let now = ic0::time();
+        TIMERS.with_borrow_mut(|timers| {
+            let mut to_reschedule = Vec::new();
+            // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
+            loop {
+                if let Some(timer) = timers.peek() {
+                    if timer.time <= now {
+                        let timer = timers.pop().unwrap();
+                        if TASKS.with(|tasks| tasks.borrow().contains_key(timer.task)) {
+                            // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
+                            // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
+                            // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
+                            // become available, this code should be rewritten.
+                            let task_id = timer.task;
+                            let env = Box::new(CallEnv {
+                                timer,
+                                gt_timestamp: now,
+                                batch: batch.clone(),
+                            });
+                            const METHOD_NAME: &str = "<ic-cdk internal> timer_executor";
+                            let liquid_cycles = ic0::canister_liquid_cycle_balance128();
+                            let cost = ic0::cost_call(METHOD_NAME.len() as u64, 8);
+                            // --- no allocations between the liquid cycles check and call_perform
+                            if liquid_cycles < cost {
+                                ic0::debug_print(
+                                    b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles",
+                                );
+                                return;
                             }
-                            continue;
+                            let env = Box::<CallEnv>::into_raw(env) as usize;
+                            // SAFETY:
+                            // - `timer_scope_callback` is intended as an entrypoint and therefore can be called as both
+                            //      reply and reject fn for ic0.call_new.
+                            // - `timer_scope_cleanup` is intended as an entrypoint and therefore can be called as
+                            //      cleanup fn for ic0.call_on_cleanup.
+                            // - `state_ptr` is a pointer created via Box::<CallEnv>::into_raw, and can therefore
+                            //      be passed as the userdata for `callback` and `cleanup`.
+                            // - if-and-only-if ic0.call_perform returns 0, exactly one of `timer_scope_callback` or
+                            //      `timer_scope_cleanup` receive ownership of `state_ptr`
+                            // - both functions deallocate `state_ptr`, and this enclosing function deallocates
+                            //      `state_ptr` if ic0.call_perform returns !=0, and therefore `state_ptr`'s ownership
+                            //      can be passed to FFI without leaking memory.
+                            unsafe {
+                                ic0::call_new(
+                                    canister_self.as_slice(),
+                                    METHOD_NAME,
+                                    timer_scope_callback,
+                                    env,
+                                    timer_scope_callback,
+                                    env,
+                                );
+                                ic0::call_on_cleanup(timer_scope_cleanup, env);
+                            }
+                            ic0::call_with_best_effort_response(300);
+                            ic0::call_data_append(task_id.0.as_ffi().to_be_bytes().as_ref());
+                            let errcode = ic0::call_perform();
+                            // ---allocations resumed
+                            if errcode != 0 {
+                                // SAFETY:
+                                // - We just created this from a Box<CallEnv>
+                                // - A nonzero error code from call_perform releases ownership back to us
+                                let env = unsafe { Box::from_raw(env as *mut CallEnv) };
+                                ic0::debug_print(
+                                    format!("[ic-cdk-timers] canister_global_timer: call_perform failed with error code {errcode}").as_bytes(),
+                                );
+                                // If the attempted call failed, we will try to execute the timer again later.
+                                to_reschedule.push(env.timer);
+                            }
                         }
+                        continue;
                     }
-                    break;
                 }
-            });
+                break;
+            }
+            timers.extend(to_reschedule);
         });
+        if Rc::strong_count(&batch) == 1 {
+            // nothing scheduled
+            MOST_RECENT.with(|recent| recent.set(None));
+            update_ic0_timer();
+        }
     });
 }
 
@@ -285,6 +288,7 @@ unsafe extern "C" fn timer_scope_cleanup(env: usize) {
     unsafe {
         drop(Box::from_raw(env as *mut CallEnv));
     }
+    ic0::debug_print(b"[ic-cdk-timers] internal error: trap in scope callback");
 }
 
 /// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.

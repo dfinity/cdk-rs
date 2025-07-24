@@ -19,7 +19,6 @@ fn test_timers() {
     advance_seconds(&pic, 5);
     update::<_, ()>(&pic, canister_id, "cancel_long", ()).expect("Failed to call cancel_long");
     advance_seconds(&pic, 5);
-
     update::<_, ()>(&pic, canister_id, "start_repeating", ())
         .expect("Failed to call start_repeating");
     advance_seconds(&pic, 3);
