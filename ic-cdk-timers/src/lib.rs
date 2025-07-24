@@ -25,14 +25,12 @@ use std::{
     future::Future,
     mem,
     pin::Pin,
+    rc::Rc,
     time::Duration,
 };
 
-use futures::{stream::FuturesUnordered, StreamExt};
-use slotmap::{new_key_type, KeyData, SlotMap};
-
-use ic_cdk::call::{Call, CallFailed, RejectCode};
 use ic_principal::Principal;
+use slotmap::{new_key_type, KeyData, SlotMap};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -105,6 +103,7 @@ impl Eq for Timer {}
 extern "C" fn global_timer() {
     ic_cdk_executor::in_executor_context(|| {
         ic_cdk_executor::spawn(async {
+            let batch = Rc::new(());
             let canister_self = {
                 let mut canister_self = [0; 32];
                 let sz = ic0::canister_self_size();
@@ -114,7 +113,6 @@ extern "C" fn global_timer() {
             // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
             // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
             // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
-            let mut call_futures = FuturesUnordered::new();
             let now = ic0::time();
             TIMERS.with(|timers| {
                 // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
@@ -129,17 +127,62 @@ extern "C" fn global_timer() {
                                 // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
                                 // become available, this code should be rewritten.
                                 let task_id = timer.task;
-                                call_futures.push(async move {
-                                    (
-                                        timer,
-                                        Call::bounded_wait(
-                                            canister_self,
-                                            "<ic-cdk internal> timer_executor",
-                                        )
-                                        .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
-                                        .await,
-                                    )
+                                let env = Box::new(CallEnv {
+                                    timer,
+                                    gt_timestamp: now,
+                                    batch: batch.clone(),
                                 });
+                                const METHOD_NAME: &str = "<ic-cdk-timers> timer_executor";
+                                let liquid_cycles = ic0::canister_liquid_cycle_balance128();
+                                let cost = ic0::cost_call(METHOD_NAME.len() as u64, 8);
+                                // --- no allocations between the liquid cycles check and call_perform
+                                if liquid_cycles < cost {
+                                    ic0::debug_print(
+                                        b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles",
+                                    );
+                                    return;
+                                }
+                                let env = Box::<CallEnv>::into_raw(env) as usize;
+                                // SAFETY:
+                                // - `timer_scope_callback` is intended as an entrypoint and therefore can be called as both
+                                //      reply and reject fn for ic0.call_new.
+                                // - `timer_scope_cleanup` is intended as an entrypoint and therefore can be called as
+                                //      cleanup fn for ic0.call_on_cleanup.
+                                // - `state_ptr` is a pointer created via Box::<CallEnv>::into_raw, and can therefore
+                                //      be passed as the userdata for `callback` and `cleanup`.
+                                // - if-and-only-if ic0.call_perform returns 0, exactly one of `timer_scope_callback` or
+                                //      `timer_scope_cleanup` receive ownership of `state_ptr`
+                                // - both functions deallocate `state_ptr`, and this enclosing function deallocates
+                                //      `state_ptr` if ic0.call_perform returns !=0, and therefore `state_ptr`'s ownership
+                                //      can be passed to FFI without leaking memory.
+                                unsafe {
+                                    ic0::call_new(
+                                        canister_self.as_slice(),
+                                        METHOD_NAME,
+                                        timer_scope_callback,
+                                        env,
+                                        timer_scope_callback,
+                                        env,
+                                    );
+                                    ic0::call_on_cleanup(timer_scope_cleanup, env);
+                                }
+                                ic0::call_with_best_effort_response(300);
+                                ic0::call_data_append(task_id.0.as_ffi().to_be_bytes().as_ref());
+                                let errcode = ic0::call_perform();
+                                // ---allocations resumed
+                                if errcode != 0 {
+                                    // SAFETY:
+                                    // * We just created this from a Box<CallEnv>
+                                    // * A nonzero error code from call_perform releases ownership back to us
+                                    let env = unsafe { Box::from_raw(env as *mut CallEnv) };
+                                    ic0::debug_print(
+                                        format!("[ic-cdk-timers] canister_global_timer: call_perform failed with error code {errcode}").as_bytes(),
+                                    );
+                                    // If the attempted call failed, we will try to execute the timer again later.
+                                    TIMERS.with(|timers| {
+                                        timers.borrow_mut().push(env.timer);
+                                    });
+                                }
                             }
                             continue;
                         }
@@ -147,58 +190,101 @@ extern "C" fn global_timer() {
                     break;
                 }
             });
-            // run all the collected tasks, and clean up after them if necessary
-            while let Some((timer, res)) = call_futures.next().await {
-                let task_id = timer.task;
-                if let Err(e) = res {
-                    ic0::debug_print(
-                        format!("[ic-cdk-timers] canister_global_timer: {e:?}").as_bytes(),
-                    );
-                    if matches!(
-                        e,
-                        CallFailed::InsufficientLiquidCycleBalance(_)
-                            | CallFailed::CallPerformFailed(_)
-                    ) || matches!(e, CallFailed::CallRejected(e) if e.reject_code() == Ok(RejectCode::SysTransient))
-                    {
-                        // Try to execute the timer again later.
-                        TIMERS.with(|timers| {
-                            timers.borrow_mut().push(timer);
-                        });
-                        continue;
-                    }
-                }
-                TASKS.with(|tasks| {
-                    let mut tasks = tasks.borrow_mut();
-                    if let Some(task) = tasks.get(task_id) {
-                        match task {
-                            // duplicated on purpose - it must be removed in the function call, to access self by value;
-                            // and it must be removed here, because it may have trapped and not actually been removed.
-                            // Luckily slotmap ops are equivalent to simple vector indexing.
-                            Task::Once(_) => {
-                                tasks.remove(task_id);
-                            }
-                            // reschedule any repeating tasks
-                            Task::Repeated { interval, .. } => {
-                                match now.checked_add(interval.as_nanos() as u64) {
-                                    Some(time) => TIMERS.with(|timers| {
-                                        timers.borrow_mut().push(Timer {
-                                            task: task_id,
-                                            time,
-                                        })
-                                    }),
-                                    None => ic0::debug_print(
-                                        format!("Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)", interval = interval.as_nanos()).as_bytes(),
-                                    ),
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            MOST_RECENT.with(|recent| recent.set(None));
-            update_ic0_timer();
         });
     });
+}
+
+struct CallEnv {
+    timer: Timer,
+    gt_timestamp: u64,
+    batch: Rc<()>,
+}
+
+/// # Safety
+///
+/// This function must only be passed to the IC with a pointer from Box::<CallEnv>::into_raw as userdata.
+unsafe extern "C" fn timer_scope_callback(env: usize) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Box<CallEnv> as userdata.
+    let CallEnv {
+        timer,
+        gt_timestamp,
+        batch,
+    } = *unsafe { Box::<CallEnv>::from_raw(env as *mut CallEnv) };
+    let task_id = timer.task;
+    let reject_code = ic0::msg_reject_code();
+    match reject_code {
+        0 => {} // success
+        2 => {
+            // Try to execute the timer again later.
+            TIMERS.with(|timers| {
+                timers.borrow_mut().push(timer);
+            });
+            return;
+        }
+        x => {
+            let reject_data_size = ic0::msg_arg_data_size();
+            let mut reject_data = Vec::with_capacity(reject_data_size);
+            ic0::msg_arg_data_copy_uninit(
+                &mut reject_data.spare_capacity_mut()[..reject_data_size],
+                0,
+            );
+            // SAFETY: ic0.msg_arg_data_copy fully initializes the vector up to reject_data_size.
+            unsafe {
+                reject_data.set_len(reject_data_size);
+            }
+            ic0::debug_print(
+                format!(
+                    "[ic-cdk-timers] timer failed (code {x}): {}",
+                    String::from_utf8_lossy(&reject_data)
+                )
+                .as_bytes(),
+            )
+        }
+    }
+    TASKS.with_borrow_mut(|tasks| {
+        if let Some(task) = tasks.get(task_id) {
+            match task {
+                // duplicated on purpose - it must be removed in the function call, to access self by value;
+                // and it must be removed here, because it may have trapped and not actually been removed.
+                // Luckily slotmap ops are equivalent to simple vector indexing.
+                Task::Once(_) => {
+                    tasks.remove(task_id);
+                }
+                // reschedule any repeating tasks
+                Task::Repeated { interval, .. } => {
+                    match gt_timestamp.checked_add(interval.as_nanos() as u64) {
+                        Some(time) => TIMERS.with(|timers| {
+                            timers.borrow_mut().push(Timer {
+                                task: task_id,
+                                time,
+                            })
+                        }),
+                        None => ic0::debug_print(
+                            format!(
+                                "Failed to reschedule task (needed {interval}, currently {gt_timestamp}, and this would exceed u64::MAX)",
+                                interval = interval.as_nanos()
+                            ).as_bytes(),
+                        ),
+                    }
+                }
+            }
+        }
+    });
+    if Rc::strong_count(&batch) == 1 {
+        // last timer in the batch
+        MOST_RECENT.with(|recent| recent.set(None));
+        update_ic0_timer();
+    }
+}
+
+/// # Safety
+///
+/// This function must only be passed to the IC with a pointer from Box::<CallEnv>::into_raw as userdata.
+unsafe extern "C" fn timer_scope_cleanup(env: usize) {
+    // SAFETY: This function is only ever called by the IC, and we only ever pass a Box<CallEnv> as userdata.
+    unsafe {
+        drop(Box::from_raw(env as *mut CallEnv));
+    }
 }
 
 /// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`][ic_cdk::api::time] is more than [`u64::MAX`] nanoseconds.
