@@ -1,4 +1,5 @@
-//! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly.
+//! An async executor for [`ic-cdk`](https://docs.rs/ic-cdk). Most users should not use this crate directly. It is useful
+//! primarily for those who are writing their own CDK or a runtime host for non-Rust languages.
 //!
 //! When you depend on this crate, it is recommended that you enable only the feature with the same name as the
 //! current minor version:
