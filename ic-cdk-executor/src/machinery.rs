@@ -13,7 +13,7 @@ use std::{
 };
 
 use pin_project_lite::pin_project;
-use slotmap::{new_key_type, HopSlotMap, Key, SecondaryMap, SlotMap};
+use slotmap::{new_key_type, Key, SecondaryMap, SlotMap};
 use smallvec::SmallVec;
 
 /// Represents an active canister method.
@@ -61,7 +61,7 @@ thread_local! {
     // global: list of all method contexts currently active
     pub(crate) static METHODS: RefCell<SlotMap<MethodId, MethodContext>> = RefCell::default();
     // global: list of all tasks currently spawned
-    pub(crate) static TASKS: RefCell<HopSlotMap<TaskId, Task>> = RefCell::default();
+    pub(crate) static TASKS: RefCell<SlotMap<TaskId, Task>> = RefCell::default();
     // global: map of methods to their protected tasks that have been woken up
     pub(crate) static PROTECTED_WAKEUPS: RefCell<SecondaryMap<MethodId, VecDeque<TaskId>>> = RefCell::default();
     // global: list of migratory tasks that have been woken up
