@@ -21,12 +21,14 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
 candid.workspace = true
+futures.workspace = true
 ic0.workspace = true
 ic-cdk.workspace = true
+ic-cdk-executor.workspace = true
+ic_principal.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap.workspace = true
-futures.workspace = true
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

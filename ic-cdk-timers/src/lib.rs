@@ -32,6 +32,7 @@ use futures::{stream::FuturesUnordered, StreamExt};
 use slotmap::{new_key_type, KeyData, SlotMap};
 
 use ic_cdk::call::{Call, CallFailed, RejectCode};
+use ic_principal::Principal;
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -102,13 +103,19 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[export_name = "canister_global_timer"]
 extern "C" fn global_timer() {
-    ic_cdk::futures::in_executor_context(|| {
-        ic_cdk::futures::spawn(async {
+    ic_cdk_executor::in_executor_context(|| {
+        ic_cdk_executor::spawn(async {
+            let canister_self = {
+                let mut canister_self = [0; 32];
+                let sz = ic0::canister_self_size();
+                ic0::canister_self_copy(&mut canister_self[..sz], 0);
+                Principal::from_slice(&canister_self[..sz])
+            };
             // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
             // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
             // The only thing that can happen interleavedly is canceling a task, which is seamless by design.
             let mut call_futures = FuturesUnordered::new();
-            let now = ic_cdk::api::time();
+            let now = ic0::time();
             TIMERS.with(|timers| {
                 // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
                 loop {
@@ -126,7 +133,7 @@ extern "C" fn global_timer() {
                                     (
                                         timer,
                                         Call::bounded_wait(
-                                            ic_cdk::api::canister_self(),
+                                            canister_self,
                                             "<ic-cdk internal> timer_executor",
                                         )
                                         .with_raw_args(task_id.0.as_ffi().to_be_bytes().as_ref())
@@ -144,7 +151,9 @@ extern "C" fn global_timer() {
             while let Some((timer, res)) = call_futures.next().await {
                 let task_id = timer.task;
                 if let Err(e) = res {
-                    ic_cdk::println!("[ic-cdk-timers] canister_global_timer: {e:?}");
+                    ic0::debug_print(
+                        format!("[ic-cdk-timers] canister_global_timer: {e:?}").as_bytes(),
+                    );
                     if matches!(
                         e,
                         CallFailed::InsufficientLiquidCycleBalance(_)
@@ -177,9 +186,8 @@ extern "C" fn global_timer() {
                                             time,
                                         })
                                     }),
-                                    None => ic_cdk::println!(
-                                        "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
-                                        interval = interval.as_nanos(),
+                                    None => ic0::debug_print(
+                                        format!("Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)", interval = interval.as_nanos()).as_bytes(),
                                     ),
                                 }
                             }
@@ -202,7 +210,7 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
     let delay_ns = u64::try_from(delay.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let scheduled_time = ic_cdk::api::time().checked_add(delay_ns).expect(
+    let scheduled_time = ic0::time().checked_add(delay_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
     let key = TASKS.with(|tasks| tasks.borrow_mut().insert(Task::Once(Box::pin(future))));
@@ -225,7 +233,7 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
     let interval_ns = u64::try_from(interval.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let scheduled_time = ic_cdk::api::time().checked_add(interval_ns).expect(
+    let scheduled_time = ic0::time().checked_add(interval_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
     let key = TASKS.with(|tasks| {
@@ -275,32 +283,47 @@ fn update_ic0_timer() {
     export_name = "canister_update_ic_cdk_internal.timer_executor"
 )]
 extern "C" fn timer_executor() {
-    if ic_cdk::api::msg_caller() != ic_cdk::api::canister_self() {
-        ic_cdk::trap("This function is internal to ic-cdk and should not be called externally.");
-    }
-    let arg_bytes = ic_cdk::api::msg_arg_data();
-    // timer_executor is only called by the canister itself (from global_timer),
-    // so we can safely assume that the argument is a valid TimerId (u64).
-    // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
-    assert!(arg_bytes.len() == 8);
-    let task_id = u64::from_be_bytes(arg_bytes.try_into().unwrap());
+    let caller = {
+        let mut caller = [0; 32];
+        let sz = ic0::msg_caller_size();
+        ic0::msg_caller_copy(&mut caller[..sz], 0);
+        Principal::from_slice(&caller[..sz])
+    };
+    let canister_self = {
+        let mut canister_self = [0; 32];
+        let sz = ic0::canister_self_size();
+        ic0::canister_self_copy(&mut canister_self[..sz], 0);
+        Principal::from_slice(&canister_self[..sz])
+    };
 
-    let task_id = TimerId(KeyData::from_ffi(task_id));
-    // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
-    // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
-    let task = TASKS.with(|tasks| {
-        let mut tasks = tasks.borrow_mut();
-        tasks.get_mut(task_id).map(mem::take)
-    });
-    if let Some(task) = task {
-        match task {
-            Task::Once(fut) => {
-                ic_cdk::futures::in_executor_context(|| ic_cdk::futures::spawn(fut));
-                TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
-            }
-            Task::Repeated { func, interval } => {
-                ic_cdk::futures::in_executor_context(move || {
-                    ic_cdk::futures::spawn(async move {
+    if caller != canister_self {
+        ic0::trap(b"This function is internal to ic-cdk and should not be called externally.");
+    }
+
+    ic_cdk_executor::in_executor_context(|| {
+        // timer_executor is only called by the canister itself (from global_timer),
+        // so we can safely assume that the argument is a valid TimerId (u64).
+        // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
+        assert!(ic0::msg_arg_data_size() == 8);
+        let mut arg_bytes = [0; 8];
+        ic0::msg_arg_data_copy(&mut arg_bytes, 0);
+        let task_id = u64::from_be_bytes(arg_bytes);
+        let task_id = TimerId(KeyData::from_ffi(task_id));
+
+        // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
+        // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
+        let task = TASKS.with(|tasks| {
+            let mut tasks = tasks.borrow_mut();
+            tasks.get_mut(task_id).map(mem::take)
+        });
+        if let Some(task) = task {
+            match task {
+                Task::Once(fut) => {
+                    ic_cdk_executor::spawn(fut);
+                    TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
+                }
+                Task::Repeated { func, interval } => {
+                    ic_cdk_executor::spawn(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
                         let mut guard = RepeatGuard(Some(func), task_id, interval);
                         guard.0.as_mut().unwrap().call_mut().await;
@@ -317,9 +340,10 @@ extern "C" fn timer_executor() {
                             }
                         }
                     })
-                });
+                }
             }
         }
-    }
-    ic_cdk::api::msg_reply([]);
+        ic0::msg_reply_data_append(&[]);
+        ic0::msg_reply();
+    });
 }
