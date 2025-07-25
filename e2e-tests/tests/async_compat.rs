@@ -1,12 +1,13 @@
+use candid::Principal;
 use pocket_ic::{query_candid, ErrorCode};
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
-fn panic_after_async_frees_resources() {
+fn old_panic_after_async_frees_resources() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -44,9 +45,9 @@ fn panic_after_async_frees_resources() {
 }
 
 #[test]
-fn panic_after_async_destructors_cannot_schedule_tasks() {
+fn old_panic_after_async_destructors_cannot_schedule_tasks() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -62,9 +63,9 @@ fn panic_after_async_destructors_cannot_schedule_tasks() {
 }
 
 #[test]
-fn panic_after_async_destructors_can_schedule_timers() {
+fn old_panic_after_async_destructors_can_schedule_timers() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -81,9 +82,9 @@ fn panic_after_async_destructors_can_schedule_timers() {
 }
 
 #[test]
-fn notify_calls() {
+fn old_notify_calls() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
     pic.install_canister(sender_id, wasm.clone(), vec![], None);
@@ -101,9 +102,9 @@ fn notify_calls() {
 }
 
 #[test]
-fn test_composite_query() {
+fn old_test_composite_query() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let sender_id = pic.create_canister();
     pic.add_cycles(sender_id, 2_000_000_000_000);
     pic.install_canister(sender_id, wasm.clone(), vec![], None);
@@ -117,9 +118,9 @@ fn test_composite_query() {
 }
 
 #[test]
-fn channels() {
+fn old_channels() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -129,9 +130,9 @@ fn channels() {
 }
 
 #[test]
-fn spawn_ordering() {
+fn old_spawn_ordering() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -142,9 +143,9 @@ fn spawn_ordering() {
 }
 
 #[test]
-fn early_panic_not_erased() {
+fn old_early_panic_not_erased() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -158,22 +159,71 @@ fn early_panic_not_erased() {
 }
 
 #[test]
-fn protected_spawn_behavior() {
+fn outer_old_inner_new_works() {
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("async");
+    let wasm = cargo_build_canister("async_compat");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    update::<_, ()>(&pic, canister_id, "spawn_protected_with_distant_waker", ()).unwrap();
+    update::<_, ()>(&pic, canister_id, "outer_old_inner_new", ()).unwrap();
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 1);
 
-    let err = update::<_, ()>(&pic, canister_id, "stalled_protected_task", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("protected task outlived its canister method"));
+    query_candid::<_, ()>(&pic, canister_id, "outer_old_inner_new_q", ()).unwrap();
+}
 
-    let err = update::<_, ()>(&pic, canister_id, "migratory_from_protected", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("cannot be called outside of a tracked method context"));
+#[test]
+fn outer_new_inner_old_panics() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async_compat");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    let err = update::<_, ()>(&pic, canister_id, "outer_new_inner_old", ()).unwrap_err();
+    assert!(
+        err.reject_message
+            .contains("usage mismatch between canister method and inter-canister call")
+            || (err.reject_message.contains("Call already trapped")
+                && pic
+                    .fetch_canister_logs(canister_id, Principal::anonymous())
+                    .unwrap()
+                    .iter()
+                    .any(|log| str::from_utf8(&log.content).unwrap().contains(
+                        "usage mismatch between canister method and inter-canister call"
+                    )))
+    );
+
+    let err = query_candid::<_, ()>(&pic, canister_id, "outer_new_inner_old_q", ()).unwrap_err();
+    assert!(
+        err.reject_message
+            .contains("usage mismatch between canister method and inter-canister call")
+            || (err.reject_message.contains("Call already trapped")
+                && pic
+                    .fetch_canister_logs(canister_id, Principal::anonymous())
+                    .unwrap()
+                    .iter()
+                    .any(|log| str::from_utf8(&log.content).unwrap().contains(
+                        "usage mismatch between canister method and inter-canister call"
+                    )))
+    );
+}
+
+#[test]
+fn mixed_modes() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async_compat");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<_, ()>(&pic, canister_id, "mixed_modes", ()).unwrap();
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 9);
+
+    let err = update::<_, ()>(&pic, canister_id, "mixed_trap", ()).unwrap_err();
+    assert!(err.reject_message.contains("intentional trap"));
+    let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
+    assert_eq!(n, 10);
 }
