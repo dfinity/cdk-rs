@@ -3,7 +3,10 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_management_canister() {
-    let pic = pic_base().with_ii_subnet().build();
+    let pic = pic_base()
+        .with_ii_subnet()
+        .with_nonmainnet_features(true) // required for env_var
+        .build();
 
     let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();
