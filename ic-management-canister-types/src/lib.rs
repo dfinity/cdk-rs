@@ -1319,6 +1319,225 @@ pub struct DeleteCanisterSnapshotArgs {
     pub snapshot_id: SnapshotId,
 }
 
+/// # Read Canister Snapshot Metadata Args.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct ReadCanisterSnapshotMetadataArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be read.
+    pub snapshot_id: SnapshotId,
+}
+
+/// # Read Canister Snapshot Metadata Result.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct ReadCanisterSnapshotMetadataResult {
+    /// The source of the snapshot.
+    pub source: SnapshotSource,
+    /// The Unix nanosecond timestamp the snapshot was taken at.
+    pub taken_at_timestamp: u64,
+    /// The size of the Wasm module.
+    pub wasm_module_size: u64,
+    /// The exported globals.
+    pub exported_globals: Vec<ExportedGlobal>,
+    /// The size of the Wasm memory.
+    pub wasm_memory_size: u64,
+    /// The size of the stable memory.
+    pub stable_memory_size: u64,
+    /// The chunk store of the Wasm module.
+    pub wasm_chunk_store: StoredChunksResult,
+    /// The version of the canister.
+    pub canister_version: u64,
+    /// The certified data.
+    #[serde(with = "serde_bytes")]
+    pub certified_data: Vec<u8>,
+    /// The status of the global timer.
+    pub global_timer: Option<CanisterTimer>,
+    /// The status of the low wasm memory hook.
+    pub on_low_wasm_memory_hook_status: Option<OnLowWasmMemoryHookStatus>,
+}
+
+/// # The source of a snapshot.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum SnapshotSource {
+    /// The snapshot was taken from a canister.
+    #[serde(rename = "taken_from_canister")]
+    TakenFromCanister,
+    /// The snapshot was created by uploading metadata.
+    #[serde(rename = "metadata_upload")]
+    MetadataUpload,
+}
+
+/// # An exported global variable.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum ExportedGlobal {
+    /// A 32-bit integer.
+    #[serde(rename = "i32")]
+    I32(i32),
+    /// A 64-bit integer.
+    #[serde(rename = "i64")]
+    I64(i64),
+    /// A 32-bit floating point number.
+    #[serde(rename = "f32")]
+    F32(f32),
+    /// A 64-bit floating point number.
+    #[serde(rename = "f64")]
+    F64(f64),
+    /// A 128-bit integer.
+    #[serde(rename = "v128")]
+    V128(Nat),
+}
+
+/// # The status of a global timer.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum CanisterTimer {
+    /// The global timer is inactive.
+    #[serde(rename = "inactive")]
+    Inactive,
+    /// The global timer is active.
+    #[serde(rename = "active")]
+    Active(u64),
+}
+
+/// # The status of a low wasm memory hook.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum OnLowWasmMemoryHookStatus {
+    /// The condition for the  low wasm memory hook is not satisfied.
+    #[serde(rename = "condition_not_satisfied")]
+    ConditionNotSatisfied,
+    /// The low wasm memory hook is ready to be executed.
+    #[serde(rename = "ready")]
+    Ready,
+    /// The low wasm memory hook has been executed.
+    #[serde(rename = "executed")]
+    Executed,
+}
+
+/// # Read Canister Snapshot Data Args.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct ReadCanisterSnapshotDataArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be read.
+    pub snapshot_id: SnapshotId,
+    /// The kind of data to be read.
+    pub kind: SnapshotDataKind,
+}
+
+/// # Snapshot data kind.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum SnapshotDataKind {
+    /// Wasm module.
+    #[serde(rename = "wasm_module")]
+    WasmModule {
+        /// Offset in bytes.
+        offset: u64,
+        /// Size of the data in bytes.
+        size: u64,
+    },
+    /// Main memory.
+    #[serde(rename = "main_memory")]
+    MainMemory {
+        /// Offset in bytes.
+        offset: u64,
+        /// Size of the data in bytes.
+        size: u64,
+    },
+    /// Stable memory.
+    #[serde(rename = "stable_memory")]
+    StableMemory {
+        /// Offset in bytes.
+        offset: u64,
+        /// Size of the data in bytes.
+        size: u64,
+    },
+    /// Chunk hash.
+    #[serde(rename = "wasm_chunk")]
+    WasmChunk {
+        /// The hash of the chunk.
+        #[serde(with = "serde_bytes")]
+        hash: Vec<u8>,
+    },
+}
+
+/// # Read Canister Snapshot Data Result.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct ReadCanisterSnapshotDataResult {
+    /// The returned chunk of data.
+    #[serde(with = "serde_bytes")]
+    pub chunk: Vec<u8>,
+}
+
+/// # Upload Canister Snapshot Metadata Args.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct UploadCanisterSnapshotMetadataArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// An optional snapshot ID to be replaced by the new snapshot.
+    ///
+    /// The snapshot identified by the specified ID will be deleted once a new snapshot has been successfully created.
+    pub replace_snapshot: Option<SnapshotId>,
+    /// The size of the Wasm module.
+    pub wasm_module_size: u64,
+    /// The exported globals.
+    pub exported_globals: Vec<ExportedGlobal>,
+    /// The size of the Wasm memory.
+    pub wasm_memory_size: u64,
+    /// The size of the stable memory.
+    pub stable_memory_size: u64,
+    /// The certified data.
+    pub certified_data: Vec<u8>,
+    /// The status of the global timer.
+    pub global_timer: Option<CanisterTimer>,
+    /// The status of the low wasm memory hook.
+    pub on_low_wasm_memory_hook_status: Option<OnLowWasmMemoryHookStatus>,
+}
+
+/// # Upload Canister Snapshot Metadata Result.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct UploadCanisterSnapshotMetadataResult {
+    /// The ID of the snapshot.
+    pub snapshot_id: SnapshotId,
+}
+
+/// # Upload Canister Snapshot Data Args.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub struct UploadCanisterSnapshotDataArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// ID of the snapshot to be read.
+    pub snapshot_id: SnapshotId,
+    /// The kind of data to be read.
+    pub kind: SnapshotDataOffset,
+    /// The chunk of data to be uploaded.
+    pub chunk: Vec<u8>,
+}
+
+/// # Snapshot data offset.
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum SnapshotDataOffset {
+    /// Wasm module.
+    #[serde(rename = "wasm_module")]
+    WasmModule {
+        /// Offset in bytes.
+        offset: u64,
+    },
+    /// Main memory.
+    #[serde(rename = "main_memory")]
+    MainMemory {
+        /// Offset in bytes.
+        offset: u64,
+    },
+    /// Stable memory.
+    #[serde(rename = "stable_memory")]
+    StableMemory {
+        /// Offset in bytes.
+        offset: u64,
+    },
+    /// Wasm chunk.
+    #[serde(rename = "wasm_chunk")]
+    WasmChunk,
+}
+
 /// # Fetch Canister Logs Args.
 ///
 /// Argument type of [`fetch_canister_logs`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-fetch_canister_logs).
@@ -1331,8 +1550,12 @@ pub type FetchCanisterLogsArgs = CanisterIdRecord;
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CanisterLogRecord {
+    /// The index of the log record.
     pub idx: u64,
+    /// The timestamp of the log record.
     pub timestamp_nanos: u64,
+    /// The content of the log record.
+    #[serde(with = "serde_bytes")]
     pub content: Vec<u8>,
 }
 
@@ -1343,5 +1566,6 @@ pub struct CanisterLogRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct FetchCanisterLogsResult {
+    /// The logs of the canister.
     pub canister_log_records: Vec<CanisterLogRecord>,
 }
