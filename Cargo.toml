@@ -51,5 +51,6 @@ slotmap = "1"
 syn = "2"
 
 # required for e2e-tests to have two versions of ic-cdk
+# unifies the ic-cdk-executor version in ic-cdk and ic-cdk-old in e2e-tests
 [patch.crates-io]
 ic-cdk-executor = { path = "ic-cdk-executor" }
