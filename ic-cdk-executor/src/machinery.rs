@@ -22,6 +22,7 @@ pub(crate) struct MethodContext {
     /// Whether this method is an update or a query.
     pub(crate) kind: ContextKind,
     /// The number of handles to this method context. When this drops to zero, the method context gets deleted.
+    /// The refcount is managed by `MethodHandle`.
     pub(crate) handles: usize,
     /// An index for Task.method_binding; all protected tasks attached to this method.
     pub(crate) tasks: SmallVec<[TaskId; 4]>,
