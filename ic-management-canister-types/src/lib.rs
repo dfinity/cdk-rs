@@ -46,6 +46,18 @@ pub enum LogVisibility {
     AllowedViewers(Vec<Principal>),
 }
 
+/// A generic environment variable struct defining a key-value pair, meant to be used for defining a canister environment
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct EnvironmentVariable {
+    /// Variable name
+    pub name: String,
+
+    /// Variable value
+    pub value: String,
+}
+
 /// # Canister Settings
 ///
 /// For arguments of [`create_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister),
@@ -116,6 +128,8 @@ pub struct CanisterSettings {
     ///
     /// Default value: 0 (i.e., the "on low wasm memory" hook is never scheduled).
     pub wasm_memory_threshold: Option<Nat>,
+    /// A set of dynamically-configurable environment variables for a canister
+    pub environment_variables: Option<Vec<EnvironmentVariable>>,
 }
 
 /// # Definite Canister Settings

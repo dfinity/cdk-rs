@@ -8,6 +8,11 @@ type log_visibility = variant {
     allowed_viewers : vec principal;
 };
 
+type environment_variable = record {
+    name : text;
+    value : text;
+};
+
 type canister_settings = record {
     controllers : opt vec principal;
     compute_allocation : opt nat;
@@ -17,6 +22,7 @@ type canister_settings = record {
     log_visibility : opt log_visibility;
     wasm_memory_limit : opt nat;
     wasm_memory_threshold : opt nat;
+    environment_variable : opt vec environment_variable;
 };
 
 type definite_canister_settings = record {
@@ -28,6 +34,7 @@ type definite_canister_settings = record {
     log_visibility : log_visibility;
     wasm_memory_limit : nat;
     wasm_memory_threshold : nat;
+    environment_variable : vec environment_variable;
 };
 
 type change_origin = variant {
