@@ -14,7 +14,7 @@ fn old_panic_after_async_frees_resources() {
 
     for i in 1..3 {
         match update(&pic, canister_id, "panic_after_async", ()) {
-            Ok(()) => (),
+            Ok(()) => panic!("expected a panic, but got success"),
             Err(rej) => {
                 println!("Got a user error as expected: {rej}");
 
