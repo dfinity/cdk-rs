@@ -206,7 +206,7 @@ async fn spawn_ordering() {
 async fn outer_new_inner_old() {
     futures::join!(
         async {
-            Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
                 .await
                 .unwrap();
         },
@@ -232,7 +232,7 @@ async fn outer_old_inner_new() {
 async fn outer_new_inner_old_q() {
     futures::join!(
         async {
-            Call::bounded_wait(ic_cdk_new::api::canister_self(), "on_notify")
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
                 .await
                 .unwrap();
         },

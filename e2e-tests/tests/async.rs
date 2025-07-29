@@ -172,7 +172,7 @@ fn protected_spawn_behavior() {
         .reject_message
         .contains("protected task outlived its canister method"));
 
-    let err = update::<_, ()>(&pic, canister_id, "migratory_from_protected", ()).unwrap_err();
+    let err = update::<_, ()>(&pic, canister_id, "protected_from_migratory", ()).unwrap_err();
     assert!(err
         .reject_message
         .contains("cannot be called outside of a tracked method context"));

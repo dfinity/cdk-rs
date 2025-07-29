@@ -258,7 +258,7 @@ async fn stalled_protected_task() {
 }
 
 #[update]
-async fn migratory_from_protected() {
+async fn protected_from_migratory() {
     spawn_migratory(async {
         spawn(async {
             on_notify();
