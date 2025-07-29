@@ -28,7 +28,7 @@ fn panic_after_async_frees_resources() {
             }
         }
 
-        let (n,): (u64,) = update(&pic, canister_id, "invocation_count", ()).unwrap();
+        let (n,): (u64,) = update(&pic, canister_id, "get_locked_resource", ()).unwrap();
 
         assert_eq!(i, n, "expected the invocation count to be {i}, got {n}");
     }
@@ -40,7 +40,7 @@ fn panic_after_async_frees_resources() {
     let rej = update::<_, ()>(&pic, canister_id, "panic_twice", ()).expect_err("failed to panic");
     assert!(rej.reject_message.contains("Call already trapped"));
     let _: (u64,) = update(&pic, canister_id, "notifications_received", ()).unwrap();
-    let _: (u64,) = update(&pic, canister_id, "invocation_count", ()).unwrap();
+    let _: (u64,) = update(&pic, canister_id, "get_locked_resource", ()).unwrap();
 }
 
 #[test]
@@ -51,7 +51,9 @@ fn panic_after_async_destructors_cannot_schedule_tasks() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
     let err = update::<_, ()>(&pic, canister_id, "schedule_on_panic", ()).unwrap_err();
-    assert!(err.reject_message.contains("recovering"));
+    assert!(err
+        .reject_message
+        .contains("tasks cannot be spawned while recovering from a trap"));
     let (pre_bg_notifs,): (u64,) =
         query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
     assert_eq!(pre_bg_notifs, 1);
@@ -154,7 +156,7 @@ fn early_panic_not_erased() {
 
     let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
     assert_eq!(n, 2);
-    let _: (u64,) = query_candid(&pic, canister_id, "invocation_count", ()).unwrap();
+    let _: (u64,) = query_candid(&pic, canister_id, "get_locked_resource", ()).unwrap();
 }
 
 #[test]

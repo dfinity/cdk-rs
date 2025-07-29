@@ -26,7 +26,7 @@ fn inc(n: u64) -> u64 {
 }
 
 #[query]
-fn invocation_count() -> u64 {
+fn get_locked_resource() -> u64 {
     let lock = RESOURCE
         .read()
         .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a read lock"));
