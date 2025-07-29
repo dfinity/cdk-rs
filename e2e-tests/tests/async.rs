@@ -158,7 +158,7 @@ fn early_panic_not_erased() {
 }
 
 #[test]
-fn protected_spawn_behavior() {
+fn protected_spawn_magnetism() {
     let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
@@ -166,11 +166,29 @@ fn protected_spawn_behavior() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     update::<_, ()>(&pic, canister_id, "spawn_protected_with_distant_waker", ()).unwrap();
+}
+
+#[test]
+fn protected_spawn_cannot_outlive() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
 
     let err = update::<_, ()>(&pic, canister_id, "stalled_protected_task", ()).unwrap_err();
     assert!(err
         .reject_message
         .contains("protected task outlived its canister method"));
+}
+
+#[test]
+fn protected_spawn_unavailable_in_migratory() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
 
     let err = update::<_, ()>(&pic, canister_id, "protected_from_migratory", ()).unwrap_err();
     assert!(err
