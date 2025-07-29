@@ -157,6 +157,8 @@ pub struct DefiniteCanisterSettings {
     pub wasm_memory_limit: Nat,
     /// Threshold on the remaining wasm memory size of the canister in bytes.
     pub wasm_memory_threshold: Nat,
+    /// A set of dynamically-configurable environment variables for a canister
+    pub environment_variables: Option<Vec<EnvironmentVariable>>,
 }
 
 /// # Create Canister Args
