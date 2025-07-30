@@ -22,7 +22,7 @@ type canister_settings = record {
     log_visibility : opt log_visibility;
     wasm_memory_limit : opt nat;
     wasm_memory_threshold : opt nat;
-    environment_variable : opt vec environment_variable;
+    environment_variables : opt vec environment_variable;
 };
 
 type definite_canister_settings = record {
@@ -34,7 +34,7 @@ type definite_canister_settings = record {
     log_visibility : log_visibility;
     wasm_memory_limit : nat;
     wasm_memory_threshold : nat;
-    environment_variable : vec environment_variable;
+    environment_variables : vec environment_variable;
 };
 
 type change_origin = variant {
