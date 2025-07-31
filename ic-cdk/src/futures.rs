@@ -29,7 +29,7 @@
 //! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
 //! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
 //!
-//! ## `spawn` vs `spawn_weak`
+//! ## Method lifetime
 //!
 //! The default [`spawn`] function will ensure a task does not outlive the canister method it was spawned in. If
 //! the method ends, and the task has `await`s that are not completed yet, it will trap. The method's lifetime lasts until
@@ -37,6 +37,9 @@
 //! `spawn_weak`) should be, or be driven by, an inter-canister call. If you instead await something dependent on a
 //! different canister method, or a timer, or similar, it is likely to trap. (This is unlikely to impact you if you
 //! don't use any 'remote' futures like channels or signals.)
+//!
+//! Where a task spawned with [`spawn`] will panic if it outlives the canister method, [`spawn_weak`] will simply
+//! cancel the task in such a case, dropping it.
 //!
 //! ## `spawn_migratory`
 //!
