@@ -32,15 +32,18 @@
 //! ## `spawn` vs `spawn_weak`
 //!
 //! The default [`spawn`] function will ensure a task does not outlive the canister method it was spawned in. If
-//! the method ends, and the task has not completed yet, it will trap. If you want the task to be canceled instead,
-//! use [`spawn_weak`].
+//! the method ends, and the task has `await`s that are not completed yet, it will trap. The method's lifetime lasts until
+//! it stops making inter-canister calls. What this means is that any await in a protected task (meaning `spawn` or
+//! `spawn_weak`) should be, or be driven by, an inter-canister call. If you instead await something dependent on a
+//! different canister method, or a timer, or similar, it is likely to trap. (This is unlikely to impact you if you
+//! don't use any 'remote' futures like channels or signals.)
 //!
 //! ## `spawn_migratory`
 //!
 //! The [`spawn_migratory`] function is a little different. Migratory tasks can outlive the canister method they were
 //! spawned in, and will migrate between different canister methods as needed; when awoken, they will resume in whatever
 //! context they were awoken in, instead of the context they were originally spawned in. Because they can move around,
-//! any functions referencing the current method (i.e. `msg_*`) will trap.
+//! any functions referencing the current method (i.e. `msg_*`) are unreliable and should not be used from these tasks.
 //!
 //! "Background" is a tricky subject on the IC. Migratory tasks can only run in the context of a canister message.
 //! It takes from that call's instruction limit, which can introduce hidden sources of instruction limit based traps;
