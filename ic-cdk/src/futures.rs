@@ -33,8 +33,8 @@
 //!
 //! The default [`spawn`] function will ensure a task does not outlive the canister method it was spawned in. If
 //! the method ends, and the task has `await`s that are not completed yet, it will trap. The method's lifetime lasts until
-//! it stops making inter-canister calls. What this means is that any await in a protected task (meaning `spawn` or
-//! `spawn_weak`) should be, or be driven by, an inter-canister call. If you instead await something dependent on a
+//! it stops making inter-canister calls. What this means is that any await in a task created with `spawn` should be,
+//! or be driven by, an inter-canister call. If you instead await something dependent on a
 //! different canister method, or a timer, or similar, it is likely to trap. (This is unlikely to impact you if you
 //! don't use any 'remote' futures like channels or signals.)
 //!
