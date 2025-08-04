@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Timer bodies have been changed from `FnOnce`/`FnMut` to `Future`/`AsyncFnMut`, so `spawn` is no longer required to enter an async context from a timer. For `set_timer`, `|| {}` should be changed to `async {}`, and for `set_timer_interval`, `|| {}` should be changed to `async || {}`.
+
 ## [0.12.2] - 2025-06-25
 
 - Upgrade `ic0` to v1.0.

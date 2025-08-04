@@ -171,10 +171,8 @@ async fn timer_on_panic() {
     impl Drop for Guard {
         fn drop(&mut self) {
             for _ in 0..3 {
-                ic_cdk_timers::set_timer(Duration::ZERO, || {
-                    ic_cdk::futures::spawn(async {
-                        on_notify();
-                    })
+                ic_cdk_timers::set_timer(Duration::ZERO, async {
+                    on_notify();
                 });
             }
         }
