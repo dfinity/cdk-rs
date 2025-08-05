@@ -1,6 +1,7 @@
 use crate::hashtree::{
-    fork, fork_hash, labeled, labeled_hash, leaf_hash, Hash,
+    Hash,
     HashTree::{self, Empty, Leaf, Pruned},
+    fork, fork_hash, labeled, labeled_hash, leaf_hash,
 };
 use std::borrow::Cow;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
@@ -1053,7 +1054,7 @@ fn is_balanced<K, V>(root: &NodeRef<K, V>) -> bool {
     fn go<K, V>(node: &NodeRef<K, V>, mut num_black: usize) -> bool {
         match node {
             None => num_black == 0,
-            Some(ref n) => {
+            Some(n) => {
                 if !is_red(node) {
                     debug_assert!(num_black > 0);
                     num_black -= 1;
@@ -1089,7 +1090,7 @@ impl<K: AsRef<[u8]>, V> fmt::Debug for DebugView<'_, K, V> {
         ) -> fmt::Result {
             match node {
                 None => writeln!(f, "{:width$}[B] <null>", "", width = offset),
-                Some(ref h) => {
+                Some(h) => {
                     writeln!(
                         f,
                         "{:width$}[{}] {:?}",

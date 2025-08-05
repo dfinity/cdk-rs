@@ -1,6 +1,6 @@
 //! Canister HTTP request.
 
-use crate::api::call::{call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call_with_payment128};
 use candid::Principal;
 #[cfg(feature = "transform-closure")]
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
@@ -36,11 +36,11 @@ thread_local! {
 }
 
 #[cfg(feature = "transform-closure")]
-#[export_name = "canister_query <ic-cdk internal> http_transform_legacy"]
+#[unsafe(export_name = "canister_query <ic-cdk internal> http_transform_legacy")]
 extern "C" fn http_transform() {
     ic_cdk_executor::in_query_executor_context(|| {
         use crate::api::{
-            call::{arg_data, reply, ArgDecoderConfig},
+            call::{ArgDecoderConfig, arg_data, reply},
             caller,
         };
         if caller() != Principal::management_canister() {

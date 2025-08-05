@@ -56,10 +56,10 @@
 //! - [`cost_vetkd_derive_key`]
 
 use crate::api::{
-    canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
-    cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
+    SignCostError, canister_version, cost_create_canister,
+    cost_http_request as ic0_cost_http_request, cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
     cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
-    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key, SignCostError,
+    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key,
 };
 use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
@@ -561,8 +561,8 @@ pub fn transform_context_from_query(
 #[cfg(feature = "transform-closure")]
 mod transform_closure {
     use super::{
-        http_request, transform_context_from_query, CallResult, HttpRequestArgs, HttpRequestResult,
-        Principal, TransformArgs,
+        CallResult, HttpRequestArgs, HttpRequestResult, Principal, TransformArgs, http_request,
+        transform_context_from_query,
     };
     use candid::{decode_one, encode_one};
     use ic_cdk_executor::in_query_executor_context;
@@ -574,7 +574,7 @@ mod transform_closure {
         static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpRequestResult) -> HttpRequestResult>>> = RefCell::default();
     }
 
-    #[export_name = "canister_query <ic-cdk internal> http_transform"]
+    #[unsafe(export_name = "canister_query <ic-cdk internal> http_transform")]
     extern "C" fn http_transform() {
         in_query_executor_context(|| {
             use crate::api::{msg_arg_data, msg_caller, msg_reply};
