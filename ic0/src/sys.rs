@@ -2,7 +2,7 @@
 // Don't manually modify it.
 #[cfg(target_family = "wasm")]
 #[link(wasm_import_module = "ic0")]
-extern "C" {
+unsafe extern "C" {
     #[doc = "# Safety\n\nAlways safe to call"]
     pub fn msg_arg_data_size() -> usize;
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
