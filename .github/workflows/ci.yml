@@ -66,9 +66,9 @@ jobs:
             ${{ runner.os }}-
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
-      - name: Install protoc (macOS)
-        if: runner.os == 'macOS'
-        run: brew install protobuf
+      # - name: Install protoc (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: brew install protobuf
       - name: Install protoc (Ubuntu)
         if: runner.os == 'Linux'
         run: |
