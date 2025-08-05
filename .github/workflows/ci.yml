@@ -15,11 +15,7 @@ concurrency:
 jobs:
   msrv:
     name: cargo build with MSRV
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-24.04, macos-13-large]
-      fail-fast: false
+    runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -49,11 +45,7 @@ jobs:
 
   test:
     name: cargo test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-24.04, macos-13-large]
-      fail-fast: false
+    runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
         run: rustup show active-toolchain || rustup toolchain install
@@ -90,11 +82,7 @@ jobs:
 
   wasm64:
     name: wasm64 e2e
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-24.04, macos-13-large]
-      fail-fast: false
+    runs-on: ubuntu-24.04
     steps:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -118,9 +106,9 @@ jobs:
             ${{ runner.os }}-
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
-      - name: Install protoc (macOS)
-        if: runner.os == 'macOS'
-        run: brew install protobuf
+      # - name: Install protoc (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: brew install protobuf
       - name: Install protoc (Ubuntu)
         if: runner.os == 'Linux'
         run: |
