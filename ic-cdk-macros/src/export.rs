@@ -63,7 +63,7 @@ impl MethodType {
         }
     }
 
-    /// init, post_upgrade, update, query can have arguments.
+    /// `init`, `post_upgrade`, `update`, `query` can have arguments.
     pub fn can_have_args(&self) -> bool {
         match self {
             MethodType::Init | MethodType::PostUpgrade | MethodType::Update | MethodType::Query => {

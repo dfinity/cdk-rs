@@ -13,7 +13,7 @@ use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use candid::{types::reference::Func, CandidType, Principal};
+use candid::{CandidType, Principal, types::reference::Func};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha2::Digest;
@@ -137,6 +137,7 @@ impl Display for Tokens {
 )]
 pub struct Subaccount(pub [u8; 32]);
 
+#[allow(clippy::range_plus_one)]
 impl From<Principal> for Subaccount {
     fn from(principal: Principal) -> Self {
         let mut subaccount = [0; 32];
@@ -147,7 +148,7 @@ impl From<Principal> for Subaccount {
     }
 }
 
-/// AccountIdentifier is a 32-byte array.
+/// `AccountIdentifier` is a 32-byte array.
 /// The first 4 bytes is a big-endian encoding of a CRC32 checksum of the last 28 bytes.
 #[derive(
     CandidType, Serialize, Deserialize, Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord,
@@ -173,7 +174,7 @@ impl AccountIdentifier {
         Self(result)
     }
 
-    /// Convert hex string into AccountIdentifier.
+    /// Convert hex string into `AccountIdentifier`.
     pub fn from_hex(hex_str: &str) -> Result<AccountIdentifier, String> {
         let hex: Vec<u8> = hex::decode(hex_str).map_err(|e| e.to_string())?;
         Self::from_slice(&hex[..]).map_err(|err| match err {
@@ -213,7 +214,7 @@ impl AccountIdentifier {
         }
     }
 
-    /// Convert AccountIdentifier into hex string.
+    /// Convert `AccountIdentifier` into hex string.
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
@@ -505,7 +506,7 @@ pub struct Transaction {
     pub operation: Option<Operation>,
     /// The time at which the client of the ledger constructed the transaction.
     pub created_at_time: Timestamp,
-    /// The memo that was provided to the icrc1_transfer method.
+    /// The memo that was provided to the `icrc1_transfer` method.
     pub icrc1_memo: Option<ByteBuf>,
 }
 
@@ -546,7 +547,7 @@ pub struct QueryBlocksResponse {
     ///
     /// The block range can be an arbitrary sub-range of the originally requested range.
     pub blocks: Vec<Block>,
-    /// The index of the first block in [QueryBlocksResponse::blocks].
+    /// The index of the first block in [`QueryBlocksResponse::blocks`].
     /// If the `blocks` vector is empty, the exact value of this field is not specified.
     pub first_block_index: BlockIndex,
     /// Encoded functions for fetching archived blocks whose indices fall into the
@@ -667,7 +668,7 @@ impl CandidType for QueryArchiveFn {
     }
 }
 
-/// Calls the "account_balance" method on the specified canister.
+/// Calls the `account_balance` method on the specified canister.
 ///
 /// # Example
 /// ```no_run
@@ -730,7 +731,7 @@ pub struct Symbol {
     pub symbol: String,
 }
 
-/// Calls the "token_symbol" method on the specified canister.
+/// Calls the `token_symbol` method on the specified canister.
 /// # Example
 /// ```no_run
 /// use candid::Principal;
@@ -746,7 +747,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
         .candid()?)
 }
 
-/// Calls the "query_block" method on the specified canister.
+/// Calls the `query_block` method on the specified canister.
 /// # Example
 /// ```no_run
 /// use candid::Principal;
@@ -998,9 +999,11 @@ mod tests {
         );
 
         let length_64 = "0000000000000000000000000000000000000000000000000000000000000000";
-        assert!(AccountIdentifier::from_hex(length_64)
-            .unwrap_err()
-            .contains("Checksum failed"));
+        assert!(
+            AccountIdentifier::from_hex(length_64)
+                .unwrap_err()
+                .contains("Checksum failed")
+        );
 
         // Try again with correct checksum
         let length_64 = "807077e900000000000000000000000000000000000000000000000000000000";

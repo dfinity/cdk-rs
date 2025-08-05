@@ -15,7 +15,7 @@ enum Color {
 
 impl Color {
     fn flip_assign(&mut self) {
-        *self = self.flip()
+        *self = self.flip();
     }
 
     fn flip(self) -> Self {
@@ -142,7 +142,7 @@ impl<K: AsRef<[u8]>, V: AsHashTree> Node<K, V> {
         if let Some(n) = n {
             Self::visit(&n.left, f);
             (*f)(n.key.as_ref(), &n.value);
-            Self::visit(&n.right, f)
+            Self::visit(&n.right, f);
         }
     }
 
@@ -195,7 +195,7 @@ enum Visit {
     Post,
 }
 
-/// Iterator over a RbTree.
+/// Iterator over a `RbTree`.
 #[derive(Debug)]
 pub struct Iter<'a, K, V> {
     /// Invariants:
@@ -207,10 +207,10 @@ pub struct Iter<'a, K, V> {
 }
 
 impl<K, V> Iter<'_, K, V> {
-    /// This function is an adaptation of the traverse_step procedure described in
+    /// This function is an adaptation of the `traverse_step` procedure described in
     /// section 7.2 "Bidirectional Bifurcate Coordinates" of
     /// "Elements of Programming" by A. Stepanov and P. McJones, p. 118.
-    /// http://elementsofprogramming.com/eop.pdf
+    /// <http://elementsofprogramming.com/eop.pdf>
     ///
     /// The main difference is that our nodes don't have parent links for two reasons:
     /// 1. They don't play well with safe Rust ownership model.
@@ -240,8 +240,7 @@ impl<K, V> Iter<'_, K, V> {
                             if parent
                                 .left
                                 .as_ref()
-                                .map(|l| l.as_ref() as *const Node<K, V>)
-                                == Some(tip as *const Node<K, V>)
+                                .is_some_and(|l| std::ptr::eq(l.as_ref(), tip))
                             {
                                 self.visit = Visit::In;
                             }
@@ -322,7 +321,7 @@ where
         T: IntoIterator<Item = (K, V)>,
     {
         let mut t = RbTree::<K, V>::new();
-        for (k, v) in iter.into_iter() {
+        for (k, v) in iter {
             t.insert(k, v);
         }
         t
@@ -337,7 +336,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         let mut first = true;
-        for (k, v) in self.iter() {
+        for (k, v) in self {
             if !first {
                 write!(f, ", ")?;
             }
@@ -398,7 +397,7 @@ impl<K: AsRef<[u8]>, V: AsHashTree> RbTree<K, V> {
                 }
             }
         }
-        go(&mut self.root, key, f)
+        go(&mut self.root, key, f);
     }
 
     fn range_witness<'a>(
@@ -499,7 +498,7 @@ impl<K: AsRef<[u8]>, V: AsHashTree> RbTree<K, V> {
     where
         F: 'a + FnMut(&'a [u8], &'a V),
     {
-        Node::visit(&self.root, &mut f)
+        Node::visit(&self.root, &mut f);
     }
 
     fn witness_range_above<'a>(
@@ -889,6 +888,15 @@ impl<K: AsRef<[u8]>, V: AsHashTree> RbTree<K, V> {
     }
 }
 
+impl<'a, K: AsRef<[u8]>, V: AsHashTree> IntoIterator for &'a RbTree<K, V> {
+    type Item = (&'a K, &'a V);
+    type IntoIter = Iter<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 use candid::CandidType;
 
 impl<K, V> CandidType for RbTree<K, V>
@@ -921,7 +929,7 @@ where
         S: Serializer,
     {
         let mut map = serializer.serialize_map(Some(self.iter().count()))?;
-        for (k, v) in self.iter() {
+        for (k, v) in self {
             map.serialize_entry(k, v)?;
         }
         map.end()
@@ -992,7 +1000,7 @@ fn three_way_fork<'a>(l: HashTree<'a>, m: HashTree<'a>, r: HashTree<'a>) -> Hash
 
 // helper functions
 fn is_red<K, V>(x: &NodeRef<K, V>) -> bool {
-    x.as_ref().map(|h| h.color == Color::Red).unwrap_or(false)
+    x.as_ref().is_some_and(|h| h.color == Color::Red)
 }
 
 fn balance<'t, K: AsRef<[u8]> + 't, V: AsHashTree + 't>(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
@@ -1003,7 +1011,7 @@ fn balance<'t, K: AsRef<[u8]> + 't, V: AsHashTree + 't>(mut h: Box<Node<K, V>>) 
         h = rotate_right(h);
     }
     if is_red(&h.left) && is_red(&h.right) {
-        flip_colors(&mut h)
+        flip_colors(&mut h);
     }
     h
 }

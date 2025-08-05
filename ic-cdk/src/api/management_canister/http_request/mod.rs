@@ -14,7 +14,7 @@ pub use types::*;
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
-/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// This call requires cycles payment. The required cycles is a function of the request size and `max_response_bytes`.
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn http_request(
     arg: CanisterHttpRequestArgument,
@@ -54,7 +54,7 @@ extern "C" fn http_transform() {
             crate::trap(format!("Missing transform function for request {int}"));
         };
         let transformed = func(args.response);
-        reply((transformed,))
+        reply((transformed,));
     });
 }
 
@@ -64,7 +64,7 @@ extern "C" fn http_transform() {
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
-/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// This call requires cycles payment. The required cycles is a function of the request size and `max_response_bytes`.
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 #[cfg(feature = "transform-closure")]
 #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]

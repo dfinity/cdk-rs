@@ -39,7 +39,7 @@ impl Config {
         self.type_attributes = attr;
         self
     }
-    /// Only generates SERVICE struct if canister_id is not provided
+    /// Only generates SERVICE struct if canister id is not provided
     pub fn set_canister_id(&mut self, id: candid::Principal) -> &mut Self {
         self.canister_id = Some(id);
         self
@@ -441,7 +441,7 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
     }
 }
 
-pub fn compile(config: &Config, env: &TypeEnv, actor: &Option<Type>) -> String {
+pub fn compile(config: &Config, env: &TypeEnv, actor: Option<&Type>) -> String {
     let header = format!(
         r#"// This is an experimental feature to generate Rust binding from Candid.
 // You may want to manually adjust some of the types.
@@ -516,7 +516,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
         TypeInner::Record(fs) => {
             if matches!(
                 path.last(),
-                None | Some(TypePath::VariantField(_)) | Some(TypePath::Id(_))
+                None | Some(TypePath::VariantField(_) | TypePath::Id(_))
             ) || is_tuple(fs)
             {
                 let fs: Vec<_> = fs
@@ -534,7 +534,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 let ty = nominalize(
                     env,
                     &mut vec![TypePath::Id(new_var.clone())],
-                    &TypeInner::Record(fs.to_vec()).into(),
+                    &TypeInner::Record(fs.clone()).into(),
                 );
                 env.0.insert(new_var.clone(), ty);
                 TypeInner::Var(new_var)
@@ -558,7 +558,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 let ty = nominalize(
                     env,
                     &mut vec![TypePath::Id(new_var.clone())],
-                    &TypeInner::Variant(fs.to_vec()).into(),
+                    &TypeInner::Variant(fs.clone()).into(),
                 );
                 env.0.insert(new_var.clone(), ty);
                 TypeInner::Var(new_var)
@@ -652,14 +652,12 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
     .into()
 }
 
-fn nominalize_all(env: &TypeEnv, actor: &Option<Type>) -> (TypeEnv, Option<Type>) {
-    let mut res = TypeEnv(Default::default());
-    for (id, ty) in env.0.iter() {
+fn nominalize_all(env: &TypeEnv, actor: Option<&Type>) -> (TypeEnv, Option<Type>) {
+    let mut res = TypeEnv::default();
+    for (id, ty) in &env.0 {
         let ty = nominalize(&mut res, &mut vec![TypePath::Id(id.clone())], ty);
         res.0.insert(id.to_string(), ty);
     }
-    let actor = actor
-        .as_ref()
-        .map(|ty| nominalize(&mut res, &mut vec![], ty));
+    let actor = actor.map(|ty| nominalize(&mut res, &mut vec![], ty));
     (res, actor)
 }

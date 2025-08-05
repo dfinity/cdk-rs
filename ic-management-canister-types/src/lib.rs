@@ -71,7 +71,7 @@ pub struct CanisterSettings {
     ///
     /// Must be a number between 0 and 100, inclusively.
     ///
-    /// Default value: 0
+    /// Default value: `0`
     pub compute_allocation: Option<Nat>,
     /// Indicates how much memory (bytes) the canister is allowed to use in total.
     ///
@@ -82,21 +82,21 @@ pub struct CanisterSettings {
     ///
     /// Must be a number between 0 and 2<sup>48</sup> (i.e 256TB), inclusively.
     ///
-    /// Default value: 0
+    /// Default value: `0`
     pub memory_allocation: Option<Nat>,
     /// Indicates a length of time in seconds.
     /// A canister is considered frozen whenever the IC estimates that the canister would be depleted of cycles
-    /// before freezing_threshold seconds pass, given the canister's current size and the IC's current cost for storage.
+    /// before `freezing_threshold` seconds pass, given the canister's current size and the IC's current cost for storage.
     ///
     /// Must be a number between 0 and 2<sup>64</sup>-1, inclusively.
     ///
-    /// Default value: 2592000 (approximately 30 days).
+    /// Default value: `2_592_000` (approximately 30 days).
     pub freezing_threshold: Option<Nat>,
     /// Indicates the upper limit on [`CanisterStatusResult::reserved_cycles`] of the canister.
     ///
     /// Must be a number between 0 and 2<sup>128</sup>-1, inclusively.
     ///
-    /// Default value: 5_000_000_000_000 (5 trillion cycles).
+    /// Default value: `5_000_000_000_000` (5 trillion cycles).
     pub reserved_cycles_limit: Option<Nat>,
     /// Defines who is allowed to read the canister's logs.
     ///
@@ -106,7 +106,7 @@ pub struct CanisterSettings {
     ///
     /// Must be a number between 0 and 2<sup>48</sup>-1 (i.e 256TB), inclusively.
     ///
-    /// Default value: 3_221_225_472 (3 GiB).
+    /// Default value: `3_221_225_472` (3 GiB).
     pub wasm_memory_limit: Option<Nat>,
     /// Indicates the threshold on the remaining wasm memory size of the canister in bytes.
     ///
@@ -114,7 +114,7 @@ pub struct CanisterSettings {
     ///
     /// Must be a number between 0 and 2<sup>64</sup>-1, inclusively.
     ///
-    /// Default value: 0 (i.e., the "on low wasm memory" hook is never scheduled).
+    /// Default value: `0` (i.e., the "on low wasm memory" hook is never scheduled).
     pub wasm_memory_threshold: Option<Nat>,
 }
 
@@ -327,7 +327,7 @@ pub struct InstallChunkedCodeArgs {
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
     pub target_canister: CanisterId,
-    /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified).
+    /// The canister in whose chunk storage the chunks are stored (defaults to `target_canister` if not specified).
     pub store_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm.
     pub chunk_hashes_list: Vec<ChunkHash>,
@@ -999,7 +999,7 @@ pub struct SchnorrPublicKeyResult {
     /// An Schnorr public key encoded in SEC1 compressed form.
     #[serde(with = "serde_bytes")]
     pub public_key: Vec<u8>,
-    /// Can be used to deterministically derive child keys of the public_key.
+    /// Can be used to deterministically derive child keys of the `public_key`.
     #[serde(with = "serde_bytes")]
     pub chain_code: Vec<u8>,
 }

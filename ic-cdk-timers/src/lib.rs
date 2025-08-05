@@ -175,7 +175,7 @@ extern "C" fn global_timer() {
                                         timers.borrow_mut().push(Timer {
                                             task: task_id,
                                             time,
-                                        })
+                                        });
                                     }),
                                     None => ic_cdk::println!(
                                         "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
@@ -238,7 +238,7 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
         timers.borrow_mut().push(Timer {
             task: key,
             time: scheduled_time,
-        })
+        });
     });
     update_ic0_timer();
     key
@@ -302,8 +302,6 @@ extern "C" fn timer_executor() {
                 ic_cdk::futures::in_executor_context(move || {
                     ic_cdk::futures::spawn(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
-                        let mut guard = RepeatGuard(Some(func), task_id, interval);
-                        guard.0.as_mut().unwrap().call_mut().await;
                         impl Drop for RepeatGuard {
                             fn drop(&mut self) {
                                 TASKS.with(|tasks| {
@@ -316,7 +314,10 @@ extern "C" fn timer_executor() {
                                 });
                             }
                         }
-                    })
+
+                        let mut guard = RepeatGuard(Some(func), task_id, interval);
+                        guard.0.as_mut().unwrap().call_mut().await;
+                    });
                 });
             }
         }
