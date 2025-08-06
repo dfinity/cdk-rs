@@ -18,7 +18,7 @@ async fn call_create_canister() -> Principal {
 async fn call_upload_chunk(canister_id: Principal, chunk: Vec<u8>) -> Vec<u8> {
     let arg = UploadChunkArgs {
         canister_id,
-        chunk: chunk.to_vec(),
+        chunk: chunk.clone(),
     };
     upload_chunk(&arg).await.unwrap().hash
 }

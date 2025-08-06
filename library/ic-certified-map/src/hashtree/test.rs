@@ -1,6 +1,6 @@
 use super::{
-    fork, labeled,
     HashTree::{Empty, Leaf},
+    fork, labeled,
 };
 use std::borrow::Cow;
 

@@ -8,7 +8,7 @@ fn decode_arg0(_arg_bytes: Vec<u8>) {}
 
 #[update(decode_with = "decode_arg1")]
 fn arg1(a: u32) {
-    assert_eq!(a, 1)
+    assert_eq!(a, 1);
 }
 fn decode_arg1(arg_bytes: Vec<u8>) -> u32 {
     candid::utils::decode_one(&arg_bytes).unwrap()
@@ -74,7 +74,7 @@ fn from_proto_bytes<T: Message + Default>(msg: Vec<u8>) -> T {
     Message::decode(&msg[..]).unwrap()
 }
 
-/// The following method demonstrates how to specify guard/decode_with/encode_with attributes with generic parameters.
+/// The following method demonstrates how to specify `guard`/`decode_with`/`encode_with` attributes with generic parameters.
 #[update(
     guard = "generic_guard::<0>", // N = 0, any input length is accepted
     decode_with = "custom_candid_decode::<10000,_>",

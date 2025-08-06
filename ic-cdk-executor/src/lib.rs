@@ -8,7 +8,7 @@ use std::pin::Pin;
 use std::sync::{Arc, Once};
 use std::task::{Context, Poll, Wake, Waker};
 
-use slotmap::{new_key_type, SlotMap};
+use slotmap::{SlotMap, new_key_type};
 
 /// Spawn an asynchronous task to run in the background.
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
@@ -198,9 +198,9 @@ impl Wake for TaskWaker {
             WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
             if context == AsyncContext::FromTask {
                 if self.query {
-                    CONTEXT.set(AsyncContext::Query)
+                    CONTEXT.set(AsyncContext::Query);
                 } else {
-                    CONTEXT.set(AsyncContext::Update)
+                    CONTEXT.set(AsyncContext::Update);
                 }
             }
         }

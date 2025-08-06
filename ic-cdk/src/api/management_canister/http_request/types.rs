@@ -48,7 +48,7 @@ pub struct TransformContext {
 }
 
 impl TransformContext {
-    /// Constructs a TransformContext from a name and context. The principal is assumed to be the [current canister's](id).
+    /// Constructs a `TransformContext` from a name and context. The principal is assumed to be the [current canister's](id).
     pub fn from_name(candid_function_name: String, context: Vec<u8>) -> Self {
         Self {
             context,
@@ -101,7 +101,7 @@ pub enum HttpMethod {
     HEAD,
 }
 
-/// Argument type of [super::http_request].
+/// Argument type of [`http_request`](super::http_request).
 #[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct CanisterHttpRequestArgument {
     /// The requested URL.

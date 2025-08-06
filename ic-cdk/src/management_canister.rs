@@ -56,10 +56,10 @@
 //! - [`cost_vetkd_derive_key`]
 
 use crate::api::{
-    canister_version, cost_create_canister, cost_http_request as ic0_cost_http_request,
-    cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
+    SignCostError, canister_version, cost_create_canister,
+    cost_http_request as ic0_cost_http_request, cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
     cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
-    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key, SignCostError,
+    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key,
 };
 use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use candid::{CandidType, Nat, Principal};
@@ -224,7 +224,7 @@ pub async fn update_settings(arg: &UpdateSettingsArgs) -> CallResult<()> {
 pub struct UpdateSettingsArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
-    /// See [CanisterSettings].
+    /// See [`CanisterSettings`].
     pub settings: CanisterSettings,
 }
 
@@ -302,7 +302,7 @@ pub async fn install_code(arg: &InstallCodeArgs) -> CallResult<()> {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct InstallCodeArgs {
-    /// See [CanisterInstallMode].
+    /// See [`CanisterInstallMode`].
     pub mode: CanisterInstallMode,
     /// Canister ID.
     pub canister_id: CanisterId,
@@ -351,7 +351,7 @@ pub struct InstallChunkedCodeArgs {
     pub mode: CanisterInstallMode,
     /// Principal of the canister being installed.
     pub target_canister: CanisterId,
-    /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified).
+    /// The canister in whose chunk storage the chunks are stored (defaults to `target_canister` if not specified).
     pub store_canister: Option<CanisterId>,
     /// The list of chunks that make up the canister wasm.
     pub chunk_hashes_list: Vec<ChunkHash>,
@@ -509,12 +509,12 @@ pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
             .iter()
             .map(|h| h.name.len() + h.value.len())
             .sum::<usize>()
-        + arg.body.as_ref().map(|b| b.len()).unwrap_or(0)
+        + arg.body.as_ref().map_or(0, |b| b.len())
         + arg
             .transform
             .as_ref()
-            .map(|t| t.context.len() + t.function.0.method.len())
-            .unwrap_or(0)) as u64;
+            .map_or(0, |t| t.context.len() + t.function.0.method.len()))
+        as u64;
     // As stated here: https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request:
     // "The upper limit on the maximal size for the response is 2MB (2,000,000B) and this value also applies if no maximal size value is specified."
     let max_res_bytes = arg.max_response_bytes.unwrap_or(2_000_000);
@@ -561,8 +561,8 @@ pub fn transform_context_from_query(
 #[cfg(feature = "transform-closure")]
 mod transform_closure {
     use super::{
-        http_request, transform_context_from_query, CallResult, HttpRequestArgs, HttpRequestResult,
-        Principal, TransformArgs,
+        CallResult, HttpRequestArgs, HttpRequestResult, Principal, TransformArgs, http_request,
+        transform_context_from_query,
     };
     use candid::{decode_one, encode_one};
     use ic_cdk_executor::in_query_executor_context;
@@ -574,7 +574,7 @@ mod transform_closure {
         static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpRequestResult) -> HttpRequestResult>>> = RefCell::default();
     }
 
-    #[export_name = "canister_query <ic-cdk internal> http_transform"]
+    #[unsafe(export_name = "canister_query <ic-cdk internal> http_transform")]
     extern "C" fn http_transform() {
         in_query_executor_context(|| {
             use crate::api::{msg_arg_data, msg_caller, msg_reply};
@@ -676,7 +676,7 @@ pub fn cost_sign_with_ecdsa(arg: &SignWithEcdsaArgs) -> Result<u128, SignCostErr
     ic0_cost_sign_with_ecdsa(&arg.key_id.name, arg.key_id.curve.into())
 }
 
-/// Gets a new ECDSA signature of the given message_hash with a user-specified amount of cycles.
+/// Gets a new ECDSA signature of the given `message_hash` with a user-specified amount of cycles.
 ///
 /// **Unbounded-wait call**
 ///
