@@ -16,7 +16,7 @@ fn call_msg_caller() {
     msg_reply(vec![]);
 }
 
-/// This entrypoint will call [`call_msg_deadline`] with both bounded_wait and unbounded_wait.
+/// This entrypoint will call [`call_msg_deadline`] with both `bounded_wait` and `unbounded_wait`.
 #[ic_cdk::update]
 async fn call_msg_deadline_caller() {
     use ic_cdk::call::Call;
@@ -33,8 +33,8 @@ async fn call_msg_deadline_caller() {
 }
 
 /// This entrypoint is to be called by [`call_msg_deadline_caller`].
-/// If the call was made with bounded_wait, `msg_deadline` should be `Some`, then return 1.
-/// If the call was made with unbounded_wait, `msg_deadline` should be `None`, then return 0.
+/// If the call was made with `bounded_wait`, `msg_deadline` should be `Some`, then return 1.
+/// If the call was made with `unbounded_wait`, `msg_deadline` should be `None`, then return 0.
 #[export_name = "canister_update call_msg_deadline"]
 fn call_msg_deadline() {
     let reply = match msg_deadline() {

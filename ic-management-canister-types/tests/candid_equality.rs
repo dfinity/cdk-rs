@@ -175,7 +175,7 @@ fn fetch_canister_logs(_: FetchCanisterLogsArgs) -> FetchCanisterLogsResult {
 
 #[cfg(test)]
 mod test {
-    use candid_parser::utils::{service_equal, CandidSource};
+    use candid_parser::utils::{CandidSource, service_equal};
     use ic_management_canister_types::*;
 
     #[test]

@@ -40,7 +40,7 @@ fn bitcoin_send_transaction(_: SendTransactionRequest) {
 
 #[cfg(test)]
 mod test {
-    use candid_parser::utils::{service_equal, CandidSource};
+    use candid_parser::utils::{CandidSource, service_equal};
     use ic_cdk::bitcoin_canister::*;
 
     #[test]

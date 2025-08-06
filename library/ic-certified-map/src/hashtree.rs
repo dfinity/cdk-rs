@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test;
 
-use serde::{ser::SerializeSeq, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeSeq};
 use serde_bytes::Bytes;
 use sha2::{Digest, Sha256};
 use std::borrow::Cow;
@@ -9,7 +9,7 @@ use std::borrow::Cow;
 /// SHA-256 hash bytes.
 pub type Hash = [u8; 32];
 
-/// HashTree as defined in the [interfaces spec](https://internetcomputer.org/docs/current/references/ic-interface-spec#certificate).
+/// `HashTree` as defined in the [interfaces spec](https://internetcomputer.org/docs/current/references/ic-interface-spec#certificate).
 #[derive(Debug, Clone, Default)]
 pub enum HashTree<'a> {
     /// No child nodes; a proof of absence.

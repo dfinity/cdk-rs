@@ -28,8 +28,8 @@ use std::{
     time::Duration,
 };
 
-use futures::{stream::FuturesUnordered, StreamExt};
-use slotmap::{new_key_type, KeyData, SlotMap};
+use futures::{StreamExt, stream::FuturesUnordered};
+use slotmap::{KeyData, SlotMap, new_key_type};
 
 use ic_cdk::call::{Call, CallFailed, RejectCode};
 
@@ -100,7 +100,7 @@ impl PartialEq for Timer {
 impl Eq for Timer {}
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
-#[export_name = "canister_global_timer"]
+#[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
     ic_cdk::futures::in_executor_context(|| {
         ic_cdk::futures::spawn(async {
@@ -175,7 +175,7 @@ extern "C" fn global_timer() {
                                         timers.borrow_mut().push(Timer {
                                             task: task_id,
                                             time,
-                                        })
+                                        });
                                     }),
                                     None => ic_cdk::println!(
                                         "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
@@ -238,7 +238,7 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
         timers.borrow_mut().push(Timer {
             task: key,
             time: scheduled_time,
-        })
+        });
     });
     update_ic0_timer();
     key
@@ -268,11 +268,11 @@ fn update_ic0_timer() {
 
 #[cfg_attr(
     target_family = "wasm",
-    export_name = "canister_update <ic-cdk internal> timer_executor"
+    unsafe(export_name = "canister_update <ic-cdk internal> timer_executor")
 )]
 #[cfg_attr(
     not(target_family = "wasm"),
-    export_name = "canister_update_ic_cdk_internal.timer_executor"
+    unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
     if ic_cdk::api::msg_caller() != ic_cdk::api::canister_self() {
@@ -302,8 +302,6 @@ extern "C" fn timer_executor() {
                 ic_cdk::futures::in_executor_context(move || {
                     ic_cdk::futures::spawn(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
-                        let mut guard = RepeatGuard(Some(func), task_id, interval);
-                        guard.0.as_mut().unwrap().call_mut().await;
                         impl Drop for RepeatGuard {
                             fn drop(&mut self) {
                                 TASKS.with(|tasks| {
@@ -316,7 +314,10 @@ extern "C" fn timer_executor() {
                                 });
                             }
                         }
-                    })
+
+                        let mut guard = RepeatGuard(Some(func), task_id, interval);
+                        guard.0.as_mut().unwrap().call_mut().await;
+                    });
                 });
             }
         }

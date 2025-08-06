@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- The macros now support 2024 edition.
+
+### Changed
+
+- MSRV raised to 1.85.0.
+
 ## [0.18.5] - 2025-06-25
 
 ### Fixed

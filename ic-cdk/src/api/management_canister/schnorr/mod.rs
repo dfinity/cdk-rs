@@ -1,6 +1,6 @@
 //! Threshold Schnorr signing API.
 
-use crate::api::call::{call, call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call, call_with_payment128};
 use candid::Principal;
 
 mod types;
