@@ -12,7 +12,6 @@ use std::{
     task::{Context, Poll, Wake, Waker},
 };
 
-use pin_project_lite::pin_project;
 use slotmap::{new_key_type, Key, SecondaryMap, SlotMap};
 use smallvec::SmallVec;
 
@@ -81,6 +80,8 @@ pub(crate) struct Task {
     /// If Some, this task will always resume during that method, regardless of where the waker is woken from.
     /// If None, this task will resume wherever it is awoken from.
     method_binding: Option<MethodId>,
+    // While this task is executing, `CURRENT_METHOD` will be set to this value.
+    set_current_method_var: MethodId,
 }
 
 // Actually using the default value would be a memory leak. This only exists for `take`.
@@ -89,31 +90,8 @@ impl Default for Task {
         Self {
             future: Box::pin(std::future::pending()),
             method_binding: None,
+            set_current_method_var: MethodId::null(),
         }
-    }
-}
-
-pin_project! {
-    /// Future at the top level in `Task`. Exists to dynamically scope `CURRENT_METHOD`.
-    struct TaskFuture<F: Future> {
-        #[pin]
-        inner: F,
-        // While this task is executing, `CURRENT_METHOD` will be set to this value.
-        current_method_var: MethodId,
-    }
-}
-
-impl<F: Future> Future for TaskFuture<F> {
-    type Output = F::Output;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // This is more generic than the current implementation needs. CURRENT_METHOD, if Some, is already the right value.
-        // The real point is to ensure that migratory tasks get null context.
-        let this = self.project();
-        let method = CURRENT_METHOD.replace(Some(*this.current_method_var));
-        let result = this.inner.poll(cx);
-        CURRENT_METHOD.set(method);
-        result
     }
 }
 
@@ -231,6 +209,9 @@ pub fn extend_current_method_context() -> MethodHandle {
 }
 
 /// Polls all tasks that have been woken up. Called after all context closures besides cancelation.
+///
+/// Should never be called inside a task, because it should only be called inside a context closure, and context closures
+/// should only be at the top level of an entrypoint.
 pub(crate) fn poll_all() {
     let Some(method_id) = CURRENT_METHOD.get() else {
         panic!("tasks can only be polled within an executor context");
@@ -265,7 +246,9 @@ pub(crate) fn poll_all() {
             #[cfg(feature = "v1.0")]
             source_method: method_id,
         }));
+        let prev_current_method_var = CURRENT_METHOD.replace(Some(task.set_current_method_var));
         let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
+        CURRENT_METHOD.set(prev_current_method_var);
         match poll {
             Poll::Pending => {
                 // more to do, put the task back in the table
@@ -399,11 +382,9 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         panic!("unprotected spawns cannot be made within a query context");
     }
     let task = Task {
-        future: Box::pin(TaskFuture {
-            inner: f,
-            current_method_var: MethodId::null(),
-        }),
+        future: Box::pin(f),
         method_binding: None,
+        set_current_method_var: MethodId::null(),
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
     MIGRATORY_WAKEUPS.with_borrow_mut(|unattached| {
@@ -428,11 +409,9 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         panic!("`spawn_protected` cannot be called outside of a tracked method context");
     }
     let task = Task {
-        future: Box::pin(TaskFuture {
-            inner: f,
-            current_method_var: method_id,
-        }),
+        future: Box::pin(f),
         method_binding: Some(method_id),
+        set_current_method_var: method_id,
     };
     let task_id = TASKS.with_borrow_mut(|tasks| tasks.insert(task));
     METHODS.with_borrow_mut(|methods| {
