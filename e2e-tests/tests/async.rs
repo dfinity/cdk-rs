@@ -1,10 +1,11 @@
+use candid::Principal;
 use pocket_ic::{query_candid, ErrorCode};
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
-fn panic_after_async_frees_resources() {
+fn panic_after_await_frees_resources() {
     let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
@@ -12,7 +13,7 @@ fn panic_after_async_frees_resources() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     for i in 1..3 {
-        match update(&pic, canister_id, "panic_after_async", ()) {
+        match update(&pic, canister_id, "panic_after_await", ()) {
             Ok(()) => panic!("expected a panic, but got success"),
             Err(rej) => {
                 println!("Got a user error as expected: {rej}");
@@ -44,7 +45,45 @@ fn panic_after_async_frees_resources() {
 }
 
 #[test]
-fn panic_after_async_destructors_cannot_schedule_tasks() {
+fn panic_after_await_frees_resources_in_spawn_migratory() {
+    let pic = pic_base().build();
+    let wasm = cargo_build_canister("async");
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<_, ()>(
+        &pic,
+        canister_id,
+        "panic_after_await_in_spawn_migratory",
+        (),
+    )
+    .unwrap();
+
+    let res = update::<_, ()>(&pic, canister_id, "migratory_resume", ());
+    let logs = pic
+        .fetch_canister_logs(canister_id, Principal::anonymous())
+        .unwrap();
+    match res {
+        Err(r) => assert!(r.reject_message.contains("Goodbye, cruel world.")),
+        Ok(()) => assert!(logs.last().is_some_and(|log| str::from_utf8(&log.content)
+            .unwrap()
+            .contains("Goodbye, cruel world.",))),
+    }
+
+    update::<_, ()>(&pic, canister_id, "migratory_resume", ()).unwrap();
+    assert!(
+        pic.fetch_canister_logs(canister_id, Principal::anonymous())
+            .unwrap()
+            .len()
+            == logs.len()
+    );
+    let _: (u64,) = update(&pic, canister_id, "notifications_received", ()).unwrap();
+    let _: (u64,) = update(&pic, canister_id, "get_locked_resource", ()).unwrap();
+}
+
+#[test]
+fn panic_after_await_destructors_cannot_schedule_tasks() {
     let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();
@@ -64,7 +103,7 @@ fn panic_after_async_destructors_cannot_schedule_tasks() {
 }
 
 #[test]
-fn panic_after_async_destructors_can_schedule_timers() {
+fn panic_after_await_destructors_can_schedule_timers() {
     let pic = pic_base().build();
     let wasm = cargo_build_canister("async");
     let canister_id = pic.create_canister();

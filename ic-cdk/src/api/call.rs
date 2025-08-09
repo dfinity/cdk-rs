@@ -6,7 +6,7 @@ use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEnco
 use candid::{
     decode_args, encode_args, write_args, CandidType, DecoderConfig, Deserialize, Principal,
 };
-use ic_cdk_executor::MethodHandle;
+use ic_cdk_executor::{MethodHandle, TaskHandle};
 use serde::ser::Error;
 use std::future::Future;
 use std::marker::PhantomData;
@@ -81,7 +81,11 @@ enum CallFutureState<T: AsRef<[u8]>> {
     },
     /// The call has been performed and the message is in flight. Neither callback has been called. Polling will return `Pending`.
     /// This state will transition to `Trapped` if the future is canceled because of a trap in another future.
-    Executing { waker: Waker, method: MethodHandle },
+    Executing {
+        waker: Waker,
+        method: MethodHandle,
+        task: Option<TaskHandle>,
+    },
     /// `callback` has been called, so the call has been completed. This completion state has not yet been read by the user.
     /// Polling will return `Ready` and transition to `PostComplete`.
     Complete { result: CallResult<Vec<u8>> },
@@ -166,13 +170,15 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 *state = CallFutureState::Executing {
                     waker: context.waker().clone(),
                     method: ic_cdk_executor::extend_current_method_context(),
+                    task: TaskHandle::current(),
                 };
                 Poll::Pending
             }
-            CallFutureState::Executing { method, .. } => {
+            CallFutureState::Executing { method, task, .. } => {
                 *state = CallFutureState::Executing {
                     waker: context.waker().clone(),
                     method,
+                    task,
                 };
                 Poll::Pending
             }
@@ -214,7 +220,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
         },
     };
     let (waker, method) = match mem::replace(&mut *state.write().unwrap(), completed_state) {
-        CallFutureState::Executing { waker, method } => (waker, method),
+        CallFutureState::Executing { waker, method, .. } => (waker, method),
         // This future has already been cancelled and waking it will do nothing.
         // All that's left is to explicitly trap in case this is the last call being multiplexed,
         // to replace an automatic trap from not replying.
@@ -250,8 +256,8 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
     let err_state = CallFutureState::Complete {
         result: Err((RejectionCode::NoError, "cleanup".to_string())),
     };
-    let method = match mem::replace(&mut *state.write().unwrap(), err_state) {
-        CallFutureState::Executing { method, .. } => method,
+    let (method, task) = match mem::replace(&mut *state.write().unwrap(), err_state) {
+        CallFutureState::Executing { method, task, .. } => (method, task),
         CallFutureState::Trapped => {
             // The future has already been canceled and dropped. There is nothing
             // more to clean up except for the CallFutureState.
@@ -263,6 +269,9 @@ unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
     };
     ic_cdk_executor::in_trap_recovery_context_for(method, || {
         ic_cdk_executor::cancel_all_tasks_attached_to_current_method();
+        if let Some(task) = task {
+            ic_cdk_executor::cancel_task(&task);
+        }
     });
 }
 

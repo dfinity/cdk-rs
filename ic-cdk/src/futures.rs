@@ -63,6 +63,9 @@
 //! (not counting [`spawn_weak`]) is caused by panics and traps: if an async function panics, time will be rewound to the
 //! previous await as though the code since then never ran, and then the task will be canceled.
 //!
+//! When a protected task traps, *all* protected tasks in the method will be canceled, as well as any pending migratory tasks.
+//! The system cannot know exactly which task panicked, so a conservatively large 'blast radius' is assumed.
+//!
 //! Use panics sparingly in async functions after the first await, and beware system functions that trap
 //! (which is most of them in the right context). Make atomic transactions between awaits wherever
 //! possible, and use [`scopeguard`] or a [`Drop`] impl for any cleanup functions that must run no matter what.

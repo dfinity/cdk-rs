@@ -1,4 +1,4 @@
-use async_channel::TryRecvError;
+use async_channel::{Receiver, Sender, TryRecvError};
 use candid::Principal;
 use core::panic;
 use futures::stream::FuturesUnordered;
@@ -18,6 +18,7 @@ use std::time::Duration;
 lazy_static! {
     static ref RESOURCE: RwLock<u64> = RwLock::new(0);
     static ref NOTIFICATIONS_RECEIVED: RwLock<u64> = RwLock::new(0);
+    static ref CHANNEL: (Sender<()>, Receiver<()>) = async_channel::unbounded();
 }
 
 #[query]
@@ -35,7 +36,7 @@ fn get_locked_resource() -> u64 {
 
 #[update]
 #[allow(clippy::await_holding_lock)]
-async fn panic_after_async() {
+async fn panic_after_await() {
     let mut lock = RESOURCE
         .write()
         .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
@@ -48,6 +49,29 @@ async fn panic_after_async() {
         .await
         .unwrap();
     ic_cdk::api::trap("Goodbye, cruel world.")
+}
+
+#[update]
+#[allow(clippy::await_holding_lock)]
+async fn panic_after_await_in_spawn_migratory() {
+    spawn_migratory(async move {
+        CHANNEL.1.recv().await.unwrap();
+        let mut lock = RESOURCE
+            .write()
+            .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
+        *lock += 1;
+        let value = *lock;
+        Call::bounded_wait(ic_cdk::api::canister_self(), "inc")
+            .with_arg(value)
+            .await
+            .unwrap();
+        panic!("Goodbye, cruel world.");
+    });
+}
+
+#[update]
+async fn migratory_resume() {
+    CHANNEL.0.send(()).await.unwrap();
 }
 
 #[update]

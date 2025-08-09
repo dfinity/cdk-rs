@@ -4,7 +4,7 @@ use slotmap::Key;
 use smallvec::SmallVec;
 
 use crate::machinery::{
-    cancel_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
+    delete_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
     ContextKind, MethodContext, MethodHandle, MethodId, TaskWaker, CURRENT_METHOD, METHODS,
     RECOVERING,
 };
@@ -101,7 +101,7 @@ pub(crate) fn v0_wake_hook(waker: &TaskWaker) -> ControlFlow<()> {
             }
             Some(InferContext::Cancel) => {
                 RECOVERING.set(true);
-                cancel_task(waker.task_id);
+                delete_task(waker.task_id);
                 RECOVERING.set(false);
                 ControlFlow::Break(())
             }

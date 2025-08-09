@@ -80,7 +80,7 @@ pub use machinery::is_recovering_from_trap;
 #[cfg(feature = "v1.1")]
 #[doc(inline)]
 pub use machinery::{
-    cancel_all_tasks_attached_to_current_method, extend_current_method_context,
+    cancel_all_tasks_attached_to_current_method, cancel_task, extend_current_method_context,
     in_callback_executor_context_for, in_tracking_executor_context,
     in_tracking_query_executor_context, in_trap_recovery_context_for, spawn_migratory,
     spawn_protected, MethodHandle, TaskHandle,

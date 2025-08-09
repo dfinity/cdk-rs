@@ -71,6 +71,8 @@ thread_local! {
     pub(crate) static CURRENT_METHOD: Cell<Option<MethodId>> = const { Cell::new(None) };
     // dynamically scoped: whether we are currently recovering from a trap
     pub(crate) static RECOVERING: Cell<bool> = const { Cell::new(false) };
+    // dynamically scoped: the current task ID, or None if a task is not running
+    pub(crate) static CURRENT_TASK_ID: Cell<Option<TaskId>> = const { Cell::new(None) };
 }
 
 /// A registered task in the executor.
@@ -165,12 +167,13 @@ pub fn cancel_all_tasks_attached_to_current_method() {
 
 /// Cancels all tasks made with [`spawn_protected`] attached to the given method.
 fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
-    let to_cancel = METHODS.with_borrow_mut(|methods| {
-        let Some(method) = methods.get_mut(method_id) else {
-            panic!("internal error: method context deleted while in use (cancel_all_tasks_attached_to_method)");
-        };
-        take(&mut method.tasks)
-    });
+    let Some(to_cancel) = METHODS.with_borrow_mut(|methods| {
+        methods
+            .get_mut(method_id)
+            .map(|method| take(&mut method.tasks))
+    }) else {
+        return; // method context null or already deleted
+    };
     let _tasks = TASKS.with(|tasks| {
         let Ok(mut tasks) = tasks.try_borrow_mut() else {
             panic!(
@@ -186,10 +189,15 @@ fn cancel_all_tasks_attached_to_method(method_id: MethodId) {
     drop(_tasks); // always run task destructors outside of a refcell borrow
 }
 
-/// Cancels a specific task. Use this instead of `remove` for guaranteed drop order.
-pub(crate) fn cancel_task(task_id: TaskId) {
+/// Removes a specific task. Use this instead of `remove` for guaranteed drop order.
+pub(crate) fn delete_task(task_id: TaskId) {
     let _task = TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
     drop(_task); // always run task destructors outside of a refcell borrow
+}
+
+/// Cancels a specific task by its handle.
+pub fn cancel_task(task_handle: &TaskHandle) {
+    delete_task(task_handle.task_id);
 }
 
 /// Returns true if tasks are being canceled due to a trap or panic.
@@ -247,7 +255,9 @@ pub(crate) fn poll_all() {
             source_method: method_id,
         }));
         let prev_current_method_var = CURRENT_METHOD.replace(Some(task.set_current_method_var));
+        CURRENT_TASK_ID.set(Some(task_id));
         let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
+        CURRENT_TASK_ID.set(None);
         CURRENT_METHOD.set(prev_current_method_var);
         match poll {
             Poll::Pending => {
@@ -260,7 +270,7 @@ pub(crate) fn poll_all() {
             }
             Poll::Ready(()) => {
                 // task complete, remove its entry from the table fully
-                cancel_task(task_id);
+                delete_task(task_id);
             }
         }
     }
@@ -328,8 +338,17 @@ impl Drop for MethodHandle {
 }
 
 /// A handle to a spawned task.
+#[derive(Debug)]
 pub struct TaskHandle {
-    _task_id: TaskId,
+    task_id: TaskId,
+}
+
+impl TaskHandle {
+    /// A handle to the task currently executing, or None if no task is executing.
+    pub fn current() -> Option<Self> {
+        let task_id = CURRENT_TASK_ID.get()?;
+        Some(Self { task_id })
+    }
 }
 
 pub(crate) struct TaskWaker {
@@ -390,7 +409,7 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     MIGRATORY_WAKEUPS.with_borrow_mut(|unattached| {
         unattached.push_back(task_id);
     });
-    TaskHandle { _task_id: task_id }
+    TaskHandle { task_id }
 }
 
 /// Spawns a task attached to the current method.
@@ -426,7 +445,7 @@ pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
         };
         entry.or_default().push_back(task_id);
     });
-    TaskHandle { _task_id: task_id }
+    TaskHandle { task_id }
 }
 
 fn setup_panic_hook() {
