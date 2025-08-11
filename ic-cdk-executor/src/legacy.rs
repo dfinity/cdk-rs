@@ -9,6 +9,18 @@ use crate::machinery::{
     RECOVERING,
 };
 
+// This module adapts the 1.0 interface onto the 1.1 executor. It has the following limitations:
+// 1. Method contexts cannot be traced. Code using the 1.0 callback contexts cannot support protected tasks.
+// 2. Cancellation is based on the waker, not on the pending wakeups.
+// 3. Relevant method information is stored in the waker, rather than in a method handle.
+// So this module adapts the interface in the following ways:
+// - The `spawn` function will create a migratory task in update methods.
+// - The callback context functions will trap if they are asked to participate in method lifetime tracking, ie
+//   if they are called from nonnull update contexts.
+// - Query methods get a special `QUERY_METHOD` method, deliberately memleaked.
+// - The `v0_wake_hook` function is called from the waker to infer context in callback contexts. Those context closures
+//   set `INFER_CONTEXT` to indicate whether the context is a continuation or cancelation.
+
 thread_local! {
     /// global: 1.0 queries are implemented as a single known query method context that is never freed
     pub(crate) static QUERY_METHOD: MethodId = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext {

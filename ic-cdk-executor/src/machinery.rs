@@ -50,7 +50,7 @@ pub(crate) enum ContextKind {
     Query,
 }
 
-// Null method ID corresponds to 'null context', used for migratory tasks (and legacy code).
+// Null method ID corresponds to 'null context', used for migratory tasks (and legacy update contexts).
 // Null task ID is an error.
 new_key_type! {
     pub(crate) struct MethodId;

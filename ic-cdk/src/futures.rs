@@ -41,6 +41,8 @@
 //! Where a task spawned with [`spawn`] will panic if it outlives the canister method, [`spawn_weak`] will simply
 //! cancel the task in such a case, dropping it.
 //!
+//! Note: for purposes of the executor, each invocation of a repeated [timer] is considered a separate canister method.
+//!
 //! ## `spawn_migratory`
 //!
 //! The [`spawn_migratory`] function is a little different. Migratory tasks can outlive the canister method they were
@@ -74,6 +76,7 @@
 //!
 //! [`scopeguard`]: https://docs.rs/scopeguard
 //! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
+//! [timer]: https://docs.rs/ic-cdk-timers
 //! [`caller`]: crate::api::caller
 //! [`in_replicated_execution`]: crate::api::in_replicated_execution
 //! [`canister_self`]: crate::api::canister_self

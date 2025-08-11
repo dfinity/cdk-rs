@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Updated to version 1.1 of the async executor. The `spawn` function now creates protected tasks that panic if they outlive the canister method (with a new `spawn_migratory` functions for tasks that are supposed to outlive the method). A trap will now cancel all protected tasks in the method it is part of. See the [module docs](https://docs.rs/ic-cdk/0.19.0/ic_cdk/futures/index.html) for more information.
+
 ## [0.18.5] - 2025-06-25
 
 ### Fixed
