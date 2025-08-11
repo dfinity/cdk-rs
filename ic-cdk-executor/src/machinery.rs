@@ -12,7 +12,7 @@ use std::{
     task::{Context, Poll, Wake, Waker},
 };
 
-use slotmap::{new_key_type, Key, SecondaryMap, SlotMap};
+use slotmap::{Key, SecondaryMap, SlotMap, new_key_type};
 use smallvec::SmallVec;
 
 /// Represents an active canister method.
@@ -160,7 +160,9 @@ pub fn in_trap_recovery_context_for<R>(method: MethodHandle, f: impl FnOnce() ->
 /// Cancels all tasks made with [`spawn_protected`] attached to the current method.
 pub fn cancel_all_tasks_attached_to_current_method() {
     let Some(method_id) = CURRENT_METHOD.get() else {
-        panic!("`cancel_all_tasks_attached_to_current_method` can only be called within a method context");
+        panic!(
+            "`cancel_all_tasks_attached_to_current_method` can only be called within a method context"
+        );
     };
     cancel_all_tasks_attached_to_method(method_id);
 }

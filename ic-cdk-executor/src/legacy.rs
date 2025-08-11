@@ -4,9 +4,9 @@ use slotmap::Key;
 use smallvec::SmallVec;
 
 use crate::machinery::{
-    delete_task, enter_current_method, in_null_context, poll_all, spawn_migratory, spawn_protected,
-    ContextKind, MethodContext, MethodHandle, MethodId, TaskWaker, CURRENT_METHOD, METHODS,
-    RECOVERING,
+    CURRENT_METHOD, ContextKind, METHODS, MethodContext, MethodHandle, MethodId, RECOVERING,
+    TaskWaker, delete_task, enter_current_method, in_null_context, poll_all, spawn_migratory,
+    spawn_protected,
 };
 
 // This module adapts the 1.0 interface onto the 1.1 executor. It has the following limitations:
@@ -107,7 +107,9 @@ pub(crate) fn v0_wake_hook(waker: &TaskWaker) -> ControlFlow<()> {
                     // for propagating method lifetime; without tracking it properly, protected tasks could leak
                     // or cancel early. This cannot be caught before the call, but we know whether it has occurred if a
                     // task spawned in a tracking context is woken from an inferred context.
-                    panic!("waker API usage mismatch between canister method and inter-canister call; try running `cargo update -p ic-cdk`");
+                    panic!(
+                        "waker API usage mismatch between canister method and inter-canister call; try running `cargo update -p ic-cdk`"
+                    );
                 }
                 ControlFlow::Continue(())
             }
