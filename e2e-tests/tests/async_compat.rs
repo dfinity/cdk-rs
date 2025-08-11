@@ -227,5 +227,5 @@ fn mixed_modes() {
     let err = update::<_, ()>(&pic, canister_id, "mixed_trap", ()).unwrap_err();
     assert!(err.reject_message.contains("intentional trap"));
     let (n,): (u64,) = query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
-    assert_eq!(n, 10);
+    assert_eq!(n, 11);
 }

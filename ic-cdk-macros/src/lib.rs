@@ -48,7 +48,7 @@ pub fn export_candid(input: TokenStream) -> TokenStream {
     quote::quote! {
         ::candid::export_service!(#input);
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub fn get_candid_pointer() -> *mut std::os::raw::c_char {
             let c_string = std::ffi::CString::new(__export_service()).unwrap();
             c_string.into_raw()

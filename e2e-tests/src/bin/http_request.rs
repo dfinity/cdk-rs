@@ -57,7 +57,7 @@ async fn head() {
 
 /// The standard way to define a transform function.
 ///
-/// It is a query method that takes a TransformArgs and returns an HttpRequestResult.
+/// It is a query method that takes a `TransformArgs` and returns an `HttpRequestResult`.
 #[query]
 fn transform(args: TransformArgs) -> HttpRequestResult {
     let mut body = args.response.body;

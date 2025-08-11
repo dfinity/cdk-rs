@@ -5,7 +5,7 @@ use ic_cdk::update;
 
 /// A simple entry point that takes empty arguments.
 #[update]
-async fn foo() -> u32 {
+fn foo() -> u32 {
     0
 }
 
@@ -68,7 +68,7 @@ async fn call_foo() {
 
 /// A simple entry point that takes a single `u32` argument and returns it.
 #[update]
-async fn echo(arg: u32) -> u32 {
+fn echo(arg: u32) -> u32 {
     arg
 }
 

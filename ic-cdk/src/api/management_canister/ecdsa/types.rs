@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::super::main::CanisterId;
 
-/// Argument type of [ecdsa_public_key](super::ecdsa_public_key).
+/// Argument type of [`ecdsa_public_key`](super::ecdsa_public_key).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -12,22 +12,22 @@ pub struct EcdsaPublicKeyArgument {
     pub canister_id: Option<CanisterId>,
     /// A vector of variable length byte strings.
     pub derivation_path: Vec<Vec<u8>>,
-    /// See [EcdsaKeyId].
+    /// See [`EcdsaKeyId`].
     pub key_id: EcdsaKeyId,
 }
 
-/// Response Type of [ecdsa_public_key](super::ecdsa_public_key).
+/// Response Type of [`ecdsa_public_key`](super::ecdsa_public_key).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct EcdsaPublicKeyResponse {
     /// An ECDSA public key encoded in SEC1 compressed form.
     pub public_key: Vec<u8>,
-    /// Can be used to deterministically derive child keys of the public_key.
+    /// Can be used to deterministically derive child keys of the `public_key`.
     pub chain_code: Vec<u8>,
 }
 
-/// Argument type of [sign_with_ecdsa](super::sign_with_ecdsa).
+/// Argument type of [`sign_with_ecdsa`](super::sign_with_ecdsa).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -36,11 +36,11 @@ pub struct SignWithEcdsaArgument {
     pub message_hash: Vec<u8>,
     /// A vector of variable length byte strings.
     pub derivation_path: Vec<Vec<u8>>,
-    /// See [EcdsaKeyId].
+    /// See [`EcdsaKeyId`].
     pub key_id: EcdsaKeyId,
 }
 
-/// Response type of [sign_with_ecdsa](super::sign_with_ecdsa).
+/// Response type of [`sign_with_ecdsa`](super::sign_with_ecdsa).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
@@ -49,12 +49,12 @@ pub struct SignWithEcdsaResponse {
     pub signature: Vec<u8>,
 }
 
-/// ECDSA KeyId.
+/// ECDSA key ID.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct EcdsaKeyId {
-    /// See [EcdsaCurve].
+    /// See [`EcdsaCurve`].
     pub curve: EcdsaCurve,
     /// Name.
     pub name: String,

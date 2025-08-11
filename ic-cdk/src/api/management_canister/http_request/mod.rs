@@ -1,6 +1,6 @@
 //! Canister HTTP request.
 
-use crate::api::call::{call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call_with_payment128};
 use candid::Principal;
 #[cfg(feature = "transform-closure")]
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
@@ -14,7 +14,7 @@ pub use types::*;
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
-/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// This call requires cycles payment. The required cycles is a function of the request size and `max_response_bytes`.
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 pub async fn http_request(
     arg: CanisterHttpRequestArgument,
@@ -38,16 +38,16 @@ thread_local! {
 #[cfg(feature = "transform-closure")]
 #[cfg_attr(
     target_family = "wasm",
-    export_name = "canister_query <ic-cdk internal> http_transform_legacy"
+    unsafe(export_name = "canister_query <ic-cdk internal> http_transform_legacy")
 )]
 #[cfg_attr(
     not(target_family = "wasm"),
-    export_name = "canister_query_ic_cdk_internal.http_transform_legacy"
+    unsafe(export_name = "canister_query_ic_cdk_internal.http_transform_legacy")
 )]
 extern "C" fn http_transform() {
     ic_cdk_executor::in_tracking_query_executor_context(|| {
         use crate::api::{
-            call::{arg_data, reply, ArgDecoderConfig},
+            call::{ArgDecoderConfig, arg_data, reply},
             caller,
         };
         if caller() != Principal::management_canister() {
@@ -71,7 +71,7 @@ extern "C" fn http_transform() {
 ///
 /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
 ///
-/// This call requires cycles payment. The required cycles is a function of the request size and max_response_bytes.
+/// This call requires cycles payment. The required cycles is a function of the request size and `max_response_bytes`.
 /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
 #[cfg(feature = "transform-closure")]
 #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]

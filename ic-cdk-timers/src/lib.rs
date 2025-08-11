@@ -5,7 +5,7 @@
 //! ```rust,no_run
 //! # use std::time::Duration;
 //! # fn main() {
-//! ic_cdk_timers::set_timer(Duration::from_secs(1), || ic_cdk::println!("Hello from the future!"));
+//! ic_cdk_timers::set_timer(Duration::from_secs(1), async { ic_cdk::println!("Hello from the future!") });
 //! # }
 //! ```
 
@@ -22,12 +22,14 @@ use std::{
     cell::{Cell, RefCell},
     cmp::Ordering,
     collections::BinaryHeap,
+    future::Future,
     mem,
+    pin::Pin,
     time::Duration,
 };
 
-use futures::{stream::FuturesUnordered, StreamExt};
-use slotmap::{new_key_type, KeyData, SlotMap};
+use futures::{StreamExt, stream::FuturesUnordered};
+use slotmap::{KeyData, SlotMap, new_key_type};
 
 use ic_cdk::call::{Call, CallFailed, RejectCode};
 
@@ -43,15 +45,25 @@ thread_local! {
 
 enum Task {
     Repeated {
-        func: Box<dyn FnMut()>,
+        func: Box<dyn RepeatedClosure>,
         interval: Duration,
     },
-    Once(Box<dyn FnOnce()>),
+    Once(Pin<Box<dyn Future<Output = ()>>>),
+}
+
+trait RepeatedClosure {
+    fn call_mut<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+}
+
+impl<F: AsyncFnMut()> RepeatedClosure for F {
+    fn call_mut<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+        Box::pin(self())
+    }
 }
 
 impl Default for Task {
     fn default() -> Self {
-        Self::Once(Box::new(|| ()))
+        Self::Once(Box::pin(std::future::pending()))
     }
 }
 
@@ -88,7 +100,7 @@ impl PartialEq for Timer {
 impl Eq for Timer {}
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
-#[export_name = "canister_global_timer"]
+#[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
     ic_cdk::futures::internals::in_executor_context(|| {
         ic_cdk::futures::spawn(async {
@@ -163,7 +175,7 @@ extern "C" fn global_timer() {
                                         timers.borrow_mut().push(Timer {
                                             task: task_id,
                                             time,
-                                        })
+                                        });
                                     }),
                                     None => ic_cdk::println!(
                                         "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
@@ -186,14 +198,14 @@ extern "C" fn global_timer() {
 /// To cancel the timer before it executes, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
-pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
+pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
     let delay_ns = u64::try_from(delay.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
     let scheduled_time = ic_cdk::api::time().checked_add(delay_ns).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
-    let key = TASKS.with(|tasks| tasks.borrow_mut().insert(Task::Once(Box::new(func))));
+    let key = TASKS.with(|tasks| tasks.borrow_mut().insert(Task::Once(Box::pin(future))));
     TIMERS.with(|timers| {
         timers.borrow_mut().push(Timer {
             task: key,
@@ -209,7 +221,7 @@ pub fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
 /// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
-pub fn set_timer_interval(interval: Duration, func: impl FnMut() + 'static) -> TimerId {
+pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static) -> TimerId {
     let interval_ns = u64::try_from(interval.as_nanos()).expect(
         "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
     );
@@ -226,7 +238,7 @@ pub fn set_timer_interval(interval: Duration, func: impl FnMut() + 'static) -> T
         timers.borrow_mut().push(Timer {
             task: key,
             time: scheduled_time,
-        })
+        });
     });
     update_ic0_timer();
     key
@@ -256,11 +268,11 @@ fn update_ic0_timer() {
 
 #[cfg_attr(
     target_family = "wasm",
-    export_name = "canister_update <ic-cdk internal> timer_executor"
+    unsafe(export_name = "canister_update <ic-cdk internal> timer_executor")
 )]
 #[cfg_attr(
     not(target_family = "wasm"),
-    export_name = "canister_update_ic_cdk_internal.timer_executor"
+    unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
     if ic_cdk::api::msg_caller() != ic_cdk::api::canister_self() {
@@ -280,15 +292,33 @@ extern "C" fn timer_executor() {
         let mut tasks = tasks.borrow_mut();
         tasks.get_mut(task_id).map(mem::take)
     });
-    if let Some(mut task) = task {
+    if let Some(task) = task {
         match task {
-            Task::Once(func) => {
-                ic_cdk::futures::internals::in_executor_context(func);
+            Task::Once(fut) => {
+                ic_cdk::futures::internals::in_executor_context(|| ic_cdk::futures::spawn(fut));
                 TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
             }
-            Task::Repeated { ref mut func, .. } => {
-                ic_cdk::futures::internals::in_executor_context(func);
-                TASKS.with(|tasks| tasks.borrow_mut().get_mut(task_id).map(|slot| *slot = task));
+            Task::Repeated { func, interval } => {
+                ic_cdk::futures::internals::in_executor_context(move || {
+                    ic_cdk::futures::spawn(async move {
+                        struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
+                        impl Drop for RepeatGuard {
+                            fn drop(&mut self) {
+                                TASKS.with(|tasks| {
+                                    tasks.borrow_mut().get_mut(self.1).map(|slot| {
+                                        *slot = Task::Repeated {
+                                            func: self.0.take().unwrap(),
+                                            interval: self.2,
+                                        }
+                                    })
+                                });
+                            }
+                        }
+
+                        let mut guard = RepeatGuard(Some(func), task_id, interval);
+                        guard.0.as_mut().unwrap().call_mut().await;
+                    });
+                });
             }
         }
     }

@@ -2,7 +2,7 @@
 //!
 //! Check [Bitcoin integration](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/bitcoin-how-it-works/#api) for more details.
 
-use crate::api::call::{call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call_with_payment128};
 use candid::Principal;
 
 mod types;

@@ -1,11 +1,11 @@
 //! The main functionalities in [the IC management canister][1].
 //!
 //! Most of the functions are for managing canister lifecycle.
-//! [raw_rand] is also included in this module.
+//! [`raw_rand`] is also included in this module.
 //!
 //! [1]: https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-management-canister
 
-use crate::api::call::{call, call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call, call_with_payment128};
 use crate::api::canister_version;
 use candid::Principal;
 

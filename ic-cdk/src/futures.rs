@@ -85,8 +85,8 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     task::{Context, Poll, Wake, Waker},
 };
@@ -148,7 +148,7 @@ pub fn spawn_migratory<F: 'static + Future<Output = ()>>(future: F) {
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
 ///
 /// In a destructor, `is_recovering_from_trap` serves the same purpose as
-/// [std::thread::panicking] - it tells you whether the destructor is executing *because* of a trap,
+/// [`std::thread::panicking`] - it tells you whether the destructor is executing *because* of a trap,
 /// as opposed to just because the scope was exited, so you could e.g. implement mutex poisoning.
 ///
 /// For information about when and how this occurs, see [the module docs](self).

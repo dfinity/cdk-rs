@@ -75,12 +75,12 @@ pub fn stable_grow(new_pages: u64) -> Result<u64, StableMemoryError> {
 /// Warning - this will panic if `offset + buf.len()` exceeds the current size of stable memory.
 /// Use `stable_grow` to request more stable memory if needed.
 pub fn stable_write(offset: u64, buf: &[u8]) {
-    CANISTER_STABLE_MEMORY.stable_write(offset, buf)
+    CANISTER_STABLE_MEMORY.stable_write(offset, buf);
 }
 
 /// Reads data from the stable memory location specified by an offset.
 pub fn stable_read(offset: u64, buf: &mut [u8]) {
-    CANISTER_STABLE_MEMORY.stable_read(offset, buf)
+    CANISTER_STABLE_MEMORY.stable_read(offset, buf);
 }
 
 /// Returns a copy of the stable memory.
@@ -176,9 +176,9 @@ impl<M: StableMemory> StableIO<M> {
     ///
     /// # Errors
     ///
-    /// The stable memory size is cached on creation of the StableReader.
+    /// The stable memory size is cached on creation of the `StableReader`.
     /// Therefore, in following scenario, it will get an `OutOfBounds` error:
-    /// 1. Create a StableReader
+    /// 1. Create a `StableReader`
     /// 2. Write some data to the stable memory which causes it grow
     /// 3. call `read()` to read the newly written bytes
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, StableMemoryError> {
@@ -393,9 +393,9 @@ impl<M: StableMemory> StableReader<M> {
     /// Reads data from the stable memory location specified by an offset.
     ///
     /// Note:
-    /// The stable memory size is cached on creation of the StableReader.
+    /// The stable memory size is cached on creation of the `StableReader`.
     /// Therefore, in following scenario, it will get an `OutOfBounds` error:
-    /// 1. Create a StableReader
+    /// 1. Create a `StableReader`
     /// 2. Write some data to the stable memory which causes it grow
     /// 3. call `read()` to read the newly written bytes
     #[inline]

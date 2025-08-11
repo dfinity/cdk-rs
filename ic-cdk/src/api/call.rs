@@ -2,9 +2,9 @@
 
 #![allow(deprecated)]
 use crate::api::trap;
-use candid::utils::{decode_args_with_config_debug, ArgumentDecoder, ArgumentEncoder};
+use candid::utils::{ArgumentDecoder, ArgumentEncoder, decode_args_with_config_debug};
 use candid::{
-    decode_args, encode_args, write_args, CandidType, DecoderConfig, Deserialize, Principal,
+    CandidType, DecoderConfig, Deserialize, Principal, decode_args, encode_args, write_args,
 };
 use ic_cdk_executor::{MethodHandle, TaskHandle};
 use serde::ser::Error;
@@ -208,7 +208,7 @@ impl<T: AsRef<[u8]>> Drop for CallFuture<T> {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState<T>>>::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from `Arc::<RwLock<CallFutureState<T>>>::into_raw` as userdata.
 unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
     let state_ptr = env as *const RwLock<CallFutureState<T>>;
     // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
@@ -240,7 +240,7 @@ unsafe extern "C" fn callback<T: AsRef<[u8]>>(env: usize) {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState<T>>>::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from `Arc::<RwLock<CallFutureState<T>>>::into_raw` as userdata.
 unsafe extern "C" fn cleanup<T: AsRef<[u8]>>(env: usize) {
     let state_ptr = env as *const RwLock<CallFutureState<T>>;
     // SAFETY: This function is only ever called by the IC, and we only ever pass an Arc as userdata.
@@ -316,7 +316,7 @@ pub fn notify_with_payment128<T: ArgumentEncoder>(
     notify_raw(id, method, &args_raw, payment)
 }
 
-/// Like [notify_with_payment128], but sets the payment to zero.
+/// Like [`notify_with_payment128`], but sets the payment to zero.
 #[deprecated(
     since = "0.18.0",
     note = "Please use `ic_cdk::call::Call::unbounded_wait()` instead."
@@ -460,7 +460,7 @@ fn decoder_error_to_reject<T>(err: candid::error::Error) -> (RejectionCode, Stri
 /// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [`RejectionCode::CanisterError`] error.
 #[deprecated(
     since = "0.18.0",
     note = "Please use `ic_cdk::call::Call::unbounded_wait()` instead."
@@ -506,7 +506,7 @@ pub fn call<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [`RejectionCode::CanisterError`] error.
 #[deprecated(
     since = "0.18.0",
     note = "Please use `ic_cdk::call::Call::unbounded_wait()` instead."
@@ -553,7 +553,7 @@ pub fn call_with_payment<T: ArgumentEncoder, R: for<'a> ArgumentDecoder<'a>>(
 /// * Both argument and return types are tuples even if it has only one value, e.g `(user_id,)`, `("Alice".to_string(),)`.
 /// * The type annotation on return type is required. Or the return type can be inferred from the context.
 /// * The asynchronous call must be awaited in order for the inter-canister call to be made.
-/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [RejectionCode::CanisterError] error.
+/// * If the reply payload is not a valid encoding of the expected type `T`, the call results in [`RejectionCode::CanisterError`] error.
 #[deprecated(
     since = "0.18.0",
     note = "Please use `ic_cdk::call::Call::unbounded_wait()` instead."
@@ -652,8 +652,8 @@ fn print_decoding_debug_info(title: &str, cost: &DecoderConfig, pre_cycles: Opti
 
 /// Returns a result that maps over the call
 ///
-/// It will be Ok(T) if the call succeeded (with T being the arg_data),
-/// and [reject_message()] if it failed.
+/// It will be Ok(T) if the call succeeded (with T being the `arg_data`),
+/// and [`reject_message()`] if it failed.
 #[deprecated(
     since = "0.18.0",
     note = "Please use `ic_cdk::api::{msg_reject_code, msg_reject_msg}` instead."
@@ -699,7 +699,7 @@ pub fn reject(message: &str) {
     ic0::msg_reject(err_message);
 }
 
-/// An io::Write for message replies.
+/// An `io::Write` for message replies.
 #[derive(Debug, Copy, Clone)]
 #[deprecated(
     since = "0.18.0",
@@ -778,7 +778,7 @@ pub fn msg_cycles_refunded128() -> u128 {
     note = "Please use `ic_cdk::api::msg_cycles_accept` instead."
 )]
 pub fn msg_cycles_accept(max_amount: u64) -> u64 {
-    msg_cycles_accept128(max_amount as u128) as u64
+    msg_cycles_accept128(u128::from(max_amount)) as u64
 }
 
 /// Moves cycles from the call to the canister balance.
@@ -825,7 +825,7 @@ pub fn arg_data_raw_size() -> usize {
 pub fn reply_raw(buf: &[u8]) {
     if !buf.is_empty() {
         ic0::msg_reply_data_append(buf);
-    };
+    }
     ic0::msg_reply();
 }
 
