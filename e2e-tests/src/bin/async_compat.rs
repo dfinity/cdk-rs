@@ -1,24 +1,21 @@
-use async_channel::{Receiver, Sender, TryRecvError};
+extern crate ic_cdk as ic_cdk_new;
+extern crate ic_cdk_old as ic_cdk;
+
 use candid::Principal;
-use core::panic;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use ic_cdk::call::Call;
-use ic_cdk::futures::{spawn, spawn_017_compat, spawn_migratory};
+use ic_cdk::futures::{spawn, spawn_017_compat};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::cell::Cell;
-use std::future::Future;
-use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::RwLock;
-use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 lazy_static! {
     static ref RESOURCE: RwLock<u64> = RwLock::new(0);
     static ref NOTIFICATIONS_RECEIVED: RwLock<u64> = RwLock::new(0);
-    static ref CHANNEL: (Sender<()>, Receiver<()>) = async_channel::unbounded();
 }
 
 #[query]
@@ -36,7 +33,7 @@ fn get_locked_resource() -> u64 {
 
 #[update]
 #[allow(clippy::await_holding_lock)]
-async fn panic_after_await() {
+async fn panic_after_async() {
     let mut lock = RESOURCE
         .write()
         .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
@@ -49,29 +46,6 @@ async fn panic_after_await() {
         .await
         .unwrap();
     ic_cdk::api::trap("Goodbye, cruel world.")
-}
-
-#[update]
-#[allow(clippy::await_holding_lock)]
-async fn panic_after_await_in_spawn_migratory() {
-    spawn_migratory(async move {
-        CHANNEL.1.recv().await.unwrap();
-        let mut lock = RESOURCE
-            .write()
-            .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
-        *lock += 1;
-        let value = *lock;
-        Call::bounded_wait(ic_cdk::api::canister_self(), "inc")
-            .with_arg(value)
-            .await
-            .unwrap();
-        panic!("Goodbye, cruel world.");
-    });
-}
-
-#[update]
-async fn migratory_resume() {
-    CHANNEL.0.send(()).await.unwrap();
 }
 
 #[update]
@@ -183,7 +157,7 @@ async fn schedule_on_panic() {
             for _ in 0..3 {
                 ic_cdk::futures::spawn(async {
                     on_notify();
-                });
+                })
             }
         }
     }
@@ -214,7 +188,7 @@ async fn timer_on_panic() {
 }
 
 #[update]
-fn spawn_ordering() {
+async fn spawn_ordering() {
     let notifs = notifications_received();
     spawn_017_compat(async { on_notify() });
     assert_eq!(
@@ -226,68 +200,120 @@ fn spawn_ordering() {
     assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
 }
 
-#[update]
-async fn spawn_protected_with_distant_waker() {
-    let caller = ic_cdk::api::msg_caller();
-    thread_local! {
-        static WAKER: Cell<Option<Waker>> = const { Cell::new(None) };
-    }
-    struct RemoteFuture(bool);
-    impl Future for RemoteFuture {
-        type Output = ();
-
-        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            if self.0 {
-                Poll::Ready(())
-            } else {
-                WAKER.set(Some(cx.waker().clone()));
-                self.as_mut().0 = true;
-                Poll::Pending
-            }
-        }
-    }
-    // despite the waker being awoken from a timer...
-    ic_cdk_timers::set_timer(Duration::from_secs(0), async {
-        WAKER.take().unwrap().wake();
-    });
-    let (tx, rx) = async_channel::bounded(1);
-    spawn(async move {
-        RemoteFuture(false).await;
-        // ... the msg data should still match the original task
-        tx.send(ic_cdk::api::msg_caller()).await.unwrap();
-    });
-    loop {
-        match rx.try_recv() {
-            Ok(value) => {
-                assert_eq!(value, caller);
-                break;
-            }
-            Err(TryRecvError::Empty) => {
-                // make calls to keep the method alive while the background task runs
-                Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+#[ic_cdk_new::update(crate = "ic_cdk_new")]
+async fn outer_new_inner_old() {
+    futures::join!(
+        async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap();
+        },
+        async {
+            // dummy - if this is not present, the panic message is instead about spawn_protected outliving
+            loop {
+                ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
                     .await
                     .unwrap();
             }
-            Err(TryRecvError::Closed) => panic!("channel closed unexpectedly"),
         }
-    }
+    );
 }
 
 #[update]
-async fn stalled_protected_task() {
-    spawn(std::future::pending());
-    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+async fn outer_old_inner_new() {
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
         .await
         .unwrap();
 }
 
+#[ic_cdk_new::query(composite = true, crate = "ic_cdk_new")]
+async fn outer_new_inner_old_q() {
+    futures::join!(
+        async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap();
+        },
+        async {
+            // dummy - if this is not present, the panic message is instead about spawn_protected outliving
+            loop {
+                ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                    .await
+                    .unwrap();
+            }
+        }
+    );
+}
+
+#[query(composite = true)]
+async fn outer_old_inner_new_q() {
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "greet")
+        .with_arg("myself")
+        .await
+        .unwrap()
+        .candid::<String>()
+        .unwrap();
+}
+
 #[update]
-async fn protected_from_migratory() {
-    spawn_migratory(async {
-        spawn(async {
-            on_notify();
-        });
+async fn mixed_modes() {
+    ic_cdk_new::futures::spawn_migratory(async move {
+        let fut1 = async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut2 = async {
+            ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut3 = async { on_notify() };
+        futures::join!(fut1, fut2, fut3);
     });
+    ic_cdk::futures::spawn(async move {
+        let fut1 = async {
+            Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut2 = async {
+            ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                .await
+                .unwrap()
+        };
+        let fut3 = async { on_notify() };
+        futures::join!(fut1, fut2, fut3);
+    });
+    let fut1 = async {
+        Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+            .await
+            .unwrap()
+    };
+    let fut2 = async {
+        ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+            .await
+            .unwrap()
+    };
+    let fut3 = async { on_notify() };
+    futures::join!(fut1, fut2, fut3);
+}
+
+#[update]
+async fn mixed_trap() {
+    struct IncOnDrop;
+    impl Drop for IncOnDrop {
+        fn drop(&mut self) {
+            if ic_cdk::futures::is_recovering_from_trap() {
+                on_notify();
+            }
+        }
+    }
+    let _guard = IncOnDrop;
+    ic_cdk_new::call::Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+    ic_cdk::trap("intentional trap");
 }
 
 fn main() {}
