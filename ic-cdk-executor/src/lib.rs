@@ -55,7 +55,8 @@ pub fn in_callback_executor_context(f: impl FnOnce()) {
     if CONTEXT.get() == AsyncContext::FromTask {
         ic0::debug_print(
             b"empty message callback: canister may have just been upgraded mid-call. \
-        This is a very bad idea and can result in memory corruption; it is advised to stop canisters before upgrading them.",
+            This is a very bad idea and can result in memory corruption; \
+            it is advised to stop canisters before upgrading them.",
         );
         return;
     }
