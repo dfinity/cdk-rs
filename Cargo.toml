@@ -34,7 +34,7 @@ opt-level = 'z'
 ic0 = { path = "ic0", version = "1.0.0" }
 ic-cdk = { path = "ic-cdk", version = "0.18.5" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.2" }
-ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.1" }
+ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.2" }
 ic-management-canister-types = { path = "ic-management-canister-types", version = "0.3.2" }
 
 candid = "0.10.13"      # sync with the doc comment in ic-cdk/README.md
