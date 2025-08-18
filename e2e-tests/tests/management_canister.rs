@@ -3,9 +3,9 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_management_canister() {
+    let wasm = cargo_build_canister("management_canister");
     let pic = pic_base().with_ii_subnet().build();
 
-    let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();
     let subnet_id = pic.get_subnet(canister_id).unwrap();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
@@ -27,13 +27,13 @@ fn test_management_canister() {
 
 #[test]
 fn test_vetkd() {
+    let wasm = cargo_build_canister("management_canister");
     let pic = pic_base()
         .with_ii_subnet()
         // vetKD is not available on mainnet yet
         .with_nonmainnet_features(true)
         .build();
 
-    let wasm = cargo_build_canister("management_canister");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
     pic.install_canister(canister_id, wasm, vec![], None);

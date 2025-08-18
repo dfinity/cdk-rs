@@ -6,8 +6,8 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_timers() {
-    let pic = pic_base().build();
     let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -60,10 +60,10 @@ fn test_timers_can_cancel_themselves() {
 
 #[test]
 fn test_scheduling_many_timers() {
+    let wasm = cargo_build_canister("timers");
     // Must be more than the queue limit (500)
     let timers_to_schedule = 1_000;
     let pic = pic_base().build();
-    let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -96,9 +96,9 @@ fn advance_seconds(pic: &PocketIc, seconds: u32) {
 
 #[test]
 fn test_set_global_timers() {
+    let wasm = cargo_build_canister("timers");
     let pic = pic_base().build();
 
-    let wasm = cargo_build_canister("timers");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);

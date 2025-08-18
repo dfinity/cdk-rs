@@ -99,10 +99,10 @@ fn test_bitcoin_canister() {
 }
 
 fn test_network(network: Network, btc_id: Principal, init_args: &str) {
+    let wasm = cargo_build_canister("bitcoin_canister");
     // The Bitcoin canisters can still function without connecting to a `bitcoind` node.
     // The interface check and the cycles cost logic are still valid.
     let pic = pic_base().with_bitcoin_subnet().build();
-    let wasm = cargo_build_canister("bitcoin_canister");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
     pic.install_canister(canister_id, wasm, vec![], None);

@@ -12,8 +12,8 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_canister_info() {
-    let pic = pic_base().build();
     let wasm = cargo_build_canister("canister_info");
+    let pic = pic_base().build();
     // As of PocketIC server v5.0.0 and client v4.0.0, the first canister creation happens at (time0+4).
     // Each operation advances the Pic by 2 nanos, except for the last operation which advances only by 1 nano.
     let time0: u64 = pic.get_time().as_nanos_since_unix_epoch();
