@@ -9,8 +9,8 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 /// across upgrades.
 #[test]
 fn test_storage_roundtrip() {
-    let pic = pic_base().build();
     let wasm = cargo_build_canister("simple_kv_store");
+    let pic = pic_base().build();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm.clone(), vec![], None);

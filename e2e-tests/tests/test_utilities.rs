@@ -4,7 +4,7 @@ use cargo_metadata::MetadataCommand;
 use pocket_ic::common::rest::RawEffectivePrincipal;
 use pocket_ic::{call_candid, PocketIc, PocketIcBuilder, RejectResponse};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Once;
 
 /// Builds a canister with the specified name from the current
@@ -46,18 +46,22 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
         }
     };
 
-    let cmd = cmd.args([
-        "--bin",
-        bin_name,
-        "--profile",
-        "canister-release",
-        "--manifest-path",
-        &cargo_toml_path.to_string_lossy(),
-        "--target-dir",
-        wasm_target_dir.as_ref(),
-    ]);
+    let cmd = cmd
+        .args([
+            "--bin",
+            bin_name,
+            "--profile",
+            "canister-release",
+            "--manifest-path",
+            &cargo_toml_path.to_string_lossy(),
+            "--target-dir",
+            wasm_target_dir.as_ref(),
+        ])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
 
-    cmd.output().expect("failed to compile the wasm binary");
+    let output = cmd.output().expect("failed to locate cargo");
+    assert!(output.status.success(), "failed to compile the wasm binary");
 
     let wasm_path = wasm_target_dir
         .join(target)
