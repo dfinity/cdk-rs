@@ -75,4 +75,27 @@ fn call_macros() {
     let _res = pic
         .update_call(canister_id, sender, "with_guards", vec![15])
         .unwrap();
+
+    // The entry-point expects an `opt nat32` value.
+    // Here we send some blob that decoder need to skip.
+    // The call is expected to:
+    // * succeed: when the blob is relatively small
+    // * fail: when the blob is too large
+    let _: () = update(
+        &pic,
+        canister_id,
+        "default_skipping_quota",
+        (vec![42; 1400],),
+    )
+    .unwrap();
+    let res: Result<(), _> = update(
+        &pic,
+        canister_id,
+        "default_skipping_quota",
+        (vec![42; 1500],),
+    );
+    assert!(res
+        .unwrap_err()
+        .reject_message
+        .contains("Skipping cost exceeds the limit"));
 }
