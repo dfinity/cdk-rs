@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Restored the default `skipping_quota` to match the behavior of previous versions of the macros.
+
 ### Fixed
 
 - The macros now support 2024 edition.
