@@ -66,7 +66,7 @@ pub fn msg_reject_code() -> u32 {
 ///
 /// This function can only be called in the reject callback.
 ///
-/// Traps if there is no reject message (i.e. if reject_code is 0).
+/// Traps if there is no reject message (i.e. if `reject_code` is 0).
 pub fn msg_reject_msg() -> String {
     let len = ic0::msg_reject_msg_size();
     let mut buf = vec![0u8; len];
@@ -106,7 +106,7 @@ pub fn msg_reply<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
     if !buf.is_empty() {
         ic0::msg_reply_data_append(buf);
-    };
+    }
     ic0::msg_reply();
 }
 
@@ -248,7 +248,7 @@ pub fn msg_method_name() -> String {
 /// This function is only available in the `canister_inspect_message` context.
 /// This function traps if invoked twice.
 pub fn accept_message() {
-    ic0::accept_message()
+    ic0::accept_message();
 }
 
 /// Gets the current size of the stable memory (in WebAssembly pages).
@@ -274,7 +274,7 @@ pub fn stable_grow(new_pages: u64) -> u64 {
 /// This will panic if `offset + buf.len()` exceeds the current size of stable memory.
 /// Call [`stable_grow`] to request more stable memory if needed.
 pub fn stable_write(offset: u64, buf: &[u8]) {
-    ic0::stable64_write(buf, offset)
+    ic0::stable64_write(buf, offset);
 }
 
 /// Reads data from the stable memory location specified by an offset.
@@ -300,20 +300,20 @@ pub fn root_key() -> Vec<u8> {
 /// Sets the certified data of this canister.
 ///
 /// Canisters can store up to 32 bytes of data that is certified by
-/// the system on a regular basis.  One can call [data_certificate]
+/// the system on a regular basis.  One can call [`data_certificate`]
 /// function from a query call to get a certificate authenticating the
 /// value set by calling this function.
 ///
 /// This function can only be called from the following contexts:
-///. - "canister_init", "canister_pre_upgrade" and "canister_post_upgrade"
-///    hooks.
-///. - "canister_update" calls.
-///. - reply or reject callbacks.
+/// - `canister_init`, `canister_pre_upgrade` and `canister_post_upgrade`
+///   hooks.
+/// - `canister_update` calls.
+/// - reply or reject callbacks.
 ///
 /// # Panics
 ///
-///.- This function traps if data.len() > 32.
-///.- This function traps if it's called from an illegal context
+/// - This function traps if `data.len() > 32`.
+/// - This function traps if it's called from an illegal context
 ///   (e.g., from a query call).
 pub fn certified_data_set<T: AsRef<[u8]>>(data: T) {
     let buf = data.as_ref();
@@ -321,7 +321,7 @@ pub fn certified_data_set<T: AsRef<[u8]>>(data: T) {
 }
 
 /// When called from a query call, returns the data certificate authenticating
-/// certified_data set by this canister.
+/// certified data set by this canister.
 ///
 /// Returns `None` if called not from a query call.
 pub fn data_certificate() -> Option<Vec<u8>> {
@@ -635,20 +635,20 @@ pub fn canister_balance128() -> u128 {
 /// Sets the certified data of this canister.
 ///
 /// Canisters can store up to 32 bytes of data that is certified by
-/// the system on a regular basis.  One can call [data_certificate]
+/// the system on a regular basis.  One can call [`data_certificate`]
 /// function from a query call to get a certificate authenticating the
 /// value set by calling this function.
 ///
 /// This function can only be called from the following contexts:
-///. - "canister_init", "canister_pre_upgrade" and "canister_post_upgrade"
-///    hooks.
-///. - "canister_update" calls.
-///. - reply or reject callbacks.
+/// - `canister_init`, `canister_pre_upgrade` and `canister_post_upgrade`
+///   hooks.
+/// - `canister_update` calls.
+/// - reply or reject callbacks.
 ///
 /// # Panics
 ///
-///.- This function traps if data.len() > 32.
-///.- This function traps if it's called from an illegal context
+/// - This function traps if `data.len() > 32`.
+/// - This function traps if it's called from an illegal context
 ///   (e.g., from a query call).
 #[deprecated(since = "0.18.0", note = "Use `certified_data_set` instead")]
 pub fn set_certified_data(data: &[u8]) {
@@ -658,7 +658,7 @@ pub fn set_certified_data(data: &[u8]) {
 /// Sets global timer.
 ///
 /// The canister can set a global timer to make the system
-/// schedule a call to the exported canister_global_timer
+/// schedule a call to the exported `canister_global_timer`
 /// Wasm method after the specified time.
 /// The time must be provided as nanoseconds since 1970-01-01.
 ///
@@ -666,7 +666,7 @@ pub fn set_certified_data(data: &[u8]) {
 /// If no timer is set before invoking the function, then the function returns zero.
 ///
 /// Passing zero as an argument to the function deactivates the timer and thus
-/// prevents the system from scheduling calls to the canister's canister_global_timer Wasm method.
+/// prevents the system from scheduling calls to the canister's `canister_global_timer` Wasm method.
 #[deprecated(since = "0.18.0", note = "Use `global_timer_set` instead")]
 pub fn set_global_timer(timestamp: u64) -> u64 {
     ic0::global_timer_set(timestamp)

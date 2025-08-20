@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.3.3] - 2025-08-20
+
+### Fixed
+
+- The `exported_globals` field in the `ReadCanisterSnapshotMetadataResult` and `UploadCanisterSnapshotMetadataArgs` structs has been renamed to `globals`.
+- The associated type `ExportedGlobal` has been renamed to `SnapshotMetadataGlobal`.
+
+While this is technically a breaking change in the Rust type system, we are treating it as a patch fix.
+This is because the affected types and methods are for new, unreleased features (snapshot download/upload).
+Therefore, no existing services or canisters should be impacted by this change.
+
 ## [0.3.2] - 2025-07-25
 
 ### Added
+
 - Types for canister snapshot download/upload.
 
 ## [0.3.1] - 2025-05-09

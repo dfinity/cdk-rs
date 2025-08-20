@@ -100,7 +100,7 @@ impl PartialEq for Timer {
 impl Eq for Timer {}
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
-#[export_name = "canister_global_timer"]
+#[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
     ic_cdk_executor::in_executor_context(|| {
         let batch = Rc::new(());
@@ -338,7 +338,7 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
         timers.push(Timer {
             task: key,
             time: scheduled_time,
-        })
+        });
     });
     update_ic0_timer();
     key
@@ -367,11 +367,11 @@ fn update_ic0_timer() {
 
 #[cfg_attr(
     target_family = "wasm",
-    export_name = "canister_update <ic-cdk internal> timer_executor"
+    unsafe(export_name = "canister_update <ic-cdk internal> timer_executor")
 )]
 #[cfg_attr(
     not(target_family = "wasm"),
-    export_name = "canister_update_ic_cdk_internal.timer_executor"
+    unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
     let caller = {
@@ -413,8 +413,6 @@ extern "C" fn timer_executor() {
                 Task::Repeated { func, interval } => {
                     ic_cdk_executor::spawn(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
-                        let mut guard = RepeatGuard(Some(func), task_id, interval);
-                        guard.0.as_mut().unwrap().call_mut().await;
                         impl Drop for RepeatGuard {
                             fn drop(&mut self) {
                                 TASKS.with_borrow_mut(|tasks| {
@@ -427,8 +425,11 @@ extern "C" fn timer_executor() {
                                 });
                             }
                         }
-                    })
-                }
+
+                        let mut guard = RepeatGuard(Some(func), task_id, interval);
+                        guard.0.as_mut().unwrap().call_mut().await;
+                    });
+                },
             }
         }
         ic0::msg_reply_data_append(&[]);

@@ -39,7 +39,7 @@ impl Config {
         self.type_attributes = attr;
         self
     }
-    /// Only generates SERVICE struct if canister_id is not provided
+    /// Only generates SERVICE struct if canister id is not provided
     pub fn set_canister_id(&mut self, id: candid::Principal) -> &mut Self {
         self.canister_id = Some(id);
         self
@@ -77,7 +77,7 @@ static KEYWORDS: [&str; 51] = [
     "while", "async", "await", "dyn", "abstract", "become", "box", "do", "final", "macro",
     "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
 ];
-fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
+fn ident_(id: &str, case: Option<Case>) -> (RcDoc<'_>, bool) {
     if id.is_empty()
         || id.starts_with(|c: char| !c.is_ascii_alphabetic() && c != '_')
         || id.chars().any(|c| !c.is_ascii_alphanumeric() && c != '_')
@@ -98,7 +98,7 @@ fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
         (RcDoc::text(id), is_rename)
     }
 }
-fn ident(id: &str, case: Option<Case>) -> RcDoc {
+fn ident(id: &str, case: Option<Case>) -> RcDoc<'_> {
     ident_(id, case).0
 }
 
@@ -122,7 +122,7 @@ fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints) -> RcDoc<'a> {
         Text => str("String"),
         Reserved => str("candid::Reserved"),
         Empty => str("candid::Empty"),
-        Var(ref id) => {
+        Var(id) => {
             let name = ident(id, Some(Case::Pascal));
             if recs.contains(id.as_str()) {
                 str("Box<").append(name).append(">")
@@ -131,11 +131,11 @@ fn pp_ty<'a>(ty: &'a Type, recs: &RecPoints) -> RcDoc<'a> {
             }
         }
         Principal => str("Principal"),
-        Opt(ref t) => str("Option").append(enclose("<", pp_ty(t, recs), ">")),
+        Opt(t) => str("Option").append(enclose("<", pp_ty(t, recs), ">")),
         // It's a bit tricky to use `deserialize_with = "serde_bytes"`. It's not working for `type t = blob`
-        Vec(ref t) if matches!(t.as_ref(), Nat8) => str("serde_bytes::ByteBuf"),
-        Vec(ref t) => str("Vec").append(enclose("<", pp_ty(t, recs), ">")),
-        Record(ref fs) => pp_record_fields(fs, recs, ""),
+        Vec(t) if matches!(t.as_ref(), Nat8) => str("serde_bytes::ByteBuf"),
+        Vec(t) => str("Vec").append(enclose("<", pp_ty(t, recs), ">")),
+        Record(fs) => pp_record_fields(fs, recs, ""),
         Variant(_) => unreachable!("pp_ty variant"), // not possible after rewriting
         Func(_) => unreachable!("pp_ty func"),       // not possible after rewriting
         Service(_) => unreachable!("pp_ty service"), // not possible after rewriting
@@ -281,12 +281,12 @@ fn pp_defs<'a>(
     }))
 }
 
-fn pp_args(args: &[Type]) -> RcDoc {
+fn pp_args(args: &[Type]) -> RcDoc<'_> {
     let empty = RecPoints::default();
     let doc = concat(args.iter().map(|t| pp_ty(t, &empty)), ",");
     enclose("(", doc, ")")
 }
-fn pp_ty_func(f: &Function) -> RcDoc {
+fn pp_ty_func(f: &Function) -> RcDoc<'_> {
     let args = pp_args(&f.args);
     let rets = pp_args(&f.rets);
     let modes = candid::pretty::candid::pp_modes(&f.modes);
@@ -295,11 +295,11 @@ fn pp_ty_func(f: &Function) -> RcDoc {
         .append(rets.append(modes))
         .nest(INDENT_SPACE)
 }
-fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
+fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc<'_> {
     let doc = concat(
         serv.iter().map(|(id, func)| {
             let func_doc = match func.as_ref() {
-                TypeInner::Func(ref f) => enclose("candid::func!(", pp_ty_func(f), ")"),
+                TypeInner::Func(f) => enclose("candid::func!(", pp_ty_func(f), ")"),
                 TypeInner::Var(_) => pp_ty(func, &RecPoints::default()).append("::ty()"),
                 _ => unreachable!("pp_ty_service received scalar"),
             };
@@ -441,7 +441,7 @@ fn pp_actor<'a>(config: &'a Config, env: &'a TypeEnv, actor: &'a Type) -> RcDoc<
     }
 }
 
-pub fn compile(config: &Config, env: &TypeEnv, actor: &Option<Type>) -> String {
+pub fn compile(config: &Config, env: &TypeEnv, actor: Option<&Type>) -> String {
     let header = format!(
         r#"// This is an experimental feature to generate Rust binding from Candid.
 // You may want to manually adjust some of the types.
@@ -516,7 +516,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
         TypeInner::Record(fs) => {
             if matches!(
                 path.last(),
-                None | Some(TypePath::VariantField(_)) | Some(TypePath::Id(_))
+                None | Some(TypePath::VariantField(_) | TypePath::Id(_))
             ) || is_tuple(fs)
             {
                 let fs: Vec<_> = fs
@@ -534,7 +534,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 let ty = nominalize(
                     env,
                     &mut vec![TypePath::Id(new_var.clone())],
-                    &TypeInner::Record(fs.to_vec()).into(),
+                    &TypeInner::Record(fs.clone()).into(),
                 );
                 env.0.insert(new_var.clone(), ty);
                 TypeInner::Var(new_var)
@@ -558,7 +558,7 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
                 let ty = nominalize(
                     env,
                     &mut vec![TypePath::Id(new_var.clone())],
-                    &TypeInner::Variant(fs.to_vec()).into(),
+                    &TypeInner::Variant(fs.clone()).into(),
                 );
                 env.0.insert(new_var.clone(), ty);
                 TypeInner::Var(new_var)
@@ -652,14 +652,12 @@ fn nominalize(env: &mut TypeEnv, path: &mut Vec<TypePath>, t: &Type) -> Type {
     .into()
 }
 
-fn nominalize_all(env: &TypeEnv, actor: &Option<Type>) -> (TypeEnv, Option<Type>) {
-    let mut res = TypeEnv(Default::default());
-    for (id, ty) in env.0.iter() {
+fn nominalize_all(env: &TypeEnv, actor: Option<&Type>) -> (TypeEnv, Option<Type>) {
+    let mut res = TypeEnv::default();
+    for (id, ty) in &env.0 {
         let ty = nominalize(&mut res, &mut vec![TypePath::Id(id.clone())], ty);
         res.0.insert(id.to_string(), ty);
     }
-    let actor = actor
-        .as_ref()
-        .map(|ty| nominalize(&mut res, &mut vec![], ty));
+    let actor = actor.map(|ty| nominalize(&mut res, &mut vec![], ty));
     (res, actor)
 }

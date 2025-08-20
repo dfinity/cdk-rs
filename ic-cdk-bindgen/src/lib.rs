@@ -38,17 +38,19 @@ impl Config {
 /// Resolve the candid path and canister id from environment variables.
 ///
 /// The name and format of the environment variables are standardized:
-/// https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.md#canister_id_canistername
+/// <https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.md#canister_id_canistername>
 ///
-/// We previously used environment variables like`CANISTER_CANDID_PATH_<canister_name>` without to_uppercase.
+/// We previously used environment variables like `CANISTER_CANDID_PATH_<canister_name>` without `to_uppercase`.
 /// That is deprecated. To keep backward compatibility, we also check for the old format.
-/// Just in case the user run `ic-cdk-bindgen` outside `dfx`.
+/// Just in case the user runs `ic-cdk-bindgen` outside `dfx`.
 /// If the old format is found, we print a warning to the user.
 /// dfx v0.13.0 only provides the old format, which can be used to check the warning logic.
 /// TODO: remove the support for the old format, in the next major release (v0.2) of `ic-cdk-bindgen`.
 fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Principal) {
     fn warning_deprecated_env(deprecated_name: &str, new_name: &str) {
-        println!("cargo:warning=The environment variable {deprecated_name} is deprecated. Please set {new_name} instead. Upgrading dfx may fix this issue.");
+        println!(
+            "cargo:warning=The environment variable {deprecated_name} is deprecated. Please set {new_name} instead. Upgrading dfx may fix this issue."
+        );
     }
 
     let canister_name = canister_name.replace('-', "_");
@@ -115,10 +117,10 @@ impl Builder {
             manifest_dir.join("src").join("declarations")
         });
         fs::create_dir_all(&out_path).unwrap();
-        for conf in self.configs.iter() {
+        for conf in &self.configs {
             let (env, actor) =
                 pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
-            let content = code_generator::compile(&conf.binding, &env, &actor);
+            let content = code_generator::compile(&conf.binding, &env, actor.as_ref());
             let generated_path = out_path.join(format!("{}.rs", conf.canister_name));
             if !(conf.skip_existing_files && generated_path.exists()) {
                 fs::write(generated_path, content).expect("Cannot store generated binding");
@@ -130,7 +132,7 @@ impl Builder {
             .write_all(b"#![allow(non_upper_case_globals)]\n")
             .unwrap();
         module.write_all(b"#![allow(non_snake_case)]\n").unwrap();
-        for conf in self.configs.iter() {
+        for conf in &self.configs {
             module.write_all(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
             let line = format!("pub mod {};\n", conf.canister_name);
             module.write_all(line.as_bytes()).unwrap();
