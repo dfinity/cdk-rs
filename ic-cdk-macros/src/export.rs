@@ -356,6 +356,7 @@ fn dfn_macro(
         quote! {
             ::ic_cdk::futures::#async_context_name(|| {
                 #guard
+                #[allow(clippy::disallowed_methods)]
                 ::ic_cdk::futures::spawn(async {
                     #arg_decode
                     let result = #function_call;
