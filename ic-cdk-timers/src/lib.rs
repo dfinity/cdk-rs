@@ -30,7 +30,7 @@ use std::{
 };
 
 use ic_principal::Principal;
-use slotmap::{new_key_type, KeyData, SlotMap};
+use slotmap::{KeyData, SlotMap, new_key_type};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
 // and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
@@ -429,7 +429,7 @@ extern "C" fn timer_executor() {
                         let mut guard = RepeatGuard(Some(func), task_id, interval);
                         guard.0.as_mut().unwrap().call_mut().await;
                     });
-                },
+                }
             }
         }
         ic0::msg_reply_data_append(&[]);
