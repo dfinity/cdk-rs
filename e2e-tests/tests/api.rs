@@ -6,9 +6,9 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn call_api() {
+    let wasm = cargo_build_canister("api");
     // with_ii_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
     let pic = pic_base().with_ii_subnet().build();
-    let wasm = cargo_build_canister("api");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);

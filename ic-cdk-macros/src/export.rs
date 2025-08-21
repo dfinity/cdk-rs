@@ -254,7 +254,9 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
-            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+            let mut decoder_config = ::candid::DecoderConfig::new();
+            decoder_config.set_skipping_quota(10000);
+            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
         }
     };
 
@@ -357,6 +359,7 @@ fn dfn_macro(
         quote! {
             #cratename::futures::internals::#async_context_name(|| {
                 #guard
+                #[allow(clippy::disallowed_methods)]
                 #cratename::futures::spawn(async {
                     #arg_decode
                     let result = #function_call;
@@ -573,7 +576,9 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -610,7 +615,9 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a, b);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -647,7 +654,9 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a, b);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);

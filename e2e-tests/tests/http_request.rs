@@ -10,9 +10,9 @@ use test_utilities::{cargo_build_canister, pic_base};
 
 #[test]
 fn test_http_request() {
+    let wasm = cargo_build_canister("http_request");
     let pic = pic_base().build();
 
-    let wasm = cargo_build_canister("http_request");
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 3_000_000_000_000u128);
     pic.install_canister(canister_id, wasm, vec![], None);

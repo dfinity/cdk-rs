@@ -139,6 +139,12 @@ fn guard2() -> Result<(), String> {
     }
 }
 
+// This method will be called with "malicious" payloads.
+// We expected that a default skipping_quota (10_000) is set in the update/query macros.
+// This will trigger a decoding error when the payload exceeds the quota.
+#[update]
+fn default_skipping_quota(_arg: Option<u32>) {}
+
 export_candid! {}
 
 fn main() {
@@ -165,6 +171,7 @@ mod tests {
             generic : (blob) -> (blob);
             manual_reply : () -> (nat32);
             with_guards : () -> ();
+            default_skipping_quota : (opt nat32) -> ();
           }";
         let expected_candid = CandidSource::Text(expected);
 

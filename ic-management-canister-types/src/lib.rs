@@ -1337,8 +1337,8 @@ pub struct ReadCanisterSnapshotMetadataResult {
     pub taken_at_timestamp: u64,
     /// The size of the Wasm module.
     pub wasm_module_size: u64,
-    /// The exported globals.
-    pub exported_globals: Vec<ExportedGlobal>,
+    /// The globals.
+    pub globals: Vec<SnapshotMetadataGlobal>,
     /// The size of the Wasm memory.
     pub wasm_memory_size: u64,
     /// The size of the stable memory.
@@ -1369,7 +1369,7 @@ pub enum SnapshotSource {
 
 /// # An exported global variable.
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub enum ExportedGlobal {
+pub enum SnapshotMetadataGlobal {
     /// A 32-bit integer.
     #[serde(rename = "i32")]
     I32(i32),
@@ -1478,8 +1478,8 @@ pub struct UploadCanisterSnapshotMetadataArgs {
     pub replace_snapshot: Option<SnapshotId>,
     /// The size of the Wasm module.
     pub wasm_module_size: u64,
-    /// The exported globals.
-    pub exported_globals: Vec<ExportedGlobal>,
+    /// The globals.
+    pub globals: Vec<SnapshotMetadataGlobal>,
     /// The size of the Wasm memory.
     pub wasm_memory_size: u64,
     /// The size of the stable memory.
