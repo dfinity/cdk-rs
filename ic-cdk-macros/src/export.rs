@@ -869,8 +869,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ic_cdk_old::futures::internals::in_query_executor_context(|| {
                     let result = query();
