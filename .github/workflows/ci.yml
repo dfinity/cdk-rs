@@ -99,7 +99,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly-2025-01-03 # 1.85.0
+          toolchain: nightly-2025-05-09 # 1.88.0
           components: rust-src
       - name: Checkout repository
         uses: actions/checkout@v4
