@@ -29,25 +29,44 @@
 //! running while `foo` awaits (or after it ends if it does not await). Unlike some other libraries, `spawn` does not
 //! return a join-handle; if you want to await multiple results concurrently, use `futures`' [`join_all`] function.
 //!
-//! "Background" is a tricky subject on the IC. Background tasks can only run in the context of a canister message.
-//! If you await a future whose completion you manually trigger in code, such as sending to an async channel,
-//! then the code after the await will be in the call context of whatever you completed it in. This means that global state
-//! like [`caller`], [`in_replicated_execution`], and even [`canister_self`] may have changed. (The canister method
-//! itself cannot await anything triggered by another canister method, or you will get an error that it 'failed to reply'.)
-//! It will also take from that call's instruction limit, which can introduce hidden sources of instruction limit based traps.
+//! ## Method lifetime
 //!
-//! Most importantly, a background task that runs in other call contexts must never trap. When it traps, it will cancel
-//! (see below) the execution of the call whose context it's in, even though that call didn't do anything wrong, and it
-//! may not undo whatever caused it to trap, meaning the canister could end up bricked. Tasks that you expect to complete
-//! before the canister method ends are safe, but traps/panics in tasks that are expected to continue running into other
-//! calls/timers may produce surprising results and behavioral errors.
+//! The default [`spawn`] function will ensure a task does not outlive the canister method it was spawned in. If
+//! the method ends, and the task has `await`s that are not completed yet, it will trap. The method's lifetime lasts until
+//! it stops making inter-canister calls. What this means is that any await in a task created with `spawn` should be,
+//! or be driven by, an inter-canister call. If you instead await something dependent on a
+//! different canister method, or a timer, or similar, it is likely to trap. (This is unlikely to impact you if you
+//! don't use any 'remote' futures like channels or signals.)
+//!
+//! Where a task spawned with [`spawn`] will panic if it outlives the canister method, [`spawn_weak`] will simply
+//! cancel the task in such a case, dropping it.
+//!
+//! Note: for purposes of the executor, each invocation of a repeated [timer] is considered a separate canister method.
+//!
+//! ## `spawn_migratory`
+//!
+//! The [`spawn_migratory`] function is a little different. Migratory tasks can outlive the canister method they were
+//! spawned in, and will migrate between different canister methods as needed; when awoken, they will resume in whatever
+//! context they were awoken in, instead of the context they were originally spawned in. Because they can move around,
+//! any functions referencing the current method (i.e. `msg_*`) are unreliable and should not be used from these tasks.
+//!
+//! "Background" is a tricky subject on the IC. Migratory tasks can only run in the context of a canister message.
+//! It takes from that call's instruction limit, which can introduce hidden sources of instruction limit based traps;
+//! if that call runs multiple concurrent tasks, state changes made by the migratory task may be observable in between them.
+//!
+//! Most importantly, a migratory task must never trap. When it traps, it will cancel (see below) the execution of the call
+//! whose context it's in, even though that call didn't do anything wrong, and it may not undo whatever caused it to trap,
+//! meaning the canister could end up bricked.
 //!
 //! ## Automatic cancellation
 //!
 //! Asynchronous tasks can be *canceled*, meaning that a partially completed function will halt at an
 //! `await` point, never complete, and drop its local variables as though it had returned. Cancellation
-//! is caused by panics and traps: if an async function panics, time will be rewound to the
+//! (not counting [`spawn_weak`]) is caused by panics and traps: if an async function panics, time will be rewound to the
 //! previous await as though the code since then never ran, and then the task will be canceled.
+//!
+//! When a protected task traps, *all* protected tasks in the method will be canceled, as well as any pending migratory tasks.
+//! The system cannot know exactly which task panicked, so a conservatively large 'blast radius' is assumed.
 //!
 //! Use panics sparingly in async functions after the first await, and beware system functions that trap
 //! (which is most of them in the right context). Make atomic transactions between awaits wherever
@@ -57,12 +76,14 @@
 //!
 //! [`scopeguard`]: https://docs.rs/scopeguard
 //! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
+//! [timer]: https://docs.rs/ic-cdk-timers
 //! [`caller`]: crate::api::caller
 //! [`in_replicated_execution`]: crate::api::in_replicated_execution
 //! [`canister_self`]: crate::api::canister_self
 
 use std::{
     future::Future,
+    pin::Pin,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -70,30 +91,58 @@ use std::{
     task::{Context, Poll, Wake, Waker},
 };
 
-/// Spawn an asynchronous task to run in the background. For information about semantics, see
-/// [the module docs](self).
+pub mod internals;
+
+/// Spawn a protected asynchronous task to run during the current canister method.
+///
+/// The task will panic if it outlives the canister method. To cancel it instead, use [`spawn_weak`].
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
-    ic_cdk_executor::spawn(future);
+    pin_project_lite::pin_project! {
+        struct ProtectedTask<F> {
+            #[pin]
+            future: F,
+            completed: bool,
+        }
+        impl<F> PinnedDrop for ProtectedTask<F> {
+            #[track_caller]
+            fn drop(this: Pin<&mut Self>) {
+                if !this.completed && !ic_cdk_executor::is_recovering_from_trap() {
+                    panic!("protected task outlived its canister method (did you mean to use spawn_weak or spawn_migratory?)")
+                }
+            }
+        }
+    }
+    impl<F> Future for ProtectedTask<F>
+    where
+        F: Future<Output = ()>,
+    {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let this = self.project();
+            let res = this.future.poll(cx);
+            if res.is_ready() {
+                *this.completed = true;
+            }
+            res
+        }
+    }
+    ic_cdk_executor::spawn_protected(ProtectedTask {
+        future,
+        completed: false,
+    });
 }
 
-/// Execute an update function in a context that allows calling [`spawn`].
+/// Spawn a weak asynchronous task to run during the current canister method.
 ///
-/// You do not need to worry about this function unless you are avoiding the attribute macros.
-///
-/// Background tasks will be polled in the process (and will not be run otherwise).
-/// Panics if called inside an existing executor context.
-pub fn in_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    ic_cdk_executor::in_executor_context(f)
+/// If the task outlives the canister method, it will be dropped.
+pub fn spawn_weak<F: 'static + Future<Output = ()>>(future: F) {
+    ic_cdk_executor::spawn_protected(future);
 }
 
-/// Execute a composite query function in a context that allows calling [`spawn`].
-///
-/// You do not need to worry about this function unless you are avoiding the attribute macros.
-///
-/// Background composite query tasks will be polled in the process (and will not be run otherwise).
-/// Panics if called inside an existing executor context.
-pub fn in_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
-    ic_cdk_executor::in_query_executor_context(f)
+/// Spawn an asynchronous task that can outlive the current canister method.
+pub fn spawn_migratory<F: 'static + Future<Output = ()>>(future: F) {
+    ic_cdk_executor::spawn_migratory(future);
 }
 
 /// Tells you whether the current async fn is being canceled due to a trap/panic.
@@ -134,7 +183,7 @@ pub fn spawn_017_compat<F: 'static + Future<Output = ()>>(fut: F) {
                 if dummy.0.load(Ordering::SeqCst) {
                     continue;
                 } else {
-                    crate::futures::spawn(pin);
+                    spawn(pin);
                     break;
                 }
             }

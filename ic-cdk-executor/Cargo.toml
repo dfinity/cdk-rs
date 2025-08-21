@@ -14,5 +14,9 @@ keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 links = "ic-cdk async executor, see https://github.com/dfinity/cdk-rs/blob/links-pin/TROUBLESHOOTING.md"
 
 [dependencies]
-slotmap.workspace = true
 ic0.workspace = true
+slotmap.workspace = true
+smallvec = "1.15.1"
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]

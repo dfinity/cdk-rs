@@ -36,9 +36,16 @@ thread_local! {
 }
 
 #[cfg(feature = "transform-closure")]
-#[unsafe(export_name = "canister_query <ic-cdk internal> http_transform_legacy")]
+#[cfg_attr(
+    target_family = "wasm",
+    unsafe(export_name = "canister_query <ic-cdk internal> http_transform_legacy")
+)]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    unsafe(export_name = "canister_query_ic_cdk_internal.http_transform_legacy")
+)]
 extern "C" fn http_transform() {
-    ic_cdk_executor::in_query_executor_context(|| {
+    ic_cdk_executor::in_tracking_query_executor_context(|| {
         use crate::api::{
             call::{ArgDecoderConfig, arg_data, reply},
             caller,
