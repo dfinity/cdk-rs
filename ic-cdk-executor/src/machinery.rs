@@ -1,7 +1,3 @@
-#![cfg_attr(not(all(feature = "v1.0", feature = "v1.1")), allow(dead_code))]
-
-#[cfg(feature = "v1.0")]
-use std::ops::ControlFlow;
 use std::{
     cell::{Cell, RefCell},
     collections::VecDeque,
@@ -50,7 +46,7 @@ pub(crate) enum ContextKind {
     Query,
 }
 
-// Null method ID corresponds to 'null context', used for migratory tasks (and legacy update contexts).
+// Null method ID corresponds to 'null context', used for migratory tasks.
 // Null task ID is an error.
 new_key_type! {
     pub(crate) struct MethodId;
@@ -102,7 +98,7 @@ pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let method = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext::new_update()));
     let guard = MethodHandle::for_method(method);
-    enter_current_method(guard, |_| {
+    enter_current_method(guard, || {
         let res = f();
         poll_all();
         res
@@ -111,10 +107,11 @@ pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
 
 /// Execute a function in a context that is not tracked across callbacks, able to call [`spawn_migratory`]
 /// but not [`spawn_protected`].
+#[expect(dead_code)] // not used in current null context code but may be used for other things in the future
 pub(crate) fn in_null_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let guard = MethodHandle::for_method(MethodId::null());
-    enter_current_method(guard, |_| {
+    enter_current_method(guard, || {
         let res = f();
         poll_all();
         res
@@ -126,7 +123,7 @@ pub fn in_tracking_query_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let method = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext::new_query()));
     let guard = MethodHandle::for_method(method);
-    enter_current_method(guard, |_| {
+    enter_current_method(guard, || {
         let res = f();
         poll_all();
         res
@@ -139,7 +136,7 @@ pub fn in_callback_executor_context_for<R>(
     f: impl FnOnce() -> R,
 ) -> R {
     setup_panic_hook();
-    enter_current_method(method_handle, |_| {
+    enter_current_method(method_handle, || {
         let res = f();
         poll_all();
         res
@@ -149,7 +146,7 @@ pub fn in_callback_executor_context_for<R>(
 /// Enters a panic recovery context for calling [`cancel_all_tasks_attached_to_current_method`] in.
 pub fn in_trap_recovery_context_for<R>(method: MethodHandle, f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
-    enter_current_method(method, |_| {
+    enter_current_method(method, || {
         RECOVERING.set(true);
         let res = f();
         RECOVERING.set(false);
@@ -253,8 +250,6 @@ pub(crate) fn poll_all() {
         };
         let waker = Waker::from(Arc::new(TaskWaker {
             task_id,
-            #[cfg(feature = "v1.0")]
-            source_method: method_id,
         }));
         let prev_current_method_var = CURRENT_METHOD.replace(Some(task.set_current_method_var));
         CURRENT_TASK_ID.set(Some(task_id));
@@ -281,7 +276,7 @@ pub(crate) fn poll_all() {
 /// Begin a context closure for the given method. Destroys the method afterwards if there are no outstanding handles.
 pub(crate) fn enter_current_method<R>(
     method_guard: MethodHandle,
-    f: impl FnOnce(MethodId) -> R,
+    f: impl FnOnce() -> R,
 ) -> R {
     CURRENT_METHOD.with(|context_var| {
         assert!(
@@ -290,7 +285,7 @@ pub(crate) fn enter_current_method<R>(
         );
         context_var.set(Some(method_guard.method_id));
     });
-    let r = f(method_guard.method_id);
+    let r = f();
     drop(method_guard); // drop the guard *before* the method freeing logic, but *after* the in-context code
     let method_id = CURRENT_METHOD.replace(None);
     if let Some(method_id) = method_id {
@@ -355,18 +350,10 @@ impl TaskHandle {
 
 pub(crate) struct TaskWaker {
     pub(crate) task_id: TaskId,
-    /// The method that originally spawned this task.
-    /// Needed for the 1.0 pattern of inferring the context from which task got awoken.
-    #[cfg(feature = "v1.0")]
-    pub(crate) source_method: MethodId,
 }
 
 impl Wake for TaskWaker {
     fn wake(self: Arc<Self>) {
-        #[cfg(feature = "v1.0")]
-        if crate::legacy::v0_wake_hook(&self) == ControlFlow::Break(()) {
-            return;
-        }
         TASKS.with_borrow_mut(|tasks| {
             if let Some(task) = tasks.get(self.task_id) {
                 if let Some(method_id) = task.method_binding {

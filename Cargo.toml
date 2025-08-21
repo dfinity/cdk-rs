@@ -34,9 +34,7 @@ opt-level = 'z'
 ic0 = { path = "ic0", version = "1.0.0" }
 ic-cdk = { path = "ic-cdk", version = "0.18.5" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.2" }
-ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.1", default-features = false, features = [
-    "v1.1",
-] }
+ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.1" }
 ic-management-canister-types = { path = "ic-management-canister-types", version = "0.3.2" }
 
 candid = "0.10.13"      # sync with the doc comment in ic-cdk/README.md
@@ -49,8 +47,3 @@ serde_bytes = "0.11"
 sha2 = "0.10"
 slotmap = "1"
 syn = "2"
-
-# required for e2e-tests to have two versions of ic-cdk
-# unifies the ic-cdk-executor version in ic-cdk and ic-cdk-old in e2e-tests
-[patch.crates-io]
-ic-cdk-executor = { path = "ic-cdk-executor" }
