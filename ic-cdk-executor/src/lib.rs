@@ -56,6 +56,6 @@ mod machinery;
 pub use machinery::{
     MethodHandle, TaskHandle, cancel_all_tasks_attached_to_current_method, cancel_task,
     extend_current_method_context, in_callback_executor_context_for, in_tracking_executor_context,
-    in_tracking_query_executor_context, in_trap_recovery_context_for, spawn_migratory,
-    spawn_protected, is_recovering_from_trap,
+    in_tracking_query_executor_context, in_trap_recovery_context_for, is_recovering_from_trap,
+    spawn_migratory, spawn_protected,
 };

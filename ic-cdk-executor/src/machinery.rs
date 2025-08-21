@@ -248,9 +248,7 @@ pub(crate) fn poll_all() {
             // In the case that a task panicked and that's why it's missing, but it was in an earlier callback so a later
             // one tries to re-wake, the responsibility for re-trapping lies with CallFuture.
         };
-        let waker = Waker::from(Arc::new(TaskWaker {
-            task_id,
-        }));
+        let waker = Waker::from(Arc::new(TaskWaker { task_id }));
         let prev_current_method_var = CURRENT_METHOD.replace(Some(task.set_current_method_var));
         CURRENT_TASK_ID.set(Some(task_id));
         let poll = task.future.as_mut().poll(&mut Context::from_waker(&waker));
@@ -274,10 +272,7 @@ pub(crate) fn poll_all() {
 }
 
 /// Begin a context closure for the given method. Destroys the method afterwards if there are no outstanding handles.
-pub(crate) fn enter_current_method<R>(
-    method_guard: MethodHandle,
-    f: impl FnOnce() -> R,
-) -> R {
+pub(crate) fn enter_current_method<R>(method_guard: MethodHandle, f: impl FnOnce() -> R) -> R {
     CURRENT_METHOD.with(|context_var| {
         assert!(
             context_var.get().is_none(),
