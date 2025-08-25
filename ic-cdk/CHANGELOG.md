@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- [BREAKING] Upgrade `ic-management-canister-types` which contains the changes for Canister Environment Variable.
+- [BREAKING] Upgrade `ic-management-canister-types` which contains the changes for:
+  - Canister Environment Variable.
+  - Non-replicated HTTP outcalls.
 
 ## [0.18.7] - 2025-08-20
 
