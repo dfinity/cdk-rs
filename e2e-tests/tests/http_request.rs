@@ -22,6 +22,7 @@ fn test_http_request() {
     test_one_http_request(&pic, canister_id, "head");
     test_one_http_request(&pic, canister_id, "get_with_transform");
     test_one_http_request(&pic, canister_id, "get_with_transform_closure");
+    test_one_http_request(&pic, canister_id, "non_replicated");
 }
 
 fn test_one_http_request(pic: &PocketIc, canister_id: Principal, method: &str) {
