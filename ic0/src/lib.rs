@@ -589,6 +589,80 @@ pub fn cost_vetkd_derive_key(key_name: &str, vetkd_curve: u32) -> (u128, u32) {
 }
 
 #[inline]
+pub fn env_var_count() -> usize {
+    // SAFETY: ic0.env_var_count is always safe to call
+    unsafe { sys::env_var_count() }
+}
+
+#[inline]
+pub fn env_var_name_size(index: usize) -> usize {
+    // SAFETY: ic0.env_var_name_size is always safe to call
+    unsafe { sys::env_var_name_size(index) }
+}
+
+#[inline]
+pub fn env_var_name_copy(index: usize, dst: &mut [u8], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.env_var_name_copy
+    unsafe { sys::env_var_name_copy(index, dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+/// # Safety
+///
+/// This function will fully initialize `dst` (or trap if it cannot).
+#[inline]
+pub fn env_var_name_copy_uninit(index: usize, dst: &mut [MaybeUninit<u8>], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.env_var_name_copy
+    unsafe { sys::env_var_name_copy(index, dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+#[inline]
+pub fn env_var_name_exists(name: &str) -> u32 {
+    // SAFETY: name is a readable string and therefore safe to pass as ptr and len to ic0.env_var_name_exists
+    unsafe { sys::env_var_name_exists(name.as_ptr() as usize, name.len()) }
+}
+
+#[inline]
+pub fn env_var_value_size(name: &str) -> usize {
+    // SAFETY: name is a readable string and therefore safe to pass as ptr and len to ic0.env_var_value_size
+    unsafe { sys::env_var_value_size(name.as_ptr() as usize, name.len()) }
+}
+
+#[inline]
+pub fn env_var_value_copy(name: &str, dst: &mut [u8], offset: usize) {
+    // SAFETY:
+    // - name is a readable string and therefore safe to pass as ptr and len to ic0.env_var_value_copy
+    // - dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.env_var_value_copy
+    unsafe {
+        sys::env_var_value_copy(
+            name.as_ptr() as usize,
+            name.len(),
+            dst.as_mut_ptr() as usize,
+            offset,
+            dst.len(),
+        )
+    }
+}
+
+/// # Safety
+///
+/// This function will fully initialize `dst` (or trap if it cannot).
+#[inline]
+pub fn env_var_value_copy_uninit(name: &str, dst: &mut [MaybeUninit<u8>], offset: usize) {
+    // SAFETY:
+    // - name is a readable string and therefore safe to pass as ptr and len to ic0.env_var_value_copy
+    // - dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.env_var_value_copy
+    unsafe {
+        sys::env_var_value_copy(
+            name.as_ptr() as usize,
+            name.len(),
+            dst.as_mut_ptr() as usize,
+            offset,
+            dst.len(),
+        )
+    }
+}
+
+#[inline]
 pub fn debug_print(message: &[u8]) {
     // SAFETY: message is a readable sequence of bytes and therefore safe to pass as ptr and len to ic0.debug_print
     unsafe { sys::debug_print(message.as_ptr() as usize, message.len()) }

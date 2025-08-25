@@ -75,5 +75,14 @@
     ic0.cost_sign_with_schnorr : (src : I, size : I, algorithm: i32, dst : I) -> i32;     // * s
     ic0.cost_vetkd_derive_key : (src : I, size : I, vetkd_curve: i32, dst : I) -> i32;  // * s
 
-    ic0.debug_print : (src : I, size : I) -> ();                                          // * s
-    ic0.trap : (src : I, size : I) -> ();                                                 // * s
+    ic0.env_var_count : () -> I;                                                                      // *
+
+    ic0.env_var_name_size : (index: I) -> I;                                                          // *
+    ic0.env_var_name_copy : (index: I, dst: I, offset: I, size: I) -> ();                             // *
+    ic0.env_var_name_exists : (name_src: I, name_size: I) -> i32;                                     // *
+    
+    ic0.env_var_value_size : (name_src: I, name_size: I) -> I;                                        // *
+    ic0.env_var_value_copy : (name_src: I, name_size: I, dst: I, offset: I, size: I) -> ();           // *
+
+    ic0.debug_print : (src : I, size : I) -> ();                                                      // * s
+    ic0.trap : (src : I, size : I) -> ();                                                             // * s

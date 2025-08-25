@@ -26,6 +26,20 @@ fn test_management_canister() {
 }
 
 #[test]
+fn test_env_var() {
+    let wasm = cargo_build_canister("management_canister");
+    let pic = pic_base()
+        // env_var is not available on mainnet yet
+        .with_nonmainnet_features(true)
+        .build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
+    pic.install_canister(canister_id, wasm, vec![], None);
+    let () = update(&pic, canister_id, "env_var", ()).unwrap();
+}
+
+#[test]
 fn test_vetkd() {
     let wasm = cargo_build_canister("management_canister");
     let pic = pic_base()
