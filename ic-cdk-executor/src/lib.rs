@@ -8,7 +8,7 @@ use std::pin::Pin;
 use std::sync::{Arc, Once};
 use std::task::{Context, Poll, Wake, Waker};
 
-use slotmap::{new_key_type, SlotMap};
+use slotmap::{SlotMap, new_key_type};
 
 /// Spawn an asynchronous task to run in the background.
 pub fn spawn<F: 'static + Future<Output = ()>>(future: F) {
@@ -52,6 +52,14 @@ pub fn in_callback_executor_context(f: impl FnOnce()) {
     set_panic_hook();
     let _guard = ContextGuard::new(AsyncContext::FromTask);
     f();
+    if CONTEXT.get() == AsyncContext::FromTask {
+        ic0::debug_print(
+            b"empty message callback: canister may have just been upgraded mid-call. \
+            This is a very bad idea and can result in memory corruption; \
+            it is advised to stop canisters before upgrading them.",
+        );
+        return;
+    }
     poll_all();
 }
 
@@ -198,9 +206,9 @@ impl Wake for TaskWaker {
             WAKEUP.with_borrow_mut(|wakeup| wakeup.push_back(self.task_id));
             if context == AsyncContext::FromTask {
                 if self.query {
-                    CONTEXT.set(AsyncContext::Query)
+                    CONTEXT.set(AsyncContext::Query);
                 } else {
-                    CONTEXT.set(AsyncContext::Update)
+                    CONTEXT.set(AsyncContext::Update);
                 }
             }
         }

@@ -1,12 +1,12 @@
-use darling::ast::NestedMeta;
 use darling::FromMeta;
+use darling::ast::NestedMeta;
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use std::fmt::Formatter;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{
-    parse_str, Error, FnArg, ItemFn, Pat, PatIdent, PatType, Path, ReturnType, Signature, Type,
+    Error, FnArg, ItemFn, Pat, PatIdent, PatType, Path, ReturnType, Signature, Type, parse_str,
 };
 
 #[derive(Default, FromMeta)]
@@ -63,7 +63,7 @@ impl MethodType {
         }
     }
 
-    /// init, post_upgrade, update, query can have arguments.
+    /// `init`, `post_upgrade`, `update`, `query` can have arguments.
     pub fn can_have_args(&self) -> bool {
         match self {
             MethodType::Init | MethodType::PostUpgrade | MethodType::Update | MethodType::Query => {
@@ -251,7 +251,9 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = ::ic_cdk::api::msg_arg_data();
-            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+            let mut decoder_config = ::candid::DecoderConfig::new();
+            decoder_config.set_skipping_quota(10000);
+            let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
         }
     };
 
@@ -354,6 +356,7 @@ fn dfn_macro(
         quote! {
             ::ic_cdk::futures::#async_context_name(|| {
                 #guard
+                #[allow(clippy::disallowed_methods)]
                 ::ic_cdk::futures::spawn(async {
                     #arg_decode
                     let result = #function_call;
@@ -373,8 +376,8 @@ fn dfn_macro(
     };
 
     Ok(quote! {
-        #[cfg_attr(target_family = "wasm", export_name = #export_name)]
-        #[cfg_attr(not(target_family = "wasm"), export_name = #host_compatible_name)]
+        #[cfg_attr(target_family = "wasm", unsafe(export_name = #export_name))]
+        #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = #host_compatible_name))]
         fn #outer_function_ident() {
             #body
         }
@@ -445,8 +448,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
@@ -494,8 +497,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
@@ -530,8 +533,8 @@ mod test {
         };
 
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
@@ -565,12 +568,14 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -602,12 +607,14 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a, b);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(()).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -639,12 +646,14 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    let (a, b,) = ::candid::utils::decode_args(&arg_bytes).unwrap();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = query(a, b);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
                     ::ic_cdk::api::msg_reply(bytes);
@@ -676,8 +685,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query custom_query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.custom_query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query custom_query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.custom_query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
@@ -712,8 +721,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
@@ -763,8 +772,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 ::ic_cdk::futures::in_query_executor_context(|| {
                     let result = query();
@@ -811,8 +820,8 @@ mod test {
             _ => panic!("Incorrect parsed AST."),
         };
         let expected = quote! {
-            #[cfg_attr(target_family = "wasm", export_name = "canister_query query")]
-            #[cfg_attr(not(target_family = "wasm"), export_name = "canister_query.query")]
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_query query"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_query.query"))]
             fn #fn_name() {
                 let r: Result<(), String> = guard1 ();
                 if let Err(e) = r {

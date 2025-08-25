@@ -296,7 +296,7 @@ pub unsafe fn call_new(
             reply_env,
             reject_fn as usize,
             reject_env,
-        )
+        );
     }
 }
 
@@ -322,7 +322,7 @@ pub fn call_new_oneway(callee: &[u8], name: &str) {
             usize::MAX,
             usize::MAX,
             usize::MAX,
-        )
+        );
     }
 }
 
@@ -678,6 +678,6 @@ pub fn trap(message: &[u8]) -> ! {
 #[inline]
 fn to_high_low(x: u128) -> (u64, u64) {
     let high = (x >> 64) as u64;
-    let low = (x & u64::MAX as u128) as u64;
+    let low = (x & u128::from(u64::MAX)) as u64;
     (high, low)
 }

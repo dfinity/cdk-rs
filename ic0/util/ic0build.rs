@@ -3,7 +3,7 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
-use syn::{parenthesized, Error};
+use syn::{Error, parenthesized};
 use syn::{FnArg, Ident, Token, TypePath};
 
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ impl Parse for SystemAPI {
                         return Err(Error::new(
                             pat_type.span(),
                             "argument types can only be i32, i64 or isize",
-                        ))
+                        ));
                     }
                 },
             }
@@ -182,7 +182,7 @@ fn main() {
 // Don't manually modify it.
 #[cfg(target_family = "wasm")]
 #[link(wasm_import_module = "ic0")]
-extern "C" {{"#,
+unsafe extern "C" {{"#,
     )
     .unwrap();
 

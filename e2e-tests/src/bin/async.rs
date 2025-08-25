@@ -154,7 +154,7 @@ async fn schedule_on_panic() {
             for _ in 0..3 {
                 ic_cdk::futures::spawn(async {
                     on_notify();
-                })
+                });
             }
         }
     }
@@ -171,10 +171,8 @@ async fn timer_on_panic() {
     impl Drop for Guard {
         fn drop(&mut self) {
             for _ in 0..3 {
-                ic_cdk_timers::set_timer(Duration::ZERO, || {
-                    ic_cdk::futures::spawn(async {
-                        on_notify();
-                    })
+                ic_cdk_timers::set_timer(Duration::ZERO, async {
+                    on_notify();
                 });
             }
         }
@@ -187,7 +185,7 @@ async fn timer_on_panic() {
 }
 
 #[update]
-async fn spawn_ordering() {
+fn spawn_ordering() {
     let notifs = notifications_received();
     spawn_017_compat(async { on_notify() });
     assert_eq!(

@@ -1,6 +1,6 @@
 //! Threshold ECDSA signing API.
 
-use crate::api::call::{call, call_with_payment128, CallResult};
+use crate::api::call::{CallResult, call, call_with_payment128};
 use candid::Principal;
 
 mod types;
@@ -17,7 +17,7 @@ pub async fn ecdsa_public_key(
     call(Principal::management_canister(), "ecdsa_public_key", (arg,)).await
 }
 
-/// Return a new ECDSA signature of the given message_hash that can be separately verified against a derived ECDSA public key.
+/// Return a new ECDSA signature of the given `message_hash` that can be separately verified against a derived ECDSA public key.
 ///
 /// See [IC method `sign_with_ecdsa`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-sign_with_ecdsa).
 ///

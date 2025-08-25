@@ -39,8 +39,8 @@
 
 use crate::api::{cost_call, msg_arg_data, msg_reject_code, msg_reject_msg};
 use crate::{futures::is_recovering_from_trap, trap};
-use candid::utils::{encode_args_ref, ArgumentDecoder, ArgumentEncoder};
-use candid::{decode_args, decode_one, encode_one, CandidType, Deserialize, Principal};
+use candid::utils::{ArgumentDecoder, ArgumentEncoder, encode_args_ref};
+use candid::{CandidType, Deserialize, Principal, decode_args, decode_one, encode_one};
 use std::borrow::Cow;
 use std::future::IntoFuture;
 use std::mem;
@@ -73,7 +73,7 @@ pub use ic_error_types::RejectCode;
 /// - Cycles:
 ///   - [`with_cycles`][Self::with_cycles]: set the cycles attached in this call.
 /// - Response waiting timeout:
-///   - [`change_timeout`][Self::change_timeout]: change the timeout for **bounded_wait** call.
+///   - [`change_timeout`][Self::change_timeout]: change the timeout for **`bounded_wait`** call.
 ///
 /// Please note that all the configuration methods are chainable and can be called multiple times.
 /// For each **aspect** of the call, the **last** configuration takes effect.
@@ -163,6 +163,7 @@ impl<'m> Call<'m, '_> {
     /// The timeout can be changed using the [`change_timeout`][Self::change_timeout] method.
     ///
     /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
+    #[must_use]
     pub fn bounded_wait(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
@@ -179,6 +180,7 @@ impl<'m> Call<'m, '_> {
     /// Constructs a [`Call`] which will **unboundedly** wait for response.
     ///
     /// To boundedly wait for response, use the  [`Call::bounded_wait`] constructor instead.
+    #[must_use]
     pub fn unbounded_wait(canister_id: Principal, method: &'m str) -> Self {
         Self {
             canister_id,
@@ -197,6 +199,7 @@ impl<'a> Call<'_, 'a> {
     /// Sets the argument for the call.
     ///
     /// The argument must implement [`CandidType`].
+    #[must_use]
     pub fn with_arg<A: CandidType>(self, arg: A) -> Self {
         Self {
             encoded_args: Cow::Owned(encode_one(&arg).unwrap_or_else(panic_when_encode_fails)),
@@ -207,6 +210,7 @@ impl<'a> Call<'_, 'a> {
     /// Sets the arguments for the call.
     ///
     /// The arguments are a tuple of types, each implementing [`CandidType`].
+    #[must_use]
     pub fn with_args<A: ArgumentEncoder>(self, args: &A) -> Self {
         Self {
             encoded_args: Cow::Owned(encode_args_ref(args).unwrap_or_else(panic_when_encode_fails)),
@@ -225,6 +229,7 @@ impl<'a> Call<'_, 'a> {
     /// if the arguments don't live long enough.
     ///
     /// For cases where you need to transfer ownership of the arguments bytes consider using [`Self::take_raw_args`] instead.
+    #[must_use]
     pub fn with_raw_args(self, raw_args: &'a [u8]) -> Self {
         Self {
             encoded_args: Cow::Borrowed(raw_args),
@@ -241,6 +246,7 @@ impl<'a> Call<'_, 'a> {
     ///
     /// For cases where you want to make multiple calls with the same argument data,
     /// consider using [`Self::with_raw_args`] instead to avoid unnecessary cloning.
+    #[must_use]
     pub fn take_raw_args(self, raw_args: Vec<u8>) -> Self {
         Self {
             encoded_args: Cow::Owned(raw_args),
@@ -256,6 +262,7 @@ impl<'a> Call<'_, 'a> {
     /// - Overrides any previously set cycle value
     /// - Last invocation determines the final cycles amount
     /// - Does not accumulate cycles across multiple invocations
+    #[must_use]
     pub fn with_cycles(mut self, cycles: u128) -> Self {
         self.cycles = cycles;
         self
@@ -280,6 +287,7 @@ impl<'a> Call<'_, 'a> {
     /// and the execution manages to schedule both the request and the response in the same round.
     ///
     /// To unboundedly wait for response, use the [`Call::unbounded_wait`] constructor instead.
+    #[must_use]
     pub fn change_timeout(mut self, timeout_seconds: u32) -> Self {
         match self.timeout_seconds {
             Some(_) => self.timeout_seconds = Some(timeout_seconds),
@@ -298,6 +306,7 @@ impl<'a> Call<'_, 'a> {
     /// - the cost of transmitting the request
     /// - the cost for the reservation of response transmission (may be partially refunded)
     /// - the cost for the reservation of callback execution (may be partially refunded).
+    #[must_use]
     pub fn get_cost(&self) -> u128 {
         self.cycles.saturating_add(cost_call(
             self.method.len() as u64,
@@ -537,7 +546,7 @@ impl CallRejected {
     /// Please check if your `ic-error-types` dependency is up-to-date.
     /// If the latest version of `ic-error-types` doesn't include the new reject code, please report it to the `ic-cdk` maintainers.
     pub fn reject_code(&self) -> Result<RejectCode, UnrecognizedRejectCode> {
-        RejectCode::try_from(self.raw_reject_code as u64)
+        RejectCode::try_from(u64::from(self.raw_reject_code))
             .map_err(|_| UnrecognizedRejectCode(self.raw_reject_code))
     }
 
@@ -805,7 +814,7 @@ impl Call<'_, '_> {
                 // - under the current behavior of the IC, this produces an error,
                 //   which would unconditionally call the cleanup callback
             }
-        };
+        }
         if !arg.is_empty() {
             ic0::call_data_append(arg);
         }
@@ -967,7 +976,7 @@ unsafe extern "C" fn callback(env: usize) {
 ///
 /// # Safety
 ///
-/// This function must only be passed to the IC with a pointer from Arc::<RwLock<CallFutureState>>::into_raw as userdata.
+/// This function must only be passed to the IC with a pointer from `Arc::<RwLock<CallFutureState>>::into_raw` as userdata.
 unsafe extern "C" fn cleanup(env: usize) {
     let state_ptr = env as *const RwLock<CallFutureState<'_, '_>>;
     // Flag that we do not want to actually wake the task - we

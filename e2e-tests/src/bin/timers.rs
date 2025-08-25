@@ -26,18 +26,22 @@ fn clear_events() {
 
 #[update]
 fn schedule() {
-    set_timer(Duration::from_secs(2), || add_event("2"));
-    set_timer(Duration::from_secs(1), || {
-        add_event("1");
-        set_timer(Duration::from_secs(2), || add_event("3"));
+    set_timer(Duration::from_secs(2), async {
+        add_event("2");
     });
-    set_timer(Duration::from_secs(4), || add_event("4"));
+    set_timer(Duration::from_secs(1), async {
+        add_event("1");
+        set_timer(Duration::from_secs(2), async { add_event("3") });
+    });
+    set_timer(Duration::from_secs(4), async {
+        add_event("4");
+    });
 }
 
 #[update]
 fn schedule_n_timers(n: u32) {
     for i in 0..n {
-        ic_cdk_timers::set_timer(Duration::from_nanos(i.into()), move || {
+        ic_cdk_timers::set_timer(Duration::from_nanos(i.into()), async move {
             EXECUTED_TIMERS.fetch_add(1, Ordering::Relaxed);
         });
     }
@@ -50,13 +54,13 @@ fn executed_timers() -> u32 {
 
 #[update]
 fn schedule_long() {
-    let id = set_timer(Duration::from_secs(9), || add_event("long"));
+    let id = set_timer(Duration::from_secs(9), async { add_event("long") });
     LONG.with(|long| long.set(id));
 }
 
 #[update]
 fn set_self_cancelling_timer() {
-    let id = set_timer(Duration::from_secs(0), || {
+    let id = set_timer(Duration::from_secs(0), async {
         cancel_long();
         add_event("timer cancelled self");
     });
@@ -70,15 +74,17 @@ fn cancel_long() {
 
 #[update]
 fn start_repeating() {
-    let id = set_timer_interval(Duration::from_secs(1), || add_event("repeat"));
+    let id = set_timer_interval(Duration::from_secs(1), async || {
+        add_event("repeat");
+    });
     REPEATING.with(|repeating| repeating.set(id));
 }
 
 #[update]
 fn set_self_cancelling_periodic_timer() {
-    let id = set_timer_interval(Duration::from_secs(0), || {
+    let id = set_timer_interval(Duration::from_secs(0), async || {
         stop_repeating();
-        add_event("periodic timer cancelled self")
+        add_event("periodic timer cancelled self");
     });
     REPEATING.with(|repeating| repeating.set(id));
 }
