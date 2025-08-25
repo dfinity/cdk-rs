@@ -66,12 +66,14 @@ pub fn msg_reject_code() -> u32 {
 ///
 /// This function can only be called in the reject callback.
 ///
-/// Traps if there is no reject message (i.e. if `reject_code` is 0).
+/// Traps if:
+/// - There is no reject message (i.e. if `reject_code` is 0).
+/// - The message is not valid UTF-8.
 pub fn msg_reject_msg() -> String {
     let len = ic0::msg_reject_msg_size();
     let mut buf = vec![0u8; len];
     ic0::msg_reject_msg_copy(&mut buf, 0);
-    String::from_utf8_lossy(&buf).into_owned()
+    String::from_utf8(buf).expect("reject message is not valid UTF-8")
 }
 
 /// Gets the deadline, in nanoseconds since 1970-01-01, after which the caller might stop waiting for a response.
@@ -236,11 +238,13 @@ pub fn subnet_self() -> Principal {
 /// Gets the name of the method to be inspected.
 ///
 /// This function is only available in the `canister_inspect_message` context.
+///
+/// Traps if the method name is not valid UTF-8.
 pub fn msg_method_name() -> String {
     let len = ic0::msg_method_name_size();
     let mut buf = vec![0u8; len];
     ic0::msg_method_name_copy(&mut buf, 0);
-    String::from_utf8_lossy(&buf).into_owned()
+    String::from_utf8(buf).expect("msg_method_name is not valid UTF-8")
 }
 
 /// Accepts the message in `canister_inspect_message`.
@@ -573,12 +577,14 @@ pub fn env_var_count() -> usize {
 ///
 /// # Panics
 ///
-/// This function traps if the index is out of bounds (>= than value provided by [`env_var_count`])
+/// This function traps if:
+/// - The index is out of bounds (>= than value provided by [`env_var_count`])
+/// - The name is not valid UTF-8.
 pub fn env_var_name(index: usize) -> String {
     let len = ic0::env_var_name_size(index);
     let mut buf = vec![0u8; len];
     ic0::env_var_name_copy(index, &mut buf, 0);
-    String::from_utf8_lossy(&buf).into_owned()
+    String::from_utf8(buf).expect("env_var_name is not valid UTF-8")
 }
 
 /// Checks if the environment variable with the given name exists.
@@ -603,12 +609,13 @@ pub fn env_var_name_exists<T: AsRef<str>>(name: T) -> bool {
 /// This function traps if:
 /// - The length of `name` exceeds `MAX_ENV_VAR_NAME_LENGTH`.
 /// - The name does not match any existing environment variable.
+/// - The value is not valid UTF-8.
 pub fn env_var_value<T: AsRef<str>>(name: T) -> String {
     let name = name.as_ref();
     let len = ic0::env_var_value_size(name);
     let mut buf = vec![0u8; len];
     ic0::env_var_value_copy(name, &mut buf, 0);
-    String::from_utf8_lossy(&buf).into_owned()
+    String::from_utf8(buf).expect("env_var_value is not valid UTF-8")
 }
 
 /// Emits textual trace messages.
