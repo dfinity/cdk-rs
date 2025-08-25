@@ -160,12 +160,8 @@ fn call_api() {
 #[test]
 fn call_env_var() {
     let wasm = cargo_build_canister("api");
-    // with_ii_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
-    let pic = pic_base()
-        .with_ii_subnet()
-        .with_nonmainnet_features(true)
-        .build();
-    let wasm = cargo_build_canister("api");
+    // env_var is not available on mainnet yet
+    let pic = pic_base().with_nonmainnet_features(true).build();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);

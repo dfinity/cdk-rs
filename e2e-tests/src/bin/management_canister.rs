@@ -19,10 +19,7 @@ async fn basic() {
             log_visibility: Some(LogVisibility::Public),
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
-            environment_variables: Some(vec![EnvironmentVariable {
-                name: "key1".to_string(),
-                value: "value1".to_string(),
-            }]),
+            environment_variables: Some(vec![]),
         }),
     };
     // 500 B is the minimum cycles required to create a canister.
@@ -49,13 +46,6 @@ async fn basic() {
     );
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_threshold, 0u8);
-    assert_eq!(
-        definite_canister_setting.environment_variables,
-        vec![EnvironmentVariable {
-            name: "key1".to_string(),
-            value: "value1".to_string(),
-        }]
-    );
 
     // update_settings
     let arg = UpdateSettingsArgs {
@@ -63,16 +53,7 @@ async fn basic() {
         settings: CanisterSettings {
             freezing_threshold: Some(2_592_000u32.into()),
             log_visibility: Some(LogVisibility::AllowedViewers(vec![self_id])),
-            environment_variables: Some(vec![
-                EnvironmentVariable {
-                    name: "key2".to_string(),
-                    value: "value2".to_string(),
-                },
-                EnvironmentVariable {
-                    name: "key3".to_string(),
-                    value: "value3".to_string(),
-                },
-            ]),
+
             ..Default::default()
         },
     };
@@ -112,6 +93,56 @@ async fn basic() {
     // raw_rand
     let bytes = raw_rand().await.unwrap();
     assert_eq!(bytes.len(), 32);
+}
+
+#[update]
+async fn env_var() {
+    let arg = CreateCanisterArgs {
+        settings: Some(CanisterSettings {
+            environment_variables: Some(vec![EnvironmentVariable {
+                name: "key1".to_string(),
+                value: "value1".to_string(),
+            }]),
+            ..Default::default()
+        }),
+    };
+    // 500 B is the minimum cycles required to create a canister.
+    // Here we set 1 T cycles for other operations below.
+    let canister_id = create_canister_with_extra_cycles(&arg, 1_000_000_000_000u128)
+        .await
+        .unwrap()
+        .canister_id;
+
+    // canister_status
+    let arg = CanisterStatusArgs { canister_id };
+    let result = canister_status(&arg).await.unwrap();
+    let definite_canister_setting = result.settings;
+    assert_eq!(
+        definite_canister_setting.environment_variables,
+        vec![EnvironmentVariable {
+            name: "key1".to_string(),
+            value: "value1".to_string(),
+        }]
+    );
+
+    // update_settings
+    let arg = UpdateSettingsArgs {
+        canister_id,
+        settings: CanisterSettings {
+            environment_variables: Some(vec![
+                EnvironmentVariable {
+                    name: "key2".to_string(),
+                    value: "value2".to_string(),
+                },
+                EnvironmentVariable {
+                    name: "key3".to_string(),
+                    value: "value3".to_string(),
+                },
+            ]),
+            ..Default::default()
+        },
+    };
+    update_settings(&arg).await.unwrap();
 }
 
 #[update]
