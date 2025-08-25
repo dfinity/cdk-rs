@@ -750,6 +750,8 @@ pub struct HttpRequestArgs {
     pub body: Option<Vec<u8>>,
     /// Name of the transform function which is `func (transform_args) -> (http_response) query`.
     pub transform: Option<TransformContext>,
+    /// If `Some(false)`, the HTTP request will be made by single replica instead of all nodes in the subnet.
+    pub is_replicated: Option<bool>,
 }
 
 /// # HTTP Request Result
