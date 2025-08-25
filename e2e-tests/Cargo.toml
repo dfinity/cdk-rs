@@ -27,7 +27,7 @@ cargo_metadata = "0.21"
 futures = "0.3"
 hex.workspace = true
 ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-07-11_03-31-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-08-21_03-19-base" }
 reqwest = "0.12"
 
 [build-dependencies]

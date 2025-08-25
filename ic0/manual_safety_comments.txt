@@ -134,6 +134,22 @@ ic0.cost_vetkd_derive_key : (src : I, size : I, vetkd_curve: i32, dst : I) -> i3
     - `src` must be a pointer to a readable UTF-8 string with size `size`
     - `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)
     - The `vetkd_curve` parameter does not affect safety
+ic0.env_var_count : () -> I;                                                                      // *
+    Always safe to call
+ic0.env_var_name_size : (index: I) -> I;                                                          // *
+    Always safe to call
+ic0.env_var_name_copy : (index: I, dst: I, offset: I, size: I) -> ();                             // *
+    - The `index` parameter does not affect safety
+    - `dst` must be a pointer to a writable sequence of bytes with size `size`
+    - The `offset` parameter does not affect safety
+ic0.env_var_name_exists : (name_src: I, name_size: I) -> i32;                                     // *
+    `name_src` must be a pointer to a readable UTF-8 string with size `name_size`
+ic0.env_var_value_size : (name_src: I, name_size: I) -> I;                                        // *
+    `name_src` must be a pointer to a readable UTF-8 string with size `name_size`
+ic0.env_var_value_copy : (name_src: I, name_size: I, dst: I, offset: I, size: I) -> ();           // *
+    - `name_src` must be a pointer to a readable UTF-8 string with size `name_size`
+    - `dst` must be a pointer to a writable sequence of bytes with size `size`
+    - The `offset` parameter does not affect safety
 ic0.debug_print : (src : I, size : I) -> ();                                          // * s
     `src` must be a pointer to a readable sequence of bytes with size `size`
 ic0.trap : (src : I, size : I) -> ();                                                 // * s
