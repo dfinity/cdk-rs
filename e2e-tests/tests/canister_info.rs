@@ -66,7 +66,8 @@ fn test_canister_info() {
                         canister_version: Some(1)
                     }),
                     details: ChangeDetails::Creation(CreationRecord {
-                        controllers: vec![canister_id]
+                        controllers: vec![canister_id],
+                        environment_variables_hash: None
                     }),
                 },
                 Change {
