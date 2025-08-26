@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod test;
 
+use serde::de::{self, Deserialize, Deserializer, SeqAccess, Visitor};
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 use serde_bytes::Bytes;
 use sha2::{Digest, Sha256};
 use std::borrow::Cow;
+use std::fmt;
 
 /// SHA-256 hash bytes.
 pub type Hash = [u8; 32];
@@ -112,6 +114,75 @@ impl Serialize for HashTree<'_> {
                 seq.end()
             }
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for HashTree<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct HashTreeVisitor;
+
+        impl<'de> Visitor<'de> for HashTreeVisitor {
+            type Value = HashTree<'de>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a valid sequence representing a HashTree")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let variant: u8 = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &"variant for the HashTree"))?;
+
+                match variant {
+                    0 => Ok(HashTree::Empty),
+                    1 => {
+                        let left: HashTree<'de> = seq.next_element()?.ok_or_else(|| {
+                            de::Error::invalid_length(1, &"left child for the Fork")
+                        })?;
+                        let right: HashTree<'de> = seq.next_element()?.ok_or_else(|| {
+                            de::Error::invalid_length(2, &"right child for the Fork")
+                        })?;
+                        Ok(HashTree::Fork(Box::new((left, right))))
+                    }
+                    2 => {
+                        let label: &'de [u8] = seq.next_element()?.ok_or_else(|| {
+                            de::Error::invalid_length(1, &"label for the Labeled")
+                        })?;
+                        let tree: HashTree<'de> = seq
+                            .next_element()?
+                            .ok_or_else(|| de::Error::invalid_length(2, &"tree for the Labeled"))?;
+                        Ok(HashTree::Labeled(label, Box::new(tree)))
+                    }
+                    3 => {
+                        let bytes: &'de [u8] = seq
+                            .next_element()?
+                            .ok_or_else(|| de::Error::invalid_length(1, &"bytes for the Leaf"))?;
+                        Ok(HashTree::Leaf(Cow::Borrowed(bytes)))
+                    }
+                    4 => {
+                        let digest: &'de [u8] = seq.next_element()?.ok_or_else(|| {
+                            de::Error::invalid_length(1, &"digest for the Pruned")
+                        })?;
+                        let hash: Hash = digest.try_into().map_err(|_| {
+                            de::Error::invalid_length(digest.len(), &"32 bytes for the Hash")
+                        })?;
+                        Ok(HashTree::Pruned(hash))
+                    }
+                    _ => Err(de::Error::unknown_variant(
+                        &variant.to_string(),
+                        &["0", "1", "2", "3", "4"],
+                    )),
+                }
+            }
+        }
+
+        deserializer.deserialize_seq(HashTreeVisitor)
     }
 }
 
