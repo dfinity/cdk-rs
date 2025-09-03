@@ -373,13 +373,13 @@ fn update_ic0_timer() {
     unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
-        let mut caller = [0; 32];
+    let mut caller = [0; 32];
     let caller = {
         let sz = ic0::msg_caller_size();
         ic0::msg_caller_copy(&mut caller[..sz], 0);
         &caller[..sz]
     };
-        let mut canister_self = [0; 32];
+    let mut canister_self = [0; 32];
     let canister_self = {
         let sz = ic0::canister_self_size();
         ic0::canister_self_copy(&mut canister_self[..sz], 0);
