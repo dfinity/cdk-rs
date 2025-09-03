@@ -15,7 +15,6 @@ keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-futures.workspace = true
 ic0.workspace = true
 ic-cdk-executor.workspace = true
 ic_principal.workspace = true
