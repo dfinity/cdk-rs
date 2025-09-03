@@ -118,7 +118,7 @@ impl Builder {
         });
         fs::create_dir_all(&out_path).unwrap();
         for conf in &self.configs {
-            let (env, actor) =
+            let (env, actor, _merged) =
                 pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
             let content = code_generator::compile(&conf.binding, &env, actor.as_ref());
             let generated_path = out_path.join(format!("{}.rs", conf.canister_name));

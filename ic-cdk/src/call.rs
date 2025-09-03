@@ -51,6 +51,8 @@ use thiserror::Error;
 
 pub use ic_error_types::RejectCode;
 
+pub mod typed;
+
 /// Inter-canister Call.
 ///
 /// This type enables the configuration and execution of inter-canister calls using a builder pattern.
@@ -153,6 +155,7 @@ pub struct Call<'m, 'a> {
 }
 
 // Constructors
+// If you add anything to this block, be sure to mirror it in the `typed` module
 impl<'m> Call<'m, '_> {
     /// Constructs a [`Call`] which will **boundedly** wait for response.
     ///
@@ -195,6 +198,7 @@ impl<'m> Call<'m, '_> {
 }
 
 // Configuration
+// If you add anything to this block, be sure to mirror it in the `typed` module
 impl<'a> Call<'_, 'a> {
     /// Sets the argument for the call.
     ///
