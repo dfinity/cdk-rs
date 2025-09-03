@@ -71,6 +71,7 @@ async fn canister_lifecycle() -> Principal {
             log_visibility: None,
             wasm_memory_limit: None,
             wasm_memory_threshold: None,
+            environment_variables: None,
         },
         canister_id,
     })

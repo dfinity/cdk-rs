@@ -1,6 +1,6 @@
 [package]
 name = "ic-management-canister-types"
-version = "0.3.3"
+version = "0.4.0"
 authors.workspace = true
 edition.workspace = true
 repository.workspace = true

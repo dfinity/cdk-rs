@@ -17,6 +17,7 @@ async fn get_without_transform() {
         body: Some(vec![1]),
         max_response_bytes: Some(100_000),
         transform: None,
+        is_replicated: Some(true),
     };
 
     let res = http_request(&args).await.unwrap();
@@ -124,6 +125,19 @@ async fn get_with_transform_closure() {
     );
     // The first 42 is from the response body, the second 42 is from the transform closure.
     assert_eq!(res.body, vec![42, 42]);
+}
+
+/// Non replicated HTTP request.
+#[update]
+async fn non_replicated() {
+    let args = HttpRequestArgs {
+        url: "https://example.com".to_string(),
+        method: HttpMethod::GET,
+        is_replicated: Some(false),
+        ..Default::default()
+    };
+
+    http_request(&args).await.unwrap();
 }
 
 fn main() {}

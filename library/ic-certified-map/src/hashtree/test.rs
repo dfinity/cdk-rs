@@ -29,12 +29,21 @@ fn test_public_spec_example() {
         ),
     );
 
+    let root = t.reconstruct();
     assert_eq!(
-        hex::encode(&t.reconstruct()[..]),
+        hex::encode(&root[..]),
         "eb5c5b2195e62d996b84c9bcc8259d19a83786a2f59e0878cec84c811f669aa0".to_string()
     );
 
+    let cbor = serde_cbor::to_vec(&t).unwrap();
+    let encoded = hex::encode(&cbor[..]);
     assert_eq!(
-        hex::encode(serde_cbor::to_vec(&t).unwrap()),
+        encoded,
         "8301830183024161830183018302417882034568656c6c6f810083024179820345776f726c6483024162820344676f6f648301830241638100830241648203476d6f726e696e67".to_string());
+
+    let decoded = hex::decode(encoded).unwrap();
+    let de: super::HashTree<'_> = serde_cbor::from_slice(&decoded).unwrap();
+
+    assert_eq!(de.reconstruct(), root);
+    assert_eq!(serde_cbor::to_vec(&de).unwrap(), cbor);
 }
