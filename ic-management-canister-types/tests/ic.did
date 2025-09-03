@@ -61,6 +61,10 @@ type change_details = variant {
         canister_version : nat64;
         snapshot_id : snapshot_id;
         taken_at_timestamp : nat64;
+        source : variant {
+            taken_from_canister : reserved;
+            metadata_upload : reserved;
+        };
     };
     // Deprecated: `settings_change` is used instead.
     controllers_change : record {
@@ -443,8 +447,8 @@ type read_canister_snapshot_metadata_args = record {
 
 type read_canister_snapshot_metadata_result = record {
     source : variant {
-        taken_from_canister;
-        metadata_upload;
+        taken_from_canister : reserved;
+        metadata_upload : reserved;
     };
     taken_at_timestamp : nat64;
     wasm_module_size : nat64;
@@ -481,7 +485,7 @@ type read_canister_snapshot_data_args = record {
             offset : nat64;
             size : nat64;
         };
-        main_memory : record {
+        wasm_memory : record {
             offset : nat64;
             size : nat64;
         };
@@ -535,7 +539,7 @@ type upload_canister_snapshot_data_args = record {
         wasm_module : record {
             offset : nat64;
         };
-        main_memory : record {
+        wasm_memory : record {
             offset : nat64;
         };
         stable_memory : record {
