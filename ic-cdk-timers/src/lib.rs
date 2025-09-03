@@ -29,7 +29,6 @@ use std::{
     time::Duration,
 };
 
-use ic_principal::Principal;
 use slotmap::{KeyData, SlotMap, new_key_type};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
@@ -104,11 +103,11 @@ impl Eq for Timer {}
 extern "C" fn global_timer() {
     ic_cdk_executor::in_executor_context(|| {
         let batch = Rc::new(());
+        let mut canister_self = [0; 32];
         let canister_self = {
-            let mut canister_self = [0; 32];
             let sz = ic0::canister_self_size();
             ic0::canister_self_copy(&mut canister_self[..sz], 0);
-            Principal::from_slice(&canister_self[..sz])
+            &canister_self[..sz]
         };
         // All the calls are made concurrently, according only to the timestamp we *started* with.
         // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
@@ -157,7 +156,7 @@ extern "C" fn global_timer() {
                             //      can be passed to FFI without leaking memory.
                             unsafe {
                                 ic0::call_new(
-                                    canister_self.as_slice(),
+                                    canister_self,
                                     METHOD_NAME,
                                     timer_scope_callback,
                                     env,
@@ -374,17 +373,17 @@ fn update_ic0_timer() {
     unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
-    let caller = {
         let mut caller = [0; 32];
+    let caller = {
         let sz = ic0::msg_caller_size();
         ic0::msg_caller_copy(&mut caller[..sz], 0);
-        Principal::from_slice(&caller[..sz])
+        &caller[..sz]
     };
-    let canister_self = {
         let mut canister_self = [0; 32];
+    let canister_self = {
         let sz = ic0::canister_self_size();
         ic0::canister_self_copy(&mut canister_self[..sz], 0);
-        Principal::from_slice(&canister_self[..sz])
+        &canister_self[..sz]
     };
 
     if caller != canister_self {

@@ -17,7 +17,6 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 [dependencies]
 ic0.workspace = true
 ic-cdk-executor.workspace = true
-ic_principal.workspace = true
 slotmap.workspace = true
 
 [dev-dependencies]
