@@ -1480,9 +1480,9 @@ pub enum SnapshotDataKind {
         /// Size of the data in bytes.
         size: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
         /// Size of the data in bytes.
@@ -1567,9 +1567,9 @@ pub enum SnapshotDataOffset {
         /// Offset in bytes.
         offset: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
     },
