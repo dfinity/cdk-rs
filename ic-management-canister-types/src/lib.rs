@@ -634,6 +634,8 @@ pub struct LoadSnapshotRecord {
     pub snapshot_id: SnapshotId,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
+    /// The source from which the snapshot was taken.
+    pub source: SnapshotSource,
 }
 
 /// # Controllers Change Record
@@ -1403,7 +1405,9 @@ pub struct ReadCanisterSnapshotMetadataResult {
 }
 
 /// # The source of a snapshot.
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub enum SnapshotSource {
     /// The snapshot was taken from a canister.
     #[serde(rename = "taken_from_canister")]
