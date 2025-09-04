@@ -443,8 +443,8 @@ type read_canister_snapshot_metadata_args = record {
 
 type read_canister_snapshot_metadata_result = record {
     source : variant {
-        taken_from_canister;
-        metadata_upload;
+        taken_from_canister: reserved;
+        metadata_upload: reserved;
     };
     taken_at_timestamp : nat64;
     wasm_module_size : nat64;

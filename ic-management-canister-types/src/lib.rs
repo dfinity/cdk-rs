@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use candid::{CandidType, Nat, Principal};
+use candid::{CandidType, Nat, Principal, Reserved};
 use serde::{Deserialize, Serialize};
 
 /// # Canister ID.
@@ -1407,10 +1407,10 @@ pub struct ReadCanisterSnapshotMetadataResult {
 pub enum SnapshotSource {
     /// The snapshot was taken from a canister.
     #[serde(rename = "taken_from_canister")]
-    TakenFromCanister,
+    TakenFromCanister(Reserved),
     /// The snapshot was created by uploading metadata.
     #[serde(rename = "metadata_upload")]
-    MetadataUpload,
+    MetadataUpload(Reserved),
 }
 
 /// # An exported global variable.
