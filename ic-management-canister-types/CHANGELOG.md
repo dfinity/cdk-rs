@@ -11,7 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The `TakenFromCanister` and `MetadataUpload` variants in `SnapshotSource` have been updated to use `candid:Reserved` inside.
+- Used `candid:Reserved` inside `TakenFromCanister` and `MetadataUpload` variants in `SnapshotSource`.
+- Renamed `MainMemory` to `WasmMemory` in `SnapshotDataKind` and `SnapshotDataOffset`.
+
+While this is technically a breaking change in the Rust type system, we are treating it as a patch fix.
+This is because the affected types and methods are for new, unreleased features (snapshot download/upload).
+Therefore, no existing services or canisters should be impacted by this change.
 
 ## [0.4.0] - 2025-08-25
 
