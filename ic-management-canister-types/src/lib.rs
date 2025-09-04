@@ -634,6 +634,8 @@ pub struct LoadSnapshotRecord {
     pub snapshot_id: SnapshotId,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
+    /// The source from which the snapshot was taken.
+    pub source: SnapshotSource,
 }
 
 /// # Controllers Change Record
@@ -1403,14 +1405,16 @@ pub struct ReadCanisterSnapshotMetadataResult {
 }
 
 /// # The source of a snapshot.
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub enum SnapshotSource {
     /// The snapshot was taken from a canister.
     #[serde(rename = "taken_from_canister")]
-    TakenFromCanister,
+    TakenFromCanister(candid::Reserved),
     /// The snapshot was created by uploading metadata.
     #[serde(rename = "metadata_upload")]
-    MetadataUpload,
+    MetadataUpload(candid::Reserved),
 }
 
 /// # An exported global variable.
@@ -1480,9 +1484,9 @@ pub enum SnapshotDataKind {
         /// Size of the data in bytes.
         size: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
         /// Size of the data in bytes.
@@ -1567,9 +1571,9 @@ pub enum SnapshotDataOffset {
         /// Offset in bytes.
         offset: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
     },
