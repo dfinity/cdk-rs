@@ -1,18 +1,24 @@
+use async_channel::{Receiver, Sender, TryRecvError};
 use candid::Principal;
+use core::panic;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use ic_cdk::call::Call;
-use ic_cdk::futures::{spawn, spawn_017_compat};
+use ic_cdk::futures::{spawn, spawn_017_compat, spawn_migratory};
 use ic_cdk::{query, update};
 use lazy_static::lazy_static;
 use std::cell::Cell;
+use std::future::Future;
+use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::RwLock;
+use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 lazy_static! {
     static ref RESOURCE: RwLock<u64> = RwLock::new(0);
     static ref NOTIFICATIONS_RECEIVED: RwLock<u64> = RwLock::new(0);
+    static ref CHANNEL: (Sender<()>, Receiver<()>) = async_channel::unbounded();
 }
 
 #[query]
@@ -21,7 +27,7 @@ fn inc(n: u64) -> u64 {
 }
 
 #[query]
-fn invocation_count() -> u64 {
+fn get_locked_resource() -> u64 {
     let lock = RESOURCE
         .read()
         .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a read lock"));
@@ -30,7 +36,7 @@ fn invocation_count() -> u64 {
 
 #[update]
 #[allow(clippy::await_holding_lock)]
-async fn panic_after_async() {
+async fn panic_after_await() {
     let mut lock = RESOURCE
         .write()
         .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
@@ -43,6 +49,29 @@ async fn panic_after_async() {
         .await
         .unwrap();
     ic_cdk::api::trap("Goodbye, cruel world.")
+}
+
+#[update]
+#[allow(clippy::await_holding_lock)]
+async fn panic_after_await_in_spawn_migratory() {
+    spawn_migratory(async move {
+        CHANNEL.1.recv().await.unwrap();
+        let mut lock = RESOURCE
+            .write()
+            .unwrap_or_else(|_| ic_cdk::api::trap("failed to obtain a write lock"));
+        *lock += 1;
+        let value = *lock;
+        Call::bounded_wait(ic_cdk::api::canister_self(), "inc")
+            .with_arg(value)
+            .await
+            .unwrap();
+        panic!("Goodbye, cruel world.");
+    });
+}
+
+#[update]
+async fn migratory_resume() {
+    CHANNEL.0.send(()).await.unwrap();
 }
 
 #[update]
@@ -195,6 +224,70 @@ fn spawn_ordering() {
     );
     spawn(async { on_notify() });
     assert_eq!(notifications_received(), notifs + 1, "spawn should be lazy");
+}
+
+#[update]
+async fn spawn_protected_with_distant_waker() {
+    let caller = ic_cdk::api::msg_caller();
+    thread_local! {
+        static WAKER: Cell<Option<Waker>> = const { Cell::new(None) };
+    }
+    struct RemoteFuture(bool);
+    impl Future for RemoteFuture {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if self.0 {
+                Poll::Ready(())
+            } else {
+                WAKER.set(Some(cx.waker().clone()));
+                self.as_mut().0 = true;
+                Poll::Pending
+            }
+        }
+    }
+    // despite the waker being awoken from a timer...
+    ic_cdk_timers::set_timer(Duration::from_secs(0), async {
+        WAKER.take().unwrap().wake();
+    });
+    let (tx, rx) = async_channel::bounded(1);
+    spawn(async move {
+        RemoteFuture(false).await;
+        // ... the msg data should still match the original task
+        tx.send(ic_cdk::api::msg_caller()).await.unwrap();
+    });
+    loop {
+        match rx.try_recv() {
+            Ok(value) => {
+                assert_eq!(value, caller);
+                break;
+            }
+            Err(TryRecvError::Empty) => {
+                // make calls to keep the method alive while the background task runs
+                Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+                    .await
+                    .unwrap();
+            }
+            Err(TryRecvError::Closed) => panic!("channel closed unexpectedly"),
+        }
+    }
+}
+
+#[update]
+async fn stalled_protected_task() {
+    spawn(std::future::pending());
+    Call::bounded_wait(ic_cdk::api::canister_self(), "on_notify")
+        .await
+        .unwrap();
+}
+
+#[update]
+async fn protected_from_migratory() {
+    spawn_migratory(async {
+        spawn(async {
+            on_notify();
+        });
+    });
 }
 
 fn main() {}

@@ -31,7 +31,7 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
     let target = match std::env::var("WASM64") {
         Ok(_) => {
             cmd.args([
-                "+nightly",
+                "+nightly-2025-05-09", // 1.88.0
                 "build",
                 "-Z",
                 "build-std=std,panic_abort",
