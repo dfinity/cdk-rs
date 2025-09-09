@@ -34,7 +34,7 @@ ic-management-canister-types.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 slotmap.workspace = true
-thiserror = "2.0"
+thiserror.workspace = true
 
 [dev-dependencies]
 anyhow = "1"
