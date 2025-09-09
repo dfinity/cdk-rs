@@ -61,16 +61,9 @@ impl Builder {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Target {
-    Consumer,
-    Provider,
-    Type,
-}
-
 // Code generation.
 impl Builder {
-    fn generate(&self, target: Target) -> Result<()> {
+    pub fn generate(&self) -> Result<()> {
         // 1. Parse the candid file and generate the Output (the struct for bindings)
         let config = Config::new(Configs::from_str("").unwrap());
         let candid_path = if let Some(p) = &self.candid_path {
@@ -85,25 +78,12 @@ impl Builder {
         assert!(unused.is_empty());
 
         // 2. Generate the Rust bindings using the Handlebars template
-        let template = match target {
-            Target::Consumer => include_str!("templates/consumer.hbs"),
-            Target::Provider => include_str!("templates/provider.hbs"),
-            Target::Type => include_str!("templates/type.hbs"),
-        };
+        let template = include_str!("templates/consumer.hbs");
         let mut external = ExternalConfig::default();
-        if target == Target::Consumer {
-            let canister_id = if let Some(p) = &self.canister_id {
-                *p
-            } else {
-                canister_id_from_env(&self.canister_name)?
-            };
-            external
-                .0
-                .insert("canister_id".to_string(), canister_id.to_string());
-        }
+        let canister_id = &self.canister_id.expect("canister_id not set");
         external
             .0
-            .insert("service_name".to_string(), self.canister_name.to_string());
+            .insert("canister_id".to_string(), canister_id.to_string());
         let content = output_handlebar(output, external, template);
 
         // 3. Write the generated Rust bindings to the output directory
@@ -115,21 +95,6 @@ impl Builder {
         writeln!(file, "{content}")?;
         Ok(())
     }
-
-    /// Generate the Rust bindings for consumer (inter-canister calls).
-    pub fn generate_consumer(&self) -> Result<()> {
-        self.generate(Target::Consumer)
-    }
-
-    /// Generate the Rust bindings for provider (implement canister entry-points).
-    pub fn generate_provider(&self) -> Result<()> {
-        self.generate(Target::Provider)
-    }
-
-    /// Generate the Rust bindings for type only (types used in the candid file).
-    pub fn generate_type(&self) -> Result<()> {
-        self.generate(Target::Type)
-    }
 }
 
 // https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.mdx#canister_candid_path_canistername
@@ -139,15 +104,6 @@ fn candid_path_from_env(canister_name: &str) -> Result<PathBuf> {
     let candid_path_str = var_from_env(&candid_path_var_name)?;
     println!("cargo:rerun-if-env-changed={candid_path_var_name}");
     Ok(PathBuf::from(candid_path_str))
-}
-
-// https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.mdx#canister_id_canistername
-fn canister_id_from_env(canister_name: &str) -> Result<Principal> {
-    let canister_name_upper = canister_name.replace('-', "_").to_uppercase();
-    let canister_id_var_name = format!("CANISTER_ID_{}", canister_name_upper);
-    let canister_id_str = var_from_env(&canister_id_var_name)?;
-    println!("cargo:rerun-if-env-changed={canister_id_var_name}");
-    Ok(Principal::from_text(canister_id_str)?)
 }
 
 fn var_from_env(var: &str) -> Result<String> {
