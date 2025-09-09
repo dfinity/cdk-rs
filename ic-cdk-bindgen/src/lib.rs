@@ -3,7 +3,6 @@ use candid_parser::bindings::rust::{Config, ExternalConfig, emit_bindgen, output
 use candid_parser::configs::Configs;
 use candid_parser::pretty_check_file;
 
-use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -40,7 +39,7 @@ impl Builder {
     ///
     /// This is only needed for the consumer target.
     ///
-    /// If not set, the canister id will be resolved from the environment variable `CANISTER_ID_<CANISTER_NAME>`.
+    /// If not set, the bindgen will fail.
     pub fn canister_id<S>(&mut self, canister_id: S) -> &mut Self
     where
         S: Into<Principal>,
@@ -51,7 +50,7 @@ impl Builder {
 
     /// Set the path to the candid file.
     ///
-    /// If not set, the path will be resolved from the environment variable `CANISTER_CANDID_PATH_<CANISTER_NAME>`.
+    /// If not set, the bindgen will fail.
     pub fn candid_path<S>(&mut self, path: S) -> &mut Self
     where
         S: Into<PathBuf>,
@@ -66,13 +65,15 @@ impl Builder {
     pub fn generate(&self) -> Result<()> {
         // 1. Parse the candid file and generate the Output (the struct for bindings)
         let config = Config::new(Configs::from_str("").unwrap());
-        let candid_path = if let Some(p) = &self.candid_path {
-            p.clone()
-        } else {
-            candid_path_from_env(&self.canister_name)?
-        };
+        let candid_path = self.candid_path.as_ref().expect("candid_path not set");
 
-        let (env, actor, prog) = pretty_check_file(&candid_path).expect("Cannot parse candid file");
+        let (env, actor, prog) = pretty_check_file(candid_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to parse candid file ({}): {}",
+                candid_path.display(),
+                e
+            )
+        });
         let (output, unused) = emit_bindgen(&config, &env, &actor, &prog);
         // TODO: handle unused.
         assert!(unused.is_empty());
@@ -95,20 +96,4 @@ impl Builder {
         writeln!(file, "{content}")?;
         Ok(())
     }
-}
-
-// https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.mdx#canister_candid_path_canistername
-fn candid_path_from_env(canister_name: &str) -> Result<PathBuf> {
-    let canister_name_upper = canister_name.replace('-', "_").to_uppercase();
-    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{}", canister_name_upper);
-    let candid_path_str = var_from_env(&candid_path_var_name)?;
-    println!("cargo:rerun-if-env-changed={candid_path_var_name}");
-    Ok(PathBuf::from(candid_path_str))
-}
-
-fn var_from_env(var: &str) -> Result<String> {
-    env::var(var).map_err(|e| IcCdkBindgenError::EnvVarNotFound {
-        var: var.to_string(),
-        source: e,
-    })
 }
