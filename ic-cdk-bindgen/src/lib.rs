@@ -20,7 +20,6 @@ pub struct Builder {
     pub(crate) canister_name: String,
     pub(crate) canister_id: Option<Principal>,
     pub(crate) candid_path: Option<PathBuf>,
-    pub(crate) out_dir: Option<PathBuf>,
 }
 
 // Configurations.
@@ -34,7 +33,6 @@ impl Builder {
             canister_name: canister_name.into(),
             canister_id: None,
             candid_path: None,
-            out_dir: None,
         }
     }
 
@@ -59,22 +57,6 @@ impl Builder {
         S: Into<PathBuf>,
     {
         self.candid_path = Some(path.into());
-        self
-    }
-
-    /// Set the output directory.
-    ///
-    /// If not set, the output directory will be resolved from the environment variable `OUT_DIR` set by cargo.
-    ///
-    /// The generated files will be placed in a subdirectory of the output directory based on the target:
-    /// - `/consumer/` for the [consumer](Self::generate_consumer) target
-    /// - `/provider/` for the [provider](Self::generate_provider) target
-    /// - `/type/` for the [type](Self::generate_type) target
-    pub fn out_dir<S>(&mut self, path: S) -> &mut Self
-    where
-        S: Into<PathBuf>,
-    {
-        self.out_dir = Some(path.into());
         self
     }
 }
@@ -125,20 +107,10 @@ impl Builder {
         let content = output_handlebar(output, external, template);
 
         // 3. Write the generated Rust bindings to the output directory
-        let out_dir = if let Some(p) = &self.out_dir {
-            p.clone()
-        } else {
-            out_dir_from_env()?
-        };
-        let sub_dir_str = match target {
-            Target::Consumer => "consumer",
-            Target::Provider => "provider",
-            Target::Type => "type",
-        };
-        let sub_dir = out_dir.join(sub_dir_str);
-        fs::create_dir_all(&sub_dir)?;
-
-        let generated_path = sub_dir.join(format!("{}.rs", &self.canister_name));
+        let out_dir_str = std::env::var("OUT_DIR")
+            .expect("OUT_DIR should always be set when execute the build.rs script");
+        let out_dir = PathBuf::from(out_dir_str);
+        let generated_path = out_dir.join(format!("{}.rs", &self.canister_name));
         let mut file = fs::File::create(generated_path)?;
         writeln!(file, "{content}")?;
         Ok(())
@@ -176,11 +148,6 @@ fn canister_id_from_env(canister_name: &str) -> Result<Principal> {
     let canister_id_str = var_from_env(&canister_id_var_name)?;
     println!("cargo:rerun-if-env-changed={canister_id_var_name}");
     Ok(Principal::from_text(canister_id_str)?)
-}
-
-fn out_dir_from_env() -> Result<PathBuf> {
-    let out_dir_str = var_from_env("OUT_DIR")?;
-    Ok(PathBuf::from(out_dir_str))
 }
 
 fn var_from_env(var: &str) -> Result<String> {
