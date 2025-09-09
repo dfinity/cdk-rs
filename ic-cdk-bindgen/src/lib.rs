@@ -8,12 +8,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-mod error;
-
-pub use error::IcCdkBindgenError;
-
-type Result<T> = std::result::Result<T, IcCdkBindgenError>;
-
 #[derive(Debug, Clone)]
 pub struct Builder {
     pub(crate) canister_name: String,
@@ -62,7 +56,7 @@ impl Builder {
 
 // Code generation.
 impl Builder {
-    pub fn generate(&self) -> Result<()> {
+    pub fn generate(&self) {
         // 1. Parse the candid file and generate the Output (the struct for bindings)
         let config = Config::new(Configs::from_str("").unwrap());
         let candid_path = self.candid_path.as_ref().expect("candid_path not set");
@@ -92,8 +86,19 @@ impl Builder {
             .expect("OUT_DIR should always be set when execute the build.rs script");
         let out_dir = PathBuf::from(out_dir_str);
         let generated_path = out_dir.join(format!("{}.rs", &self.canister_name));
-        let mut file = fs::File::create(generated_path)?;
-        writeln!(file, "{content}")?;
-        Ok(())
+        let mut file = fs::File::create(&generated_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to create the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
+        writeln!(file, "{content}").unwrap_or_else(|e| {
+            panic!(
+                "failed to write to the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
     }
 }
