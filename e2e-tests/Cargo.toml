@@ -32,3 +32,4 @@ reqwest = "0.12"
 
 [build-dependencies]
 prost-build = "0.14"
+ic-cdk-bindgen.workspace = true

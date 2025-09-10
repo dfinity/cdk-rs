@@ -33,6 +33,7 @@ opt-level = 'z'
 [workspace.dependencies]
 ic0 = { path = "ic0", version = "1.0.0" }
 ic-cdk = { path = "ic-cdk", version = "0.18.7" }
+ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0-alpha.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "0.12.2" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "1.0.2" }
 ic-management-canister-types = { path = "ic-management-canister-types", version = "0.4.1" }
