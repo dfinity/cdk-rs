@@ -4,9 +4,10 @@ fn main() {
         .expect("Failed to compile protos");
 
     // For the `bindgen` test
-    ic_cdk_bindgen::static_callee(
+    ic_cdk_bindgen::Config::new(
         "management_canister",
         "../ic-management-canister-types/tests/ic.did",
-        candid::Principal::management_canister(),
-    );
+    )
+    .static_callee(candid::Principal::management_canister())
+    .generate();
 }

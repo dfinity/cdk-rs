@@ -10,6 +10,8 @@ mod management_canister {
 
 #[update]
 async fn call_management_canister() {
+    // In modern IDE/editors like VSCode, you can often use "Go to Definition" or similar features
+    // to quickly navigate to the generated bindings.
     let _rand = management_canister::raw_rand().await.unwrap();
 }
 

@@ -1,5 +1,7 @@
 use candid::Principal;
-use candid_parser::bindings::rust::{Config, ExternalConfig, emit_bindgen, output_handlebar};
+use candid_parser::bindings::rust::{
+    Config as BindgenConfig, ExternalConfig, emit_bindgen, output_handlebar,
+};
 use candid_parser::configs::Configs;
 use candid_parser::pretty_check_file;
 
@@ -8,49 +10,155 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-/// Generate bindings for a callee canister, the canister ID of it is static (known at compile time).
-pub fn static_callee<S>(canister_name: &str, candid_path: S, canister_id: Principal)
-where
-    S: Into<PathBuf>,
-{
-    // 1. Parse the candid file and generate the Output (the struct for bindings)
-    let config = Config::new(Configs::from_str("").unwrap());
-    let candid_path = candid_path.into();
-    let (env, actor, prog) = pretty_check_file(&candid_path).unwrap_or_else(|e| {
-        panic!(
-            "failed to parse candid file ({}): {}",
-            candid_path.display(),
-            e
-        )
-    });
-    // unused are not handled
-    let (output, _unused) = emit_bindgen(&config, &env, &actor, &prog);
+/// Config for Candid to Rust bindings generation.
+///
+/// # Bindgen Modes
+///
+/// The bindgen has following modes:
+/// - Types only: Only the types definition will be generated. This is the default behavior with [`Self::new`].
+/// - Static callee: The canister ID is known at compile time. Call [`Self::static_callee`] to set it.
+/// - Dynamic callee: The canister ID is determined at runtime via ICP environment variable. Call [`Self::dynamic_callee`] to set it.
+#[derive(Debug)]
+pub struct Config {
+    canister_name: String,
+    candid_path: PathBuf,
+    mode: Mode,
+    type_selector_config_path: Option<PathBuf>,
+}
 
-    // 2. Generate the Rust bindings using the Handlebars template
-    let template = include_str!("templates/static_callee.hbs");
-    let mut external = ExternalConfig::default();
-    external
-        .0
-        .insert("canister_id".to_string(), canister_id.to_string());
-    let content = output_handlebar(output, external, template);
+/// Bindgen mode.
+#[derive(Debug)]
+enum Mode {
+    TypesOnly,
+    StaticCallee { canister_id: Principal },
+    DynamicCallee { env_var_name: String },
+}
 
-    // 3. Write the generated Rust bindings to the output directory
-    let out_dir_str = std::env::var("OUT_DIR")
-        .expect("OUT_DIR should always be set when execute the build.rs script");
-    let out_dir = PathBuf::from(out_dir_str);
-    let generated_path = out_dir.join(format!("{}.rs", canister_name));
-    let mut file = fs::File::create(&generated_path).unwrap_or_else(|e| {
-        panic!(
-            "failed to create the output file ({}): {}",
-            generated_path.display(),
-            e
-        )
-    });
-    writeln!(file, "{content}").unwrap_or_else(|e| {
-        panic!(
-            "failed to write to the output file ({}): {}",
-            generated_path.display(),
-            e
-        )
-    });
+impl Config {
+    /// Create a new `Config` instance.
+    ///
+    /// # Arguments
+    /// - `canister_name` - The name of the canister. This will be used as the generated file name.
+    ///   It is important to ensure that this name is valid for use in a file system (no
+    ///   spaces, special characters, or other characters that could cause issues with file paths).
+    /// - `candid_path` - The path to the Candid file.
+    pub fn new<N, P>(canister_name: N, candid_path: P) -> Self
+    where
+        N: Into<String>,
+        P: Into<PathBuf>,
+    {
+        Self {
+            canister_name: canister_name.into(),
+            candid_path: candid_path.into(),
+            mode: Mode::TypesOnly,
+            type_selector_config_path: None,
+        }
+    }
+
+    /// Changes the bindgen mode to "Static callee", where the canister ID is known at compile time.
+    ///
+    /// This mode hardcodes the target canister ID in the generated code, making it suitable
+    /// for deployments where the canister ID is fixed and known at compile time.
+    ///
+    /// # Arguments
+    ///
+    /// - `canister_id` - The Principal ID of the target canister
+    pub fn static_callee<S>(&mut self, canister_id: S) -> &mut Self
+    where
+        S: Into<Principal>,
+    {
+        if !matches!(self.mode, Mode::TypesOnly) {
+            panic!("The bindgen mode has already been set.");
+        }
+        self.mode = Mode::StaticCallee {
+            canister_id: canister_id.into(),
+        };
+        self
+    }
+
+    /// Changes the bindgen mode to "Dynamic callee", where the canister ID is determined at runtime.
+    ///
+    /// This mode allows the canister ID to be resolved dynamically from an Internet Computer (ICP)
+    /// environment variable, making it suitable for deployments where the target canister ID
+    /// may change across environments.
+    ///
+    /// # Arguments
+    ///
+    /// - `env_var_name` - The name of the ICP environment variable containing the canister ID.
+    pub fn dynamic_callee<S>(&mut self, env_var_name: S) -> &mut Self
+    where
+        S: Into<String>,
+    {
+        if !matches!(self.mode, Mode::TypesOnly) {
+            panic!("The bindgen mode has already been set.");
+        }
+        self.mode = Mode::DynamicCallee {
+            env_var_name: env_var_name.into(),
+        };
+        self
+    }
+
+    /// Generate the bindings.
+    ///
+    /// The generated bindings will be written to the output directory specified by the
+    /// `OUT_DIR` environment variable. The file will be named after the canister name.
+    /// For example, if the canister name is "my_canister", the generated file will be
+    /// located at `$OUT_DIR/my_canister.rs`.
+    pub fn generate(&self) {
+        // 1. Parse the candid file and generate the Output (the struct for bindings)
+        let config = BindgenConfig::new(Configs::from_str("").unwrap());
+        let (env, actor, prog) = pretty_check_file(&self.candid_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to parse candid file ({}): {}",
+                self.candid_path.display(),
+                e
+            )
+        });
+        // unused are not handled
+        let (output, _unused) = emit_bindgen(&config, &env, &actor, &prog);
+
+        // 2. Generate the Rust bindings using the Handlebars template
+        assert!(self.type_selector_config_path.is_none());
+        let mut external = ExternalConfig::default();
+        let content = match &self.mode {
+            Mode::StaticCallee { canister_id } => {
+                let template = include_str!("templates/static_callee.hbs");
+                external
+                    .0
+                    .insert("canister_id".to_string(), canister_id.to_string());
+                output_handlebar(output, external, template)
+            }
+            Mode::DynamicCallee { env_var_name } => {
+                let template = include_str!("templates/dynamic_callee.hbs");
+                external
+                    .0
+                    .insert("env_var_name".to_string(), env_var_name.to_string());
+                output_handlebar(output, external, template)
+            }
+            Mode::TypesOnly => {
+                let template = include_str!("templates/types_only.hbs");
+                output_handlebar(output, external, template)
+            }
+        };
+
+        // 3. Write the generated Rust bindings to the output directory
+        let out_dir_str = std::env::var("OUT_DIR")
+            .expect("OUT_DIR should always be set when execute the build.rs script");
+        let out_dir = PathBuf::from(out_dir_str);
+        let generated_path = out_dir.join(format!("{}.rs", self.canister_name));
+        let mut file = fs::File::create(&generated_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to create the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
+        writeln!(file, "{content}").unwrap_or_else(|e| {
+            panic!(
+                "failed to write to the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
+    }
 }
