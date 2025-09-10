@@ -15,7 +15,14 @@ async fn call_management_canister() {
     let _rand = management_canister::raw_rand().await.unwrap();
 }
 
-// Running this main function can refresh the build script execution.
-fn main() {
-    println!("{}", env!("OUT_DIR"));
+#[allow(dead_code, unused_imports)]
+mod bindgen_callee {
+    include!(concat!(env!("OUT_DIR"), "/bindgen_callee.rs"));
 }
+
+#[update]
+async fn call_bindgen_callee() {
+    assert_eq!(bindgen_callee::add(&1, &2).await.unwrap(), 3);
+}
+
+fn main() {}

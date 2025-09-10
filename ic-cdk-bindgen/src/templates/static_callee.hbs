@@ -1,10 +1,12 @@
 use {{candid_crate}}::{CandidType, Deserialize, Principal};
 use ic_cdk::call::{Call, CallResult};
-
+// START -- Types
 {{type_defs}}
-
+// END   -- Types
+/// Canister ID: `{{canister_id}}`
+pub const CANISTER_ID : Principal = Principal::from_slice(&[{{principal_slice canister_id}}]);
+// START -- Methods
 {{#if methods}}
-
 {{#each methods}}
 {{#each this.docs}}
 {{../../doc_comment_prefix}}{{this}}
@@ -13,8 +15,5 @@ pub async fn {{this.name}}({{#each this.args}}{{this.0}}: &{{this.1}}, {{/each}}
     Ok(Call::bounded_wait(CANISTER_ID, "{{escape_debug this.original_name}}"){{#if (eq (len this.args) 0)}}{{else}}{{#if (eq (len this.args) 1)}}.with_arg({{this.args.0.0}}){{else}}.with_args(&({{#each this.args}}{{this.0}}{{#unless @last}}, {{/unless}}{{/each}})){{/if}}{{/if}}.await?.candid()?)
 }
 {{/each}}
-
 {{/if}}
-
-{{doc_comment_prefix}}Canister ID: `{{canister_id}}`
-pub const CANISTER_ID : Principal = Principal::from_slice(&[{{principal_slice canister_id}}]);
+// END   -- Methods

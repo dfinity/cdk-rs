@@ -10,4 +10,7 @@ fn main() {
     )
     .static_callee(candid::Principal::management_canister())
     .generate();
+    ic_cdk_bindgen::Config::new("bindgen_callee", "src/bin/bindgen_callee/callee.did")
+        .dynamic_callee("ICP_CANISTER_ID:bindgen_callee")
+        .generate();
 }
