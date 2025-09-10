@@ -9,10 +9,14 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 /// Generate bindings for a callee canister, the canister ID of it is static (known at compile time).
-pub fn static_callee(canister_name: &str, candid_path: &PathBuf, canister_id: Principal) {
+pub fn static_callee<S>(canister_name: &str, candid_path: S, canister_id: Principal)
+where
+    S: Into<PathBuf>,
+{
     // 1. Parse the candid file and generate the Output (the struct for bindings)
     let config = Config::new(Configs::from_str("").unwrap());
-    let (env, actor, prog) = pretty_check_file(candid_path).unwrap_or_else(|e| {
+    let candid_path = candid_path.into();
+    let (env, actor, prog) = pretty_check_file(&candid_path).unwrap_or_else(|e| {
         panic!(
             "failed to parse candid file ({}): {}",
             candid_path.display(),
