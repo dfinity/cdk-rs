@@ -23,7 +23,7 @@ pub fn static_callee(canister_name: &str, candid_path: &PathBuf, canister_id: Pr
     let (output, _unused) = emit_bindgen(&config, &env, &actor, &prog);
 
     // 2. Generate the Rust bindings using the Handlebars template
-    let template = include_str!("templates/consumer.hbs");
+    let template = include_str!("templates/static_callee.hbs");
     let mut external = ExternalConfig::default();
     external
         .0
