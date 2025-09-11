@@ -1,8 +1,7 @@
 use ic_cdk::update;
 
-// It's likely that not all the types/methods in the binding will be used.
-// So it's a common practice to allow dead_code and unused_imports.
-// The lint only affects this inner module.
+// It's a common practice to suppress the warnings from generated code.
+// These attributes are scoped to the module to avoid affecting other code.
 #[allow(dead_code, unused_imports)]
 mod management_canister {
     include!(concat!(env!("OUT_DIR"), "/management_canister.rs"));
