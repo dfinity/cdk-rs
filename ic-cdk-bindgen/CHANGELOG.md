@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New API Design
 
-The `ic-cdk-bindgen` crate got a new API design to better work with `ic-cdk` v0.18 and later.
-- The entry point is the `Config` type, in which the canister name and candid path must be specified explicitly.
+The `ic-cdk-bindgen` crate introduces a completely redesigned API to integrate seamlessly with `ic-cdk` v0.18 and later:
+- The new API centers around the `Config` struct, requiring explicit specification of canister name and candid path.
 - The bindgen now supports two modes:
   - `static_callee`: The canister ID is known at compile time.
   - `dynamic_callee`: The canister ID will be fetched via ICP environment variables at runtime.
