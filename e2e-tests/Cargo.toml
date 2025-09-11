@@ -17,6 +17,7 @@ futures.workspace = true
 ic-cdk = { workspace = true, features = ["transform-closure"] }
 ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
+serde.workspace = true
 serde_bytes.workspace = true
 sha2.workspace = true
 prost = "0.14"
@@ -32,3 +33,5 @@ reqwest = "0.12"
 
 [build-dependencies]
 prost-build = "0.14"
+ic-cdk-bindgen.workspace = true
+candid.workspace = true

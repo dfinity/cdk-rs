@@ -1,141 +1,174 @@
+#![allow(clippy::needless_doctest_main)]
+#![doc = include_str!("../README.md")]
+
 use candid::Principal;
+use candid_parser::bindings::rust::{
+    Config as BindgenConfig, ExternalConfig, emit_bindgen, output_handlebar,
+};
+use candid_parser::configs::Configs;
 use candid_parser::pretty_check_file;
-use std::env;
+
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
-mod code_generator;
-
-#[derive(Clone)]
+/// Config for Candid to Rust bindings generation.
+///
+/// # Choose Bindgen Modes
+///
+/// The bindgen has following modes:
+/// - Types only: Only the types definition will be generated. This is the default behavior with [`Self::new`].
+/// - Static callee: The canister ID is known at compile time. Call [`Self::static_callee`] to set it.
+/// - Dynamic callee: The canister ID is determined at runtime via ICP environment variable. Call [`Self::dynamic_callee`] to set it.
+///
+/// # Generate Bindings
+///
+/// After configuring your bindgen settings through the methods above, you must call
+/// [`Self::generate`] to actually produce the Rust bindings.
+#[derive(Debug)]
 pub struct Config {
-    pub canister_name: String,
-    pub candid_path: PathBuf,
-    pub skip_existing_files: bool,
-    pub binding: code_generator::Config,
+    canister_name: String,
+    candid_path: PathBuf,
+    mode: Mode,
+    type_selector_config_path: Option<PathBuf>, // TODO: Implement type selector config
+}
+
+/// Bindgen mode.
+#[derive(Debug)]
+enum Mode {
+    TypesOnly,
+    StaticCallee { canister_id: Principal },
+    DynamicCallee { env_var_name: String },
 }
 
 impl Config {
-    pub fn new(canister_name: &str) -> Self {
-        let (candid_path, canister_id) = resolve_candid_path_and_canister_id(canister_name);
-        let mut binding = code_generator::Config::new();
-        binding
-            // User will depend on candid crate directly
-            .set_candid_crate("candid".to_string())
-            .set_canister_id(canister_id)
-            .set_service_name(canister_name.to_string())
-            .set_target(code_generator::Target::CanisterCall);
-
-        Config {
-            canister_name: canister_name.to_string(),
-            candid_path,
-            skip_existing_files: false,
-            binding,
+    /// Create a new `Config` instance.
+    ///
+    /// # Arguments
+    /// - `canister_name` - The name of the canister. This will be used as the generated file name.
+    ///   It is important to ensure that this name is valid for use in a file system (no
+    ///   spaces, special characters, or other characters that could cause issues with file paths).
+    /// - `candid_path` - The path to the Candid file.
+    pub fn new<N, P>(canister_name: N, candid_path: P) -> Self
+    where
+        N: Into<String>,
+        P: Into<PathBuf>,
+    {
+        Self {
+            canister_name: canister_name.into(),
+            candid_path: candid_path.into(),
+            mode: Mode::TypesOnly,
+            type_selector_config_path: None,
         }
     }
-}
 
-/// Resolve the candid path and canister id from environment variables.
-///
-/// The name and format of the environment variables are standardized:
-/// <https://github.com/dfinity/sdk/blob/master/docs/cli-reference/dfx-envars.md#canister_id_canistername>
-///
-/// We previously used environment variables like `CANISTER_CANDID_PATH_<canister_name>` without `to_uppercase`.
-/// That is deprecated. To keep backward compatibility, we also check for the old format.
-/// Just in case the user runs `ic-cdk-bindgen` outside `dfx`.
-/// If the old format is found, we print a warning to the user.
-/// dfx v0.13.0 only provides the old format, which can be used to check the warning logic.
-/// TODO: remove the support for the old format, in the next major release (v0.2) of `ic-cdk-bindgen`.
-fn resolve_candid_path_and_canister_id(canister_name: &str) -> (PathBuf, Principal) {
-    fn warning_deprecated_env(deprecated_name: &str, new_name: &str) {
-        println!(
-            "cargo:warning=The environment variable {deprecated_name} is deprecated. Please set {new_name} instead. Upgrading dfx may fix this issue."
-        );
-    }
-
-    let canister_name = canister_name.replace('-', "_");
-    let canister_name_upper = canister_name.to_uppercase();
-
-    let candid_path_var_name = format!("CANISTER_CANDID_PATH_{canister_name_upper}");
-    let candid_path_var_name_legacy = format!("CANISTER_CANDID_PATH_{canister_name}");
-    println!("cargo:rerun-if-env-changed={candid_path_var_name}");
-    println!("cargo:rerun-if-env-changed={candid_path_var_name_legacy}");
-
-    let candid_path_str = if let Ok(candid_path_str) = env::var(&candid_path_var_name) {
-        candid_path_str
-    } else if let Ok(candid_path_str) = env::var(&candid_path_var_name_legacy) {
-        warning_deprecated_env(&candid_path_var_name_legacy, &candid_path_var_name);
-        candid_path_str
-    } else {
-        panic!(
-            "Cannot find environment variable: {}",
-            &candid_path_var_name
-        );
-    };
-    let candid_path = PathBuf::from(candid_path_str);
-
-    let canister_id_var_name = format!("CANISTER_ID_{canister_name_upper}");
-    let canister_id_var_name_legacy = format!("CANISTER_ID_{canister_name}");
-    println!("cargo:rerun-if-env-changed={canister_id_var_name}");
-    println!("cargo:rerun-if-env-changed={canister_id_var_name_legacy}");
-    let canister_id_str = if let Ok(canister_id_str) = env::var(&canister_id_var_name) {
-        canister_id_str
-    } else if let Ok(canister_id_str) = env::var(&canister_id_var_name_legacy) {
-        warning_deprecated_env(&canister_id_var_name_legacy, &canister_id_var_name);
-        canister_id_str
-    } else {
-        panic!(
-            "Cannot find environment variable: {}",
-            &canister_id_var_name
-        );
-    };
-    let canister_id = Principal::from_text(&canister_id_str)
-        .unwrap_or_else(|_| panic!("Invalid principal: {}", &canister_id_str));
-
-    (candid_path, canister_id)
-}
-
-#[derive(Default)]
-pub struct Builder {
-    configs: Vec<Config>,
-}
-
-impl Builder {
-    pub fn new() -> Self {
-        Builder {
-            configs: Vec::new(),
+    /// Changes the bindgen mode to "Static callee", where the canister ID is known at compile time.
+    ///
+    /// This mode hardcodes the target canister ID in the generated code, making it suitable
+    /// for deployments where the canister ID is fixed and known at compile time.
+    ///
+    /// # Arguments
+    ///
+    /// - `canister_id` - The Principal ID of the target canister
+    pub fn static_callee<S>(&mut self, canister_id: S) -> &mut Self
+    where
+        S: Into<Principal>,
+    {
+        if !matches!(self.mode, Mode::TypesOnly) {
+            panic!("The bindgen mode has already been set.");
         }
-    }
-    pub fn add(&mut self, config: Config) -> &mut Self {
-        self.configs.push(config);
+        self.mode = Mode::StaticCallee {
+            canister_id: canister_id.into(),
+        };
         self
     }
-    pub fn build(self, out_path: Option<PathBuf>) {
-        let out_path = out_path.unwrap_or_else(|| {
-            let manifest_dir =
-                PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("Cannot find manifest dir"));
-            manifest_dir.join("src").join("declarations")
+
+    /// Changes the bindgen mode to "Dynamic callee", where the canister ID is determined at runtime.
+    ///
+    /// This mode allows the canister ID to be resolved dynamically from an Internet Computer (ICP)
+    /// environment variable, making it suitable for deployments where the target canister ID
+    /// may change across environments.
+    ///
+    /// # Arguments
+    ///
+    /// - `env_var_name` - The name of the ICP environment variable containing the canister ID.
+    pub fn dynamic_callee<S>(&mut self, env_var_name: S) -> &mut Self
+    where
+        S: Into<String>,
+    {
+        if !matches!(self.mode, Mode::TypesOnly) {
+            panic!("The bindgen mode has already been set.");
+        }
+        self.mode = Mode::DynamicCallee {
+            env_var_name: env_var_name.into(),
+        };
+        self
+    }
+
+    /// Generate the bindings.
+    ///
+    /// The generated bindings will be written to the output directory specified by the
+    /// `OUT_DIR` environment variable. The file will be named after the canister name.
+    /// For example, if the canister name is "my_canister", the generated file will be
+    /// located at `$OUT_DIR/my_canister.rs`.
+    pub fn generate(&self) {
+        // 1. Parse the candid file and generate the Output (the struct for bindings)
+        let config = BindgenConfig::new(Configs::from_str("").unwrap());
+        // This tells Cargo to re-run the build-script if the Candid file changes.
+        println!("cargo:rerun-if-changed={}", self.candid_path.display());
+        let (env, actor, prog) = pretty_check_file(&self.candid_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to parse candid file ({}): {}",
+                self.candid_path.display(),
+                e
+            )
         });
-        fs::create_dir_all(&out_path).unwrap();
-        for conf in &self.configs {
-            let (env, actor) =
-                pretty_check_file(&conf.candid_path).expect("Cannot parse candid file");
-            let content = code_generator::compile(&conf.binding, &env, actor.as_ref());
-            let generated_path = out_path.join(format!("{}.rs", conf.canister_name));
-            if !(conf.skip_existing_files && generated_path.exists()) {
-                fs::write(generated_path, content).expect("Cannot store generated binding");
+        // unused are not handled
+        let (output, _unused) = emit_bindgen(&config, &env, &actor, &prog);
+
+        // 2. Generate the Rust bindings using the Handlebars template
+        assert!(self.type_selector_config_path.is_none());
+        let mut external = ExternalConfig::default();
+        let content = match &self.mode {
+            Mode::StaticCallee { canister_id } => {
+                let template = include_str!("templates/static_callee.hbs");
+                external
+                    .0
+                    .insert("canister_id".to_string(), canister_id.to_string());
+                output_handlebar(output, external, template)
             }
-        }
-        let mut module = fs::File::create(out_path.join("mod.rs")).unwrap();
-        module.write_all(b"#![allow(unused_imports)]\n").unwrap();
-        module
-            .write_all(b"#![allow(non_upper_case_globals)]\n")
-            .unwrap();
-        module.write_all(b"#![allow(non_snake_case)]\n").unwrap();
-        for conf in &self.configs {
-            module.write_all(b"#[rustfmt::skip]\n").unwrap(); // so that we get a better diff
-            let line = format!("pub mod {};\n", conf.canister_name);
-            module.write_all(line.as_bytes()).unwrap();
-        }
+            Mode::DynamicCallee { env_var_name } => {
+                let template = include_str!("templates/dynamic_callee.hbs");
+                external
+                    .0
+                    .insert("env_var_name".to_string(), env_var_name.to_string());
+                output_handlebar(output, external, template)
+            }
+            Mode::TypesOnly => {
+                let template = include_str!("templates/types_only.hbs");
+                output_handlebar(output, external, template)
+            }
+        };
+
+        // 3. Write the generated Rust bindings to the output directory
+        let out_dir_str = std::env::var("OUT_DIR")
+            .expect("OUT_DIR should always be set when execute the build.rs script");
+        let out_dir = PathBuf::from(out_dir_str);
+        let generated_path = out_dir.join(format!("{}.rs", self.canister_name));
+        let mut file = fs::File::create(&generated_path).unwrap_or_else(|e| {
+            panic!(
+                "failed to create the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
+        writeln!(file, "{content}").unwrap_or_else(|e| {
+            panic!(
+                "failed to write to the output file ({}): {}",
+                generated_path.display(),
+                e
+            )
+        });
     }
 }

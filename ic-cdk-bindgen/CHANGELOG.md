@@ -6,15 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-- Support canister setting `log_visibility`.
+### New API Design
 
-### Changed
-
-- Refactor!: move Rust code generation logic from candid_parser. (#480)
-
-### Fixed
-
-- Re-generate bindings if the canister ids changed (e.g. when switching networks) or when the path to the candid file of a dependency changed. (#479)
+The `ic-cdk-bindgen` crate introduces a completely redesigned API to integrate seamlessly with `ic-cdk` v0.18 and later:
+- The new API centers around the `Config` struct, requiring explicit specification of canister name and candid path.
+- The bindgen now supports two modes:
+  - `static_callee`: The canister ID is known at compile time.
+  - `dynamic_callee`: The canister ID will be fetched via ICP environment variables at runtime.
+- Removed implicit handling of `dfx` environment variables. See the "Use with `dfx`" section in the crate documentation for more info.
 
 ## [0.1.3] - 2024-02-27
 
