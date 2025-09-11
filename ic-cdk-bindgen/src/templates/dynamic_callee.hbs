@@ -7,10 +7,12 @@ use ic_cdk::call::{Call, CallResult};
 #[inline]
 pub fn __get_canister_id() -> Principal {
     if !::ic_cdk::api::env_var_name_exists("{{env_var_name}}") {
-        panic!("Environment variable `{{env_var_name}}` is not set. Canister controller can set it using tools like icp-cli.");
+        panic!("env var `{{env_var_name}}` is not set. Canister controller can set it using tools like icp-cli.");
     }
     let canister_id_str = ::ic_cdk::api::env_var_value("{{env_var_name}}");
-    Principal::from_text(&canister_id_str).expect("Invalid Principal, env_var: `{{env_var_name}}` - {canister_id_str}")
+    Principal::from_text(&canister_id_str).unwrap_or_else(|e| {
+        panic!("failed to parse Principal from env var `{{env_var_name}}`, value `{}`: {}", canister_id_str, e)
+    })
 }
 // START -- Methods
 {{#if methods}}
