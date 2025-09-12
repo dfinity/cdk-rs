@@ -11,7 +11,7 @@ The goal is to conveniently make inter-canister calls to the canister `callee`.
 First, add `ic-cdk-bindgen` as a build dependency to `Cargo.toml`.
 
 ```bash
-$ cargo add --build ic-cdk-bindgen
+cargo add --build ic-cdk-bindgen
 ```
 
 Next, add the Candid interface file of the `callee` canister (e.g., at `candid/callee.did`).
@@ -21,7 +21,7 @@ To generate Rust code from `callee.did`, we use `ic-cdk-bindgen` in the crate's 
 ```rust,no_run
 // build.rs
 fn main() {
-#   let CALLEE_CANISTER_ID : candid::Principal = todo!();
+    let CALLEE_CANISTER_ID : candid::Principal = todo!();
     ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
         .static_callee(CALLEE_CANISTER_ID)
         .generate();
