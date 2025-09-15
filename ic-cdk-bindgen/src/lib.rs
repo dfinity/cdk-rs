@@ -106,6 +106,20 @@ impl Config {
         self
     }
 
+    /// Sets the path to the type selector configuration file.
+    ///
+    /// The "type selector config" is a TOML file that specifies how certain Candid types
+    /// should be mapped to Rust types (attributes, visibility, etc.). Please refer to the
+    /// [specification](https://github.com/dfinity/candid/blob/master/spec/Type-selector.md#rust-binding-configuration)
+    /// for more details.
+    pub fn set_type_selector_config<P>(&mut self, path: P) -> &mut Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.type_selector_config_path = Some(path.into());
+        self
+    }
+
     /// Generate the bindings.
     ///
     /// The generated bindings will be written to the output directory specified by the
@@ -113,8 +127,22 @@ impl Config {
     /// For example, if the canister name is "my_canister", the generated file will be
     /// located at `$OUT_DIR/my_canister.rs`.
     pub fn generate(&self) {
+        // 0. Load type selector config if provided
+        let type_selector_configs_str = match &self.type_selector_config_path {
+            Some(p) => fs::read_to_string(p).unwrap_or_else(|e| {
+                panic!(
+                    "failed to read the type selector config file ({}): {}",
+                    p.display(),
+                    e
+                )
+            }),
+            None => "".to_string(),
+        };
+        let type_selector_configs = Configs::from_str(&type_selector_configs_str)
+            .unwrap_or_else(|e| panic!("failed to parse the type selector config: {}", e));
+        let rust_bindgen_config = BindgenConfig::new(type_selector_configs);
+
         // 1. Parse the candid file and generate the Output (the struct for bindings)
-        let config = BindgenConfig::new(Configs::from_str("").unwrap());
         // This tells Cargo to re-run the build-script if the Candid file changes.
         println!("cargo:rerun-if-changed={}", self.candid_path.display());
         let (env, actor, prog) = pretty_check_file(&self.candid_path).unwrap_or_else(|e| {
@@ -125,10 +153,9 @@ impl Config {
             )
         });
         // unused are not handled
-        let (output, _unused) = emit_bindgen(&config, &env, &actor, &prog);
+        let (output, _unused) = emit_bindgen(&rust_bindgen_config, &env, &actor, &prog);
 
         // 2. Generate the Rust bindings using the Handlebars template
-        assert!(self.type_selector_config_path.is_none());
         let mut external = ExternalConfig::default();
         let content = match &self.mode {
             Mode::StaticCallee { canister_id } => {

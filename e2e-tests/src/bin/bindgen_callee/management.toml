@@ -1,0 +1,2 @@
+[rust]
+blob.use_type = "Vec<u8>"
