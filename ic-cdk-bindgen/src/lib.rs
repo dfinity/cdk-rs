@@ -129,13 +129,16 @@ impl Config {
     pub fn generate(&self) {
         // 0. Load type selector config if provided
         let type_selector_configs_str = match &self.type_selector_config_path {
-            Some(p) => fs::read_to_string(p).unwrap_or_else(|e| {
-                panic!(
-                    "failed to read the type selector config file ({}): {}",
-                    p.display(),
-                    e
-                )
-            }),
+            Some(p) => {
+                println!("cargo:rerun-if-changed={}", p.display());
+                fs::read_to_string(p).unwrap_or_else(|e| {
+                    panic!(
+                        "failed to read the type selector config file ({}): {}",
+                        p.display(),
+                        e
+                    )
+                })
+            }
             None => "".to_string(),
         };
         let type_selector_configs = Configs::from_str(&type_selector_configs_str)
