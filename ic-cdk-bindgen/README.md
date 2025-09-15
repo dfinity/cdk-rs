@@ -92,7 +92,6 @@ Then, add the type selector configuration to your build script using `set_type_s
 // build.rs
 fn main() {
     ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
-        .static_callee(CALLEE_CANISTER_ID)
         .set_type_selector_config("path/to/callee.toml")
         .dynamic_callee("ICP_CANISTER_ID:callee")
         .generate();
