@@ -11,7 +11,7 @@ The goal is to conveniently make inter-canister calls to the canister `callee`.
 First, add `ic-cdk-bindgen` as a build dependency to `Cargo.toml`.
 
 ```bash
-$ cargo add --build ic-cdk-bindgen
+cargo add --build ic-cdk-bindgen
 ```
 
 Next, add the Candid interface file of the `callee` canister (e.g., at `candid/callee.did`).
@@ -21,7 +21,7 @@ To generate Rust code from `callee.did`, we use `ic-cdk-bindgen` in the crate's 
 ```rust,no_run
 // build.rs
 fn main() {
-#   let CALLEE_CANISTER_ID : candid::Principal = todo!();
+    let CALLEE_CANISTER_ID : candid::Principal = todo!();
     ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
         .static_callee(CALLEE_CANISTER_ID)
         .generate();
@@ -75,7 +75,7 @@ Then the generated code will use the canister ID from the environment variable a
 The `candid` project specifies a "Type Selector" configuration language that controls the details of Rust code generation.
 You can use type selectors to customize how Candid types are translated to Rust types.
 
-First, add a `toml` file which has a `rust` map at the top level.
+First, create a TOML file for your canister (e.g., `callee.toml`) with a `rust` table at the top level. For example:
 
 ```toml
 # callee.toml
@@ -86,7 +86,7 @@ blob.use_type = "Vec<u8>"
 change_details.variant.creation.name = "CreationRecord"
 ```
 
-Next, invoke the `set_type_selector_config` method to set the path.
+Then, add the type selector configuration to your build script using `set_type_selector_config`:
 
 ```rust,no_run
 // build.rs
