@@ -13,6 +13,7 @@ The `ic-cdk-bindgen` crate introduces a completely redesigned API to integrate s
 - The bindgen now supports two modes:
   - `static_callee`: The canister ID is known at compile time.
   - `dynamic_callee`: The canister ID will be fetched via ICP environment variables at runtime.
+- The "Type Selector" config can be set to customize how Candid types are translated to Rust types.
 - Removed implicit handling of `dfx` environment variables. See the "Use with `dfx`" section in the crate documentation for more info.
 
 ## [0.1.3] - 2024-02-27
