@@ -38,7 +38,9 @@ mod callee {
 
 #[ic_cdk::update]
 async fn invoke_callee() {
-    let _result = callee::invoke().await;
+    // In modern IDE/editors like VSCode, you can often use "Go to Definition" or similar features
+    // to quickly navigate to the generated bindings.
+    let _result = callee::some_method().await;
 }
 ```
 
@@ -67,6 +69,39 @@ fn main() {
 ```
 
 Then the generated code will use the canister ID from the environment variable at runtime.
+
+## Type Selector Config
+
+The `candid` project specifies a "Type Selector" configuration language that controls the details of Rust code generation.
+You can use type selectors to customize how Candid types are translated to Rust types.
+
+First, create a TOML file for your canister (e.g., `callee.toml`) with a `rust` table at the top level. For example:
+
+```toml
+# callee.toml
+[rust]
+visibility = "pub(crate)"
+attributes = "#[derive(CandidType, Deserialize, Clone, Debug)]"
+blob.use_type = "Vec<u8>"
+change_details.variant.creation.name = "CreationRecord"
+```
+
+Then, add the type selector configuration to your build script using `set_type_selector_config`:
+
+```rust,no_run
+// build.rs
+fn main() {
+    ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
+        .set_type_selector_config("path/to/callee.toml")
+        .dynamic_callee("ICP_CANISTER_ID:callee")
+        .generate();
+}
+```
+
+The updated bindings can be seen by using the "Go to definition" or similar features from your IDE/editors.
+
+For more details on type selector syntax and capabilities, refer to the [specification](https://github.com/dfinity/candid/blob/master/spec/Type-selector.md#rust-binding-configuration).
+
 
 ## Use with `dfx`
 
