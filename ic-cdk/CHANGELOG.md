@@ -39,6 +39,7 @@ This annotation prevents the warning from being triggered for the macro-generate
 
 ### Changed
 
+- Updated to version 1.1 of the async executor. The `spawn` function now creates protected tasks that panic if they outlive the canister method (with a new `spawn_migratory` functions for tasks that are supposed to outlive the method). A trap will now cancel all protected tasks in the method it is part of. See the [module docs](https://docs.rs/ic-cdk/0.19.0/ic_cdk/futures/index.html) for more information.
 - MSRV raised to 1.85.0.
 
 ## [0.18.5] - 2025-06-25
