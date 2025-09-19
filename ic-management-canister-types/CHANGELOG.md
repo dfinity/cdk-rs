@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+- `ready_for_migration` and `version` to `CanisterStatusResult`.
+- `registry_version` to `SubnetInfoResult`. 
+
 ## [0.4.1] - 2025-09-04
 
 ### Fixed
