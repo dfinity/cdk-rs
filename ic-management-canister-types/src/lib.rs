@@ -398,6 +398,10 @@ pub type CanisterStatusArgs = CanisterIdRecord;
 pub struct CanisterStatusResult {
     /// Status of the canister.
     pub status: CanisterStatusType,
+    /// Indicates whether this canister can be migrated.
+    pub ready_for_migration: bool,
+    /// Canister version.
+    pub version: u64,
     /// Canister settings in effect.
     pub settings: DefiniteCanisterSettings,
     /// A SHA256 hash of the module installed on the canister. This is null if the canister is empty.
@@ -1252,6 +1256,7 @@ pub struct SubnetInfoArgs {
 pub struct SubnetInfoResult {
     /// Replica version of the subnet.
     pub replica_version: String,
+    pub registry_version: u64,
 }
 
 /// # Provisional Create Canister With Cycles Args.
