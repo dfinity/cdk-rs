@@ -123,7 +123,7 @@ fn with_guards() {}
 
 fn guard1() -> Result<(), String> {
     let input = ic_cdk::api::msg_arg_data();
-    if input[0] % 3 != 0 {
+    if !input[0].is_multiple_of(3) {
         Err("guard1 failed".to_string())
     } else {
         Ok(())
@@ -132,7 +132,7 @@ fn guard1() -> Result<(), String> {
 
 fn guard2() -> Result<(), String> {
     let input = ic_cdk::api::msg_arg_data();
-    if input[0] % 5 != 0 {
+    if !input[0].is_multiple_of(5) {
         Err("guard2 failed".to_string())
     } else {
         Ok(())
