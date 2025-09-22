@@ -565,7 +565,6 @@ mod transform_closure {
         transform_context_from_query,
     };
     use candid::{decode_one, encode_one};
-    use ic_cdk_executor::in_query_executor_context;
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
     use std::cell::RefCell;
 
@@ -574,9 +573,16 @@ mod transform_closure {
         static TRANSFORMS: RefCell<SlotMap<DefaultKey, Box<dyn FnOnce(HttpRequestResult) -> HttpRequestResult>>> = RefCell::default();
     }
 
-    #[unsafe(export_name = "canister_query <ic-cdk internal> http_transform")]
+    #[cfg_attr(
+        target_family = "wasm",
+        unsafe(export_name = "canister_query <ic-cdk internal> http_transform")
+    )]
+    #[cfg_attr(
+        not(target_family = "wasm"),
+        unsafe(export_name = "canister_query_ic_cdk_internal.http_transform")
+    )]
     extern "C" fn http_transform() {
-        in_query_executor_context(|| {
+        ic_cdk_executor::in_tracking_query_executor_context(|| {
             use crate::api::{msg_arg_data, msg_caller, msg_reply};
             if msg_caller() != Principal::management_canister() {
                 crate::trap(
