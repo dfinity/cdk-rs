@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use candid::{CandidType, Nat, Principal};
+use candid::{CandidType, Nat, Principal, Reserved};
 use serde::{Deserialize, Serialize};
 
 /// # Canister ID.
@@ -44,6 +44,17 @@ pub enum LogVisibility {
     /// Allowed viewers.
     #[serde(rename = "allowed_viewers")]
     AllowedViewers(Vec<Principal>),
+}
+
+/// # Environment Variable.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
+)]
+pub struct EnvironmentVariable {
+    /// Name of the environment variable.
+    pub name: String,
+    /// Value of the environment variable.
+    pub value: String,
 }
 
 /// # Canister Settings
@@ -116,6 +127,15 @@ pub struct CanisterSettings {
     ///
     /// Default value: `0` (i.e., the "on low wasm memory" hook is never scheduled).
     pub wasm_memory_threshold: Option<Nat>,
+
+    /// A list of environment variables.
+    ///
+    /// These variables are accessible to the canister during execution
+    /// and can be used to configure canister behavior without code changes.
+    /// Each key must be unique.
+    ///
+    /// Default value: `null` (i.e., no environment variables provided).
+    pub environment_variables: Option<Vec<EnvironmentVariable>>,
 }
 
 /// # Definite Canister Settings
@@ -143,6 +163,8 @@ pub struct DefiniteCanisterSettings {
     pub wasm_memory_limit: Nat,
     /// Threshold on the remaining wasm memory size of the canister in bytes.
     pub wasm_memory_threshold: Nat,
+    /// A list of environment variables.
+    pub environment_variables: Vec<EnvironmentVariable>,
 }
 
 /// # Create Canister Args
@@ -557,6 +579,8 @@ pub enum ChangeOrigin {
 pub struct CreationRecord {
     /// Initial set of canister controllers.
     pub controllers: Vec<Principal>,
+    /// Hash of the environment variables.
+    pub environment_variables_hash: Option<Vec<u8>>,
 }
 
 /// # Code Deployment Mode
@@ -610,9 +634,11 @@ pub struct LoadSnapshotRecord {
     pub snapshot_id: SnapshotId,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
+    /// The source from which the snapshot was taken.
+    pub source: SnapshotSource,
 }
 
-/// # Snapshot ID
+/// # Controllers Change Record
 ///
 /// Details about updating canister controllers.
 ///
@@ -623,6 +649,21 @@ pub struct LoadSnapshotRecord {
 pub struct ControllersChangeRecord {
     /// The complete new set of canister controllers.
     pub controllers: Vec<Principal>,
+}
+
+/// # Settings Change Record
+///
+/// Details about updating canister settings.
+///
+/// See [`ChangeDetails::SettingsChange`].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct SettingsChangeRecord {
+    /// The new canister settings.
+    pub controllers: Option<Vec<Principal>>,
+    /// Hash of the environment variables.
+    pub environment_variables_hash: Option<Vec<u8>>,
 }
 
 /// # Change Details
@@ -647,8 +688,13 @@ pub enum ChangeDetails {
     #[serde(rename = "load_snapshot")]
     LoadSnapshot(LoadSnapshotRecord),
     /// The change was updating canister controllers.
+    ///
+    /// **Deprecated: `settings_change` is used instead.**
     #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
+    /// The change was updating canister settings.
+    #[serde(rename = "settings_change")]
+    SettingsChange(SettingsChangeRecord),
 }
 
 /// # Change
@@ -706,6 +752,8 @@ pub struct HttpRequestArgs {
     pub body: Option<Vec<u8>>,
     /// Name of the transform function which is `func (transform_args) -> (http_response) query`.
     pub transform: Option<TransformContext>,
+    /// If `Some(false)`, the HTTP request will be made by single replica instead of all nodes in the subnet.
+    pub is_replicated: Option<bool>,
 }
 
 /// # HTTP Request Result
@@ -1357,14 +1405,16 @@ pub struct ReadCanisterSnapshotMetadataResult {
 }
 
 /// # The source of a snapshot.
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
 pub enum SnapshotSource {
     /// The snapshot was taken from a canister.
     #[serde(rename = "taken_from_canister")]
-    TakenFromCanister,
+    TakenFromCanister(Reserved),
     /// The snapshot was created by uploading metadata.
     #[serde(rename = "metadata_upload")]
-    MetadataUpload,
+    MetadataUpload(Reserved),
 }
 
 /// # An exported global variable.
@@ -1434,9 +1484,9 @@ pub enum SnapshotDataKind {
         /// Size of the data in bytes.
         size: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
         /// Size of the data in bytes.
@@ -1521,9 +1571,9 @@ pub enum SnapshotDataOffset {
         /// Offset in bytes.
         offset: u64,
     },
-    /// Main memory.
-    #[serde(rename = "main_memory")]
-    MainMemory {
+    /// Wasm memory.
+    #[serde(rename = "wasm_memory")]
+    WasmMemory {
         /// Offset in bytes.
         offset: u64,
     },
