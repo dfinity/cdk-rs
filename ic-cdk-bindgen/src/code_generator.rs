@@ -77,7 +77,7 @@ static KEYWORDS: [&str; 51] = [
     "while", "async", "await", "dyn", "abstract", "become", "box", "do", "final", "macro",
     "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
 ];
-fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
+fn ident_(id: &str, case: Option<Case>) -> (RcDoc<'_>, bool) {
     if id.is_empty()
         || id.starts_with(|c: char| !c.is_ascii_alphabetic() && c != '_')
         || id.chars().any(|c| !c.is_ascii_alphanumeric() && c != '_')
@@ -98,7 +98,7 @@ fn ident_(id: &str, case: Option<Case>) -> (RcDoc, bool) {
         (RcDoc::text(id), is_rename)
     }
 }
-fn ident(id: &str, case: Option<Case>) -> RcDoc {
+fn ident(id: &str, case: Option<Case>) -> RcDoc<'_> {
     ident_(id, case).0
 }
 
@@ -281,12 +281,12 @@ fn pp_defs<'a>(
     }))
 }
 
-fn pp_args(args: &[Type]) -> RcDoc {
+fn pp_args(args: &[Type]) -> RcDoc<'_> {
     let empty = RecPoints::default();
     let doc = concat(args.iter().map(|t| pp_ty(t, &empty)), ",");
     enclose("(", doc, ")")
 }
-fn pp_ty_func(f: &Function) -> RcDoc {
+fn pp_ty_func(f: &Function) -> RcDoc<'_> {
     let args = pp_args(&f.args);
     let rets = pp_args(&f.rets);
     let modes = candid::pretty::candid::pp_modes(&f.modes);
@@ -295,7 +295,7 @@ fn pp_ty_func(f: &Function) -> RcDoc {
         .append(rets.append(modes))
         .nest(INDENT_SPACE)
 }
-fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc {
+fn pp_ty_service(serv: &[(String, Type)]) -> RcDoc<'_> {
     let doc = concat(
         serv.iter().map(|(id, func)| {
             let func_doc = match func.as_ref() {
