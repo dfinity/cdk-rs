@@ -180,6 +180,8 @@ extern "C" fn global_timer() {
                                 );
                                 // If the attempted call failed, we will try to execute the timer again later.
                                 to_reschedule.push(env.timer);
+                                // This error most likely will recur if any more timers are scheduled this round.
+                                break;
                             }
                         }
                         continue;
