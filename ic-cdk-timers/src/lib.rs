@@ -139,7 +139,8 @@ extern "C" fn global_timer() {
                                 ic0::debug_print(
                                     b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles",
                                 );
-                                return;
+                                to_reschedule.push(env.timer);
+                                break;
                             }
                             let env = Box::<CallEnv>::into_raw(env) as usize;
                             // SAFETY:
@@ -219,6 +220,11 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         2 => {
             // Try to execute the timer again later.
             TIMERS.with_borrow_mut(|timers| timers.push(timer));
+            if Rc::strong_count(&batch) == 1 {
+                // last timer in the batch
+                MOST_RECENT.set(None);
+                update_ic0_timer();
+            }
             return;
         }
         x => {
