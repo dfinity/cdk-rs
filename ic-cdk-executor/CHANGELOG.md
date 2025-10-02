@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Breaking: The API has been significantly revised.
+    - `spawn` has been replaced with `spawn_local` and `spawn_migratory`. Local tasks are cancelled when the method ends.
+    - Contexts are now 'tracking', meaning that they know when canister methods start and end. Calls to `ic0.call_*` must be accompanied by `extend_current_method_context`; `in_callback_executor_context_for` takes this value.
+    - Cancellation is no longer done per-task with the waker, but per-method with the function `cancel_all_tasks_attached_to_current_method`.
+
 ## [1.0.2] - 2025-08-18
 
 ### Changed

@@ -102,7 +102,7 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
-    ic_cdk::futures::in_executor_context(|| {
+    ic_cdk::futures::internals::in_executor_context(|| {
         ic_cdk::futures::spawn(async {
             // All the calls are made first, according only to the timestamp we *started* with, and then all the results are awaited.
             // This allows us to use the minimum number of execution rounds, as well as avoid any race conditions.
@@ -295,11 +295,11 @@ extern "C" fn timer_executor() {
     if let Some(task) = task {
         match task {
             Task::Once(fut) => {
-                ic_cdk::futures::in_executor_context(|| ic_cdk::futures::spawn(fut));
+                ic_cdk::futures::internals::in_executor_context(|| ic_cdk::futures::spawn(fut));
                 TASKS.with(|tasks| tasks.borrow_mut().remove(task_id));
             }
             Task::Repeated { func, interval } => {
-                ic_cdk::futures::in_executor_context(move || {
+                ic_cdk::futures::internals::in_executor_context(move || {
                     ic_cdk::futures::spawn(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
                         impl Drop for RepeatGuard {
