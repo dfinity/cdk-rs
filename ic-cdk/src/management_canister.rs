@@ -521,7 +521,7 @@ pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
     ic0_cost_http_request(request_size, max_res_bytes)
 }
 
-/// Makes an HTTP outcall with a user-specified amount of cycles.
+/// Makes an HTTP outcall.
 ///
 /// **Unbounded-wait call**
 ///
