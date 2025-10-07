@@ -115,8 +115,18 @@ extern "C" fn global_timer() {
         let now = ic0::time();
         TIMERS.with_borrow_mut(|timers| {
             let mut to_reschedule = Vec::new();
+            let mut insn_count = 0;
+            let mut first = true;
             // pop every timer that should have been completed by `now`, and get ready to run its task if it exists
             loop {
+                if first {
+                    first = false;
+                } else if insn_count == 0 {
+                    insn_count = ic0::performance_counter(0);
+                } else if insn_count * 3 + ic0::performance_counter(0) > 40_000_000_000 {
+                    ic0::debug_print(b"[ic-cdk-timers] canister_global_timer: approaching instruction limit, deferring remaining timers to next round");
+                    break;
+                }
                 if let Some(timer) = timers.peek() {
                     if timer.time <= now {
                         let timer: Timer = timers.pop().unwrap();
