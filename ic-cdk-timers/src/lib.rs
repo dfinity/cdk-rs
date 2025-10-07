@@ -29,6 +29,7 @@ use std::{
     time::Duration,
 };
 
+use ic_cdk_executor::MethodHandle;
 use slotmap::{KeyData, SlotMap, new_key_type};
 
 // To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
@@ -101,7 +102,7 @@ impl Eq for Timer {}
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
-    ic_cdk_executor::in_executor_context(|| {
+    ic_cdk_executor::in_tracking_executor_context(|| {
         let batch = Rc::new(());
         let mut canister_self = [0; 32];
         let canister_self = {
@@ -140,6 +141,7 @@ extern "C" fn global_timer() {
                                 timer,
                                 gt_timestamp: now,
                                 batch: batch.clone(),
+                                method_handle: ic_cdk_executor::extend_current_method_context(),
                             });
                             const METHOD_NAME: &str = "<ic-cdk internal> timer_executor";
                             let liquid_cycles = ic0::canister_liquid_cycle_balance128();
@@ -213,6 +215,7 @@ struct CallEnv {
     timer: Timer,
     gt_timestamp: u64,
     batch: Rc<()>,
+    method_handle: MethodHandle,
 }
 
 /// # Safety
@@ -224,75 +227,78 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         timer,
         gt_timestamp,
         batch,
+        method_handle,
     } = *unsafe { Box::<CallEnv>::from_raw(env as *mut CallEnv) };
-    let task_id = timer.task;
-    let reject_code = ic0::msg_reject_code();
-    match reject_code {
-        0 => {} // success
-        2 => {
-            // Try to execute the timer again later.
-            TIMERS.with_borrow_mut(|timers| timers.push(timer));
-            if Rc::strong_count(&batch) == 1 {
-                // last timer in the batch
-                MOST_RECENT.set(None);
-                update_ic0_timer();
-            }
-            return;
-        }
-        x => {
-            let reject_data_size = ic0::msg_arg_data_size();
-            let mut reject_data = Vec::with_capacity(reject_data_size);
-            ic0::msg_arg_data_copy_uninit(
-                &mut reject_data.spare_capacity_mut()[..reject_data_size],
-                0,
-            );
-            // SAFETY: ic0.msg_arg_data_copy fully initializes the vector up to reject_data_size.
-            unsafe {
-                reject_data.set_len(reject_data_size);
-            }
-            ic0::debug_print(
-                format!(
-                    "[ic-cdk-timers] timer failed (code {x}): {}",
-                    String::from_utf8_lossy(&reject_data)
-                )
-                .as_bytes(),
-            )
-        }
-    }
-    TASKS.with_borrow_mut(|tasks| {
-        if let Some(task) = tasks.get(task_id) {
-            match task {
-                // duplicated on purpose - it must be removed in the function call, to access self by value;
-                // and it must be removed here, because it may have trapped and not actually been removed.
-                // Luckily slotmap ops are equivalent to simple vector indexing.
-                Task::Once(_) => {
-                    tasks.remove(task_id);
+    ic_cdk_executor::in_callback_executor_context_for(method_handle, || {
+        let task_id = timer.task;
+        let reject_code = ic0::msg_reject_code();
+        match reject_code {
+            0 => {} // success
+            2 => {
+                // Try to execute the timer again later.
+                TIMERS.with_borrow_mut(|timers| timers.push(timer));
+                if Rc::strong_count(&batch) == 1 {
+                    // last timer in the batch
+                    MOST_RECENT.set(None);
+                    update_ic0_timer();
                 }
-                // reschedule any repeating tasks
-                Task::Repeated { interval, .. } => {
-                    match gt_timestamp.checked_add(interval.as_nanos() as u64) {
-                        Some(time) => TIMERS.with_borrow_mut(|timers| {
-                            timers.push(Timer {
-                                task: task_id,
-                                time,
-                            })
-                        }),
-                        None => ic0::debug_print(
-                            format!(
-                                "Failed to reschedule task (needed {interval}, currently {gt_timestamp}, and this would exceed u64::MAX)",
-                                interval = interval.as_nanos()
-                            ).as_bytes(),
-                        ),
+                return;
+            }
+            x => {
+                let reject_data_size = ic0::msg_arg_data_size();
+                let mut reject_data = Vec::with_capacity(reject_data_size);
+                ic0::msg_arg_data_copy_uninit(
+                    &mut reject_data.spare_capacity_mut()[..reject_data_size],
+                    0,
+                );
+                // SAFETY: ic0.msg_arg_data_copy fully initializes the vector up to reject_data_size.
+                unsafe {
+                    reject_data.set_len(reject_data_size);
+                }
+                ic0::debug_print(
+                    format!(
+                        "[ic-cdk-timers] timer failed (code {x}): {}",
+                        String::from_utf8_lossy(&reject_data)
+                    )
+                    .as_bytes(),
+                )
+            }
+        }
+        TASKS.with_borrow_mut(|tasks| {
+            if let Some(task) = tasks.get(task_id) {
+                match task {
+                    // duplicated on purpose - it must be removed in the function call, to access self by value;
+                    // and it must be removed here, because it may have trapped and not actually been removed.
+                    // Luckily slotmap ops are equivalent to simple vector indexing.
+                    Task::Once(_) => {
+                        tasks.remove(task_id);
+                    }
+                    // reschedule any repeating tasks
+                    Task::Repeated { interval, .. } => {
+                        match gt_timestamp.checked_add(interval.as_nanos() as u64) {
+                            Some(time) => TIMERS.with_borrow_mut(|timers| {
+                                timers.push(Timer {
+                                    task: task_id,
+                                    time,
+                                })
+                            }),
+                            None => ic0::debug_print(
+                                format!(
+                                    "Failed to reschedule task (needed {interval}, currently {gt_timestamp}, and this would exceed u64::MAX)",
+                                    interval = interval.as_nanos()
+                                ).as_bytes(),
+                            ),
+                        }
                     }
                 }
             }
+        });
+        if Rc::strong_count(&batch) == 1 {
+            // last timer in the batch
+            MOST_RECENT.set(None);
+            update_ic0_timer();
         }
     });
-    if Rc::strong_count(&batch) == 1 {
-        // last timer in the batch
-        MOST_RECENT.set(None);
-        update_ic0_timer();
-    }
 }
 
 /// # Safety
@@ -391,24 +397,24 @@ fn update_ic0_timer() {
     unsafe(export_name = "canister_update_ic_cdk_internal.timer_executor")
 )]
 extern "C" fn timer_executor() {
-    let mut caller = [0; 32];
-    let caller = {
-        let sz = ic0::msg_caller_size();
-        ic0::msg_caller_copy(&mut caller[..sz], 0);
-        &caller[..sz]
-    };
-    let mut canister_self = [0; 32];
-    let canister_self = {
-        let sz = ic0::canister_self_size();
-        ic0::canister_self_copy(&mut canister_self[..sz], 0);
-        &canister_self[..sz]
-    };
+    ic_cdk_executor::in_tracking_executor_context(|| {
+        let mut caller = [0; 32];
+        let caller = {
+            let sz = ic0::msg_caller_size();
+            ic0::msg_caller_copy(&mut caller[..sz], 0);
+            &caller[..sz]
+        };
+        let mut canister_self = [0; 32];
+        let canister_self = {
+            let sz = ic0::canister_self_size();
+            ic0::canister_self_copy(&mut canister_self[..sz], 0);
+            &canister_self[..sz]
+        };
 
-    if caller != canister_self {
-        ic0::trap(b"This function is internal to ic-cdk and should not be called externally.");
-    }
+        if caller != canister_self {
+            ic0::trap(b"This function is internal to ic-cdk and should not be called externally.");
+        }
 
-    ic_cdk_executor::in_executor_context(|| {
         // timer_executor is only called by the canister itself (from global_timer),
         // so we can safely assume that the argument is a valid TimerId (u64).
         // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
@@ -424,11 +430,11 @@ extern "C" fn timer_executor() {
         if let Some(task) = task {
             match task {
                 Task::Once(fut) => {
-                    ic_cdk_executor::spawn(fut);
+                    ic_cdk_executor::spawn_protected(fut);
                     TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
                 }
                 Task::Repeated { func, interval } => {
-                    ic_cdk_executor::spawn(async move {
+                    ic_cdk_executor::spawn_protected(async move {
                         struct RepeatGuard(Option<Box<dyn RepeatedClosure>>, TimerId, Duration); // option for `take` in `Drop`, always `Some` otherwise
                         impl Drop for RepeatGuard {
                             fn drop(&mut self) {

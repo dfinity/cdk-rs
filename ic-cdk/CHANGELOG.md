@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [BREAKING] Updated to version 2.0 of the async executor. The `spawn` function now creates protected tasks that panic (or are canceled, with `spawn_weak`) if they outlive the canister method (with a new `spawn_migratory` function for tasks that are supposed to outlive the method). A trap will now cancel all protected tasks in the method it is part of. See the [module docs](https://docs.rs/ic-cdk/0.19.0/ic_cdk/futures/index.html) for more information.
+  - The async machinery that is primarily used from macros (i.e. `in_*_context`) has been moved to `ic_cdk::futures::internals`.
+
 - [BREAKING] Upgrade `ic-management-canister-types` which contains the changes for:
   - Canister Environment Variable.
   - Non-replicated HTTP outcalls.
