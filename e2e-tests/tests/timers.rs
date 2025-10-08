@@ -19,7 +19,6 @@ fn test_timers() {
     advance_seconds(&pic, 5);
     update::<_, ()>(&pic, canister_id, "cancel_long", ()).expect("Failed to call cancel_long");
     advance_seconds(&pic, 5);
-
     update::<_, ()>(&pic, canister_id, "start_repeating", ())
         .expect("Failed to call start_repeating");
     advance_seconds(&pic, 3);
@@ -121,4 +120,36 @@ fn test_set_global_timers() {
     let (previous,) =
         update::<(u64,), (u64,)>(&pic, canister_id, "global_timer_set", (0,)).unwrap();
     assert!(previous.abs_diff(t2) < 2); // time error no more than 1 nanosecond
+}
+
+#[test]
+fn test_async_timers() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "async_await", ()).unwrap();
+    advance_seconds(&pic, 5);
+
+    let (events,): (Vec<String>,) =
+        query_candid(&pic, canister_id, "get_events", ()).expect("Failed to call get_events");
+    assert_eq!(events.len(), 8);
+    assert_eq!(events[..4], ["0", "1", "method outer", "2",]);
+    assert_eq!(
+        events[4..]
+            .iter()
+            .filter(|e| *e == "method spawned")
+            .count(),
+        1
+    );
+    assert_eq!(
+        events[4..]
+            .iter()
+            .filter(|e| *e == "method concurrent")
+            .count(),
+        3
+    );
 }

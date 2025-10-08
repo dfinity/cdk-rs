@@ -128,7 +128,7 @@ impl<T: AsRef<[u8]>> Future for CallFuture<T> {
                 // - if-and-only-if ic0.call_perform returns 0, exactly one(‡) of `callback` or `cleanup`
                 //      receive ownership of `state_ptr`
                 // - both functions deallocate `state_ptr`, and this enclosing function deallocates `state_ptr` if ic0.call_perform
-                //      returns 0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
+                //      returns !=0, and therefore `state_ptr`'s ownership can be passed to FFI without leaking memory.
                 //
                 // ‡ The flow from outside the WASM runtime is that the callback runs, it traps, state is rolled back,
                 //   and the cleanup callback runs afterwards. Inside the runtime, there is no difference between

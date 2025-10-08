@@ -10,23 +10,17 @@ description = "Timers library for the Rust CDK."
 homepage = "https://docs.rs/ic-cdk"
 documentation = "https://docs.rs/ic-cdk-timers"
 readme = "README.md"
-categories = [
-    "api-bindings",
-    "data-structures",
-    "no-std",
-    "development-tools::ffi",
-]
+categories = ["api-bindings", "data-structures", "no-std", "development-tools::ffi"]
 keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [dependencies]
-candid.workspace = true
 ic0.workspace = true
-ic-cdk.workspace = true
-serde.workspace = true
-serde_bytes.workspace = true
+ic-cdk-executor.workspace = true
 slotmap.workspace = true
-futures.workspace = true
+
+[dev-dependencies]
+ic-cdk.workspace = true
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

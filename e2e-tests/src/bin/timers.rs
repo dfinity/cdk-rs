@@ -1,4 +1,5 @@
-use ic_cdk::{query, update};
+use futures::{stream::FuturesUnordered, StreamExt};
+use ic_cdk::{api::canister_self, call::Call, futures::spawn, query, update};
 use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
 use std::{
     cell::{Cell, RefCell},
@@ -7,7 +8,7 @@ use std::{
 };
 
 thread_local! {
-    static EVENTS: RefCell<Vec<&'static str>> = RefCell::default();
+    static EVENTS: RefCell<Vec<String>> = RefCell::default();
     static LONG: Cell<TimerId> = Cell::default();
     static REPEATING: Cell<TimerId> = Cell::default();
 }
@@ -15,7 +16,7 @@ thread_local! {
 static EXECUTED_TIMERS: AtomicU32 = AtomicU32::new(0);
 
 #[query]
-fn get_events() -> Vec<&'static str> {
+fn get_events() -> Vec<String> {
     EVENTS.with(|events| events.borrow().clone())
 }
 
@@ -94,13 +95,47 @@ fn stop_repeating() {
     REPEATING.with(|repeating| clear_timer(repeating.get()));
 }
 
-fn add_event(event: &'static str) {
-    EVENTS.with(|events| events.borrow_mut().push(event));
+fn add_event(event: &str) {
+    EVENTS.with(|events| events.borrow_mut().push(event.to_string()));
 }
 
 #[update]
 fn global_timer_set(timestamp: u64) -> u64 {
     ic_cdk::api::global_timer_set(timestamp)
+}
+
+#[update]
+fn add_event_method(name: &str) {
+    add_event(&format!("method {name}"));
+}
+
+#[update]
+fn async_await() {
+    set_timer(Duration::from_secs(1), async {
+        add_event("1");
+        Call::bounded_wait(canister_self(), "add_event_method")
+            .with_arg("outer")
+            .await
+            .unwrap();
+        add_event("2");
+        spawn(async {
+            Call::bounded_wait(canister_self(), "add_event_method")
+                .with_arg("spawned")
+                .await
+                .unwrap();
+        });
+        let futs = FuturesUnordered::new();
+        for _ in 0..3 {
+            futs.push(async move {
+                Call::bounded_wait(canister_self(), "add_event_method")
+                    .with_arg("concurrent")
+                    .await
+                    .unwrap();
+            });
+        }
+        futs.collect::<()>().await;
+    });
+    add_event("0")
 }
 
 fn main() {}

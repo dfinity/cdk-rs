@@ -42,6 +42,7 @@ candid = "0.10.18"      # sync with the doc comment in ic-cdk/README.md
 candid_parser = "0.2.1"
 futures = "0.3"
 hex = "0.4"
+ic_principal = "0.1"
 quote = "1"
 serde = "1"
 serde_bytes = "0.11"
