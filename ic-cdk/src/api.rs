@@ -167,9 +167,9 @@ pub fn canister_liquid_cycle_balance() -> u128 {
 /// Gets the status of the canister.
 ///
 /// The status is one of the following:
-///.- 1: Running
-///.- 2: Stopping
-///.- 3: Stopped
+/// - 1: Running
+/// - 2: Stopping
+/// - 3: Stopped
 pub fn canister_status() -> CanisterStatusCode {
     ic0::canister_status().into()
 }

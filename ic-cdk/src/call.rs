@@ -103,19 +103,31 @@ pub use ic_error_types::RejectCode;
 /// # Execution
 ///
 /// A [`Call`] can be executed in two ways:
-/// - `.await`: convert into a future, execute asynchronously and wait for response.
-/// - [`oneway`][Self::oneway]: send a oneway call and not wait for the response.
+/// - **Asynchronously**: Convert to a [`CallFuture`] and await the response.
+///   - Direct approach: Use `.await` on the call (e.g., `call.await`).
+///   - Collective approach: Use [`IntoFuture::into_future`] to obtain futures explicitly,
+///     then combine them with `join!`, `select!`, or other combinators.
+/// - **One-way**: Send a call with [`oneway`][Self::oneway] when you don't need a response.
 ///
 /// ## Example
 ///
 /// ```rust, no_run
 /// # use ic_cdk::call::Call;
+/// # use candid::Principal;
 /// # async fn bar() {
-/// # let canister_id = ic_cdk::api::canister_self();
-/// # let method = "foo";
-/// let call = Call::bounded_wait(canister_id, method);
-/// let response = call.clone().await.unwrap();
-/// call.oneway().unwrap();
+/// # let canister_id : Principal = todo!();
+/// # let method: &str = todo!();
+/// # let canister_id1 : Principal = todo!();
+/// # let method1: &str = todo!();
+/// # let canister_id2 : Principal = todo!();
+/// # let method2: &str = todo!();
+/// let response = Call::bounded_wait(canister_id, method).await;
+/// let calls = vec![
+///   Call::bounded_wait(canister_id1, method1).into_future(),
+///   Call::bounded_wait(canister_id2, method2).into_future(),
+/// ];
+/// let responses = futures::future::join_all(calls).await;
+/// Call::bounded_wait(canister_id, method).oneway().unwrap();
 /// # }
 /// ```
 ///
