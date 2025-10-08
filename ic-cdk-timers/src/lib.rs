@@ -312,11 +312,20 @@ unsafe extern "C" fn timer_scope_cleanup(env: usize) {
     ic0::debug_print(b"[ic-cdk-timers] internal error: trap in scope callback");
 }
 
-/// Sets `func` to be executed later, after `delay`. Panics if `delay` + [`time()`] is more than [`u64::MAX`] nanoseconds.
+/// Sets `future` to be executed later, after `delay`. Panics if `delay` + [`time()`] is more than [`u64::MAX`] nanoseconds.
 ///
 /// To cancel the timer before it executes, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// ic_cdk_timers::set_timer(Duration::from_secs(1), async {
+///     ic_cdk::println!("Hello from the future!");
+/// });
+/// ```
 ///
 /// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
@@ -343,6 +352,15 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
 ///
 /// Note that timers are not persisted across canister upgrades.
 ///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// ic_cdk_timers::set_timer_interval(Duration::from_secs(5), async || {
+///     ic_cdk::println!("This will run every five seconds forever!");
+/// });
+/// ```
+///
 /// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static) -> TimerId {
     let interval_ns = u64::try_from(interval.as_nanos()).expect(
@@ -368,6 +386,16 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
 }
 
 /// Cancels an existing timer. Does nothing if the timer has already been canceled.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// let timer_id = ic_cdk_timers::set_timer(Duration::from_secs(60), async {
+///     ic_cdk::println!("This will never run, because we cancel it!");
+/// });
+/// ic_cdk_timers::clear_timer(timer_id);
+/// ```
 pub fn clear_timer(id: TimerId) {
     TASKS.with_borrow_mut(|tasks| tasks.remove(id));
 }

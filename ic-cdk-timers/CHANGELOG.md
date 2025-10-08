@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 - `ic-cdk-timers` no longer has a dependency on `ic-cdk` and no longer needs to be upgraded when `ic-cdk` is upgraded.
-- Timer bodies have been changed from `FnOnce`/`FnMut` to `Future`/`AsyncFnMut`, so `spawn` is no longer required to enter an async context from a timer. For `set_timer`, `|| {}` should be changed to `async {}`, and for `set_timer_interval`, `|| {}` should be changed to `async || {}`.
+- Breaking: Timer bodies have been changed from `FnOnce`/`FnMut` to `Future`/`AsyncFnMut`, so `spawn` is no longer required to enter an async context from a timer. For `set_timer`, `|| {}` should be changed to `async {}`, and for `set_timer_interval`, `|| {}` should be changed to `async || {}`.
+  - If you have any immediate `spawn` calls, you can remove them and run the async code directly. (You do not have to.)
 
 ## [0.12.2] - 2025-06-25
 
