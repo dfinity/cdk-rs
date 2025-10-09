@@ -8,6 +8,13 @@
 //! ic_cdk_timers::set_timer(Duration::from_secs(1), async { ic_cdk::println!("Hello from the future!") });
 //! # }
 //! ```
+//!
+//! # Details
+//!
+//! Timers internally use a bounded-wait self-call for error handling purposes. This is not guaranteed to
+//! remain the case in the future, but means that if the system is under heavy load, timers may begin to
+//! slow down by a lot as the self-calls begin to time out and the timers are rescheduled for the next global
+//! timer tick. This also means that each executed timer incurs the cycle cost of a canister call.
 
 #![warn(
     elided_lifetimes_in_paths,
@@ -234,13 +241,16 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         let reject_code = ic0::msg_reject_code();
         match reject_code {
             0 => {} // success
-            2 => {
-                // Try to execute the timer again later.
-                TIMERS.with_borrow_mut(|timers| timers.push(timer));
-                if Rc::strong_count(&batch) == 1 {
-                    // last timer in the batch
-                    MOST_RECENT.set(None);
-                    update_ic0_timer();
+            2 | 6 => {
+                // Double check that it exists - in case of SYS_TRANSIENT it may have completed.
+                if TASKS.with_borrow(|tasks| tasks.contains_key(task_id)) {
+                    // Try to execute the timer again later.
+                    TIMERS.with_borrow_mut(|timers| timers.push(timer));
+                    if Rc::strong_count(&batch) == 1 {
+                        // last timer in the batch
+                        MOST_RECENT.set(None);
+                        update_ic0_timer();
+                    }
                 }
                 return;
             }
