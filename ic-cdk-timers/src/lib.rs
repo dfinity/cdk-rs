@@ -106,11 +106,20 @@ impl PartialEq for Timer {
 
 impl Eq for Timer {}
 
+struct BatchGuard;
+
+impl Drop for BatchGuard {
+    fn drop(&mut self) {
+        MOST_RECENT.set(None);
+        update_ic0_timer();
+    }
+}
+
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
     ic_cdk_executor::in_tracking_executor_context(|| {
-        let batch = Rc::new(());
+        let batch = Rc::new(BatchGuard);
         let mut canister_self = [0; 32];
         let canister_self = {
             let sz = ic0::canister_self_size();
@@ -210,18 +219,13 @@ extern "C" fn global_timer() {
             }
             timers.extend(to_reschedule);
         });
-        if Rc::strong_count(&batch) == 1 {
-            // nothing scheduled
-            MOST_RECENT.set(None);
-            update_ic0_timer();
-        }
     });
 }
 
 struct CallEnv {
     timer: Timer,
     gt_timestamp: u64,
-    batch: Rc<()>,
+    batch: Rc<BatchGuard>,
     method_handle: MethodHandle,
 }
 
@@ -233,7 +237,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
     let CallEnv {
         timer,
         gt_timestamp,
-        batch,
+        batch: _batch,
         method_handle,
     } = *unsafe { Box::<CallEnv>::from_raw(env as *mut CallEnv) };
     ic_cdk_executor::in_callback_executor_context_for(method_handle, || {
@@ -242,15 +246,10 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         match reject_code {
             0 => {} // success
             2 | 6 => {
-                // Double check that it exists - in case of SYS_TRANSIENT it may have completed.
+                // Double check that it exists - in case of SYS_UNKNOWN it may have completed.
                 if TASKS.with_borrow(|tasks| tasks.contains_key(task_id)) {
                     // Try to execute the timer again later.
                     TIMERS.with_borrow_mut(|timers| timers.push(timer));
-                    if Rc::strong_count(&batch) == 1 {
-                        // last timer in the batch
-                        MOST_RECENT.set(None);
-                        update_ic0_timer();
-                    }
                 }
                 return;
             }
@@ -303,11 +302,6 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 }
             }
         });
-        if Rc::strong_count(&batch) == 1 {
-            // last timer in the batch
-            MOST_RECENT.set(None);
-            update_ic0_timer();
-        }
     });
 }
 
@@ -361,6 +355,13 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
 /// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
+///
+/// <div class="warning">
+///
+/// Interval timers should be *idempotent* with respect to the canister's state, as during heavy network load,
+/// timeouts may result in duplicate execution.
+///
+/// </div>
 ///
 /// # Examples
 ///
