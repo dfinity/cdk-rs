@@ -25,16 +25,19 @@ use std::{convert::TryFrom, num::NonZeroU64};
     since = "0.18.0",
     note = "The `api::call` module is deprecated. Individual items within this module have their own deprecation notices with specific migration guidance."
 )]
+#[doc(hidden)]
 pub mod call;
 #[deprecated(
     since = "0.18.0",
     note = "The `api::management_canister` module is deprecated. Please use the `management_canister` and `bitcoin_canister` modules at the crate root."
 )]
+#[doc(hidden)]
 pub mod management_canister;
 #[deprecated(
     since = "0.18.0",
     note = "The `api::stable` module has been moved to `stable` (crate root)."
 )]
+#[doc(hidden)]
 pub mod stable;
 
 /// Gets the message argument data.
@@ -645,6 +648,7 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
 
 /// Prints the given message.
 #[deprecated(since = "0.18.0", note = "Use `debug_print` instead")]
+#[doc(hidden)]
 pub fn print<S: std::convert::AsRef<str>>(s: S) {
     let s = s.as_ref();
     ic0::debug_print(s.as_bytes());
@@ -652,6 +656,7 @@ pub fn print<S: std::convert::AsRef<str>>(s: S) {
 
 /// Returns the caller of the current call.
 #[deprecated(since = "0.18.0", note = "Use `msg_caller` instead")]
+#[doc(hidden)]
 pub fn caller() -> Principal {
     let len = ic0::msg_caller_size();
     let mut bytes = vec![0u8; len];
@@ -661,6 +666,7 @@ pub fn caller() -> Principal {
 
 /// Returns the canister id as a blob.
 #[deprecated(since = "0.18.0", note = "Use `canister_self` instead")]
+#[doc(hidden)]
 pub fn id() -> Principal {
     let len = ic0::canister_self_size();
     let mut bytes = vec![0u8; len];
@@ -675,6 +681,7 @@ pub fn id() -> Principal {
 /// When the cycle balance is greater than `u64::MAX`, this function will panic.
 /// As this function is deprecated, it is recommended to use [`canister_cycle_balance`].
 #[deprecated(since = "0.18.0", note = "Use `canister_cycle_balance` instead")]
+#[doc(hidden)]
 pub fn canister_balance() -> u64 {
     // ic0 no longer provides `ic0.canister_cycle_balance` which returns a u64,
     // so we use the u128 version and convert it to u64.
@@ -686,6 +693,7 @@ pub fn canister_balance() -> u64 {
 
 /// Gets the amount of funds available in the canister.
 #[deprecated(since = "0.18.0", note = "Use `canister_cycle_balance` instead")]
+#[doc(hidden)]
 pub fn canister_balance128() -> u128 {
     canister_cycle_balance()
 }
@@ -709,6 +717,7 @@ pub fn canister_balance128() -> u128 {
 /// - This function traps if it's called from an illegal context
 ///   (e.g., from a query call).
 #[deprecated(since = "0.18.0", note = "Use `certified_data_set` instead")]
+#[doc(hidden)]
 pub fn set_certified_data(data: &[u8]) {
     ic0::certified_data_set(data);
 }
@@ -726,6 +735,7 @@ pub fn set_certified_data(data: &[u8]) {
 /// Passing zero as an argument to the function deactivates the timer and thus
 /// prevents the system from scheduling calls to the canister's `canister_global_timer` Wasm method.
 #[deprecated(since = "0.18.0", note = "Use `global_timer_set` instead")]
+#[doc(hidden)]
 pub fn set_global_timer(timestamp: u64) -> u64 {
     ic0::global_timer_set(timestamp)
 }
