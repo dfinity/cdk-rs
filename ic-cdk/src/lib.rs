@@ -26,7 +26,7 @@ use std::future::Future;
 #[doc(inline)]
 pub use api::trap;
 
-#[doc(inline)]
+#[doc(hidden)]
 #[allow(deprecated)]
 pub use api::{
     call::{call, notify},
