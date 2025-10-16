@@ -93,7 +93,7 @@ impl Default for Task {
     }
 }
 
-/// Execute an update function in a context that allows calling [`spawn_protected`] and [`spawn_migratory`]
+/// Execute an update function in a context that allows calling [`spawn_protected`] and [`spawn_migratory`].
 pub fn in_tracking_executor_context<R>(f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     let method = METHODS.with_borrow_mut(|methods| methods.insert(MethodContext::new_update()));
@@ -143,7 +143,7 @@ pub fn in_callback_executor_context_for<R>(
     })
 }
 
-/// Enters a panic recovery context for calling [`cancel_all_tasks_attached_to_current_method`] in.
+/// Enters a trap/panic recovery context for calling [`cancel_all_tasks_attached_to_current_method`] in.
 pub fn in_trap_recovery_context_for<R>(method: MethodHandle, f: impl FnOnce() -> R) -> R {
     setup_panic_hook();
     enter_current_method(method, || {
@@ -398,8 +398,8 @@ pub fn spawn_migratory(f: impl Future<Output = ()> + 'static) -> TaskHandle {
 
 /// Spawns a task attached to the current method.
 ///
-/// When the task is awoken, if a different method is currently running, it will not run until the method
-/// it is attached to continues. If the attached method returns before the task completes, it will be canceled.
+/// When the task is awoken, if a different method is currently running, the task will not run until the method
+/// it is attached to continues. If the attached method returns before the task completes, the task will be canceled.
 pub fn spawn_protected(f: impl Future<Output = ()> + 'static) -> TaskHandle {
     setup_panic_hook();
     if is_recovering_from_trap() {

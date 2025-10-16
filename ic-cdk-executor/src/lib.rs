@@ -14,11 +14,11 @@
 //! }
 //! ```
 //!
-//! The `in_tracking_executor_context` function permits you to call `spawn_*` functions. As little code as possible
-//! should exist outside the block, because `in_tracking_executor_context` additionally sets up the panic handler.
+//! The [`in_tracking_executor_context`] function permits you to call `spawn_*` functions. As little code as possible
+//! should exist outside the block, because [`in_tracking_executor_context`] additionally sets up the panic handler.
 //!
-//! The above applies to update contexts. Query contexts, including `inspect_message`, should use
-//! `in_tracking_query_executor_context`.
+//! The above applies to update contexts. Query contexts, including `canister_inspect_message`, should use
+//! [`in_tracking_query_executor_context`].
 //!
 //! The expected boilerplate for an inter-canister call callback looks like this:
 //!
