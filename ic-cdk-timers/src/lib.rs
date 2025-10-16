@@ -362,6 +362,13 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
 ///
 /// Note that timers are not persisted across canister upgrades.
 ///
+/// <div class="warning">
+///
+/// Interval timers should be *idempotent* with respect to the canister's state, as during heavy network load,
+/// timeouts may result in duplicate execution.
+///
+/// </div>
+///
 /// # Examples
 ///
 /// ```no_run
