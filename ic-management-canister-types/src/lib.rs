@@ -380,6 +380,7 @@ pub struct UninstallCodeArgs {
 ///
 /// Argument type of [`start_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-start_canister).
 pub type StartCanisterArgs = CanisterIdRecord;
+
 /// # Stop Canister Args
 ///
 /// Argument type of [`stop_canister`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-stop_canister).
@@ -389,6 +390,7 @@ pub type StopCanisterArgs = CanisterIdRecord;
 ///
 /// Argument type of [`canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
 pub type CanisterStatusArgs = CanisterIdRecord;
+
 /// # Canister Status Result
 ///
 /// Result type of [`canister_status`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_status).
@@ -398,6 +400,11 @@ pub type CanisterStatusArgs = CanisterIdRecord;
 pub struct CanisterStatusResult {
     /// Status of the canister.
     pub status: CanisterStatusType,
+    /// Indicates whether a stopped canister is ready to be migrated to another subnet
+    /// (i.e., whether it has empty queues and flushed streams).
+    pub ready_for_migration: bool,
+    /// The canister version.
+    pub version: u64,
     /// Canister settings in effect.
     pub settings: DefiniteCanisterSettings,
     /// A SHA256 hash of the module installed on the canister. This is null if the canister is empty.
@@ -520,6 +527,32 @@ pub struct CanisterInfoResult {
     pub controllers: Vec<Principal>,
 }
 
+/// # Canister Metadata Args
+///
+/// Argument type of [`canister_metadata`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_metadata).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterMetadataArgs {
+    /// Canister ID.
+    pub canister_id: Principal,
+    /// Identifies canister's metadata contained in a custom section whose name has the form
+    /// `icp:public <name>` or `icp:private <name>`.
+    pub name: String,
+}
+
+/// # Canister Metadata Result
+///
+/// Result type of [`canister_metadata`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_metadata).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct CanisterMetadataResult {
+    /// The content of canister's metadata identified by the given `name`.
+    #[serde(with = "serde_bytes")]
+    pub value: Vec<u8>,
+}
+
 /// # From User Record
 ///
 /// Details about a canister change initiated by a user.
@@ -628,10 +661,13 @@ pub struct CodeDeploymentRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct LoadSnapshotRecord {
-    /// The version of the canister at the time that the snapshot was taken
-    pub canister_version: u64,
+    /// The canister ID of the canister from which the snapshot was loaded
+    /// (if that canister ID is different than the canister ID onto which the snapshot is loaded).
+    pub from_canister_id: Option<Principal>,
     /// The ID of the snapshot that was loaded.
     pub snapshot_id: SnapshotId,
+    /// The version of the canister at the time that the snapshot was taken.
+    pub canister_version: u64,
     /// The timestamp at which the snapshot was taken.
     pub taken_at_timestamp: u64,
     /// The source from which the snapshot was taken.
@@ -649,21 +685,6 @@ pub struct LoadSnapshotRecord {
 pub struct ControllersChangeRecord {
     /// The complete new set of canister controllers.
     pub controllers: Vec<Principal>,
-}
-
-/// # Settings Change Record
-///
-/// Details about updating canister settings.
-///
-/// See [`ChangeDetails::SettingsChange`].
-#[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
-)]
-pub struct SettingsChangeRecord {
-    /// The new canister settings.
-    pub controllers: Option<Vec<Principal>>,
-    /// Hash of the environment variables.
-    pub environment_variables_hash: Option<Vec<u8>>,
 }
 
 /// # Change Details
@@ -688,13 +709,8 @@ pub enum ChangeDetails {
     #[serde(rename = "load_snapshot")]
     LoadSnapshot(LoadSnapshotRecord),
     /// The change was updating canister controllers.
-    ///
-    /// **Deprecated: `settings_change` is used instead.**
     #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
-    /// The change was updating canister settings.
-    #[serde(rename = "settings_change")]
-    SettingsChange(SettingsChangeRecord),
 }
 
 /// # Change
@@ -1181,8 +1197,6 @@ pub struct VetKDDeriveKeyResult {
 /// # Node Metrics History Args.
 ///
 /// Argument type of [`node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node_metrics_history).
-// ! The actual url ends with `ic-node-metrics-history` instead of `ic-node_metrics_history`.
-// ! It will likely be changed to be consistent with the other methods soon.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1196,8 +1210,6 @@ pub struct NodeMetricsHistoryArgs {
 /// # Node Metrics History Result.
 ///
 /// Result type of [`node_metrics_history`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-node_metrics_history).
-// ! The actual url ends with `ic-node-metrics-history` instead of `ic-node_metrics_history`.
-// ! It will likely be changed to be consistent with the other methods soon.
 pub type NodeMetricsHistoryResult = Vec<NodeMetricsHistoryRecord>;
 
 /// # Node Metrics History Record.
@@ -1231,8 +1243,6 @@ pub struct NodeMetrics {
 /// # Subnet Info Args.
 ///
 /// Argument type of [`subnet_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-subnet_info).
-// ! The actual url ends with `ic-subnet-info` instead of `ic-subnet_info`.
-// ! It will likely be changed to be consistent with the other methods soon.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -1244,14 +1254,14 @@ pub struct SubnetInfoArgs {
 /// # Subnet Info Result.
 ///
 /// Result type of [`subnet_info`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-subnet_info).
-// ! The actual url ends with `ic-subnet-info` instead of `ic-subnet_info`.
-// ! It will likely be changed to be consistent with the other methods soon.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct SubnetInfoResult {
     /// Replica version of the subnet.
     pub replica_version: String,
+    /// Registry version of the subnet.
+    pub registry_version: u64,
 }
 
 /// # Provisional Create Canister With Cycles Args.
