@@ -76,7 +76,7 @@ type change = record {
     timestamp_nanos : nat64;
     canister_version : nat64;
     origin : change_origin;
-    details : change_details;
+    details : opt change_details;
 };
 
 type chunk_hash = record {
@@ -497,13 +497,13 @@ type read_canister_snapshot_metadata_args = record {
 };
 
 type read_canister_snapshot_metadata_response = record {
-    source : variant {
+    source : opt variant {
         taken_from_canister: reserved;
         metadata_upload : reserved;
     };
     taken_at_timestamp : nat64;
     wasm_module_size : nat64;
-    globals : vec variant {
+    globals : vec opt variant {
         i32 : int32;
         i64 : int64;
         f32 : float32;

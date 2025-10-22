@@ -362,11 +362,16 @@ async fn snapshots() {
     assert_eq!(result.chunk, wasm_module);
 
     // upload_canister_snapshot_metadata
+    let globals = snapshot_metadata
+        .globals
+        .into_iter()
+        .filter_map(|option_a| option_a)
+        .collect();
     let arg = UploadCanisterSnapshotMetadataArgs {
         canister_id,
         replace_snapshot: None,
         wasm_module_size: snapshot_metadata.wasm_module_size,
-        globals: snapshot_metadata.globals,
+        globals,
         wasm_memory_size: snapshot_metadata.wasm_memory_size,
         stable_memory_size: snapshot_metadata.stable_memory_size,
         certified_data: snapshot_metadata.certified_data,
@@ -408,7 +413,7 @@ async fn snapshots() {
     assert_eq!(canister_info_result.total_num_changes, 3);
     assert_eq!(canister_info_result.recent_changes.len(), 1);
     if let Change {
-        details: ChangeDetails::LoadSnapshot(load_snapshot_record),
+        details: Some(ChangeDetails::LoadSnapshot(load_snapshot_record)),
         ..
     } = &canister_info_result.recent_changes[0]
     {

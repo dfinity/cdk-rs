@@ -727,7 +727,7 @@ pub struct Change {
     /// The change's origin (a user or a canister).
     pub origin: ChangeOrigin,
     /// The change's details.
-    pub details: ChangeDetails,
+    pub details: Option<ChangeDetails>,
 }
 
 /// # Delete Canister Args
@@ -1390,13 +1390,13 @@ pub struct ReadCanisterSnapshotMetadataArgs {
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
 pub struct ReadCanisterSnapshotMetadataResult {
     /// The source of the snapshot.
-    pub source: SnapshotSource,
+    pub source: Option<SnapshotSource>,
     /// The Unix nanosecond timestamp the snapshot was taken at.
     pub taken_at_timestamp: u64,
     /// The size of the Wasm module.
     pub wasm_module_size: u64,
     /// The globals.
-    pub globals: Vec<SnapshotMetadataGlobal>,
+    pub globals: Vec<Option<SnapshotMetadataGlobal>>,
     /// The size of the Wasm memory.
     pub wasm_memory_size: u64,
     /// The size of the stable memory.
