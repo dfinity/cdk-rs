@@ -162,7 +162,7 @@ fn call_api() {
 #[test]
 fn call_api_nonmainnet() {
     let wasm = cargo_build_canister("api_nonmainnet");
-    let pic = pic_base().with_nonmainnet_features(true).build();
+    let pic = pic_base().build();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);

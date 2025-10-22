@@ -28,10 +28,7 @@ fn test_management_canister() {
 #[test]
 fn test_env_var() {
     let wasm = cargo_build_canister("management_canister");
-    let pic = pic_base()
-        // env_var is not available on mainnet yet
-        .with_nonmainnet_features(true)
-        .build();
+    let pic = pic_base().build();
 
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
@@ -42,11 +39,7 @@ fn test_env_var() {
 #[test]
 fn test_vetkd() {
     let wasm = cargo_build_canister("management_canister");
-    let pic = pic_base()
-        .with_ii_subnet()
-        // vetKD is not available on mainnet yet
-        .with_nonmainnet_features(true)
-        .build();
+    let pic = pic_base().with_ii_subnet().build();
 
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 10_000_000_000_000u128); // 10 T
