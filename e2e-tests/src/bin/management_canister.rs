@@ -362,11 +362,7 @@ async fn snapshots() {
     assert_eq!(result.chunk, wasm_module);
 
     // upload_canister_snapshot_metadata
-    let globals = snapshot_metadata
-        .globals
-        .into_iter()
-        .filter_map(|option_a| option_a)
-        .collect();
+    let globals = snapshot_metadata.globals.into_iter().flatten().collect();
     let arg = UploadCanisterSnapshotMetadataArgs {
         canister_id,
         replace_snapshot: None,
