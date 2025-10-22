@@ -1477,7 +1477,7 @@ pub enum OnLowWasmMemoryHookStatus {
 pub struct ReadCanisterSnapshotDataArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
-    /// ID of the snapshot to be read.
+    /// ID of the snapshot.
     pub snapshot_id: SnapshotId,
     /// The kind of data to be read.
     pub kind: SnapshotDataKind,
@@ -1564,9 +1564,9 @@ pub struct UploadCanisterSnapshotMetadataResult {
 pub struct UploadCanisterSnapshotDataArgs {
     /// Canister ID.
     pub canister_id: CanisterId,
-    /// ID of the snapshot to be read.
+    /// ID of the snapshot.
     pub snapshot_id: SnapshotId,
-    /// The kind of data to be read.
+    /// The kind of data to be uploaded.
     pub kind: SnapshotDataOffset,
     /// The chunk of data to be uploaded.
     pub chunk: Vec<u8>,

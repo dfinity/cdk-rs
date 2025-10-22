@@ -67,25 +67,31 @@ use serde::{Deserialize, Serialize};
 
 // Re-export types from the `ic-management-canister-types` crate.
 pub use ic_management_canister_types::{
-    Bip341, CanisterId, CanisterInfoArgs, CanisterInfoResult, CanisterInstallMode,
-    CanisterSettings, CanisterStatusArgs, CanisterStatusResult, CanisterStatusType, Change,
+    Bip341, CanisterId, CanisterIdRecord, CanisterInfoArgs, CanisterInfoResult,
+    CanisterInstallMode, CanisterMetadataArgs, CanisterMetadataResult, CanisterSettings,
+    CanisterStatusArgs, CanisterStatusResult, CanisterStatusType, CanisterTimer, Change,
     ChangeDetails, ChangeOrigin, ChunkHash, ClearChunkStoreArgs, CodeDeploymentMode,
     CodeDeploymentRecord, ControllersChangeRecord, CreateCanisterResult, CreationRecord,
     DefiniteCanisterSettings, DeleteCanisterArgs, DeleteCanisterSnapshotArgs, DepositCyclesArgs,
     EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgs, EcdsaPublicKeyResult, EnvironmentVariable,
     FromCanisterRecord, FromUserRecord, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult,
     ListCanisterSnapshotsArgs, ListCanisterSnapshotsResult, LoadSnapshotRecord, LogVisibility,
-    NodeMetrics, NodeMetricsHistoryArgs, NodeMetricsHistoryRecord, NodeMetricsHistoryResult,
-    ProvisionalCreateCanisterWithCyclesResult, ProvisionalTopUpCanisterArgs, QueryStats,
-    RawRandResult, SchnorrAlgorithm, SchnorrAux, SchnorrKeyId, SchnorrPublicKeyArgs,
-    SchnorrPublicKeyResult, SettingsChangeRecord, SignWithEcdsaArgs, SignWithEcdsaResult,
-    SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot, SnapshotId, StartCanisterArgs,
-    StopCanisterArgs, StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
+    MemoryMetrics, NodeMetrics, NodeMetricsHistoryArgs, NodeMetricsHistoryRecord,
+    NodeMetricsHistoryResult, OnLowWasmMemoryHookStatus, ProvisionalCreateCanisterWithCyclesResult,
+    ProvisionalTopUpCanisterArgs, QueryStats, RawRandResult, ReadCanisterSnapshotDataArgs,
+    ReadCanisterSnapshotDataResult, ReadCanisterSnapshotMetadataArgs,
+    ReadCanisterSnapshotMetadataResult, SchnorrAlgorithm, SchnorrAux, SchnorrKeyId,
+    SchnorrPublicKeyArgs, SchnorrPublicKeyResult, SignWithEcdsaArgs, SignWithEcdsaResult,
+    SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot, SnapshotDataKind, SnapshotDataOffset,
+    SnapshotId, SnapshotMetadataGlobal, SnapshotSource, StartCanisterArgs, StopCanisterArgs,
+    StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
     TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
-    TransformFunc, UpgradeFlags, UploadChunkArgs, UploadChunkResult, VetKDCurve,
-    VetKDDeriveKeyArgs, VetKDDeriveKeyResult, VetKDKeyId, VetKDPublicKeyArgs, VetKDPublicKeyResult,
-    WasmMemoryPersistence, WasmModule,
+    TransformFunc, UpgradeFlags, UploadCanisterSnapshotDataArgs,
+    UploadCanisterSnapshotMetadataArgs, UploadCanisterSnapshotMetadataResult, UploadChunkArgs,
+    UploadChunkResult, VetKDCurve, VetKDDeriveKeyArgs, VetKDDeriveKeyResult, VetKDKeyId,
+    VetKDPublicKeyArgs, VetKDPublicKeyResult, WasmMemoryPersistence, WasmModule,
 };
+
 // Following Args types contain `sender_canister_version` field which is set automatically in the corresponding functions.
 // We provide reduced versions of these types to avoid duplication of the field.
 use ic_management_canister_types::{
@@ -446,6 +452,19 @@ pub async fn canister_status(arg: &CanisterStatusArgs) -> CallResult<CanisterSta
 pub async fn canister_info(arg: &CanisterInfoArgs) -> CallResult<CanisterInfoResult> {
     Ok(
         Call::bounded_wait(Principal::management_canister(), "canister_info")
+            .with_arg(arg)
+            .await?
+            .candid()?,
+    )
+}
+/// Gets canister's metadata contained in custom sections whose names have the form `icp:public <name>` or `icp:private <name>`
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `canister_metadata`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-canister_metadata).
+pub async fn canister_metadata(arg: &CanisterMetadataArgs) -> CallResult<CanisterMetadataResult> {
+    Ok(
+        Call::bounded_wait(Principal::management_canister(), "canister_metadata")
             .with_arg(arg)
             .await?
             .candid()?,
@@ -999,6 +1018,72 @@ pub struct LoadCanisterSnapshotArgs {
     pub canister_id: CanisterId,
     /// ID of the snapshot to be loaded.
     pub snapshot_id: SnapshotId,
+}
+
+/// Reads metadata of a snapshot of a canister.
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `read_canister_snapshot_metadata`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-read_canister_snapshot_metadata).
+pub async fn read_canister_snapshot_metadata(
+    arg: &ReadCanisterSnapshotMetadataArgs,
+) -> CallResult<ReadCanisterSnapshotMetadataResult> {
+    Ok(Call::bounded_wait(
+        Principal::management_canister(),
+        "read_canister_snapshot_metadata",
+    )
+    .with_arg(arg)
+    .await?
+    .candid()?)
+}
+
+/// Reads data of a snapshot of a canister.
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `read_canister_snapshot_data`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-read_canister_snapshot_data).
+pub async fn read_canister_snapshot_data(
+    arg: &ReadCanisterSnapshotDataArgs,
+) -> CallResult<ReadCanisterSnapshotDataResult> {
+    Ok(Call::bounded_wait(
+        Principal::management_canister(),
+        "read_canister_snapshot_data",
+    )
+    .with_arg(arg)
+    .await?
+    .candid()?)
+}
+
+/// Creates a snapshot of that canister by uploading the snapshot's metadata.
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `upload_canister_snapshot_metadata`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_canister_snapshot_metadata).
+pub async fn upload_canister_snapshot_metadata(
+    arg: &UploadCanisterSnapshotMetadataArgs,
+) -> CallResult<UploadCanisterSnapshotMetadataResult> {
+    Ok(Call::bounded_wait(
+        Principal::management_canister(),
+        "upload_canister_snapshot_metadata",
+    )
+    .with_arg(arg)
+    .await?
+    .candid()?)
+}
+
+/// Uploads data to a snapshot of that canister.
+///
+/// **Bounded-wait call**
+///
+/// See [IC method `upload_canister_snapshot_data`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-upload_canister_snapshot_data).
+pub async fn upload_canister_snapshot_data(arg: &UploadCanisterSnapshotDataArgs) -> CallResult<()> {
+    Ok(Call::bounded_wait(
+        Principal::management_canister(),
+        "upload_canister_snapshot_data",
+    )
+    .with_arg(arg)
+    .await?
+    .candid()?)
 }
 
 /// Lists the snapshots of the canister.
