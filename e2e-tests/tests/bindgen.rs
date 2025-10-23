@@ -8,7 +8,7 @@ fn bindgen() {
     let wasm = cargo_build_canister("bindgen");
     let callee_wasm = cargo_build_canister("bindgen_callee");
 
-    let pic = pic_base().with_nonmainnet_features(true).build();
+    let pic = pic_base().build();
 
     let callee_canister_id = pic.create_canister();
     pic.add_cycles(callee_canister_id, 100_000_000_000_000);

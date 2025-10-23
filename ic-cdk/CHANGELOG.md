@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support Canister Environment Variable. (#636)
   - Add binding for `env_var_*` API.
+- New Management Canister methods:
+  - `canister_metadata`
+  - `read_canister_snapshot_metadata` 
+  - `read_canister_snapshot_data` 
+  - `upload_canister_snapshot_metadata`
+  - `upload_canister_snapshot_data`
 
 ### Changed
 
