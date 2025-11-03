@@ -6,7 +6,18 @@ pub type Satoshi = u64;
 
 /// Bitcoin Network.
 #[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
 )]
 pub enum BitcoinNetwork {
     /// Mainnet.
@@ -19,13 +30,8 @@ pub enum BitcoinNetwork {
     ///
     /// This is only available when developing with local replica.
     #[serde(rename = "regtest")]
+    #[default]
     Regtest,
-}
-
-impl Default for BitcoinNetwork {
-    fn default() -> Self {
-        Self::Regtest
-    }
 }
 
 /// Bitcoin Address.
