@@ -54,6 +54,10 @@ enum Task {
         func: Box<dyn RepeatedClosure>,
         interval: Duration,
     },
+    RepeatedConcurrent {
+        func: Box<dyn Fn() -> Pin<Box<dyn Future<Output = ()>>>>,
+        interval: Duration,
+    },
     Once(Pin<Box<dyn Future<Output = ()>>>),
 }
 
@@ -284,7 +288,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                         tasks.remove(task_id);
                     }
                     // reschedule any repeating tasks
-                    Task::Repeated { interval, .. } => {
+                    Task::Repeated { interval, .. } | Task::RepeatedConcurrent { interval, .. } => {
                         match gt_timestamp.checked_add(interval.as_nanos() as u64) {
                             Some(time) => TIMERS.with_borrow_mut(|timers| {
                                 timers.push(Timer {
@@ -300,6 +304,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                             ),
                         }
                     }
+                    
                 }
             }
         });
@@ -358,6 +363,8 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
 
 /// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`] is more than [`u64::MAX`] nanoseconds.
 ///
+/// `func` will not be rescheduled until `interval` time has passed since the *end* of the previous invocation of `func`.
+/// 
 /// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
 ///
 /// Note that timers are not persisted across canister upgrades.
@@ -382,6 +389,51 @@ pub fn set_timer_interval(interval: Duration, func: impl AsyncFnMut() + 'static)
     let key = TASKS.with_borrow_mut(|tasks| {
         tasks.insert(Task::Repeated {
             func: Box::new(func),
+            interval,
+        })
+    });
+    TIMERS.with_borrow_mut(|timers| {
+        timers.push(Timer {
+            task: key,
+            time: scheduled_time,
+        });
+    });
+    update_ic0_timer();
+    key
+}
+
+/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`] is more than [`u64::MAX`] nanoseconds.
+///
+/// `func` will not be rescheduled until `interval` time has passed since the *start* of the previous invocation of `func`.
+/// This means that if `func` takes longer than `interval` to execute, its future may be executed multiple times concurrently.
+/// 
+/// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
+///
+/// Note that timers are not persisted across canister upgrades.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// ic_cdk_timers::set_timer_interval(Duration::from_secs(5), async || {
+///     ic_cdk::println!("This will run every five seconds forever!");
+/// });
+/// ```
+///
+/// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
+pub fn set_timer_interval_concurrent<F: Future<Output = ()> + 'static>(
+    interval: Duration,
+    func: impl Fn() -> F + 'static,
+) -> TimerId {
+    let interval_ns = u64::try_from(interval.as_nanos()).expect(
+        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
+    );
+    let scheduled_time = ic0::time().checked_add(interval_ns).expect(
+        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
+    );
+    let key = TASKS.with_borrow_mut(|tasks| {
+        tasks.insert(Task::RepeatedConcurrent {
+            func: Box::new(move || Box::pin(func())),
             interval,
         })
     });
@@ -493,6 +545,21 @@ extern "C" fn timer_executor() {
                         let mut guard = RepeatGuard(Some(func), task_id, interval);
                         guard.0.as_mut().unwrap().call_mut().await;
                         ic0::msg_reply();
+                    });
+                }
+                Task::RepeatedConcurrent { func, interval } => {
+                    ic_cdk_executor::spawn_protected(async move {
+                        let invocation = func();
+                        TASKS.with_borrow_mut(|tasks| {
+                            tasks.get_mut(task_id).map(|slot| {
+                                *slot = Task::RepeatedConcurrent {
+                                    func,
+                                    interval,
+                                };
+                            })
+                        });
+                        ic0::msg_reply();
+                        invocation.await;
                     });
                 }
             }
