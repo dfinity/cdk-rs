@@ -475,7 +475,10 @@ extern "C" fn timer_executor() {
         if let Some(task) = task {
             match task {
                 Task::Once(fut) => {
-                    ic_cdk_executor::spawn_protected(fut);
+                    ic_cdk_executor::spawn_protected(async {
+                        fut.await;
+                        ic0::msg_reply();
+                    });
                     TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
                 }
                 Task::Repeated { func, interval } => {
@@ -496,11 +499,10 @@ extern "C" fn timer_executor() {
 
                         let mut guard = RepeatGuard(Some(func), task_id, interval);
                         guard.0.as_mut().unwrap().call_mut().await;
+                        ic0::msg_reply();
                     });
                 }
             }
         }
-        ic0::msg_reply_data_append(&[]);
-        ic0::msg_reply();
     });
 }
