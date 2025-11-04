@@ -255,9 +255,9 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 return;
             }
             x => {
-                let reject_data_size = ic0::msg_arg_data_size();
+                let reject_data_size = ic0::msg_reject_msg_size();
                 let mut reject_data = Vec::with_capacity(reject_data_size);
-                ic0::msg_arg_data_copy_uninit(
+                ic0::msg_reject_msg_copy_uninit(
                     &mut reject_data.spare_capacity_mut()[..reject_data_size],
                     0,
                 );
@@ -503,6 +503,8 @@ extern "C" fn timer_executor() {
                     });
                 }
             }
+        } else {
+            ic0::msg_reply();
         }
     });
 }

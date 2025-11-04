@@ -1,4 +1,4 @@
-use pocket_ic::{query_candid, PocketIc};
+use pocket_ic::{common::rest::AutoProgressConfig, query_candid, PocketIc};
 use std::time::Duration;
 
 mod test_utilities;
@@ -152,4 +152,37 @@ fn test_async_timers() {
             .count(),
         3
     );
+}
+
+#[test]
+fn long_timers() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    reqwest::blocking::Client::new()
+        .post(
+            pic.get_server_url()
+                .join(&format!("/instances/{}/auto_progress", pic.instance_id()))
+                .unwrap(),
+        )
+        .json(&AutoProgressConfig {
+            artificial_delay_ms: Some(3000),
+        })
+        .send()
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+
+    update::<(), ()>(&pic, canister_id, "start_repeating", ()).unwrap();
+    pic.advance_time(Duration::from_secs(3)); // ensure they are all batched
+    advance_seconds(&pic, 3);
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+    advance_seconds(&pic, 8);
+
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events[..], ["repeat", "repeat", "repeat"]);
 }
