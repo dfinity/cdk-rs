@@ -177,12 +177,15 @@ fn long_timers() {
         .error_for_status()
         .unwrap();
 
-    update::<(), ()>(&pic, canister_id, "start_repeating", ()).unwrap();
+    update::<(), ()>(&pic, canister_id, "start_repeating_async", ()).unwrap();
     pic.advance_time(Duration::from_secs(3)); // ensure they are all batched
     advance_seconds(&pic, 3);
     update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
     advance_seconds(&pic, 8);
 
     let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
-    assert_eq!(events[..], ["repeat", "repeat", "repeat"]);
+    assert_eq!(
+        events[..],
+        ["method repeat", "method repeat", "method repeat"]
+    );
 }
