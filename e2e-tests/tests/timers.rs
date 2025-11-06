@@ -1,8 +1,17 @@
-use pocket_ic::{common::rest::AutoProgressConfig, query_candid, PocketIc};
+use pocket_ic::{query_candid, PocketIc};
 use std::time::Duration;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
+
+/// Advance the time by a given number of seconds.
+/// "tick" the IC every second so that it progress and produce a block so that timers get triggered.
+fn advance_seconds(pic: &PocketIc, seconds: u32) {
+    for _ in 0..seconds {
+        pic.advance_time(Duration::from_secs(1));
+        pic.tick();
+    }
+}
 
 #[test]
 fn test_timers() {
@@ -86,13 +95,6 @@ fn test_scheduling_many_timers() {
     assert_eq!(timers_to_schedule, executed_timers);
 }
 
-fn advance_seconds(pic: &PocketIc, seconds: u32) {
-    for _ in 0..seconds {
-        pic.advance_time(Duration::from_secs(1));
-        pic.tick();
-    }
-}
-
 #[test]
 fn test_set_global_timers() {
     let wasm = cargo_build_canister("timers");
@@ -155,7 +157,7 @@ fn test_async_timers() {
 }
 
 #[test]
-fn long_timers() {
+fn test_periodic_timers_repeat_when_task_make_calls() {
     let wasm = cargo_build_canister("timers");
     let pic = pic_base().build();
 
@@ -163,25 +165,11 @@ fn long_timers() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
 
-    reqwest::blocking::Client::new()
-        .post(
-            pic.get_server_url()
-                .join(&format!("/instances/{}/auto_progress", pic.instance_id()))
-                .unwrap(),
-        )
-        .json(&AutoProgressConfig {
-            artificial_delay_ms: Some(3000),
-        })
-        .send()
-        .unwrap()
-        .error_for_status()
-        .unwrap();
-
     update::<(), ()>(&pic, canister_id, "start_repeating_async", ()).unwrap();
-    pic.advance_time(Duration::from_secs(3)); // ensure they are all batched
+    // start_repeating_async sets a repeating timer with a 1s interval
+    // advance time by 3 seconds should trigger 3 repeats
     advance_seconds(&pic, 3);
     update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
-    advance_seconds(&pic, 8);
 
     let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
     assert_eq!(
