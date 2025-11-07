@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Breaking: Interval timer bodies have been changed from `AsyncFnMut()` to `FnMut() -> impl Future`; some code may need to be changed from `async || {` to `|| async {`.
+
 ## [1.0.0-beta.1] - 2025-10-09
 
 - `ic-cdk-timers` no longer has a dependency on `ic-cdk` and no longer needs to be upgraded when `ic-cdk` is upgraded.
