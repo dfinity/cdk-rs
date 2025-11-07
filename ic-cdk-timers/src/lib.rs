@@ -77,8 +77,8 @@ struct Timer {
     counter: u128,
 }
 
-// Timers are sorted such that x > y if x should be executed _before_ y. Ties are broken in favor of
-// which timer was scheduled first (the only purpose of `counter`/`TIMER_COUNTER`).
+// Timers are sorted first by time, then by insertion order to ensure deterministic ordering.
+// The ordering is reversed (earlier timer > later) for use in BinaryHeap which is a max-heap.
 
 impl Ord for Timer {
     fn cmp(&self, other: &Self) -> Ordering {
