@@ -301,11 +301,11 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 }
             }
         });
-        if Rc::strong_count(&batch) == 1 {
-            // last timer in the batch
-            MOST_RECENT.set(None);
-            update_ic0_timer();
-        }
+        // if Rc::strong_count(&batch) == 1 {
+        // last timer in the batch
+        MOST_RECENT.set(None);
+        update_ic0_timer();
+        // }
     });
 }
 
