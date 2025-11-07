@@ -4,6 +4,15 @@ use std::time::Duration;
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
 
+/// Advance the time by a given number of seconds.
+/// "tick" the IC every second so that it progress and produce a block so that timers get triggered.
+fn advance_seconds(pic: &PocketIc, seconds: u32) {
+    for _ in 0..seconds {
+        pic.advance_time(Duration::from_secs(1));
+        pic.tick();
+    }
+}
+
 #[test]
 fn test_timers() {
     let wasm = cargo_build_canister("timers");
@@ -86,13 +95,6 @@ fn test_scheduling_many_timers() {
     assert_eq!(timers_to_schedule, executed_timers);
 }
 
-fn advance_seconds(pic: &PocketIc, seconds: u32) {
-    for _ in 0..seconds {
-        pic.advance_time(Duration::from_secs(1));
-        pic.tick();
-    }
-}
-
 #[test]
 fn test_set_global_timers() {
     let wasm = cargo_build_canister("timers");
@@ -151,5 +153,27 @@ fn test_async_timers() {
             .filter(|e| *e == "method concurrent")
             .count(),
         3
+    );
+}
+
+#[test]
+fn test_periodic_timers_repeat_when_task_make_calls() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "start_repeating_async", ()).unwrap();
+    // start_repeating_async sets a repeating timer with a 1s interval
+    // advance time by 3 seconds should trigger 3 repeats
+    advance_seconds(&pic, 3);
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(
+        events[..],
+        ["method repeat", "method repeat", "method repeat"]
     );
 }
