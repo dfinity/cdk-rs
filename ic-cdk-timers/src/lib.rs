@@ -367,8 +367,6 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
 /// and it is almost certain that either your captures must be Copy or you must use e.g. Rc to share them, because
 /// you cannot capture by reference, and referencing an owned capture in a returned async block is not possible.
 ///
-/// Note that timers are not persisted across canister upgrades.
-///
 /// <div class="warning">
 ///
 /// Interval timers should be *idempotent* with respect to the canister's state, as during heavy network load,
