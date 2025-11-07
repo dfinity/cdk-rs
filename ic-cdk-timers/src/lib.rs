@@ -50,6 +50,7 @@ use slotmap::{KeyData, SlotMap, new_key_type};
 // which is more accurately a task ID. (The obvious solution to this, `pub use`, invokes a very silly compiler error.)
 
 thread_local! {
+    static TIMER_COUNTER: Cell<u128> = const { Cell::new(0) };
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
     static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
@@ -73,13 +74,18 @@ new_key_type! {
 struct Timer {
     task: TimerId,
     time: u64,
+    counter: u128,
 }
 
-// Timers are sorted such that x > y if x should be executed _before_ y.
+// Timers are sorted such that x > y if x should be executed _before_ y. Ties are broken in favor of
+// which timer was scheduled first (the only purpose of `counter`/`TIMER_COUNTER`).
 
 impl Ord for Timer {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.time.cmp(&other.time).reverse()
+        self.time
+            .cmp(&other.time)
+            .then_with(|| self.counter.cmp(&other.counter))
+            .reverse()
     }
 }
 
@@ -96,6 +102,14 @@ impl PartialEq for Timer {
 }
 
 impl Eq for Timer {}
+
+fn next_counter() -> u128 {
+    TIMER_COUNTER.with(|c| {
+        let v = c.get();
+        c.set(v + 1);
+        v
+    })
+}
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
 #[unsafe(export_name = "canister_global_timer")]
@@ -201,6 +215,7 @@ extern "C" fn global_timer() {
                                                 timers.push(Timer {
                                                     task: task_id,
                                                     time,
+                                                    counter: next_counter(),
                                                 });
                                             }
                                             None => ic0::debug_print(
@@ -352,6 +367,7 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
         timers.push(Timer {
             task: key,
             time: scheduled_time,
+            counter: next_counter(),
         })
     });
     update_ic0_timer();
@@ -411,6 +427,7 @@ where
         timers.push(Timer {
             task: key,
             time: scheduled_time,
+            counter: next_counter(),
         });
     });
     update_ic0_timer();
