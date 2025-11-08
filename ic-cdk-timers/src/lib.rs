@@ -354,7 +354,6 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
             counter: next_counter(),
         })
     });
-    ic0::debug_print(format!("Scheduling {key:?}").as_bytes());
     update_ic0_timer();
     key
 }
@@ -485,7 +484,6 @@ extern "C" fn timer_executor() {
         ic0::msg_arg_data_copy(&mut arg_bytes, 0);
         let task_id = u64::from_be_bytes(arg_bytes);
         let task_id = TimerId(KeyData::from_ffi(task_id));
-        ic0::debug_print(format!("Running {task_id:?}").as_bytes());
 
         // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
         // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
