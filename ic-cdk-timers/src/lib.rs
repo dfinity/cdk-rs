@@ -38,7 +38,6 @@ use std::{
     future::Future,
     mem,
     pin::Pin,
-    rc::Rc,
     time::Duration,
 };
 
@@ -115,7 +114,6 @@ fn next_counter() -> u128 {
 #[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
     ic_cdk_executor::in_tracking_executor_context(|| {
-        let batch = Rc::new(());
         let mut canister_self = [0; 32];
         let canister_self = {
             let sz = ic0::canister_self_size();
@@ -152,7 +150,6 @@ extern "C" fn global_timer() {
                             let task_id = timer.task;
                             let env = Box::new(CallEnv {
                                 timer,
-                                batch: batch.clone(),
                                 method_handle: ic_cdk_executor::extend_current_method_context(),
                             });
                             const METHOD_NAME: &str = "<ic-cdk internal> timer_executor";
@@ -236,17 +233,14 @@ extern "C" fn global_timer() {
             }
             timers.extend(to_reschedule);
         });
-        // if Rc::strong_count(&batch) == 1 {
-        // nothing scheduled
+
         MOST_RECENT.set(None);
         update_ic0_timer();
-        // }
     });
 }
 
 struct CallEnv {
     timer: Timer,
-    batch: Rc<()>,
     method_handle: MethodHandle,
 }
 
@@ -257,7 +251,6 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Box<CallEnv> as userdata.
     let CallEnv {
         timer,
-        batch,
         method_handle,
     } = *unsafe { Box::<CallEnv>::from_raw(env as *mut CallEnv) };
     ic_cdk_executor::in_callback_executor_context_for(method_handle, || {
@@ -270,11 +263,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 if TASKS.with_borrow(|tasks| tasks.contains_key(task_id)) {
                     // Try to execute the timer again later.
                     TIMERS.with_borrow_mut(|timers| timers.push(timer));
-                    if Rc::strong_count(&batch) == 1 {
-                        // last timer in the batch
-                        MOST_RECENT.set(None);
-                        update_ic0_timer();
-                    }
+                    update_ic0_timer();
                 }
                 return;
             }
@@ -316,11 +305,6 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                 }
             }
         });
-        if Rc::strong_count(&batch) == 1 {
-            // last timer in the batch
-            MOST_RECENT.set(None);
-            update_ic0_timer();
-        }
     });
 }
 
