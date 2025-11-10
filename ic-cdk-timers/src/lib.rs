@@ -204,7 +204,7 @@ extern "C" fn global_timer() {
                                 // This error most likely will recur if any more timers are scheduled this round.
                                 break;
                             } else {
-                                // If a repeated timer is successfully executed, reschedule it.
+                                // If a repeated timer is successfully dispatched (irrespective of the timer's own success), reschedule it.
                                 TASKS.with_borrow(|tasks| {
                                     if let Task::Repeated { interval, .. } = &tasks[task_id] {
                                         match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
