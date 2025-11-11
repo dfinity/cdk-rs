@@ -59,16 +59,29 @@ async fn basic() {
     };
     update_settings(&arg).await.unwrap();
 
+    // wat2wasm "(module (@custom "icp:public X" "content of X"))"
+    let wasm_module = b"\x00asm\x01\x00\x00\x00\x00\x19\x0c\
+    icp:public\x20Xcontent\x20of\x20X"
+        .to_vec();
+
     // install_code
     let arg = InstallCodeArgs {
         mode: CanisterInstallMode::Install,
         canister_id,
         // A minimal valid wasm module
         // wat2wasm "(module)"
-        wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
+        wasm_module,
         arg: vec![],
     };
     install_code(&arg).await.unwrap();
+
+    // canister_metadata
+    let arg = CanisterMetadataArgs {
+        canister_id,
+        name: "X".to_string(),
+    };
+    let result = canister_metadata(&arg).await.unwrap();
+    assert_eq!(result.value, b"content of X".to_vec());
 
     // uninstall_code
     let arg = UninstallCodeArgs { canister_id };
@@ -307,12 +320,13 @@ async fn snapshots() {
 
     // Cannot take a snapshot of a canister that is empty.
     // So we install a minimal wasm module.
+    // A minimal valid wasm module
+    // wat2wasm "(module)"
+    let wasm_module = b"\x00asm\x01\x00\x00\x00".to_vec();
     let arg = InstallCodeArgs {
         mode: CanisterInstallMode::Install,
         canister_id,
-        // A minimal valid wasm module
-        // wat2wasm "(module)"
-        wasm_module: b"\x00asm\x01\x00\x00\x00".to_vec(),
+        wasm_module: wasm_module.clone(),
         arg: vec![],
     };
     install_code(&arg).await.unwrap();
@@ -322,25 +336,67 @@ async fn snapshots() {
         canister_id,
         replace_snapshot: None,
     };
-    let snapshot = take_canister_snapshot(&arg).await.unwrap();
+    let snapshot1 = take_canister_snapshot(&arg).await.unwrap();
 
     // load_canister_snapshot
     let arg = LoadCanisterSnapshotArgs {
         canister_id,
-        snapshot_id: snapshot.id.clone(),
+        snapshot_id: snapshot1.id.clone(),
     };
     assert!(load_canister_snapshot(&arg).await.is_ok());
+
+    // read_canister_snapshot_metadata
+    let arg = ReadCanisterSnapshotMetadataArgs {
+        canister_id,
+        snapshot_id: snapshot1.id.clone(),
+    };
+    let snapshot_metadata = read_canister_snapshot_metadata(&arg).await.unwrap();
+
+    // read_canister_snapshot_data
+    let arg = ReadCanisterSnapshotDataArgs {
+        canister_id,
+        snapshot_id: snapshot1.id.clone(),
+        kind: SnapshotDataKind::WasmModule { offset: 0, size: 8 },
+    };
+    let result = read_canister_snapshot_data(&arg).await.unwrap();
+    assert_eq!(result.chunk, wasm_module);
+
+    // upload_canister_snapshot_metadata
+    let globals = snapshot_metadata.globals.into_iter().flatten().collect();
+    let arg = UploadCanisterSnapshotMetadataArgs {
+        canister_id,
+        replace_snapshot: None,
+        wasm_module_size: snapshot_metadata.wasm_module_size,
+        globals,
+        wasm_memory_size: snapshot_metadata.wasm_memory_size,
+        stable_memory_size: snapshot_metadata.stable_memory_size,
+        certified_data: snapshot_metadata.certified_data,
+        global_timer: snapshot_metadata.global_timer,
+        on_low_wasm_memory_hook_status: snapshot_metadata.on_low_wasm_memory_hook_status,
+    };
+    let snapshot2 = upload_canister_snapshot_metadata(&arg).await.unwrap();
+    assert!(!snapshot2.snapshot_id.is_empty());
+
+    // upload_canister_snapshot_data
+    let arg = UploadCanisterSnapshotDataArgs {
+        canister_id,
+        snapshot_id: snapshot2.snapshot_id.clone(),
+        kind: SnapshotDataOffset::WasmModule { offset: 0 },
+        chunk: wasm_module.clone(),
+    };
+    assert!(upload_canister_snapshot_data(&arg).await.is_ok());
 
     // list_canister_snapshots
     let args = ListCanisterSnapshotsArgs { canister_id };
     let snapshots = list_canister_snapshots(&args).await.unwrap();
-    assert_eq!(snapshots.len(), 1);
-    assert_eq!(snapshots[0].id, snapshot.id);
+    assert_eq!(snapshots.len(), 2);
+    assert_eq!(snapshots[0].id, snapshot1.id);
+    assert_eq!(snapshots[1].id, snapshot2.snapshot_id);
 
     // delete_canister_snapshot
     let arg = DeleteCanisterSnapshotArgs {
         canister_id,
-        snapshot_id: snapshot.id.clone(),
+        snapshot_id: snapshot1.id.clone(),
     };
     assert!(delete_canister_snapshot(&arg).await.is_ok());
 
@@ -353,11 +409,11 @@ async fn snapshots() {
     assert_eq!(canister_info_result.total_num_changes, 3);
     assert_eq!(canister_info_result.recent_changes.len(), 1);
     if let Change {
-        details: ChangeDetails::LoadSnapshot(load_snapshot_record),
+        details: Some(ChangeDetails::LoadSnapshot(load_snapshot_record)),
         ..
     } = &canister_info_result.recent_changes[0]
     {
-        assert_eq!(load_snapshot_record.snapshot_id, snapshot.id);
+        assert_eq!(load_snapshot_record.snapshot_id, snapshot1.id);
     } else {
         panic!("Expected the most recent change to be LoadSnapshot");
     }

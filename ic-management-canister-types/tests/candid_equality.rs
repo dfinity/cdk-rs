@@ -52,13 +52,18 @@ fn stop_canister(_: StopCanisterArgs) {
     unimplemented!()
 }
 
-#[candid_method(update)]
+#[candid_method(query)]
 fn canister_status(_: CanisterStatusArgs) -> CanisterStatusResult {
     unimplemented!()
 }
 
 #[candid_method(update)]
 fn canister_info(_: CanisterInfoArgs) -> CanisterInfoResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn canister_metadata(_: CanisterMetadataArgs) -> CanisterMetadataResult {
     unimplemented!()
 }
 
@@ -104,6 +109,16 @@ fn schnorr_public_key(_: SchnorrPublicKeyArgs) -> SchnorrPublicKeyResult {
 
 #[candid_method(update)]
 fn sign_with_schnorr(_: SignWithSchnorrArgs) -> SignWithSchnorrResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn vetkd_public_key(_: VetKDPublicKeyArgs) -> VetKDPublicKeyResult {
+    unimplemented!()
+}
+
+#[candid_method(update)]
+fn vetkd_derive_key(_: VetKDDeriveKeyArgs) -> VetKDDeriveKeyResult {
     unimplemented!()
 }
 
@@ -182,7 +197,13 @@ mod test {
     fn candid_equality_test() {
         let declared_interface_str =
             std::fs::read_to_string("tests/ic.did").expect("Failed to read ic.did file");
-        let declared_interface = CandidSource::Text(&declared_interface_str);
+        let filtered_interface_str = declared_interface_str
+            .lines()
+            // Bitcoin APIs are deprecated from the management canister, so we filter them out.
+            .filter(|line| !line.trim_start().starts_with("bitcoin_"))
+            .collect::<Vec<&str>>()
+            .join("\n");
+        let declared_interface = CandidSource::Text(&filtered_interface_str);
 
         candid::export_service!();
         let implemented_interface_str = __export_service();

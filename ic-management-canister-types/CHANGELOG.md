@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Removed `SettingsChange` variant from `ChangeDetails`.
+- Added `from_cansiter_id` field to `LoadSnapshotRecord`.
+- Added `ready_for_migration` and `version` fields to `CanisterStatusResult`.
+- Added `registry_version` field to `SubnetInfoResult`.
+
+Following changes are for the Candid interface changes proposed in this [forum post](https://forum.dfinity.org/t/proposal-making-variant-fields-optional-for-schema-evolution/57898#p-203913-proposed-solution-2).
+- The `details` field in `Change` is optional.
+- The `source` and `globals` fields in `ReadCanisterSnapshotMetadataResult` are optional.
+
+### Added
+
+- `CanisterMetadataArgs` and `CanisterMetadataResult` for the new method `canister_metadata`.
+
 ## [0.4.1] - 2025-09-04
 
 ### Fixed

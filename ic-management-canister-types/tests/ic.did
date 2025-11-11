@@ -50,7 +50,7 @@ type change_origin = variant {
 type change_details = variant {
     creation : record {
         controllers : vec principal;
-        environment_variables_hash : opt blob;
+        environment_variables_hash : opt blob; 
     };
     code_uninstall;
     code_deployment : record {
@@ -58,29 +58,25 @@ type change_details = variant {
         module_hash : blob;
     };
     load_snapshot : record {
-        canister_version : nat64;
+        from_canister_id : opt principal;
         snapshot_id : snapshot_id;
+        canister_version : nat64;
         taken_at_timestamp : nat64;
         source : variant {
-            taken_from_canister : reserved;
-            metadata_upload : reserved;
+          taken_from_canister : reserved;
+          metadata_upload : reserved;
         };
     };
-    // Deprecated: `settings_change` is used instead.
     controllers_change : record {
         controllers : vec principal;
     };
-    settings_change: record {
-        controllers : opt vec principal;
-        environment_variables_hash: opt blob;
-    }
 };
 
 type change = record {
     timestamp_nanos : nat64;
     canister_version : nat64;
     origin : change_origin;
-    details : change_details;
+    details : opt change_details;
 };
 
 type chunk_hash = record {
@@ -100,6 +96,10 @@ type http_request_result = record {
 
 type ecdsa_curve = variant {
     secp256k1;
+};
+
+type vetkd_curve = variant {
+    bls12_381_g2;
 };
 
 type schnorr_algorithm = variant {
@@ -263,7 +263,13 @@ type canister_status_args = record {
 };
 
 type canister_status_result = record {
-    status : variant { running; stopping; stopped };
+    status : variant {
+        running;
+        stopping;
+        stopped;
+    };
+    ready_for_migration : bool;
+    version : nat64;
     settings : definite_canister_settings;
     module_hash : opt blob;
     memory_size : nat;
@@ -298,6 +304,15 @@ type canister_info_result = record {
     recent_changes : vec change;
     module_hash : opt blob;
     controllers : vec principal;
+};
+
+type canister_metadata_args = record {
+    canister_id : canister_id;
+    name : text;
+};
+
+type canister_metadata_result = record {
+    value : blob;
 };
 
 type delete_canister_args = record {
@@ -370,6 +385,27 @@ type sign_with_schnorr_result = record {
     signature : blob;
 };
 
+type vetkd_public_key_args = record {
+    canister_id : opt canister_id;
+    context : blob;
+    key_id : record { curve : vetkd_curve; name : text };
+};
+
+type vetkd_public_key_result = record {
+    public_key : blob;
+};
+
+type vetkd_derive_key_args = record {
+    input : blob;
+    context : blob;
+    transport_public_key : blob;
+    key_id : record { curve : vetkd_curve; name : text };
+};
+
+type vetkd_derive_key_result = record {
+    encrypted_key : blob;
+};
+
 type node_metrics_history_args = record {
     subnet_id : principal;
     start_at_timestamp_nanos : nat64;
@@ -386,6 +422,7 @@ type subnet_info_args = record {
 
 type subnet_info_result = record {
     replica_version : text;
+    registry_version : nat64;
 };
 
 type provisional_create_canister_with_cycles_args = record {
@@ -440,19 +477,33 @@ type delete_canister_snapshot_args = record {
     snapshot_id : snapshot_id;
 };
 
+type fetch_canister_logs_args = record {
+    canister_id : canister_id;
+};
+
+type canister_log_record = record {
+    idx : nat64;
+    timestamp_nanos : nat64;
+    content : blob;
+};
+
+type fetch_canister_logs_result = record {
+    canister_log_records : vec canister_log_record;
+};
+
 type read_canister_snapshot_metadata_args = record {
     canister_id : canister_id;
     snapshot_id : snapshot_id;
 };
 
-type read_canister_snapshot_metadata_result = record {
-    source : variant {
+type read_canister_snapshot_metadata_response = record {
+    source : opt variant {
         taken_from_canister: reserved;
-        metadata_upload: reserved;
+        metadata_upload : reserved;
     };
     taken_at_timestamp : nat64;
     wasm_module_size : nat64;
-    globals : vec variant {
+    globals : vec opt variant {
         i32 : int32;
         i64 : int64;
         f32 : float32;
@@ -499,7 +550,7 @@ type read_canister_snapshot_data_args = record {
     };
 };
 
-type read_canister_snapshot_data_result = record {
+type read_canister_snapshot_data_response  = record {
     chunk : blob;
 };
 
@@ -528,7 +579,7 @@ type upload_canister_snapshot_metadata_args = record {
     };
 };
 
-type upload_canister_snapshot_metadata_result = record {
+type upload_canister_snapshot_metadata_response = record {
     snapshot_id : snapshot_id;
 };
 
@@ -550,20 +601,6 @@ type upload_canister_snapshot_data_args = record {
     chunk : blob;
 };
 
-type fetch_canister_logs_args = record {
-    canister_id : canister_id;
-};
-
-type canister_log_record = record {
-    idx : nat64;
-    timestamp_nanos : nat64;
-    content : blob;
-};
-
-type fetch_canister_logs_result = record {
-    canister_log_records : vec canister_log_record;
-};
-
 service ic : {
     create_canister : (create_canister_args) -> (create_canister_result);
     update_settings : (update_settings_args) -> ();
@@ -575,12 +612,15 @@ service ic : {
     uninstall_code : (uninstall_code_args) -> ();
     start_canister : (start_canister_args) -> ();
     stop_canister : (stop_canister_args) -> ();
-    canister_status : (canister_status_args) -> (canister_status_result);
-    canister_info : (canister_info_args) -> (canister_info_result);
+    canister_status : (canister_status_args) -> (canister_status_result) query;
     delete_canister : (delete_canister_args) -> ();
     deposit_cycles : (deposit_cycles_args) -> ();
     raw_rand : () -> (raw_rand_result);
     http_request : (http_request_args) -> (http_request_result);
+
+    // Public canister data
+    canister_info : (canister_info_args) -> (canister_info_result);
+    canister_metadata : (canister_metadata_args) -> (canister_metadata_result);
 
     // Threshold ECDSA signature
     ecdsa_public_key : (ecdsa_public_key_args) -> (ecdsa_public_key_result);
@@ -590,12 +630,16 @@ service ic : {
     schnorr_public_key : (schnorr_public_key_args) -> (schnorr_public_key_result);
     sign_with_schnorr : (sign_with_schnorr_args) -> (sign_with_schnorr_result);
 
+    // Threshold key derivation
+    vetkd_public_key : (vetkd_public_key_args) -> (vetkd_public_key_result);
+    vetkd_derive_key : (vetkd_derive_key_args) -> (vetkd_derive_key_result);
+
     // bitcoin interface
-    // bitcoin_get_balance : (bitcoin_get_balance_args) -> (bitcoin_get_balance_result);
-    // bitcoin_get_utxos : (bitcoin_get_utxos_args) -> (bitcoin_get_utxos_result);
-    // bitcoin_send_transaction : (bitcoin_send_transaction_args) -> ();
-    // bitcoin_get_current_fee_percentiles : (bitcoin_get_current_fee_percentiles_args) -> (bitcoin_get_current_fee_percentiles_result);
-    // bitcoin_get_block_headers : (bitcoin_get_block_headers_args) -> (bitcoin_get_block_headers_result);
+    bitcoin_get_balance : (bitcoin_get_balance_args) -> (bitcoin_get_balance_result);
+    bitcoin_get_utxos : (bitcoin_get_utxos_args) -> (bitcoin_get_utxos_result);
+    bitcoin_send_transaction : (bitcoin_send_transaction_args) -> ();
+    bitcoin_get_current_fee_percentiles : (bitcoin_get_current_fee_percentiles_args) -> (bitcoin_get_current_fee_percentiles_result);
+    bitcoin_get_block_headers : (bitcoin_get_block_headers_args) -> (bitcoin_get_block_headers_result);
 
     // metrics interface
     node_metrics_history : (node_metrics_history_args) -> (node_metrics_history_result);
@@ -610,12 +654,12 @@ service ic : {
     // Canister snapshots
     take_canister_snapshot : (take_canister_snapshot_args) -> (take_canister_snapshot_result);
     load_canister_snapshot : (load_canister_snapshot_args) -> ();
+    read_canister_snapshot_metadata : (read_canister_snapshot_metadata_args) -> (read_canister_snapshot_metadata_response);
+    read_canister_snapshot_data : (read_canister_snapshot_data_args) -> (read_canister_snapshot_data_response);
+    upload_canister_snapshot_metadata : (upload_canister_snapshot_metadata_args) -> (upload_canister_snapshot_metadata_response);
+    upload_canister_snapshot_data : (upload_canister_snapshot_data_args) -> ();
     list_canister_snapshots : (list_canister_snapshots_args) -> (list_canister_snapshots_result);
     delete_canister_snapshot : (delete_canister_snapshot_args) -> ();
-    read_canister_snapshot_metadata : (read_canister_snapshot_metadata_args) -> (read_canister_snapshot_metadata_result);
-    read_canister_snapshot_data : (read_canister_snapshot_data_args) -> (read_canister_snapshot_data_result);
-    upload_canister_snapshot_metadata : (upload_canister_snapshot_metadata_args) -> (upload_canister_snapshot_metadata_result);
-    upload_canister_snapshot_data : (upload_canister_snapshot_data_args) -> ();
 
     // canister logging
     fetch_canister_logs : (fetch_canister_logs_args) -> (fetch_canister_logs_result) query;

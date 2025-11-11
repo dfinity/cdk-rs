@@ -82,6 +82,17 @@ fn start_repeating() {
 }
 
 #[update]
+fn start_repeating_async() {
+    let id = set_timer_interval(Duration::from_secs(1), async || {
+        Call::bounded_wait(canister_self(), "add_event_method")
+            .with_arg("repeat")
+            .await
+            .unwrap();
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
 fn set_self_cancelling_periodic_timer() {
     let id = set_timer_interval(Duration::from_secs(0), async || {
         stop_repeating();

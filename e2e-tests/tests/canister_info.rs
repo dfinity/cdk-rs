@@ -65,10 +65,10 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(1)
                     }),
-                    details: ChangeDetails::Creation(CreationRecord {
+                    details: Some(ChangeDetails::Creation(CreationRecord {
                         controllers: vec![canister_id],
                         environment_variables_hash: None
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 6,
@@ -77,13 +77,13 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(2)
                     }),
-                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: Some(ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
                         )
                         .unwrap(),
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 8,
@@ -92,7 +92,7 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(3)
                     }),
-                    details: ChangeDetails::CodeUninstall,
+                    details: Some(ChangeDetails::CodeUninstall),
                 },
                 Change {
                     timestamp_nanos: time0 + 10,
@@ -101,13 +101,13 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(4)
                     }),
-                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: Some(ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
                         )
                         .unwrap(),
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 12,
@@ -116,13 +116,13 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(5)
                     }),
-                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: Some(ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Reinstall,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
                         )
                         .unwrap(),
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 14,
@@ -131,13 +131,13 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(6)
                     }),
-                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: Some(ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Upgrade,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
                         )
                         .unwrap(),
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 16,
@@ -146,9 +146,9 @@ fn test_canister_info() {
                         canister_id,
                         canister_version: Some(7)
                     }),
-                    details: ChangeDetails::ControllersChange(ControllersChangeRecord {
+                    details: Some(ChangeDetails::ControllersChange(ControllersChangeRecord {
                         controllers: vec![Principal::anonymous(), canister_id, new_canister.0]
-                    }),
+                    })),
                 },
                 Change {
                     timestamp_nanos: time0 + 18,
@@ -156,7 +156,7 @@ fn test_canister_info() {
                     origin: ChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
                     }),
-                    details: ChangeDetails::CodeUninstall,
+                    details: Some(ChangeDetails::CodeUninstall),
                 },
                 Change {
                     timestamp_nanos: time0 + 19,
@@ -164,13 +164,13 @@ fn test_canister_info() {
                     origin: ChangeOrigin::FromUser(FromUserRecord {
                         user_id: Principal::anonymous(),
                     }),
-                    details: ChangeDetails::CodeDeployment(CodeDeploymentRecord {
+                    details: Some(ChangeDetails::CodeDeployment(CodeDeploymentRecord {
                         mode: Install,
                         module_hash: hex::decode(
                             "93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476"
                         )
                         .unwrap(),
-                    }),
+                    })),
                 },
             ],
             module_hash: Some(

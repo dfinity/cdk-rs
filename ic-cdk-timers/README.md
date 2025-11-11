@@ -22,7 +22,7 @@ ic-cdk-timers = "0.9.0"
 To schedule a one-shot task to be executed 1s later:
 
 ```rust
-ic_cdk_timers::set_timer(Duration::from_secs(1), || ic_cdk::println!("Hello from the future!"));
+ic_cdk_timers::set_timer(Duration::from_secs(1), async { ic_cdk::println!("Hello from the future!") });
 ```
 
 References
