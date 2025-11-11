@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [1.0.0] - 2025-10-16
+## [1.0.0] - 2025-11-12
 
 - `ic-cdk-timers` no longer has a dependency on `ic-cdk` and no longer needs to be upgraded when `ic-cdk` is upgraded.
 - Breaking: Timer body function signatures have been updated which eliminating the need for explicit `spawn` calls within timer callbacks. 

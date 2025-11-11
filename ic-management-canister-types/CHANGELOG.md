@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.5.0] - 2025-11-12
+
 ### Changed
 
 - Removed `SettingsChange` variant from `ChangeDetails`.
