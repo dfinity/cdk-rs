@@ -286,6 +286,9 @@ pub(crate) fn enter_current_method<R>(method_guard: MethodHandle, f: impl FnOnce
     if let Some(method_id) = method_id {
         let handles = METHODS.with_borrow_mut(|methods| methods.get(method_id).map(|m| m.handles));
         if handles == Some(0) {
+            // ic0::debug_print(
+            //     format!("No more handles for method m{method_id:?}, cleaning up").as_bytes(),
+            // );
             cancel_all_tasks_attached_to_method(method_id);
             METHODS.with_borrow_mut(|methods| methods.remove(method_id));
         }
