@@ -238,7 +238,7 @@ extern "C" fn global_timer() {
                                 // - A nonzero error code from call_perform releases ownership back to us
                                 let env = unsafe { Box::from_raw(env as *mut CallEnv) };
                                 ic0::debug_print(
-                                    format!("[ic-cdk-timers] canister_global_timer: call_perform failed for timer {task_id:?} with error code {errcode}").as_bytes(),
+                                    format!("[ic-cdk-timers] canister_global_timer: call_perform failed with error code {errcode}").as_bytes(),
                                 );
                                 // If the attempted call failed, we will try to execute the timer again later.
                                 to_reschedule.push(env.timer);
