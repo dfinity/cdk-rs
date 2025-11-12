@@ -189,3 +189,26 @@ fn test_periodic_timers_repeat_when_tasks_make_calls_despite_time_skipping() {
         ["method repeat", "method repeat", "method repeat"]
     );
 }
+
+#[test]
+fn test_individual_timer_ratelimits_when_time_skips() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "start_repeating", ()).unwrap();
+    advance_and_tick(&pic, 20);
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events.len(), 5);
+
+    let logs = pic
+        .fetch_canister_logs(canister_id, Principal::anonymous())
+        .unwrap();
+    assert!(logs.iter().any(|line| str::from_utf8(&line.content)
+        .is_ok_and(|s| s.contains("too many concurrent calls for single timer"))));
+}
