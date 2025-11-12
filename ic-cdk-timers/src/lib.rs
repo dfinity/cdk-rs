@@ -150,20 +150,20 @@ extern "C" fn global_timer() {
                         let timer_scheduled_time = timer.time;
                         if TASKS.with_borrow(|tasks| tasks.contains_key(timer.task)) {
                             let task_id = timer.task;
-                            ic0::debug_print(format!("Processing task {task_id:?}").as_bytes());
                             if ALL_CALLS.get() >= 250 {
                                 ic0::debug_print(
                                     format!("[ic-cdk-timers] canister_global_timer: too many concurrent timer calls ({}), deferring timer to next round", ALL_CALLS.get()).as_bytes(),
                                 );
                                 to_reschedule.push(timer);
                                 break;
-                            } else if TASKS.with_borrow(|tasks| tasks[task_id].concurrent_calls >= 10) {
-                                ic0::debug_print(
-                                    b"[ic-cdk-timers] canister_global_timer: too many concurrent calls for single timer, rescheduling for next possible execution time",
-                                );
-                                // Copy of the rescheduling logic below, but with one change: we use `now` instead of `timer_scheduled_time`, deliberately skipping intermediate intervals.
+                            } else if TASKS.with_borrow(|tasks| tasks[task_id].concurrent_calls >= 5) {
                                 TASKS.with_borrow(|tasks| {
-                                    if let TaskFn::Repeated { interval, .. } = &tasks[task_id].taskfn {
+                                    let task = &tasks[task_id];
+                                    ic0::debug_print(
+                                        format!("[ic-cdk-timers] canister_global_timer: too many concurrent calls for single timer ({}), rescheduling for next possible execution time", task.concurrent_calls).as_bytes(),
+                                    );
+                                    // Copy of the rescheduling logic below, but with one change: we use `now` instead of `timer_scheduled_time`, deliberately skipping intermediate intervals.
+                                    if let TaskFn::Repeated { interval, .. } = &task.taskfn {
                                         match now.checked_add(interval.as_nanos() as u64) {
                                             Some(time) => {
                                                 timers.push(Timer {

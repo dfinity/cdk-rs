@@ -1,3 +1,4 @@
+use candid::Principal;
 use pocket_ic::{query_candid, PocketIc};
 use std::time::Duration;
 
@@ -60,7 +61,7 @@ fn test_timers_can_cancel_themselves() {
     update::<_, ()>(&pic, canister_id, "set_self_cancelling_periodic_timer", ())
         .expect("Failed to call set_self_cancelling_periodic_timer");
 
-    advance_and_tick(&pic, 1);
+    advance_and_tick(&pic, 3);
 
     let (events,): (Vec<String>,) =
         query_candid(&pic, canister_id, "get_events", ()).expect("Failed to call get_events");
@@ -73,7 +74,7 @@ fn test_timers_can_cancel_themselves() {
 #[test]
 fn test_scheduling_many_timers() {
     let wasm = cargo_build_canister("timers");
-    // Must be more than the queue limit (500)
+    // Must be more than the self-imposed limit (250)
     let timers_to_schedule = 1_000_u32;
     let pic = pic_base().build();
     let canister_id = pic.create_canister();
@@ -97,8 +98,13 @@ fn test_scheduling_many_timers() {
 
     let (executed_timers,): (u32,) = query_candid(&pic, canister_id, "executed_timers", ())
         .expect("Error querying executed_timers");
-
     assert_eq!(timers_to_schedule, executed_timers);
+
+    let logs = pic
+        .fetch_canister_logs(canister_id, Principal::anonymous())
+        .unwrap();
+    assert!(logs.iter().any(|line| str::from_utf8(&line.content)
+        .is_ok_and(|s| s.contains("too many concurrent timer calls"))));
 }
 
 #[test]
