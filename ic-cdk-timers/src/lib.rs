@@ -53,12 +53,14 @@ thread_local! {
     static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
     static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
+    static ALL_CALLS: Cell<usize> = const { Cell::new(0) };
 }
 
 enum Task {
     Repeated {
         func: Box<dyn FnMut() -> Pin<Box<dyn Future<Output = ()>>>>,
         interval: Duration,
+        concurrent_calls: usize,
     },
     Once(Pin<Box<dyn Future<Output = ()>>>),
     Invalid,
@@ -143,11 +145,50 @@ extern "C" fn global_timer() {
                         let timer: Timer = timers.pop().unwrap();
                         let timer_scheduled_time = timer.time;
                         if TASKS.with_borrow(|tasks| tasks.contains_key(timer.task)) {
+                            let task_id = timer.task;
+                            if ALL_CALLS.get() >= 250 {
+                                ic0::debug_print(
+                                    format!("[ic-cdk-timers] canister_global_timer: too many concurrent timer calls ({}), deferring timer to next round", ALL_CALLS.get()).as_bytes(),
+                                );
+                                to_reschedule.push(timer);
+                                break;
+                            } else {
+                                let skip = TASKS.with_borrow(|tasks| {
+                                    let task = &tasks[task_id];
+                                    if let Task::Repeated { interval, concurrent_calls, .. } = &task {
+                                        if *concurrent_calls >= 5 {
+                                            ic0::debug_print(
+                                                format!("[ic-cdk-timers] canister_global_timer: too many concurrent calls for single timer ({}), rescheduling for next possible execution time", concurrent_calls).as_bytes(),
+                                            );
+                                            // Copy of the rescheduling logic below, but with one change: we use `now` instead of `timer_scheduled_time`, deliberately skipping intermediate intervals.
+                                            match now.checked_add(interval.as_nanos() as u64) {
+                                                Some(time) => {
+                                                    timers.push(Timer {
+                                                        task: task_id,
+                                                        time,
+                                                        counter: next_counter(),
+                                                    });
+                                                }
+                                                None => ic0::debug_print(
+                                                    format!(
+                                                        "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                                        interval = interval.as_nanos()
+                                                    ).as_bytes(),
+                                                ),
+                                            }
+                                            return true; // skip
+                                        }
+                                    }
+                                    false // do not skip
+                                });
+                                if skip {
+                                    continue;
+                                }
+                            }
                             // This is the biggest hack in this code. If a callback was called explicitly, and trapped, the rescheduling step wouldn't happen.
                             // The closest thing to a catch_unwind that's available here is performing an inter-canister call to ourselves;
                             // traps will be caught at the call boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
                             // become available, this code should be rewritten.
-                            let task_id = timer.task;
                             let env = Box::new(CallEnv {
                                 timer,
                                 method_handle: ic_cdk_executor::extend_current_method_context(),
@@ -204,9 +245,12 @@ extern "C" fn global_timer() {
                                 // This error most likely will recur if any more timers are scheduled this round.
                                 break;
                             } else {
+                                ALL_CALLS.set(ALL_CALLS.get() + 1);
                                 // If a repeated timer is successfully dispatched (irrespective of the timer's own success), reschedule it.
-                                TASKS.with_borrow(|tasks| {
-                                    if let Task::Repeated { interval, .. } = &tasks[task_id] {
+                                TASKS.with_borrow_mut(|tasks| {
+                                    if let Task::Repeated { interval, concurrent_calls, .. } = &mut tasks[task_id] {
+                                        *concurrent_calls += 1;
+                                        // This code is almost-copied above, be sure to keep them in sync.
                                         match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
                                             Some(time) => {
                                                 timers.push(Timer {
@@ -217,7 +261,7 @@ extern "C" fn global_timer() {
                                             }
                                             None => ic0::debug_print(
                                                 format!(
-                                                    "Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                                    "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
                                                     interval = interval.as_nanos()
                                                 ).as_bytes(),
                                             ),
@@ -248,6 +292,7 @@ struct CallEnv {
 ///
 /// This function must only be passed to the IC with a pointer from Box::<CallEnv>::into_raw as userdata.
 unsafe extern "C" fn timer_scope_callback(env: usize) {
+    ALL_CALLS.set(ALL_CALLS.get() - 1);
     // SAFETY: This function is only ever called by the IC, and we only ever pass a Box<CallEnv> as userdata.
     let CallEnv {
         timer,
@@ -255,6 +300,18 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
     } = *unsafe { Box::<CallEnv>::from_raw(env as *mut CallEnv) };
     ic_cdk_executor::in_callback_executor_context_for(method_handle, || {
         let task_id = timer.task;
+        TASKS.with_borrow_mut(|tasks| {
+            tasks.get_mut(task_id).map(|t| {
+                if let Task::Repeated {
+                    concurrent_calls, ..
+                } = t
+                {
+                    if *concurrent_calls > 0 {
+                        *concurrent_calls -= 1;
+                    }
+                }
+            })
+        });
         let reject_code = ic0::msg_reject_code();
         match reject_code {
             0 => {} // success
@@ -405,6 +462,7 @@ where
         tasks.insert(Task::Repeated {
             func: Box::new(move || Box::pin(func())),
             interval,
+            concurrent_calls: 0,
         })
     });
     TIMERS.with_borrow_mut(|timers| {
@@ -498,18 +556,26 @@ extern "C" fn timer_executor() {
         if let Some(task) = task {
             match task {
                 Task::Once(fut) => {
-                    ic_cdk_executor::spawn_protected(async {
+                    ic_cdk_executor::spawn_protected(async move {
                         fut.await;
                         ic0::msg_reply();
                     });
                     // Invalid cleared in the same round
                     TASKS.with_borrow_mut(|tasks| tasks.remove(task_id));
                 }
-                Task::Repeated { mut func, interval } => {
+                Task::Repeated {
+                    mut func,
+                    interval,
+                    concurrent_calls,
+                } => {
                     let invocation = func();
                     // Invalid cleared in the same round
                     TASKS.with_borrow_mut(|tasks| {
-                        tasks[task_id] = Task::Repeated { func, interval }
+                        tasks[task_id] = Task::Repeated {
+                            func,
+                            interval,
+                            concurrent_calls,
+                        };
                     });
                     ic_cdk_executor::spawn_protected(async move {
                         invocation.await;
