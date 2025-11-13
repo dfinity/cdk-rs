@@ -1,7 +1,3 @@
-// To ensure that tasks are removable seamlessly, there are two separate concepts here: tasks, for the actual function being called,
-// and timers, the scheduled execution of tasks. As this is an implementation detail, this does not affect the exported name TimerId,
-// which is more accurately a task ID.
-
 use std::{
     cell::{Cell, RefCell},
     cmp::Ordering,
@@ -12,9 +8,13 @@ use std::{
 
 use slotmap::{SlotMap, new_key_type};
 
+// To ensure that tasks are removable seamlessly, there are two separate concepts here:
+// tasks, for the actual function being called, and timers, the scheduled execution of tasks.
+// As this is an implementation detail, lib.rs exposes TaskId under the name TimerId.
+
 thread_local! {
     pub(crate) static TIMER_COUNTER: Cell<u128> = const { Cell::new(0) };
-    pub(crate) static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
+    pub(crate) static TASKS: RefCell<SlotMap<TaskId, Task>> = RefCell::default();
     pub(crate) static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
     static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
     pub(crate) static ALL_CALLS: Cell<usize> = const { Cell::new(0) };
@@ -49,12 +49,12 @@ impl<F: AsyncFnMut()> SerialClosure for F {
 
 new_key_type! {
     /// Type returned by the [`set_timer`] and [`set_timer_interval`] functions. Pass to [`clear_timer`] to remove the timer.
-    pub struct TimerId;
+    pub struct TaskId;
 }
 
 #[derive(Debug)]
 pub(crate) struct Timer {
-    pub(crate) task: TimerId,
+    pub(crate) task: TaskId,
     pub(crate) time: u64,
     pub(crate) counter: u128,
 }

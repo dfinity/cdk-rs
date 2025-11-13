@@ -3,9 +3,9 @@ use std::{ops::ControlFlow, time::Duration};
 use ic_cdk_executor::MethodHandle;
 use slotmap::Key;
 
-use crate::state::{self, ALL_CALLS, TASKS, TIMERS, Task, Timer, TimerId};
+use crate::state::{self, ALL_CALLS, TASKS, TIMERS, Task, Timer, TaskId};
 
-fn reschedule_timer(id: TimerId, base: u64, interval: Duration) {
+fn reschedule_timer(id: TaskId, base: u64, interval: Duration) {
     TIMERS.with_borrow_mut(|timers| {
         match base.checked_add(interval.as_nanos() as u64) {
             Some(time) => {

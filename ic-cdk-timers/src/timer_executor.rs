@@ -2,7 +2,7 @@ use std::{mem, time::Duration};
 
 use slotmap::KeyData;
 
-use crate::state::{SerialClosure, TASKS, Task, TimerId};
+use crate::state::{SerialClosure, TASKS, Task, TaskId};
 
 #[cfg_attr(
     target_family = "wasm",
@@ -38,7 +38,7 @@ extern "C" fn timer_executor() {
         let mut arg_bytes = [0; 8];
         ic0::msg_arg_data_copy(&mut arg_bytes, 0);
         let task_id = u64::from_be_bytes(arg_bytes);
-        let task_id = TimerId::from(KeyData::from_ffi(task_id));
+        let task_id = TaskId::from(KeyData::from_ffi(task_id));
 
         // We can't be holding `TASKS` when we call the function, because it may want to schedule more tasks.
         // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
@@ -90,7 +90,7 @@ extern "C" fn timer_executor() {
                     });
                     ic_cdk_executor::spawn_protected(async move {
                         // Option for `take` in Drop; always Some
-                        struct ReplaceGuard(Option<Box<dyn SerialClosure>>, Duration, TimerId);
+                        struct ReplaceGuard(Option<Box<dyn SerialClosure>>, Duration, TaskId);
                         impl Drop for ReplaceGuard {
                             fn drop(&mut self) {
                                 let func = self.0.take().unwrap();

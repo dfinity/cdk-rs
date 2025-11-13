@@ -33,11 +33,14 @@
 
 use std::{future::Future, time::Duration};
 
-use crate::state::{TASKS, TIMERS, Task, Timer, TimerId};
+use crate::state::{TASKS, TIMERS, Task, Timer};
 
 mod global_timer;
 mod state;
 mod timer_executor;
+
+#[doc(inline)]
+pub use crate::state::TaskId as TimerId;
 
 /// Sets `future` to be executed later, after `delay`. Panics if `delay` + [`time()`] is more than [`u64::MAX`] nanoseconds.
 ///
