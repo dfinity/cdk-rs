@@ -6,12 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-- Breaking: Interval timer bodies have been changed from `AsyncFnMut()` to `FnMut() -> impl Future`; some code may need to be changed from `async || {` to `|| async {`.
-
-## [1.0.0-beta.1] - 2025-10-09
+## [1.0.0] - 2025-11-13
 
 - `ic-cdk-timers` no longer has a dependency on `ic-cdk` and no longer needs to be upgraded when `ic-cdk` is upgraded.
-- Breaking: Timer bodies have been changed from `FnOnce`/`FnMut` to `Future`/`AsyncFnMut`, so `spawn` is no longer required to enter an async context from a timer. For `set_timer`, `|| {}` should be changed to `async {}`, and for `set_timer_interval`, `|| {}` should be changed to `async || {}`.
+- Breaking: Timer body function signatures have been updated which eliminating the need for explicit `spawn` calls within timer callbacks. 
+  - `set_timer`: now takes `impl Future<Output = ()>`. `|| {}` should be changed to `async {}`,
+  - `set_timer_interval`: now takes `FnMut() -> impl Future`. `|| {}` should be changed to `|| async {}`.
+  - `set_timer_interval_serial`: new function, takes `AsyncFnMut()`.
   - If you have any immediate `spawn` calls, you can remove them and run the async code directly. (You do not have to.)
 
 ## [0.12.2] - 2025-06-25
