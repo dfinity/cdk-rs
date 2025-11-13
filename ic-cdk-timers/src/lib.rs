@@ -39,6 +39,7 @@ mod global_timer;
 mod state;
 mod timer_executor;
 
+/// Type returned by the [`set_timer`] and [`set_timer_interval`] functions. Pass to [`clear_timer`] to remove the timer.
 #[doc(inline)]
 pub use crate::state::TaskId as TimerId;
 

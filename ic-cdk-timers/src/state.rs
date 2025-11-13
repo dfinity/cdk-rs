@@ -48,7 +48,7 @@ impl<F: AsyncFnMut()> SerialClosure for F {
 }
 
 new_key_type! {
-    /// Type returned by the [`set_timer`] and [`set_timer_interval`] functions. Pass to [`clear_timer`] to remove the timer.
+    #[expect(missing_docs)] // documented in lib.rs
     pub struct TaskId;
 }
 
