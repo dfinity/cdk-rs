@@ -1,30 +1,28 @@
-use std::{ops::ControlFlow, time::Duration};
+use std::{collections::BinaryHeap, ops::ControlFlow, time::Duration};
 
 use ic_cdk_executor::MethodHandle;
 use slotmap::Key;
 
-use crate::state::{self, ALL_CALLS, TASKS, TIMERS, Task, Timer, TaskId};
+use crate::state::{self, ALL_CALLS, TASKS, TIMERS, Task, TaskId, Timer};
 
-fn reschedule_timer(id: TaskId, base: u64, interval: Duration) {
-    TIMERS.with_borrow_mut(|timers| {
-        match base.checked_add(interval.as_nanos() as u64) {
-            Some(time) => {
-                timers.push(Timer {
-                    task: id,
-                    time,
-                    counter: state::next_counter(),
-                });
-            }
-            None => ic0::debug_print(
-                format!(
-                    "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {base}, \
-                    and this would exceed u64::MAX)",
-                    interval = interval.as_nanos()
-                )
-                .as_bytes(),
-            ),
+fn reschedule_timer(timers: &mut BinaryHeap<Timer>, id: TaskId, base: u64, interval: Duration) {
+    match base.checked_add(interval.as_nanos() as u64) {
+        Some(time) => {
+            timers.push(Timer {
+                task: id,
+                time,
+                counter: state::next_counter(),
+            });
         }
-    });
+        None => ic0::debug_print(
+            format!(
+                "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {base}, \
+                    and this would exceed u64::MAX)",
+                interval = interval.as_nanos()
+            )
+            .as_bytes(),
+        ),
+    }
 }
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
@@ -61,7 +59,7 @@ extern "C" fn global_timer() {
                 if let Some(timer) = timers.peek() {
                     if timer.time <= now {
                         let timer: Timer = timers.pop().unwrap();
-                        match do_timer(timer, canister_self, now) {
+                        match do_timer(timer, canister_self, now, timers) {
                             ControlFlow::Continue(()) => continue,
                             ControlFlow::Break(reschedule) => {
                                 if let Some(t) = reschedule {
@@ -81,7 +79,12 @@ extern "C" fn global_timer() {
     });
 }
 
-fn do_timer(timer: Timer, canister_self: &[u8], now: u64) -> ControlFlow<Option<Timer>> {
+fn do_timer(
+    timer: Timer,
+    canister_self: &[u8],
+    now: u64,
+    timers: &mut BinaryHeap<Timer>,
+) -> ControlFlow<Option<Timer>> {
     let timer_scheduled_time = timer.time;
     if TASKS.with_borrow(|tasks| tasks.contains_key(timer.task)) {
         let task_id = timer.task;
@@ -118,13 +121,13 @@ fn do_timer(timer: Timer, canister_self: &[u8], now: u64) -> ControlFlow<Option<
                             );
                             // Reschedule based on `now`, not `timer_scheduled_time`,
                             // intentionally skipping intermediate executions.
-                            reschedule_timer(task_id, now, *interval);
+                            reschedule_timer(timers, task_id, now, *interval);
                             return true; // skip
                         }
                     }
                     // 3. Check serial timer is available
                     Task::RepeatedSerialBusy { interval } => {
-                        reschedule_timer(task_id, timer_scheduled_time, *interval);
+                        reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
                         return true; // skip
                     }
                     _ => (),
@@ -208,7 +211,7 @@ fn do_timer(timer: Timer, canister_self: &[u8], now: u64) -> ControlFlow<Option<
                 if let Task::Repeated { interval, .. } | Task::RepeatedSerial { interval, .. } =
                     task
                 {
-                    reschedule_timer(task_id, timer_scheduled_time, *interval);
+                    reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
                 }
             })
         }
