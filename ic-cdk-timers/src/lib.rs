@@ -64,12 +64,7 @@ pub use crate::state::TaskId as TimerId;
 ///
 /// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
-    let delay_ns = u64::try_from(delay.as_nanos()).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
-    let scheduled_time = ic0::time().checked_add(delay_ns).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
+    let scheduled_time = get_scheduled_time(delay);
     let key = TASKS.with_borrow_mut(|tasks| tasks.insert(Task::Once(Box::pin(future))));
     TIMERS.with_borrow_mut(|timers| {
         timers.push(Timer {
@@ -119,12 +114,7 @@ where
     Fut: Future<Output = ()> + 'static,
 {
     let mut func = func;
-    let interval_ns = u64::try_from(interval.as_nanos()).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
-    let scheduled_time = ic0::time().checked_add(interval_ns).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
+    let scheduled_time = get_scheduled_time(interval);
     let key = TASKS.with_borrow_mut(|tasks| {
         tasks.insert(Task::Repeated {
             func: Box::new(move || Box::pin(func())),
@@ -175,12 +165,7 @@ where
 ///
 /// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
 pub fn set_timer_interval_serial(interval: Duration, func: impl AsyncFnMut() + 'static) -> TimerId {
-    let interval_ns = u64::try_from(interval.as_nanos()).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
-    let scheduled_time = ic0::time().checked_add(interval_ns).expect(
-        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
-    );
+    let scheduled_time = get_scheduled_time(interval);
     let key = TASKS.with_borrow_mut(|tasks| {
         tasks.insert(Task::RepeatedSerial {
             func: Box::new(func),
@@ -211,4 +196,13 @@ pub fn set_timer_interval_serial(interval: Duration, func: impl AsyncFnMut() + '
 /// ```
 pub fn clear_timer(id: TimerId) {
     TASKS.with_borrow_mut(|tasks| tasks.remove(id));
+}
+
+fn get_scheduled_time(delay: Duration) -> u64 {
+    let delay_ns = u64::try_from(delay.as_nanos()).expect(
+        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
+    );
+    ic0::time()
+        .checked_add(delay_ns)
+        .expect("delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)")
 }
