@@ -67,7 +67,7 @@ fn schedule_long() {
 
 #[update]
 fn set_self_cancelling_timer() {
-    let id = set_timer(Duration::from_secs(1), async {
+    let id = set_timer(Duration::from_secs(0), async {
         cancel_long();
         add_event("timer cancelled self");
     });
@@ -126,7 +126,7 @@ fn start_repeating_serial() {
 
 #[update]
 fn set_self_cancelling_periodic_timer() {
-    let id = set_timer_interval(Duration::from_secs(0), async || {
+    let id = set_timer_interval(Duration::from_secs(1), async || {
         stop_repeating();
         add_event("periodic timer cancelled self");
     });
