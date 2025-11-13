@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking: Timer body function signatures have been updated which eliminating the need for explicit `spawn` calls within timer callbacks. 
   - `set_timer`: now takes `impl Future<Output = ()>`. `|| {}` should be changed to `async {}`,
   - `set_timer_interval`: now takes `FnMut() -> impl Future`. `|| {}` should be changed to `|| async {}`.
+  - `set_timer_interval_serial`: new function, takes `AsyncFnMut()`.
   - If you have any immediate `spawn` calls, you can remove them and run the async code directly. (You do not have to.)
 
 ## [0.12.2] - 2025-06-25
