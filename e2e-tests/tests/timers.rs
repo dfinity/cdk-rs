@@ -1,5 +1,8 @@
 use candid::Principal;
-use pocket_ic::{query_candid, PocketIc};
+use pocket_ic::{
+    common::rest::{CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse},
+    query_candid, PocketIc,
+};
 use std::time::Duration;
 
 mod test_utilities;
@@ -211,4 +214,43 @@ fn test_individual_timer_ratelimits_when_time_skips() {
         .unwrap();
     assert!(logs.iter().any(|line| str::from_utf8(&line.content)
         .is_ok_and(|s| s.contains("too many concurrent calls for single timer"))));
+}
+
+#[test]
+fn test_serial_timers_run_in_serial() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "start_repeating_serial", ()).unwrap();
+    for _ in 0..5 {
+        advance_and_tick(&pic, 1);
+    }
+    // hack to enable the canister to 'sleep': advance time while an outcall is pending
+    let reqs = pic.get_canister_http();
+    for req in reqs {
+        pic.mock_canister_http_response(MockCanisterHttpResponse {
+            subnet_id: req.subnet_id,
+            request_id: req.request_id,
+            response: CanisterHttpResponse::CanisterHttpReply(CanisterHttpReply {
+                body: vec![],
+                status: 200,
+                headers: vec![],
+            }),
+            additional_responses: vec![],
+        });
+    }
+    for _ in 0..5 {
+        advance_and_tick(&pic, 1);
+    }
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(
+        events[..],
+        ["method repeat serial", "method repeat serial",]
+    );
 }
