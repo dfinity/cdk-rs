@@ -33,7 +33,7 @@ extern "C" fn timer_executor() {
 
         // timer_executor is only called by the canister itself (from global_timer),
         // so we can safely assume that the argument is a valid TimerId (u64).
-        // And we don't need decode_one_with_config/DecoderConfig to defense against malicious payload.
+        // And we don't need decode_one_with_config/DecoderConfig to defend against a malicious payload.
         assert!(ic0::msg_arg_data_size() == 8);
         let mut arg_bytes = [0; 8];
         ic0::msg_arg_data_copy(&mut arg_bytes, 0);
@@ -44,7 +44,8 @@ extern "C" fn timer_executor() {
         // Instead, we swap the task out in order to call it, and then either swap it back in, or remove it.
         let task = TASKS.with_borrow_mut(|tasks| {
             if let Some(task) = tasks.get_mut(task_id) {
-                // Replace with Invalid to take ownership. The Invalid variant should not last past the end of this function.
+                // Replace with Invalid to take ownership.
+                // The Invalid variant should not last past the end of this function. Each line ensuring this is commented
                 Some(mem::replace(task, Task::Invalid))
             } else {
                 None

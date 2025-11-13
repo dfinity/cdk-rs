@@ -16,7 +16,7 @@ thread_local! {
     pub(crate) static TIMER_COUNTER: Cell<u128> = const { Cell::new(0) };
     pub(crate) static TASKS: RefCell<SlotMap<TimerId, Task>> = RefCell::default();
     pub(crate) static TIMERS: RefCell<BinaryHeap<Timer>> = RefCell::default();
-    pub(crate) static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
+    static MOST_RECENT: Cell<Option<u64>> = const { Cell::new(None) };
     pub(crate) static ALL_CALLS: Cell<usize> = const { Cell::new(0) };
 }
 
@@ -107,4 +107,42 @@ pub(crate) fn update_ic0_timer() {
             MOST_RECENT.set(soonest_timer);
         }
     });
+}
+
+/// Like [`update_ic0_timer`], but forces updating unconditionally. Should only be called from canister_global_timer.
+pub(crate) fn update_ic0_timer_clean() {
+    MOST_RECENT.set(None);
+    update_ic0_timer();
+}
+
+impl Task {
+    pub(crate) fn increment_concurrent(&mut self) {
+        if let Task::Repeated {
+            concurrent_calls, ..
+        } = self
+        {
+            *concurrent_calls += 1;
+        }
+    }
+    pub(crate) fn decrement_concurrent(&mut self) {
+        if let Task::Repeated {
+            concurrent_calls, ..
+        } = self
+        {
+            if *concurrent_calls > 0 {
+                *concurrent_calls -= 1;
+            }
+        }
+    }
+}
+
+pub(crate) fn increment_all_calls() {
+    ALL_CALLS.set(ALL_CALLS.get() + 1);
+}
+
+pub(crate) fn decrement_all_calls() {
+    let current = ALL_CALLS.get();
+    if current > 0 {
+        ALL_CALLS.set(current - 1);
+    }
 }
