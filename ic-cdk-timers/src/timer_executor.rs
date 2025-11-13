@@ -45,13 +45,16 @@ extern "C" fn timer_executor() {
         let task = TASKS.with_borrow_mut(|tasks| {
             if let Some(task) = tasks.get_mut(task_id) {
                 // Replace with Invalid to take ownership.
-                // The Invalid variant should not last past the end of this function. Each line ensuring this is commented
+                // The Invalid variant should not last past the end of this function.
                 Some(mem::replace(task, Task::Invalid))
             } else {
                 None
             }
         });
         if let Some(task) = task {
+            // Each branch should:
+            // - remove the Invalid task state OR panic, before any awaits
+            // - call msg_reply OR panic when done
             match task {
                 Task::Once(fut) => {
                     ic_cdk_executor::spawn_protected(async move {
