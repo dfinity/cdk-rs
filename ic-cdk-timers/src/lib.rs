@@ -57,13 +57,30 @@ thread_local! {
 }
 
 enum Task {
+    Once(Pin<Box<dyn Future<Output = ()>>>),
     Repeated {
         func: Box<dyn FnMut() -> Pin<Box<dyn Future<Output = ()>>>>,
         interval: Duration,
         concurrent_calls: usize,
     },
-    Once(Pin<Box<dyn Future<Output = ()>>>),
+    RepeatedSerial {
+        func: Box<dyn SerialClosure>,
+        interval: Duration,
+    },
+    RepeatedSerialBusy {
+        interval: Duration,
+    },
     Invalid,
+}
+
+trait SerialClosure {
+    fn call<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+}
+
+impl<F: AsyncFnMut()> SerialClosure for F {
+    fn call<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+        Box::pin(self())
+    }
 }
 
 new_key_type! {
@@ -155,13 +172,33 @@ extern "C" fn global_timer() {
                             } else {
                                 let skip = TASKS.with_borrow(|tasks| {
                                     let task = &tasks[task_id];
-                                    if let Task::Repeated { interval, concurrent_calls, .. } = &task {
-                                        if *concurrent_calls >= 5 {
-                                            ic0::debug_print(
-                                                format!("[ic-cdk-timers] canister_global_timer: too many concurrent calls for single timer ({}), rescheduling for next possible execution time", concurrent_calls).as_bytes(),
-                                            );
-                                            // Copy of the rescheduling logic below, but with one change: we use `now` instead of `timer_scheduled_time`, deliberately skipping intermediate intervals.
-                                            match now.checked_add(interval.as_nanos() as u64) {
+                                    match &task {
+                                        Task::Repeated { interval, concurrent_calls, .. } => {
+                                            if *concurrent_calls >= 5 {
+                                                ic0::debug_print(
+                                                    format!("[ic-cdk-timers] canister_global_timer: too many concurrent calls for single timer ({}), rescheduling for next possible execution time", concurrent_calls).as_bytes(),
+                                                );
+                                                // Copy of the rescheduling logic below, but with one change: we use `now` instead of `timer_scheduled_time`, deliberately skipping intermediate intervals.
+                                                match now.checked_add(interval.as_nanos() as u64) {
+                                                    Some(time) => {
+                                                        timers.push(Timer {
+                                                            task: task_id,
+                                                            time,
+                                                            counter: next_counter(),
+                                                        });
+                                                    }
+                                                    None => ic0::debug_print(
+                                                        format!(
+                                                            "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                                            interval = interval.as_nanos()
+                                                        ).as_bytes(),
+                                                    ),
+                                                }
+                                                return true; // skip
+                                            }
+                                        }
+                                        Task::RepeatedSerialBusy { interval } => {
+                                            match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
                                                 Some(time) => {
                                                     timers.push(Timer {
                                                         task: task_id,
@@ -178,6 +215,7 @@ extern "C" fn global_timer() {
                                             }
                                             return true; // skip
                                         }
+                                        _ => (),
                                     }
                                     false // do not skip
                                 });
@@ -248,24 +286,43 @@ extern "C" fn global_timer() {
                                 ALL_CALLS.set(ALL_CALLS.get() + 1);
                                 // If a repeated timer is successfully dispatched (irrespective of the timer's own success), reschedule it.
                                 TASKS.with_borrow_mut(|tasks| {
-                                    if let Task::Repeated { interval, concurrent_calls, .. } = &mut tasks[task_id] {
-                                        *concurrent_calls += 1;
-                                        // This code is almost-copied above, be sure to keep them in sync.
-                                        match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
-                                            Some(time) => {
-                                                timers.push(Timer {
-                                                    task: task_id,
-                                                    time,
-                                                    counter: next_counter(),
-                                                });
+                                    match &mut tasks[task_id] {
+                                        Task::Repeated { interval, concurrent_calls, .. } => {
+                                            *concurrent_calls += 1;
+                                            match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
+                                                Some(time) => {
+                                                    timers.push(Timer {
+                                                        task: task_id,
+                                                        time,
+                                                        counter: next_counter(),
+                                                    });
+                                                }
+                                                None => ic0::debug_print(
+                                                    format!(
+                                                        "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                                        interval = interval.as_nanos()
+                                                    ).as_bytes(),
+                                                ),
                                             }
-                                            None => ic0::debug_print(
-                                                format!(
-                                                    "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
-                                                    interval = interval.as_nanos()
-                                                ).as_bytes(),
-                                            ),
                                         }
+                                        Task::RepeatedSerial { interval, .. } => {
+                                            match timer_scheduled_time.checked_add(interval.as_nanos() as u64) {
+                                                Some(time) => {
+                                                    timers.push(Timer {
+                                                        task: task_id,
+                                                        time,
+                                                        counter: next_counter(),
+                                                    });
+                                                }
+                                                None => ic0::debug_print(
+                                                    format!(
+                                                        "[ic-cdk-timers] Failed to reschedule task (needed {interval}, currently {now}, and this would exceed u64::MAX)",
+                                                        interval = interval.as_nanos()
+                                                    ).as_bytes(),
+                                                ),
+                                            }
+                                        }
+                                        _ => (),
                                     }
                                 })
                             }
@@ -353,7 +410,7 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
                     Task::Once(_) => {
                         tasks.remove(task_id);
                     }
-                    Task::Repeated { .. } => {}
+                    Task::Repeated { .. } | Task::RepeatedSerial { .. } | Task::RepeatedSerialBusy { .. } => {}
                     Task::Invalid => {
                         unreachable!(
                             "[ic-cdk-timers] internal error: invalid task state in global timer await callback"
@@ -476,6 +533,61 @@ where
     key
 }
 
+/// Sets `func` to be executed every `interval`. Panics if `interval` + [`time()`] is more than [`u64::MAX`] nanoseconds.
+///
+/// To cancel the interval timer, pass the returned `TimerId` to [`clear_timer`].
+///
+/// Unlike [`set_timer_interval`], this function takes an async closure (`async || {`). This is simpler to use
+/// with captured variables, but also means that invocations cannot be run concurrently; if the interval is up
+/// but the previous invocation is still running, the new invocation will be skipped.
+///
+/// <div class="warning">
+///
+/// Interval timers should be *idempotent* with respect to the canister's state, as during heavy network load,
+/// timeouts may result in duplicate execution.
+///
+/// </div>
+///
+/// <div class="warning">
+///
+/// Timers are not persisted across canister upgrades.
+///
+/// </div>
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// ic_cdk_timers::set_timer_interval_serial(Duration::from_secs(5), async || {
+///     ic_cdk::println!("This will run every five seconds forever!");
+/// });
+/// ```
+///
+/// [`time()`]: https://docs.rs/ic-cdk/0.18.5/ic_cdk/api/fn.time.html
+pub fn set_timer_interval_serial(interval: Duration, func: impl AsyncFnMut() + 'static) -> TimerId {
+    let interval_ns = u64::try_from(interval.as_nanos()).expect(
+        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
+    );
+    let scheduled_time = ic0::time().checked_add(interval_ns).expect(
+        "delay out of bounds (must be within `u64::MAX - ic_cdk::api::time()` nanoseconds)",
+    );
+    let key = TASKS.with_borrow_mut(|tasks| {
+        tasks.insert(Task::RepeatedSerial {
+            func: Box::new(func),
+            interval,
+        })
+    });
+    TIMERS.with_borrow_mut(|timers| {
+        timers.push(Timer {
+            task: key,
+            time: scheduled_time,
+            counter: next_counter(),
+        });
+    });
+    update_ic0_timer();
+    key
+}
+
 /// Cancels an existing timer. Does nothing if the timer has already been canceled.
 ///
 /// # Examples
@@ -581,6 +693,36 @@ extern "C" fn timer_executor() {
                         invocation.await;
                         ic0::msg_reply();
                     });
+                }
+                Task::RepeatedSerial { func, interval } => {
+                    // Invalid cleared in the same round
+                    TASKS.with_borrow_mut(|tasks| {
+                        tasks[task_id] = Task::RepeatedSerialBusy { interval };
+                    });
+                    ic_cdk_executor::spawn_protected(async move {
+                        // Option for `take` in Drop; always Some
+                        struct ReplaceGuard(Option<Box<dyn SerialClosure>>, Duration, TimerId);
+                        impl Drop for ReplaceGuard {
+                            fn drop(&mut self) {
+                                let func = self.0.take().unwrap();
+                                let interval = self.1;
+                                let task_id = self.2;
+                                TASKS.with_borrow_mut(|tasks| {
+                                    tasks[task_id] = Task::RepeatedSerial { func, interval };
+                                });
+                            }
+                        }
+                        let mut guard = ReplaceGuard(Some(func), interval, task_id);
+                        guard.0.as_mut().unwrap().call().await;
+                        ic0::msg_reply();
+                    });
+                }
+                Task::RepeatedSerialBusy { .. } => {
+                    // Invalid cleared in the same round
+                    TASKS.with_borrow_mut(|tasks| {
+                        tasks[task_id] = task;
+                    });
+                    ic0::msg_reply();
                 }
                 Task::Invalid => {
                     // Invalid impossible

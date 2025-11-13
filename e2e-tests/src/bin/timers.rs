@@ -1,5 +1,11 @@
 use futures::{stream::FuturesUnordered, StreamExt};
-use ic_cdk::{api::canister_self, call::Call, futures::spawn, query, update};
+use ic_cdk::{
+    api::canister_self,
+    call::Call,
+    futures::spawn,
+    management_canister::{HttpMethod, HttpRequestArgs},
+    query, update,
+};
 use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
 use std::{
     cell::{Cell, RefCell},
@@ -88,6 +94,32 @@ fn start_repeating_async() {
             .with_arg("repeat")
             .await
             .unwrap();
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
+fn start_repeating_serial() {
+    let id = ic_cdk_timers::set_timer_interval_serial(Duration::from_secs(1), async || {
+        Call::bounded_wait(canister_self(), "add_event_method")
+            .with_arg("repeat serial")
+            .await
+            .unwrap();
+        // best way of sleeping is a mocked http outcall
+        ic_cdk::management_canister::http_request_with_closure(
+            &HttpRequestArgs {
+                url: "http://mock".to_string(),
+                method: HttpMethod::GET,
+                headers: vec![],
+                body: None,
+                max_response_bytes: None,
+                transform: None,
+                is_replicated: None,
+            },
+            |resp| resp,
+        )
+        .await
+        .unwrap();
     });
     REPEATING.with(|repeating| repeating.set(id));
 }
