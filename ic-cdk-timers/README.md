@@ -16,7 +16,7 @@ In `Cargo.toml`:
 
 ```toml
 [dependencies]
-ic-cdk-timers = "0.9.0"
+ic-cdk-timers = "1.0.0"
 ```
 
 To schedule a one-shot task to be executed 1s later:
