@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.11.2] - 2023-10-11
+
+### Added
+
+- `cycles_burn` corresponding to system API `ic0.cycles_burn128`. (#434)
+
+### Changed
+
+- Upgrade `ic0` to `0.21.1`. (#434)
+
+## [0.11.1] - 2023-10-11
+
+### Changed
+
+- Upgrade `ic0` to `0.21.0`. (#433)
+
+## [0.11.0] - 2023-09-18
+
+### Changed
+
+- Candid Export workflow is changed. (#424)
+  * No need to compile for WASI separately.
+  * Canisters should still invoke `ic_cdk::export_candid!()` to export candid.
+  * Then use [`candid-extractor`](../candid-extractor/) to extract candid from the canister WASM.
+
+## [0.10.0] - 2023-07-13
+
 ### Changed
 
 - Upgrade `candid` to `0.9`. (#411)

@@ -5,7 +5,7 @@ use declarations::profile_rs::{profile_rs, Profile};
 
 #[update(name = "getSelf")]
 async fn get_self() -> Profile {
-    profile_rs.getSelf().await.unwrap().0
+    profile_rs.get_self().await.unwrap().0
 }
 
 #[update]

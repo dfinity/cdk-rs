@@ -1,6 +1,6 @@
 // This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(all(target_arch = "wasm32", not(feature = "wasi")))]
+#[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "ic0")]
 extern "C" {
     pub fn msg_arg_data_size() -> i32;
@@ -19,6 +19,7 @@ extern "C" {
     pub fn msg_cycles_refunded128(dst: i32);
     pub fn msg_cycles_accept(max_amount: i64) -> i64;
     pub fn msg_cycles_accept128(max_amount_high: i64, max_amount_low: i64, dst: i32);
+    pub fn cycles_burn128(amount_high: i64, amount_low: i64, dst: i32);
     pub fn canister_self_size() -> i32;
     pub fn canister_self_copy(dst: i32, offset: i32, size: i32);
     pub fn canister_cycle_balance() -> i64;
@@ -63,7 +64,7 @@ extern "C" {
     pub fn trap(src: i32, size: i32);
 }
 
-#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -115,6 +116,9 @@ mod non_wasm {
     }
     pub unsafe fn msg_cycles_accept128(max_amount_high: i64, max_amount_low: i64, dst: i32) {
         panic!("msg_cycles_accept128 should only be called inside canisters.");
+    }
+    pub unsafe fn cycles_burn128(amount_high: i64, amount_low: i64, dst: i32) {
+        panic!("cycles_burn128 should only be called inside canisters.");
     }
     pub unsafe fn canister_self_size() -> i32 {
         panic!("canister_self_size should only be called inside canisters.");
@@ -226,5 +230,5 @@ mod non_wasm {
     }
 }
 
-#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use non_wasm::*;

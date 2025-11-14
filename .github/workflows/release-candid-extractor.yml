@@ -1,0 +1,54 @@
+name: Release candid-extractor
+on:
+  push:
+    tags:
+      - "candid-extractor-*"
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The indirect dependency `zstd-safe` (introduced by `wasmtime`) needs higher version of GLIBC.
+          # using ubuntu-20.04 will fail to compile
+          - os: ubuntu-22.04
+            binstall_pkg: candid-extractor-x86_64-unknown-linux-gnu.tar.gz
+          - os: macos-12
+            binstall_pkg: candid-extractor-x86_64-apple-darwin.tar.gz
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-candid-extractor-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-candid-extractor-
+            ${{ runner.os }}-
+      - name: Build
+        run: |
+          cargo build -p candid-extractor --release --locked
+
+      - name: Bundle
+        run: |
+          cp target/release/candid-extractor .
+          chmod +x candid-extractor
+          tar -cvzf ${{ matrix.binstall_pkg }} candid-extractor
+
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.binstall_pkg }}
+          asset_name: ${{ matrix.binstall_pkg }}
+          tag: ${{ github.ref }}
