@@ -86,11 +86,13 @@ mod http_request {
             Some(ref n) => *n as u128,
             None => 2 * 1024 * 1024u128, // default 2MiB
         };
-        let arg_raw = ic_cdk::export::candid::utils::encode_args((arg,))
-            .expect("Failed to encode arguments.");
-        400_000_000u128 / 13
-            + 100_000u128 / 13
-                * (arg_raw.len() as u128 + "http_request".len() as u128 + max_response_bytes)
+        let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
+        // The fee is for a 13-node subnet to demonstrate a typical usage.
+        (3_000_000u128
+            + 60_000u128 * 13
+            + (arg_raw.len() as u128 + "http_request".len() as u128) * 400
+            + max_response_bytes * 800)
+            * 13
     }
 
     #[update]
@@ -155,10 +157,7 @@ mod ecdsa {
             derivation_path,
             key_id,
         };
-        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg, 10_000_000_000u128 / 13)
-            .await
-            .unwrap()
-            .0;
+        let SignWithEcdsaResponse { signature } = sign_with_ecdsa(arg).await.unwrap().0;
         assert_eq!(signature.len(), 64);
     }
 }
@@ -177,14 +176,14 @@ mod bitcoin {
             network,
             min_confirmations: Some(1),
         };
-        let _balance = bitcoin_get_balance(arg, 40_000_000u128).await.unwrap().0;
+        let _balance = bitcoin_get_balance(arg).await.unwrap().0;
 
         let arg = GetUtxosRequest {
             address: address.clone(),
             network,
             filter: Some(UtxoFilter::MinConfirmations(1)),
         };
-        let mut response = bitcoin_get_utxos(arg, 4_000_000_000u128).await.unwrap().0;
+        let mut response = bitcoin_get_utxos(arg).await.unwrap().0;
 
         while let Some(page) = response.next_page {
             ic_cdk::println!("bitcoin_get_utxos next page");
@@ -193,20 +192,17 @@ mod bitcoin {
                 network,
                 filter: Some(UtxoFilter::Page(page)),
             };
-            response = bitcoin_get_utxos(arg, 4_000_000_000u128).await.unwrap().0;
+            response = bitcoin_get_utxos(arg).await.unwrap().0;
         }
 
         let arg = GetCurrentFeePercentilesRequest { network };
-        let _percentiles = bitcoin_get_current_fee_percentiles(arg, 4_000_000u128)
-            .await
-            .unwrap()
-            .0;
+        let _percentiles = bitcoin_get_current_fee_percentiles(arg).await.unwrap().0;
 
         let arg = SendTransactionRequest {
             transaction: vec![],
             network,
         };
-        let response = bitcoin_send_transaction(arg, 2_000_000_000u128).await;
+        let response = bitcoin_send_transaction(arg).await;
         assert!(response.is_err());
         if let Err((rejection_code, rejection_reason)) = response {
             assert_eq!(rejection_code, RejectionCode::CanisterReject);
@@ -214,3 +210,5 @@ mod bitcoin {
         };
     }
 }
+
+ic_cdk::export_candid!();

@@ -1,6 +1,6 @@
 // This file is generated from ic0.txt.
 // Don't manually modify it.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "wasi")))]
 #[link(wasm_import_module = "ic0")]
 extern "C" {
     pub fn msg_arg_data_size() -> i32;
@@ -63,7 +63,7 @@ extern "C" {
     pub fn trap(src: i32, size: i32);
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
 #[allow(unused_variables)]
 #[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
@@ -226,5 +226,5 @@ mod non_wasm {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(all(target_arch = "wasm32", not(feature = "wasi"))))]
 pub use non_wasm::*;
