@@ -55,7 +55,7 @@ impl AsHashTree for Hash {
     }
 }
 
-impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> AsHashTree for RbTree<K, V> {
+impl<K: AsRef<[u8]>, V: AsHashTree> AsHashTree for RbTree<K, V> {
     fn root_hash(&self) -> Hash {
         match self.root.as_ref() {
             None => Empty.reconstruct(),
@@ -102,7 +102,7 @@ struct Node<K, V> {
     subtree_hash: Hash,
 }
 
-impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> Node<K, V> {
+impl<K: AsRef<[u8]>, V: AsHashTree> Node<K, V> {
     fn new(key: K, value: V) -> Box<Node<K, V>> {
         let value_hash = value.root_hash();
         let data_hash = labeled_hash(key.as_ref(), &value_hash);
@@ -205,7 +205,7 @@ pub struct Iter<'a, K, V> {
     parents: Vec<&'a Node<K, V>>,
 }
 
-impl<'a, K, V> Iter<'a, K, V> {
+impl<K, V> Iter<'_, K, V> {
     /// This function is an adaptation of the traverse_step procedure described in
     /// section 7.2 "Bidirectional Bifurcate Coordinates" of
     /// "Elements of Programming" by A. Stepanov and P. McJones, p. 118.
@@ -274,47 +274,47 @@ pub struct RbTree<K, V> {
     root: NodeRef<K, V>,
 }
 
-impl<'t, K, V> PartialEq for RbTree<K, V>
+impl<K, V> PartialEq for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]> + PartialEq,
-    V: 't + AsHashTree + PartialEq,
+    K: AsRef<[u8]> + PartialEq,
+    V: AsHashTree + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.iter().eq(other.iter())
     }
 }
 
-impl<'t, K, V> Eq for RbTree<K, V>
+impl<K, V> Eq for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]> + Eq,
-    V: 't + AsHashTree + Eq,
+    K: AsRef<[u8]> + Eq,
+    V: AsHashTree + Eq,
 {
 }
 
-impl<'t, K, V> PartialOrd for RbTree<K, V>
+impl<K, V> PartialOrd for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]> + PartialOrd,
-    V: 't + AsHashTree + PartialOrd,
+    K: AsRef<[u8]> + PartialOrd,
+    V: AsHashTree + PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.iter().partial_cmp(other.iter())
     }
 }
 
-impl<'t, K, V> Ord for RbTree<K, V>
+impl<K, V> Ord for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]> + Ord,
-    V: 't + AsHashTree + Ord,
+    K: AsRef<[u8]> + Ord,
+    V: AsHashTree + Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.iter().cmp(other.iter())
     }
 }
 
-impl<'t, K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
+impl<K, V> std::iter::FromIterator<(K, V)> for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]>,
-    V: 't + AsHashTree,
+    K: AsRef<[u8]>,
+    V: AsHashTree,
 {
     fn from_iter<T>(iter: T) -> Self
     where
@@ -328,10 +328,10 @@ where
     }
 }
 
-impl<'t, K, V> std::fmt::Debug for RbTree<K, V>
+impl<K, V> std::fmt::Debug for RbTree<K, V>
 where
-    K: 't + AsRef<[u8]> + std::fmt::Debug,
-    V: 't + AsHashTree + std::fmt::Debug,
+    K: AsRef<[u8]> + std::fmt::Debug,
+    V: AsHashTree + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
@@ -359,7 +359,7 @@ impl<K, V> RbTree<K, V> {
     }
 }
 
-impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> RbTree<K, V> {
+impl<K: AsRef<[u8]>, V: AsHashTree> RbTree<K, V> {
     /// Looks up the key in the map and returns the associated value, if there is one.
     pub fn get(&self, key: &[u8]) -> Option<&V> {
         let mut root = self.root.as_ref();
@@ -890,10 +890,10 @@ impl<'t, K: 't + AsRef<[u8]>, V: AsHashTree + 't> RbTree<K, V> {
 
 use candid::CandidType;
 
-impl<'t, K, V> CandidType for RbTree<K, V>
+impl<K, V> CandidType for RbTree<K, V>
 where
-    K: CandidType + AsRef<[u8]> + 't,
-    V: CandidType + AsHashTree + 't,
+    K: CandidType + AsRef<[u8]>,
+    V: CandidType + AsHashTree,
 {
     fn _ty() -> candid::types::internal::Type {
         <Vec<(&K, &V)> as CandidType>::_ty()
@@ -910,10 +910,10 @@ use serde::{
 };
 use std::marker::PhantomData;
 
-impl<'t, K, V> Serialize for RbTree<K, V>
+impl<K, V> Serialize for RbTree<K, V>
 where
-    K: Serialize + AsRef<[u8]> + 't,
-    V: Serialize + AsHashTree + 't,
+    K: Serialize + AsRef<[u8]>,
+    V: Serialize + AsHashTree,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -940,10 +940,10 @@ impl<K, V> RbTreeSerdeVisitor<K, V> {
     }
 }
 
-impl<'de, 't, K, V> Visitor<'de> for RbTreeSerdeVisitor<K, V>
+impl<'de, K, V> Visitor<'de> for RbTreeSerdeVisitor<K, V>
 where
-    K: Deserialize<'de> + AsRef<[u8]> + 't,
-    V: Deserialize<'de> + AsHashTree + 't,
+    K: Deserialize<'de> + AsRef<[u8]>,
+    V: Deserialize<'de> + AsHashTree,
 {
     type Value = RbTree<K, V>;
 
@@ -963,10 +963,10 @@ where
     }
 }
 
-impl<'de, 't, K, V> Deserialize<'de> for RbTree<K, V>
+impl<'de, K, V> Deserialize<'de> for RbTree<K, V>
 where
-    K: Deserialize<'de> + AsRef<[u8]> + 't,
-    V: Deserialize<'de> + AsHashTree + 't,
+    K: Deserialize<'de> + AsRef<[u8]>,
+    V: Deserialize<'de> + AsHashTree,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1077,9 +1077,10 @@ fn is_balanced<K, V>(root: &NodeRef<K, V>) -> bool {
     go(root, num_black)
 }
 
+#[allow(dead_code)]
 struct DebugView<'a, K, V>(&'a NodeRef<K, V>);
 
-impl<'a, K: AsRef<[u8]>, V> fmt::Debug for DebugView<'a, K, V> {
+impl<K: AsRef<[u8]>, V> fmt::Debug for DebugView<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn go<K: AsRef<[u8]>, V>(
             f: &mut fmt::Formatter<'_>,
