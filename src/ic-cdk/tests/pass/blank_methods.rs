@@ -12,8 +12,14 @@ fn post_upgrade() {}
 #[update]
 fn update() {}
 
+#[update(hidden = true)]
+fn update_hidden() {}
+
 #[query]
 fn query() {}
+
+#[query(hidden = true)]
+fn query_hidden() {}
 
 #[query(composite = true)]
 fn composite_query() {}

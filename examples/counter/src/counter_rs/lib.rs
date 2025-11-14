@@ -12,7 +12,7 @@ fn init() {
     OWNER.with(|owner| owner.set(ic_cdk::api::caller()));
 }
 
-#[update]
+#[update(debug = true, decoding_quota = 50, skipping_quota = 0)]
 fn inc() {
     ic_cdk::println!("{:?}", OWNER.with(|owner| owner.get()));
     COUNTER.with(|counter| *counter.borrow_mut() += 1u64);
@@ -27,5 +27,11 @@ fn read() -> ManualReply<candid::Nat> {
 fn write(input: candid::Nat) {
     COUNTER.with(|counter| *counter.borrow_mut() = input);
 }
+
+#[update(hidden = true)]
+fn update_hidden() {}
+
+#[query(hidden = true)]
+fn query_hidden() {}
 
 ic_cdk::export_candid!();

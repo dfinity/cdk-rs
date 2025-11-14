@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.13.1] - 2024-03-01
+
+### Changed
+
+- Upgrade `ic-cdk-macros` to v0.9.0.
+
+## [0.13.0] - 2024-03-01 (yanked)
+
+### Added
+
+- Add `is_recovering_from_trap` function for implementing trap cleanup logic. (#456)
+- Allow setting decoding quota for canister endpoints and inter-canister calls. (#465)
+  * When defining canister endpoints, we add the following attributes: `#[update(decoding_quota = 10000, skipping_quota = 100, debug = true)]`
+    - `skipping_quota` limits the amount of work allowed for skipping unneeded data on the wire. If this attributes is not present, we set a default quota of `10_000`. This affects ALL existing canisters, and is mainly used to improve canister throughput. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_skipping_quota) to understand the skipping cost.
+    - `decoding_quota` limits the total amount of work the deserializer can perform. See [docs on the Candid library](https://docs.rs/candid/latest/candid/de/struct.DecoderConfig.html#method.set_decoding_quota) to understand the cost model.
+    - `debug = true` prints the instruction count and the decoding/skipping cost to the replica log, after a successful deserialization. The decoding/skipping cost is logged only when you have already set a quota in the attributes. The debug mode is useful to determine the right quotas above. Developers can send a few large payloads to the debugging endpoint and know the actual decoding cost.
+  * When making inter-canister calls, we have a new function `call_with_config` to config the same decoding quotas described above. It's strongly recommended to use `call_with_config` when calling third-party untrusted canisters.
+
+### Changed
+
+- `ic_cdk::api::call::arg_data` takes `ArgDecoderConfig` as argument. (#465)
+
+## [0.12.1] - 2024-01-12
+
+### Changed
+
+- Add "reserved cycles" fields to the management canister API: (#449)
+  - `reserved_cycles` to `CanisterStatusResponse`
+  - `reserved_cycles_limit` to `CanisterSettings` and `DefiniteCanisterSettings`
+
+### Fixed
+
+- The README file is now more informative and used as the front page of the doc site.
+- The `call*` methods are documented with examples and notes.
+
 ## [0.12.0] - 2023-11-23
 
 ### Changed

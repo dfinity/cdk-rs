@@ -52,16 +52,17 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.10" # this version is required if you want to define Candid data types
 ic-cdk = "0.12"
+# Only necessary if you want to define Candid data types
+candid = "0.10" 
 ```
 
-Then in your rust source code:
+Then in Rust source code:
 
 ```rust
 #[ic_cdk::query]
-fn print() {
-    ic_cdk::print("Hello World from DFINITY!");
+fn hello() -> String{
+    "world".to_string()
 }
 ```
 

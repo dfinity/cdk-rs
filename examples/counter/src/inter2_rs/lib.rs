@@ -17,3 +17,5 @@ async fn inc() {
 async fn write(input: candid::Nat) {
     inter_mo.write(input).await.unwrap()
 }
+
+ic_cdk::export_candid!();
