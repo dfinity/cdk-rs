@@ -95,29 +95,36 @@ mod http_request {
             method: HttpMethod::GET,
             headers: vec![],
             body: None,
-            transform: Some(TransformContext::new(transform, vec![])),
+            transform: None,
         };
-        let response = http_request(arg).await.unwrap().0;
+        let header = HttpHeader {
+            name: "custom-header".to_string(),
+            value: "test".to_string(),
+        };
+        let response = http_request_with(arg.clone(), {
+            let header = header.clone();
+            move |mut response| {
+                response.headers = vec![header];
+                response
+            }
+        })
+        .await
+        .unwrap()
+        .0;
         assert_eq!(response.status, 200);
-        assert_eq!(
-            response.headers.get(0),
-            Some(&HttpHeader {
-                name: "custom-header".to_string(),
-                value: "test".to_string(),
-            })
-        );
-    }
-
-    // transform function must be a *query* method of the canister
-    #[query]
-    fn transform(arg: TransformArgs) -> HttpResponse {
-        HttpResponse {
-            headers: vec![HttpHeader {
-                name: "custom-header".to_string(),
-                value: "test".to_string(),
-            }],
-            ..arg.response
-        }
+        assert_eq!(response.headers.get(0), Some(&header));
+        let response = http_request_with_cycles_with(arg, 718500000u128, {
+            let header = header.clone();
+            move |mut response| {
+                response.headers = vec![header];
+                response
+            }
+        })
+        .await
+        .unwrap()
+        .0;
+        assert_eq!(response.status, 200);
+        assert_eq!(response.headers.get(0), Some(&header));
     }
 }
 

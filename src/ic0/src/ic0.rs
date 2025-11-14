@@ -58,13 +58,14 @@ extern "C" {
     pub fn time() -> i64;
     pub fn global_timer_set(timestamp: i64) -> i64;
     pub fn performance_counter(counter_type: i32) -> i64;
+    pub fn is_controller(src: i32, size: i32) -> i32;
     pub fn debug_print(src: i32, size: i32);
     pub fn trap(src: i32, size: i32);
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_variables)]
-#[allow(clippy::missing_safety_doc, missing_docs)]
+#[allow(clippy::missing_safety_doc)]
 #[allow(clippy::too_many_arguments)]
 mod non_wasm {
     pub unsafe fn msg_arg_data_size() -> i32 {
@@ -213,6 +214,9 @@ mod non_wasm {
     }
     pub unsafe fn performance_counter(counter_type: i32) -> i64 {
         panic!("performance_counter should only be called inside canisters.");
+    }
+    pub unsafe fn is_controller(src: i32, size: i32) -> i32 {
+        panic!("is_controller should only be called inside canisters.");
     }
     pub unsafe fn debug_print(src: i32, size: i32) {
         panic!("debug_print should only be called inside canisters.");

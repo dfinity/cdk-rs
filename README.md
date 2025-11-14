@@ -10,7 +10,7 @@
 
 You may be looking for:
 
-- [Documentation Site of the Internet Computer](https://smartcontracts.org/)
+- [Documentation Site of the Internet Computer](https://internetcomputer.org/docs)
 - [Tutorials of Rust CDK](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/)
 - [Examples](https://github.com/dfinity/cdk-rs/tree/main/examples)
 - [`dfx` for managing IC projects](https://github.com/dfinity/sdk)

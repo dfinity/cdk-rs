@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.8.0] - 2023-05-26
+
+### Added
+
+- `ic0.is_controller` as a public function. (#383)
+
+### Changed
+
+- `TransformContext::new` has been replaced with dedicated functions that accept closures. (#385)
+- `CallFuture` only makes an inter-canister call if it is awaited. (#391)
+
+## [0.7.4] - 2023-03-21
+
+### Added
+
+- `WASM_PAGE_SIZE_IN_BYTES` made `pub`. (#380)
+- `http_request_with_cycles`. (#381)
+
+## [0.7.3] - 2023-03-01
+
+### Fixed
+
+- Addressed a compatibility error in the signature of the `call` family of functions. (#379)
+
 ## [0.7.2] - 2023-03-01
 
 ### Fixed
