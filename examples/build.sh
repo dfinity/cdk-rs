@@ -7,6 +7,8 @@ root="$(dirname "$0")/.."
 example_root="$(dirname "$0")/$name"
 did_file="/tmp/a.did"
 
+cargo update --manifest-path="$example_root/Cargo.toml"
+
 cargo build --manifest-path="$example_root/Cargo.toml" \
     --target wasm32-unknown-unknown \
     --release \

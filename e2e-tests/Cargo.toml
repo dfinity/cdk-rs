@@ -16,6 +16,7 @@ ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
 serde_bytes.workspace = true
 futures.workspace = true
+sha2.workspace = true
 
 [[bin]]
 name = "simple-kv-store"
@@ -40,6 +41,10 @@ path = "canisters/timers.rs"
 [[bin]]
 name = "canister_info"
 path = "canisters/canister_info.rs"
+
+[[bin]]
+name = "management_caller"
+path = "canisters/management_caller.rs"
 
 [dev-dependencies]
 hex.workspace = true

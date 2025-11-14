@@ -2,7 +2,7 @@
 members = ["src/profile_rs", "src/profile_inter_rs"]
 
 [workspace.dependencies]
-candid = "0.9"
+candid = "0.10"
 ic-cdk = { path = "../../src/ic-cdk" }
 ic-cdk-bindgen = { path = "../../src/ic-cdk-bindgen" }
 serde = "1"
