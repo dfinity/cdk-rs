@@ -27,4 +27,4 @@ serde = "1.0.111"
 
 [dev-dependencies]
 trybuild = "1.0"
-ic-cdk = { path = "../ic-cdk", version = "0.8" }
+ic-cdk = { path = "../ic-cdk", version = "0.9" }
