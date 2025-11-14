@@ -1,6 +1,6 @@
 //! APIs to manage stable memory.
 //!
-//! You can check the [Internet Computer Specification](https://smartcontracts.org/docs/interface-spec/index.html#system-api-stable-memory)
+//! You can check the [Internet Computer Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-stable-memory)
 //! for a in-depth explanation of stable memory.
 mod canister;
 mod private;

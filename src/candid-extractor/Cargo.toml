@@ -1,6 +1,6 @@
 [package]
 name = "candid-extractor"
-version = "0.1.2"
+version = "0.1.4"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,7 +14,8 @@ include = ["src", "Cargo.toml", "LICENSE", "README.md", "ic_mock.wat"]
 
 [dependencies]
 anyhow = "1.0.72"
-wasmtime = "12"
+wasmtime = "19"
+clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies]
 quote.workspace = true

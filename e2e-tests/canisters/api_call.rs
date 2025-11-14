@@ -15,4 +15,14 @@ fn cycles_burn(amount: u128) -> u128 {
     ic_cdk::api::cycles_burn(amount)
 }
 
+#[update]
+fn update_is_replicated() -> bool {
+    ic_cdk::api::in_replicated_execution()
+}
+
+#[query]
+fn query_is_not_replicated() -> bool {
+    ic_cdk::api::in_replicated_execution()
+}
+
 fn main() {}

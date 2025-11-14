@@ -1,3 +1,5 @@
+load ../../bats/bats-assert/load.bash
+
 # Executed before each test.
 setup() {
   cd examples/print
@@ -13,5 +15,17 @@ teardown() {
 @test "Can print" {
   dfx deploy
 
-  dfx canister call print print
+  run dfx canister call print print
+  assert_success
+}
+
+@test "candid-extractor supports version and help" {
+  run candid-extractor --version
+  assert_success
+  run candid-extractor -V
+  assert_success
+  run candid-extractor --help
+  assert_success
+  run candid-extractor -h
+  assert_success
 }

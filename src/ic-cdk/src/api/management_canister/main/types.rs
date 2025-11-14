@@ -6,22 +6,58 @@ pub type CanisterId = Principal;
 
 /// Canister settings.
 ///
+/// The settings are optional. If they are not explicitly set, the default values will be applied automatically.
+///
 /// See [`settings`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-create_canister).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default,
 )]
 pub struct CanisterSettings {
-    /// A list of principals. Must be between 0 and 10 in size.
+    /// A list of at most 10 principals.
+    ///
+    /// The principals in this list become the *controllers* of the canister.
+    ///
+    /// Default value: A list containing only the caller of the create_canister call.
     pub controllers: Option<Vec<Principal>>,
     /// Must be a number between 0 and 100, inclusively.
+    ///
+    /// It indicates how much compute power should be guaranteed to this canister,
+    /// expressed as a percentage of the maximum compute power that a single canister can allocate.
+    ///
+    /// If the IC cannot provide the requested allocation,
+    /// for example because it is oversubscribed, the call will be **rejected**.
+    ///
+    /// Default value: 0
     pub compute_allocation: Option<Nat>,
-    /// Must be a number between 0 and 2^48^ (i.e 256TB), inclusively.
+    /// Must be a number between 0 and 2<sup>48</sup> (i.e 256TB), inclusively.
+    ///
+    /// It indicates how much memory the canister is allowed to use in total.
+    ///
+    /// If the IC cannot provide the requested allocation,
+    /// for example because it is oversubscribed, the call will be **rejected**.
+    ///
+    /// If set to 0, then memory growth of the canister will be best-effort and subject to the available memory on the IC.
+    ///
+    /// Default value: 0
     pub memory_allocation: Option<Nat>,
-    /// Must be a number between 0 and 2^64^-1, inclusively, and indicates a length of time in seconds.
+    /// Must be a number between 0 and 2<sup>64</sup>-1, inclusively.
+    ///
+    /// It indicates a length of time in seconds.
+    ///
+    /// Default value: 2592000 (approximately 30 days).
     pub freezing_threshold: Option<Nat>,
-    /// Must be a number between 0 and 2^128^-1, inclusively, and indicates the
-    /// upper limit on cycles in the `reserved_cycles` balance of the canister.
+    /// Must be a number between 0 and 2<sup>128</sup>-1, inclusively.
+    ///
+    /// It indicates the upper limit on `reserved_cycles` of the canister.
+    ///
+    /// Default value: 5_000_000_000_000 (5 trillion cycles).
     pub reserved_cycles_limit: Option<Nat>,
+    /// Must be a number between 0 and 2<sup>48</sup>-1 (i.e 256TB), inclusively.
+    ///
+    /// It indicates the upper limit on the WASM heap memory consumption of the canister.
+    ///
+    /// Default value: 3_221_225_472 (3 GiB).
+    pub wasm_memory_limit: Option<Nat>,
 }
 
 /// Argument type of [create_canister](super::create_canister).
@@ -48,7 +84,7 @@ pub(crate) struct CreateCanisterArgumentExtended {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct UpdateSettingsArgument {
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
     pub settings: CanisterSettings,
@@ -58,7 +94,7 @@ pub struct UpdateSettingsArgument {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub(crate) struct UpdateSettingsArgumentExtended {
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
     /// See [CanisterSettings].
     pub settings: CanisterSettings,
@@ -66,22 +102,93 @@ pub(crate) struct UpdateSettingsArgumentExtended {
     pub sender_canister_version: Option<u64>,
 }
 
-/// The mode with which a canister is installed.
+/// Argument type of [update_chunk](super::upload_chunk).
 #[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
-// #[serde(rename_all = "lowercase")]
+pub struct UploadChunkArgument {
+    /// The canister whose chunk store the chunk will be uploaded to
+    pub canister_id: CanisterId,
+    /// The chunk bytes (max size 1MB)
+    #[serde(with = "serde_bytes")]
+    pub chunk: Vec<u8>,
+}
+
+/// Return type of [upload_chunk](super::upload_chunk) and [stored_chunks](super::stored_chunks).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ChunkHash {
+    /// The hash of an uploaded chunk
+    #[serde(with = "serde_bytes")]
+    pub hash: Vec<u8>,
+}
+
+/// Argument type of [clear_chunk_store](super::clear_chunk_store).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct ClearChunkStoreArgument {
+    /// The canister whose chunk store will be cleared
+    pub canister_id: CanisterId,
+}
+
+/// Argument type of [stored_chunks](super::stored_chunks).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct StoredChunksArgument {
+    /// The canister whose chunk store will be queried
+    pub canister_id: CanisterId,
+}
+
+/// The mode with which a canister is installed.
+///
+/// This second version of the mode allows someone to specify the
+/// optional `SkipPreUpgrade` parameter in case of an upgrade
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
 pub enum CanisterInstallMode {
     /// A fresh install of a new canister.
     #[serde(rename = "install")]
+    #[default]
     Install,
     /// Reinstalling a canister that was already installed.
     #[serde(rename = "reinstall")]
     Reinstall,
     /// Upgrade an existing canister.
     #[serde(rename = "upgrade")]
-    Upgrade,
+    Upgrade(Option<SkipPreUpgrade>),
 }
+
+/// If set to true, the pre_upgrade step will be skipped during the canister upgrade
+#[derive(
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
+)]
+pub struct SkipPreUpgrade(pub Option<bool>);
 
 /// WASM module.
 pub type WasmModule = Vec<u8>;
@@ -93,7 +200,7 @@ pub type WasmModule = Vec<u8>;
 pub struct InstallCodeArgument {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
     /// Code to be installed.
     pub wasm_module: WasmModule,
@@ -107,11 +214,54 @@ pub struct InstallCodeArgument {
 pub(crate) struct InstallCodeArgumentExtended {
     /// See [CanisterInstallMode].
     pub mode: CanisterInstallMode,
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
     /// Code to be installed.
     pub wasm_module: WasmModule,
     /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
+    pub arg: Vec<u8>,
+    /// sender_canister_version must be set to ic_cdk::api::canister_version()
+    pub sender_canister_version: Option<u64>,
+}
+
+/// Argument type of [install_chunked_code](super::install_chunked_code).
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct InstallChunkedCodeArgument {
+    /// See [CanisterInstallMode].
+    pub mode: CanisterInstallMode,
+    /// Principal of the canister being installed
+    pub target_canister: CanisterId,
+    /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
+    pub store_canister: Option<CanisterId>,
+    /// The list of chunks that make up the canister wasm
+    pub chunk_hashes_list: Vec<ChunkHash>,
+    /// The sha256 hash of the wasm
+    #[serde(with = "serde_bytes")]
+    pub wasm_module_hash: Vec<u8>,
+    /// The argument to be passed to `canister_init` or `canister_post_upgrade`
+    #[serde(with = "serde_bytes")]
+    pub arg: Vec<u8>,
+}
+
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub(crate) struct InstallChunkedCodeArgumentExtended {
+    /// See [CanisterInstallMode].
+    pub mode: CanisterInstallMode,
+    /// Principal of the canister being installed
+    pub target_canister: CanisterId,
+    /// The canister in whose chunk storage the chunks are stored (defaults to target_canister if not specified)
+    pub store_canister: Option<CanisterId>,
+    /// The list of chunks that make up the canister wasm
+    pub chunk_hashes_list: Vec<ChunkHash>,
+    /// The sha256 hash of the wasm
+    #[serde(with = "serde_bytes")]
+    pub wasm_module_hash: Vec<u8>,
+    /// The argument to be passed to `canister_init` or `canister_post_upgrade`.
+    #[serde(with = "serde_bytes")]
     pub arg: Vec<u8>,
     /// sender_canister_version must be set to ic_cdk::api::canister_version()
     pub sender_canister_version: Option<u64>,
@@ -122,7 +272,7 @@ pub(crate) struct InstallCodeArgumentExtended {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
 )]
 pub struct CanisterIdRecord {
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
 }
 
@@ -130,7 +280,7 @@ pub struct CanisterIdRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
 )]
 pub(crate) struct CanisterIdRecordExtended {
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: CanisterId,
     /// sender_canister_version must be set to ic_cdk::api::canister_version()
     pub sender_canister_version: Option<u64>,
@@ -167,6 +317,8 @@ pub struct DefiniteCanisterSettings {
     pub freezing_threshold: Nat,
     /// Reserved cycles limit.
     pub reserved_cycles_limit: Nat,
+    /// The Wasm memory limit.
+    pub wasm_memory_limit: Nat,
 }
 
 /// Query statistics, returned by [canister_status](super::canister_status).
@@ -184,7 +336,7 @@ pub struct QueryStats {
     pub response_payload_bytes_total: candid::Nat,
 }
 
-/// Argument type of [canister_status](super::canister_status).
+/// Return type of [canister_status](super::canister_status).
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
@@ -215,7 +367,7 @@ pub struct CanisterStatusResponse {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct FromUserRecord {
-    /// Principle of the user.
+    /// Principal of the user.
     pub user_id: Principal,
 }
 
@@ -224,7 +376,7 @@ pub struct FromUserRecord {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct FromCanisterRecord {
-    /// Principle of the originator.
+    /// Principal of the originator.
     pub canister_id: Principal,
     /// Canister version of the originator when the originator initiated the change.
     /// This is null if the original does not include its canister version
@@ -254,13 +406,30 @@ pub struct CreationRecord {
     pub controllers: Vec<Principal>,
 }
 
+/// The mode with which a canister is installed.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+)]
+// #[serde(rename_all = "lowercase")]
+pub enum CodeDeploymentMode {
+    /// A fresh install of a new canister.
+    #[serde(rename = "install")]
+    Install,
+    /// Reinstalling a canister that was already installed.
+    #[serde(rename = "reinstall")]
+    Reinstall,
+    /// Upgrade an existing canister.
+    #[serde(rename = "upgrade")]
+    Upgrade,
+}
+
 /// Details about a canister code deployment.
 #[derive(
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CodeDeploymentRecord {
-    /// See [CanisterInstallMode].
-    pub mode: CanisterInstallMode,
+    /// See [CodeDeploymentMode].
+    pub mode: CodeDeploymentMode,
     /// A SHA256 hash of the new module installed on the canister.
     pub module_hash: Vec<u8>,
 }
@@ -313,7 +482,7 @@ pub struct CanisterChange {
     CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
 )]
 pub struct CanisterInfoRequest {
-    /// Principle of the canister.
+    /// Principal of the canister.
     pub canister_id: Principal,
     /// Number of most recent changes requested to be retrieved from canister history.
     /// No changes are retrieved if this field is null.

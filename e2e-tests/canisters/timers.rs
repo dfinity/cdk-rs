@@ -92,4 +92,9 @@ fn add_event(event: &'static str) {
     EVENTS.with(|events| events.borrow_mut().push(event));
 }
 
+#[update]
+fn set_global_timer(timestamp: u64) -> u64 {
+    ic_cdk::api::set_global_timer(timestamp)
+}
+
 fn main() {}

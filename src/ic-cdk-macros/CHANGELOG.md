@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.13.2] - 2024-04-08
+
+### Changed
+
+- `ic-cdk-macros` will have the same version as the `ic-cdk`.
+
 ## [0.9.0] - 2024-03-01
 
 ### Fixed

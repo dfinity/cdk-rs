@@ -9,7 +9,7 @@ repository = "https://github.com/dfinity/cdk-rs"
 # MSRV
 # Avoid updating this field unless we use new Rust features
 # Sync with rust-toolchain.toml
-rust-version = "1.70.0"
+rust-version = "1.75.0"
 license = "Apache-2.0"
 
 [profile.canister-release]
@@ -20,9 +20,9 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-ic0 = { path = "src/ic0", version = "0.21.1" }
-ic-cdk = { path = "src/ic-cdk", version = "0.13.0" }
-ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.7.0" }
+ic0 = { path = "src/ic0", version = "0.23.0" }
+ic-cdk = { path = "src/ic-cdk", version = "0.14.0"}
+ic-cdk-timers = { path = "src/ic-cdk-timers", version = "0.8.0" }
 
 candid = "0.10.4"
 candid_parser = "0.1.4"
@@ -33,5 +33,4 @@ serde = "1"
 serde_bytes = "0.11"
 sha2 = "0.10"
 slotmap = "1"
-syn = "1"
-
+syn = "2"
