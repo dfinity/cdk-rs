@@ -62,16 +62,22 @@ pub struct EcdsaKeyId {
 
 /// ECDSA Curve.
 #[derive(
-    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+    CandidType,
+    Serialize,
+    Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    Copy,
+    Default,
 )]
 pub enum EcdsaCurve {
     /// secp256k1
     #[serde(rename = "secp256k1")]
+    #[default]
     Secp256k1,
-}
-
-impl Default for EcdsaCurve {
-    fn default() -> Self {
-        Self::Secp256k1
-    }
 }
