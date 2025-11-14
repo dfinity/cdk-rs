@@ -26,8 +26,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ic-cdk = "0.15"
-# Only necessary if you want to define Candid data types
-candid = "0.10" 
+candid = "0.10" # required if you want to define Candid data types
 ```
 
 Then in Rust source code:
