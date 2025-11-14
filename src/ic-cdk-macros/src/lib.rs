@@ -91,3 +91,13 @@ pub fn heartbeat(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn inspect_message(attr: TokenStream, item: TokenStream) -> TokenStream {
     handle_debug_and_errors(export::ic_inspect_message, "ic_inspect_message", attr, item)
 }
+
+#[proc_macro_attribute]
+pub fn on_low_wasm_memory(attr: TokenStream, item: TokenStream) -> TokenStream {
+    handle_debug_and_errors(
+        export::ic_on_low_wasm_memory,
+        "ic_on_low_wasm_memory",
+        attr,
+        item,
+    )
+}

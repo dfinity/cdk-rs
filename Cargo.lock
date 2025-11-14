@@ -1118,11 +1118,11 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk"
-version = "0.16.0"
+version = "0.17.0"
 dependencies = [
  "anyhow",
  "candid",
- "ic-cdk-macros 0.16.0",
+ "ic-cdk-macros 0.17.0",
  "ic0 0.23.0",
  "rstest",
  "serde",
@@ -1150,7 +1150,7 @@ dependencies = [
  "escargot",
  "futures",
  "hex",
- "ic-cdk 0.16.0",
+ "ic-cdk 0.17.0",
  "ic-cdk-timers",
  "lazy_static",
  "pocket-ic",
@@ -1174,7 +1174,7 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-macros"
-version = "0.16.0"
+version = "0.17.0"
 dependencies = [
  "candid",
  "proc-macro2",
@@ -1186,10 +1186,10 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-timers"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "futures",
- "ic-cdk 0.16.0",
+ "ic-cdk 0.17.0",
  "ic0 0.23.0",
  "serde",
  "serde_bytes",
@@ -1203,7 +1203,7 @@ dependencies = [
  "bincode",
  "candid",
  "hex",
- "ic-cdk 0.16.0",
+ "ic-cdk 0.17.0",
  "serde",
  "serde_bytes",
  "serde_cbor",
@@ -1217,7 +1217,7 @@ dependencies = [
  "candid",
  "crc32fast",
  "hex",
- "ic-cdk 0.16.0",
+ "ic-cdk 0.17.0",
  "serde",
  "serde_bytes",
  "sha2",
