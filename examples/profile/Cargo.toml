@@ -1,5 +1,0 @@
-[workspace]
-members = [
-    "src/profile_rs",
-    "src/profile_inter_rs",
-]

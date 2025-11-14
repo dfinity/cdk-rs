@@ -9,16 +9,18 @@
     clippy::missing_safety_doc
 )]
 
+use std::convert::TryFrom;
+use std::fmt::{self, Display, Formatter};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
+
 use candid::{types::reference::Func, CandidType, Principal};
-use ic_cdk::api::call::CallResult;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha2::Digest;
-use std::convert::TryFrom;
-use std::fmt;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-/// The subaccont that is used by default.
+use ic_cdk::call::{Call, CallResult};
+
+/// The subaccount that is used by default.
 pub const DEFAULT_SUBACCOUNT: Subaccount = Subaccount([0; 32]);
 
 /// The default fee for ledger transactions.
@@ -116,8 +118,8 @@ impl SubAssign for Tokens {
     }
 }
 
-impl fmt::Display for Tokens {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Tokens {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}.{:08}",
@@ -170,6 +172,83 @@ impl AccountIdentifier {
         result[4..32].copy_from_slice(hash.as_ref());
         Self(result)
     }
+
+    /// Convert hex string into AccountIdentifier.
+    pub fn from_hex(hex_str: &str) -> Result<AccountIdentifier, String> {
+        let hex: Vec<u8> = hex::decode(hex_str).map_err(|e| e.to_string())?;
+        Self::from_slice(&hex[..]).map_err(|err| match err {
+            // Since the input was provided in hex, return an error that is hex-friendly.
+            AccountIdParseError::InvalidLength(_) => format!(
+                "{} has a length of {} but we expected a length of 64 or 56",
+                hex_str,
+                hex_str.len()
+            ),
+            AccountIdParseError::InvalidChecksum(err) => err.to_string(),
+        })
+    }
+
+    /// Converts a blob into an `AccountIdentifier`.
+    ///
+    /// The blob can be either:
+    ///
+    /// 1. The 32-byte canonical format (4 byte checksum + 28 byte hash).
+    /// 2. The 28-byte hash.
+    ///
+    /// If the 32-byte canonical format is provided, the checksum is verified.
+    pub fn from_slice(v: &[u8]) -> Result<AccountIdentifier, AccountIdParseError> {
+        // Try parsing it as a 32-byte blob.
+        match v.try_into() {
+            Ok(h) => {
+                // It's a 32-byte blob. Validate the checksum.
+                check_sum(h).map_err(AccountIdParseError::InvalidChecksum)
+            }
+            Err(_) => {
+                // Try parsing it as a 28-byte hash.
+                match <&[u8] as TryInto<[u8; 28]>>::try_into(v) {
+                    Ok(hash) => AccountIdentifier::try_from(hash)
+                        .map_err(|_| AccountIdParseError::InvalidLength(v.to_vec())),
+                    Err(_) => Err(AccountIdParseError::InvalidLength(v.to_vec())),
+                }
+            }
+        }
+    }
+
+    /// Convert AccountIdentifier into hex string.
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
+    }
+
+    /// Provide the account identifier as bytes.
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+
+    /// Returns the checksum of the account identifier.
+    pub fn generate_checksum(&self) -> [u8; 4] {
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&self.0[4..]);
+        hasher.finalize().to_be_bytes()
+    }
+}
+
+fn check_sum(hex: [u8; 32]) -> Result<AccountIdentifier, ChecksumError> {
+    // Get the checksum provided
+    let found_checksum = &hex[0..4];
+
+    let mut hasher = crc32fast::Hasher::new();
+    hasher.update(&hex[4..]);
+    let expected_checksum = hasher.finalize().to_be_bytes();
+
+    // Check the generated checksum matches
+    if expected_checksum == found_checksum {
+        Ok(AccountIdentifier(hex))
+    } else {
+        Err(ChecksumError {
+            input: hex,
+            expected_checksum,
+            found_checksum: found_checksum.try_into().unwrap(),
+        })
+    }
 }
 
 impl TryFrom<[u8; 32]> for AccountIdentifier {
@@ -188,15 +267,73 @@ impl TryFrom<[u8; 32]> for AccountIdentifier {
     }
 }
 
+impl TryFrom<[u8; 28]> for AccountIdentifier {
+    type Error = String;
+
+    fn try_from(bytes: [u8; 28]) -> Result<Self, Self::Error> {
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(bytes.as_slice());
+        let crc32_bytes = hasher.finalize().to_be_bytes();
+
+        let mut aid_bytes = [0u8; 32];
+        aid_bytes[..4].copy_from_slice(&crc32_bytes[..4]);
+        aid_bytes[4..].copy_from_slice(&bytes[..]);
+
+        Ok(Self(aid_bytes))
+    }
+}
+
 impl AsRef<[u8]> for AccountIdentifier {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl fmt::Display for AccountIdentifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for AccountIdentifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(self.as_ref()))
+    }
+}
+
+/// An error for reporting invalid checksums.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ChecksumError {
+    input: [u8; 32],
+    expected_checksum: [u8; 4],
+    found_checksum: [u8; 4],
+}
+
+impl Display for ChecksumError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Checksum failed for {}, expected check bytes {} but found {}",
+            hex::encode(&self.input[..]),
+            hex::encode(self.expected_checksum),
+            hex::encode(self.found_checksum),
+        )
+    }
+}
+
+/// An error for reporting invalid Account Identifiers.
+#[derive(Debug, PartialEq, Eq)]
+pub enum AccountIdParseError {
+    /// The checksum failed to verify.
+    InvalidChecksum(ChecksumError),
+    /// The length of the input was invalid.
+    InvalidLength(Vec<u8>),
+}
+
+impl Display for AccountIdParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidChecksum(err) => write!(f, "{}", err),
+            Self::InvalidLength(input) => write!(
+                f,
+                "Received an invalid AccountIdentifier with length {} bytes instead of the expected 28 or 32.",
+                input.len()
+            ),
+        }
     }
 }
 
@@ -276,8 +413,8 @@ pub enum TransferError {
     },
 }
 
-impl fmt::Display for TransferError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for TransferError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::BadFee { expected_fee } => {
                 write!(f, "transaction fee should be {}", expected_fee)
@@ -370,6 +507,8 @@ pub struct Transaction {
     pub operation: Option<Operation>,
     /// The time at which the client of the ledger constructed the transaction.
     pub created_at_time: Timestamp,
+    /// The memo that was provided to the icrc1_transfer method.
+    pub icrc1_memo: Option<ByteBuf>,
 }
 
 /// A single record in the ledger.
@@ -478,8 +617,8 @@ pub enum GetBlocksError {
     },
 }
 
-impl fmt::Display for GetBlocksError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for GetBlocksError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::BadFirstBlockIndex {
                 requested_index,
@@ -521,11 +660,7 @@ impl From<QueryArchiveFn> for Func {
 
 impl CandidType for QueryArchiveFn {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Func(candid::types::Function {
-            modes: vec![candid::parser::types::FuncMode::Query],
-            args: vec![GetBlocksArgs::_ty()],
-            rets: vec![GetBlocksResult::_ty()],
-        })
+        candid::func!((GetBlocksArgs) -> (GetBlocksResult) query)
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
@@ -540,41 +675,43 @@ impl CandidType for QueryArchiveFn {
 ///
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, AccountBalanceArgs, Tokens, DEFAULT_SUBACCOUNT, MAINNET_LEDGER_CANISTER_ID, account_balance};
 ///
 /// async fn check_callers_balance() -> Tokens {
 ///   account_balance(
 ///     MAINNET_LEDGER_CANISTER_ID,
-///     AccountBalanceArgs {
-///       account: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT)
+///     &AccountBalanceArgs {
+///       account: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT)
 ///     }
 ///   ).await.expect("call to ledger failed")
 /// }
 /// ```
 pub async fn account_balance(
     ledger_canister_id: Principal,
-    args: AccountBalanceArgs,
+    args: &AccountBalanceArgs,
 ) -> CallResult<Tokens> {
-    let (icp,) = ic_cdk::call(ledger_canister_id, "account_balance", (args,)).await?;
-    Ok(icp)
+    Ok(Call::bounded_wait(ledger_canister_id, "account_balance")
+        .with_arg(args)
+        .await?
+        .candid()?)
 }
 
 /// Calls the "transfer" method on the specified canister.
 /// # Example
 /// ```no_run
-/// use ic_cdk::api::{caller, call::call};
+/// use ic_cdk::api::msg_caller;
 /// use ic_ledger_types::{AccountIdentifier, BlockIndex, Memo, TransferArgs, Tokens, DEFAULT_SUBACCOUNT, DEFAULT_FEE, MAINNET_LEDGER_CANISTER_ID, transfer};
 ///
 /// async fn transfer_to_caller() -> BlockIndex {
 ///   transfer(
 ///     MAINNET_LEDGER_CANISTER_ID,
-///     TransferArgs {
+///     &TransferArgs {
 ///       memo: Memo(0),
 ///       amount: Tokens::from_e8s(1_000_000),
 ///       fee: DEFAULT_FEE,
 ///       from_subaccount: None,
-///       to: AccountIdentifier::new(&caller(), &DEFAULT_SUBACCOUNT),
+///       to: AccountIdentifier::new(&msg_caller(), &DEFAULT_SUBACCOUNT),
 ///       created_at_time: None,
 ///     }
 ///   ).await.expect("call to ledger failed").expect("transfer failed")
@@ -582,10 +719,12 @@ pub async fn account_balance(
 /// ```
 pub async fn transfer(
     ledger_canister_id: Principal,
-    args: TransferArgs,
+    args: &TransferArgs,
 ) -> CallResult<TransferResult> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "transfer", (args,)).await?;
-    Ok(result)
+    Ok(Call::bounded_wait(ledger_canister_id, "transfer")
+        .with_arg(args)
+        .await?
+        .candid()?)
 }
 
 /// Return type of the `token_symbol` function.
@@ -599,7 +738,6 @@ pub struct Symbol {
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::{caller, call::call};
 /// use ic_ledger_types::{Symbol, token_symbol};
 ///
 /// async fn symbol(ledger_canister_id: Principal) -> String {
@@ -607,21 +745,22 @@ pub struct Symbol {
 /// }
 /// ```
 pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "token_symbol", ()).await?;
-    Ok(result)
+    Ok(Call::bounded_wait(ledger_canister_id, "token_symbol")
+        .await?
+        .candid()?)
 }
 
 /// Calls the "query_block" method on the specified canister.
 /// # Example
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
 ///   let args = GetBlocksArgs { start: block_index, length: 1 };
 ///
-///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///   let blocks_result = query_blocks(ledger, &args).await?;
 ///
 ///   if blocks_result.blocks.len() >= 1 {
 ///       debug_assert_eq!(blocks_result.first_block_index, block_index);
@@ -632,7 +771,7 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 ///       .archived_blocks
 ///       .into_iter()
 ///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
-///       match query_archived_blocks(&func, args).await? {
+///       match query_archived_blocks(&func, &args).await? {
 ///           Ok(range) => return Ok(range.blocks.into_iter().next()),
 ///           _ => (),
 ///       }
@@ -641,10 +780,12 @@ pub async fn token_symbol(ledger_canister_id: Principal) -> CallResult<Symbol> {
 /// }
 pub async fn query_blocks(
     ledger_canister_id: Principal,
-    args: GetBlocksArgs,
+    args: &GetBlocksArgs,
 ) -> CallResult<QueryBlocksResponse> {
-    let (result,) = ic_cdk::call(ledger_canister_id, "query_blocks", (args,)).await?;
-    Ok(result)
+    Ok(Call::bounded_wait(ledger_canister_id, "query_blocks")
+        .with_arg(args)
+        .await?
+        .candid()?)
 }
 
 /// Continues a query started in [`query_blocks`] by calling its returned archive function.
@@ -653,13 +794,13 @@ pub async fn query_blocks(
 ///
 /// ```no_run
 /// use candid::Principal;
-/// use ic_cdk::api::call::CallResult;
+/// use ic_cdk::call::CallResult;
 /// use ic_ledger_types::{BlockIndex, Block, GetBlocksArgs, query_blocks, query_archived_blocks};
 ///
 /// async fn query_one_block(ledger: Principal, block_index: BlockIndex) -> CallResult<Option<Block>> {
 ///   let args = GetBlocksArgs { start: block_index, length: 1 };
 ///
-///   let blocks_result = query_blocks(ledger, args.clone()).await?;
+///   let blocks_result = query_blocks(ledger, &args).await?;
 ///
 ///   if blocks_result.blocks.len() >= 1 {
 ///       debug_assert_eq!(blocks_result.first_block_index, block_index);
@@ -670,7 +811,7 @@ pub async fn query_blocks(
 ///       .archived_blocks
 ///       .into_iter()
 ///       .find_map(|b| (b.start <= block_index && (block_index - b.start) < b.length).then(|| b.callback)) {
-///       match query_archived_blocks(&func, args).await? {
+///       match query_archived_blocks(&func, &args).await? {
 ///           Ok(range) => return Ok(range.blocks.into_iter().next()),
 ///           _ => (),
 ///       }
@@ -679,16 +820,19 @@ pub async fn query_blocks(
 /// }
 pub async fn query_archived_blocks(
     func: &QueryArchiveFn,
-    args: GetBlocksArgs,
+    args: &GetBlocksArgs,
 ) -> CallResult<GetBlocksResult> {
-    let (result,) = ic_cdk::api::call::call(func.0.principal, &func.0.method, (args,)).await?;
-    Ok(result)
+    Ok(Call::bounded_wait(func.0.principal, &func.0.method)
+        .with_arg(args)
+        .await?
+        .candid()?)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::string::ToString;
+
+    use super::*;
 
     #[test]
     fn test_account_id() {
@@ -699,7 +843,7 @@ mod tests {
                     "iooej-vlrze-c5tme-tn7qt-vqe7z-7bsj5-ebxlc-hlzgs-lueo3-3yast-pae"
                 )
                 .unwrap(),
-                &DEFAULT_SUBACCOUNT
+                &DEFAULT_SUBACCOUNT,
             )
             .to_string()
         );
@@ -750,5 +894,123 @@ mod tests {
             AccountIdentifier::new(&MAINNET_CYCLES_MINTING_CANISTER_ID, &subaccount).to_string(),
             "d8646d1cbe44002026fa3e0d86d51a560b1c31d669bc8b7f66421c1b2feaa59f"
         )
+    }
+
+    /// Verifies that these conversions yield the same result:
+    /// * bytes -> AccountIdentifier -> hex -> AccountIdentifier
+    /// * bytes -> AccountIdentifier
+    #[test]
+    fn check_hex_round_trip() {
+        let bytes: [u8; 32] = [
+            237, 196, 46, 168, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7,
+        ];
+        let ai = AccountIdentifier::from_slice(bytes.as_ref())
+            .expect("Failed to create account identifier");
+        let res = ai.to_hex();
+        assert_eq!(
+            AccountIdentifier::from_hex(&res),
+            Ok(ai),
+            "The account identifier doesn't change after going back and forth between a string"
+        )
+    }
+
+    /// Verifies that this convertion yields the original data:
+    /// * bytes -> AccountIdentifier -> bytes
+    #[test]
+    fn check_bytes_round_trip() {
+        let bytes: [u8; 32] = [
+            237, 196, 46, 168, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7,
+        ];
+        assert_eq!(
+            AccountIdentifier::from_slice(&bytes)
+                .expect("Failed to parse bytes as principal")
+                .as_bytes(),
+            &bytes,
+            "The account identifier doesn't change after going back and forth between a string"
+        )
+    }
+
+    #[test]
+    fn test_account_id_from_slice() {
+        let length_27 = b"123456789_123456789_1234567".to_vec();
+        assert_eq!(
+            AccountIdentifier::from_slice(&length_27),
+            Err(AccountIdParseError::InvalidLength(length_27))
+        );
+
+        let length_28 = b"123456789_123456789_12345678".to_vec();
+        assert_eq!(
+            AccountIdentifier::from_slice(&length_28),
+            Ok(AccountIdentifier::try_from(
+                <&[u8] as TryInto<[u8; 28]>>::try_into(&length_28).unwrap()
+            )
+            .unwrap())
+        );
+
+        let length_29 = b"123456789_123456789_123456789".to_vec();
+        assert_eq!(
+            AccountIdentifier::from_slice(&length_29),
+            Err(AccountIdParseError::InvalidLength(length_29))
+        );
+
+        let length_32 = [0; 32].to_vec();
+        assert_eq!(
+            AccountIdentifier::from_slice(&length_32),
+            Err(AccountIdParseError::InvalidChecksum(ChecksumError {
+                input: length_32.try_into().unwrap(),
+                expected_checksum: [128, 112, 119, 233],
+                found_checksum: [0, 0, 0, 0],
+            }))
+        );
+
+        // A 32-byte address with a valid checksum
+        let length_32 = [
+            128, 112, 119, 233, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
+        ]
+        .to_vec();
+        assert_eq!(
+            AccountIdentifier::from_slice(&length_32),
+            Ok(AccountIdentifier::try_from(
+                <&[u8] as TryInto<[u8; 28]>>::try_into(&[0u8; 28]).unwrap()
+            )
+            .unwrap())
+        );
+    }
+
+    #[test]
+    fn test_account_id_from_hex() {
+        let length_56 = "00000000000000000000000000000000000000000000000000000000";
+        let aid_bytes = [
+            128, 112, 119, 233, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(
+            AccountIdentifier::from_hex(length_56),
+            Ok(AccountIdentifier(aid_bytes))
+        );
+
+        let length_57 = "000000000000000000000000000000000000000000000000000000000";
+        assert!(AccountIdentifier::from_hex(length_57).is_err());
+
+        let length_58 = "0000000000000000000000000000000000000000000000000000000000";
+        assert_eq!(
+            AccountIdentifier::from_hex(length_58),
+            Err("0000000000000000000000000000000000000000000000000000000000 has a length of 58 but we expected a length of 64 or 56".to_string())
+        );
+
+        let length_64 = "0000000000000000000000000000000000000000000000000000000000000000";
+        assert!(AccountIdentifier::from_hex(length_64)
+            .unwrap_err()
+            .contains("Checksum failed"));
+
+        // Try again with correct checksum
+        let length_64 = "807077e900000000000000000000000000000000000000000000000000000000";
+        assert_eq!(
+            AccountIdentifier::from_hex(length_64),
+            Ok(AccountIdentifier(aid_bytes))
+        );
     }
 }

@@ -6,37 +6,29 @@ edition = "2021"
 description = "End-to-end tests for the Rust Canister Development Kit"
 license = "Apache-2.0"
 repository = "https://github.com/dfinity/cdk-rs"
+publish = false
 
 [dependencies]
-cargo_metadata = "0.14.2"
-escargot = { version = "0.5.7", features = ["print"] }
-ic-cdk = { path = "../src/ic-cdk" }
-ic-cdk-macros = { path = "../src/ic-cdk-macros" }
-ic-cdk-timers = { path = "../src/ic-cdk-timers" }
+async-channel = "2.3.1"
+candid.workspace = true
+env_logger = "0.11.5"
+escargot = { version = "0.5.7" }
+futures.workspace = true
+ic-cdk = { workspace = true, features = ["transform-closure"] }
+ic-cdk-timers.workspace = true
 lazy_static = "1.4.0"
-serde_bytes = "0.11"
-futures = "0.3"
-
-[[bin]]
-name = "simple-kv-store"
-path = "canisters/simple_kv_store.rs"
-
-[[bin]]
-name = "async"
-path = "canisters/async.rs"
-
-[[bin]]
-name = "reverse"
-path = "canisters/reverse.rs"
-
-[[bin]]
-name = "api-call"
-path = "canisters/api_call.rs"
-
-[[bin]]
-name = "timers"
-path = "canisters/timers.rs"
+serde_bytes.workspace = true
+sha2.workspace = true
+prost = "0.13.5"
 
 [dev-dependencies]
-candid = "0.8"
-ic-test-state-machine-client = "1"
+candid_parser.workspace = true
+cargo_metadata = "0.19"
+futures = "0.3"
+hex.workspace = true
+ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-05-30_03-21-base" }
+reqwest = "0.12"
+
+[build-dependencies]
+prost-build = "0.13.5"

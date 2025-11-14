@@ -2,7 +2,7 @@
 
 [![Documentation](https://docs.rs/ic-cdk/badge.svg)](https://docs.rs/ic-cdk/)
 [![Crates.io](https://img.shields.io/crates/v/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
-[![License](https://img.shields.io/crates/l/ic-cdk.svg)](https://github.com/dfinity/cdk-rs/blob/main/src/ic-cdk/LICENSE)
+[![License](https://img.shields.io/crates/l/ic-cdk.svg)](https://github.com/dfinity/cdk-rs/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/ic-cdk.svg)](https://crates.io/crates/ic-cdk)
 [![CI](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/cdk-rs/actions/workflows/ci.yml)
 
@@ -10,9 +10,8 @@
 
 You may be looking for:
 
-- [Documentation Site of the Internet Computer](https://smartcontracts.org/)
-- [Tutorials of Rust CDK](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/)
-- [Examples](https://github.com/dfinity/cdk-rs/tree/main/examples)
+- [Documentation Site of the Internet Computer](https://internetcomputer.org/docs)
+- [Tutorials of Rust CDK](https://internetcomputer.org/docs/current/developer-docs/backend/rust/)
 - [`dfx` for managing IC projects](https://github.com/dfinity/sdk)
 
 If you are looking for a crate to communicate with existing canisters on IC,
@@ -26,12 +25,17 @@ To be a `canister`, a wasm module should communicate with the execution environm
 
 This repo provides libraries and tools to facilitate developing canisters in Rust.
 
-- [`ic-cdk`](src/ic-cdk):
-Bindings of the System API.
-- [`ic-cdk-macros`](src/ic-cdk-macros):
+- [`ic0`](ic0):
+Internet Computer System API binding.
+- [`ic-cdk`](ic-cdk):
+Internet Computer Canister Development Kit.
+- [`ic-cdk-bindgen`](ic-cdk-bindgen):
+Generate Rust bindings from Candid to make inter-canister calls.
+- [`ic-cdk-macros`](ic-cdk-macros):
 Annotate functions with attribute macros to make them exposed public interfaces.
-- [`ic-cdk-timers`](src/ic-cdk-timers):
+- [`ic-cdk-timers`](ic-cdk-timers):
 The library implements multiple and periodic timers.
+- [`ic-management-canister-types`](ic-management-canister-types): Types for calling the IC management canister.
 - [`ic-certified-map`](library/ic-certified-map):
 An implementation of map which support *certified queries*.
 - [`ic-ledger-types`](library/ic-ledger-types):
@@ -46,17 +50,17 @@ In Cargo.toml:
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.8.0" # this is required if you want to use the `#[import]` macro
-ic-cdk = "0.6"
+ic-cdk = "0.18"
+candid = "0.10" # required if you want to define Candid data types
 ```
 
-Then in your rust source code:
+Then in Rust source code:
 
 ```rust
 #[ic_cdk::query]
-fn print() {
-    ic_cdk::print("Hello World from DFINITY!");
+fn hello() -> String{
+    "world".to_string()
 }
 ```
 
-Check [tutorial](https://internetcomputer.org/docs/current/developer-docs/build/cdks/cdk-rs-dfinity/rust-quickstart) for a detailed guidance.
+Check [Rust quickstart](https://internetcomputer.org/docs/current/developer-docs/backend/rust/quickstart) for a detailed guidance.
