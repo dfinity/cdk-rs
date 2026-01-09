@@ -18,14 +18,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-24.04, macos-13-large]
+        os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.85.0 # MSRV, should sync with `rust-toolchain` in `Cargo.toml`
-          target: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -52,11 +52,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-24.04, macos-13-large]
+        os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
-      - name: Install Rust toolchain
-        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -93,13 +91,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-24.04, macos-13-large]
+        os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly-2025-05-09 # 1.88.0
+          targets: wasm64-unknown-unknown
           components: rust-src
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -133,8 +132,6 @@ jobs:
     name: cargo fmt
     runs-on: ubuntu-24.04
     steps:
-      - name: Install Rust toolchain
-        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -158,8 +155,6 @@ jobs:
     name: cargo clippy
     runs-on: ubuntu-24.04
     steps:
-      - name: Install Rust toolchain
-        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -193,8 +188,6 @@ jobs:
     name: cargo doc
     runs-on: ubuntu-24.04
     steps:
-      - name: Install Rust toolchain
-        run: rustup show active-toolchain || rustup toolchain install
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
