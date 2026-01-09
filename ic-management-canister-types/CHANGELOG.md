@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.6.0] - 2026-01-09
+
+### Changed
+
+- Added `uninstall_code` and `sender_canister_version` fields to `TakeCanisterSnapshotArgs`.
+- Added `rename_canister` variant to `ChangeDetails`.
+  - Added the types `RenameCanisterRecord` and `RenameToRecord`.
+
 ## [0.5.0] - 2025-11-13
 
 ### Changed

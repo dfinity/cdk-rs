@@ -335,6 +335,8 @@ async fn snapshots() {
     let arg = TakeCanisterSnapshotArgs {
         canister_id,
         replace_snapshot: None,
+        uninstall_code: None,
+        sender_canister_version: None,
     };
     let snapshot1 = take_canister_snapshot(&arg).await.unwrap();
 

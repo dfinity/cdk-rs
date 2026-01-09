@@ -674,6 +674,59 @@ pub struct LoadSnapshotRecord {
     pub source: SnapshotSource,
 }
 
+/// # Rename To Record
+///
+/// Details about the new canister ID in a rename operation.
+///
+/// Contains the canister ID, version, and total number of changes of the new canister ID.
+/// After renaming, the total number of canister changes reported by the IC method `canister_info`
+/// is overridden to this value.
+///
+/// See [`RenameCanisterRecord::rename_to`].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct RenameToRecord {
+    /// The new canister ID.
+    pub canister_id: Principal,
+    /// The version of the new canister.
+    pub version: u64,
+    /// The total number of changes in the new canister's history.
+    /// This value overrides the total reported by `canister_info` after renaming.
+    pub total_num_changes: u64,
+}
+
+/// # Rename Canister Record
+///
+/// Details about a canister rename operation.
+///
+/// Canister renaming is described by the canister ID and the total number of canister changes
+/// before renaming as well as the canister ID, version, and total number of changes of the new
+/// canister ID. Because only a dedicated NNS canister can perform canister renaming, the actual
+/// principal who requested canister renaming is recorded in the [`requested_by`](Self::requested_by) field.
+///
+/// After renaming, the total number of canister changes reported by the IC method `canister_info`
+/// is overridden to the total number of canister changes of the new canister ID. Canister changes
+/// referring to the canister ID before renaming are preserved.
+///
+/// See [`ChangeDetails::RenameCanister`].
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct RenameCanisterRecord {
+    /// The canister ID before renaming.
+    pub canister_id: Principal,
+    /// The total number of changes in the canister's history before renaming.
+    pub total_num_changes: u64,
+    /// Details about the new canister ID after renaming.
+    pub rename_to: RenameToRecord,
+    /// The principal that requested the rename operation.
+    ///
+    /// Because only a dedicated NNS canister can perform canister renaming,
+    /// this field records the actual principal who requested it.
+    pub requested_by: Principal,
+}
+
 /// # Controllers Change Record
 ///
 /// Details about updating canister controllers.
@@ -711,6 +764,9 @@ pub enum ChangeDetails {
     /// The change was updating canister controllers.
     #[serde(rename = "controllers_change")]
     ControllersChange(ControllersChangeRecord),
+    /// The change was renaming a canister.
+    #[serde(rename = "rename_canister")]
+    RenameCanister(RenameCanisterRecord),
 }
 
 /// # Change
@@ -1332,6 +1388,10 @@ pub struct TakeCanisterSnapshotArgs {
     ///
     /// The snapshot identified by the specified ID will be deleted once a new snapshot has been successfully created.
     pub replace_snapshot: Option<SnapshotId>,
+    /// If true, uninstall the canister code after taking the snapshot.
+    pub uninstall_code: Option<bool>,
+    /// Must match the canister's [`canister_version`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#system-api-canister-version) value when specified.
+    pub sender_canister_version: Option<u64>,
 }
 
 /// # Take Canister Snapshot Result.
