@@ -114,10 +114,10 @@ pub use ic_cdk_macros::export_candid;
 ///
 /// ```rust
 /// # use ic_cdk::query;
-/// # fn wallet_canister_principal() -> candid::Principal { unimplemented!() }
 /// #[query(composite = true)]
 /// async fn composite_query_function() {
-///    let (wallet_name,): (Option<String>,) = ic_cdk::call(wallet_canister_principal(), "name", ()).await.unwrap();
+/// #  let callee : candid::Principal = todo!();
+///    ic_cdk::call::Call::bounded_wait(callee, "query_method").await.unwrap();
 /// }
 /// ```
 ///

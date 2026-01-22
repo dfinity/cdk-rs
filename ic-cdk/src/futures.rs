@@ -77,7 +77,6 @@
 //! [`scopeguard`]: https://docs.rs/scopeguard
 //! [`join_all`]: https://docs.rs/futures/latest/futures/future/fn.join_all.html
 //! [timer]: https://docs.rs/ic-cdk-timers
-//! [`caller`]: crate::api::caller
 //! [`in_replicated_execution`]: crate::api::in_replicated_execution
 //! [`canister_self`]: crate::api::canister_self
 

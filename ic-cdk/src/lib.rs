@@ -21,17 +21,8 @@ pub mod management_canister;
 pub mod stable;
 pub mod storage;
 
-use std::future::Future;
-
 #[doc(inline)]
 pub use api::trap;
-
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use api::{
-    call::{call, notify},
-    caller, id, print,
-};
 
 #[doc(inline)]
 pub use macros::*;
@@ -66,14 +57,4 @@ macro_rules! eprintln {
 macro_rules! eprintln {
     ($fmt:expr) => (std::eprintln!($fmt));
     ($fmt:expr, $($arg:tt)*) => (std::eprintln!($fmt, $($arg)*));
-}
-
-#[doc(hidden)]
-#[deprecated(
-    since = "0.18.0",
-    note = "Use ic_cdk::futures::spawn_017_compat. Alternatively, migrate to ic_cdk::futures::spawn;
-    code execution order will change, see https://github.com/dfinity/cdk-rs/blob/0.18.3/ic-cdk/V18_GUIDE.md#futures-ordering-changes"
-)]
-pub fn spawn<F: 'static + Future<Output = ()>>(fut: F) {
-    crate::futures::spawn_017_compat(fut);
 }
