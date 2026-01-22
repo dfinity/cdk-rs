@@ -21,13 +21,6 @@
 use candid::Principal;
 use std::{convert::TryFrom, num::NonZeroU64};
 
-#[deprecated(
-    since = "0.18.0",
-    note = "The `api::call` module is deprecated. Individual items within this module have their own deprecation notices with specific migration guidance."
-)]
-#[doc(hidden)]
-pub mod call;
-
 /// Gets the message argument data.
 pub fn msg_arg_data() -> Vec<u8> {
     let len = ic0::msg_arg_data_size();
