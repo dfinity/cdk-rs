@@ -33,12 +33,6 @@ pub mod call;
 )]
 #[doc(hidden)]
 pub mod management_canister;
-#[deprecated(
-    since = "0.18.0",
-    note = "The `api::stable` module has been moved to `stable` (crate root)."
-)]
-#[doc(hidden)]
-pub mod stable;
 
 /// Gets the message argument data.
 pub fn msg_arg_data() -> Vec<u8> {
