@@ -621,4 +621,3 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
     let buf = data.as_ref();
     ic0::trap(buf.as_bytes());
 }
-
