@@ -26,13 +26,6 @@ use std::future::Future;
 #[doc(inline)]
 pub use api::trap;
 
-#[doc(hidden)]
-#[allow(deprecated)]
-pub use api::{
-    call::{call, notify},
-    caller, id, print,
-};
-
 #[doc(inline)]
 pub use macros::*;
 
