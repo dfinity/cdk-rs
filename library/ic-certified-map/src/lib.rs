@@ -10,7 +10,7 @@
 //! that the value exists in the hash, you can then prove to the caller that
 //! the IC certified the data.
 //!
-//! [certified data]: https://docs.rs/ic-cdk/latest/ic_cdk/api/fn.set_certified_data.html
+//! [certified data]: https://docs.rs/ic-cdk/latest/ic_cdk/api/fn.certified_data_set.html
 //! [data certificate]: https://docs.rs/ic-cdk/latest/ic_cdk/api/fn.data_certificate.html
 //! [path]: https://internetcomputer.org/docs/current/references/ic-interface-spec#state-tree
 //!
@@ -38,7 +38,7 @@
 //!     TREE.with(|tree| {
 //!         let mut tree = tree.borrow_mut();
 //!         tree.insert("counter", leaf_hash(&count.to_be_bytes()));
-//!         ic_cdk::api::set_certified_data(&tree.root_hash());
+//!         ic_cdk::api::certified_data_set(&tree.root_hash());
 //!     })
 //! }
 //!
