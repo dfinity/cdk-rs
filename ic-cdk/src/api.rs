@@ -27,12 +27,6 @@ use std::{convert::TryFrom, num::NonZeroU64};
 )]
 #[doc(hidden)]
 pub mod call;
-#[deprecated(
-    since = "0.18.0",
-    note = "The `api::management_canister` module is deprecated. Please use the `management_canister` and `bitcoin_canister` modules at the crate root."
-)]
-#[doc(hidden)]
-pub mod management_canister;
 
 /// Gets the message argument data.
 pub fn msg_arg_data() -> Vec<u8> {
