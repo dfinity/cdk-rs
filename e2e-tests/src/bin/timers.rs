@@ -1,11 +1,6 @@
 use futures::{stream::FuturesUnordered, StreamExt};
-use ic_cdk::{
-    api::canister_self,
-    call::Call,
-    futures::spawn,
-    management_canister::{HttpMethod, HttpRequestArgs},
-    query, update,
-};
+use ic_cdk::{api::canister_self, call::Call, futures::spawn, query, update};
+use ic_cdk_management_canister::{HttpMethod, HttpRequestArgs};
 use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
 use std::{
     cell::{Cell, RefCell},
@@ -106,7 +101,7 @@ fn start_repeating_serial() {
             .await
             .unwrap();
         // best way of sleeping is a mocked http outcall
-        ic_cdk::management_canister::http_request_with_closure(
+        ic_cdk_management_canister::http_request_with_closure(
             &HttpRequestArgs {
                 url: "http://mock".to_string(),
                 method: HttpMethod::GET,

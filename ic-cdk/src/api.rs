@@ -444,23 +444,12 @@ pub fn cost_call(method_name_size: u64, payload_size: u64) -> u128 {
     ic0::cost_call(method_name_size, payload_size)
 }
 
-/// Gets the cycle cost of the Management canister method [`creating_canister`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-create_canister).
-///
-/// # Note
-///
-/// [`create_canister`](crate::management_canister::create_canister) and
-/// [`create_canister_with_extra_cycles`](crate::management_canister::create_canister_with_extra_cycles)
-/// invoke this function inside and attach the required cycles to the call.
+/// Gets the cycle cost of the Management canister method [`create_canister`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-create_canister).
 pub fn cost_create_canister() -> u128 {
     ic0::cost_create_canister()
 }
 
 /// Gets the cycle cost of the Management canister method [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request).
-///
-/// # Note
-///
-/// [`http_request`](crate::management_canister::http_request) and [`http_request_with_closure`](crate::management_canister::http_request_with_closure)
-/// invoke this function inside and attach the required cycles to the call.
 pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
     ic0::cost_http_request(request_size, max_res_bytes)
 }
@@ -495,10 +484,6 @@ fn sign_cost_result(dst: u128, code: u32) -> Result<u128, SignCostError> {
 
 /// Gets the cycle cost of the Management canister method [`sign_with_ecdsa`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-sign_with_ecdsa).
 ///
-/// # Note
-///
-/// Alternatively, [`management_canister::cost_sign_with_ecdsa`](crate::management_canister::cost_sign_with_ecdsa) provides a higher-level API that wraps this function.
-///
 /// # Errors
 ///
 /// This function will return an error if the `key_name` or the `ecdsa_curve` is invalid.
@@ -513,10 +498,6 @@ pub fn cost_sign_with_ecdsa<T: AsRef<str>>(
 }
 
 /// Gets the cycle cost of the Management canister method [`sign_with_schnorr`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-sign_with_schnorr).
-///
-/// # Note
-///
-/// Alternatively, [`management_canister::cost_sign_with_schnorr`](crate::management_canister::cost_sign_with_schnorr) provides a higher-level API that wraps this function.
 ///
 /// # Errors
 ///
@@ -534,10 +515,6 @@ pub fn cost_sign_with_schnorr<T: AsRef<str>>(
 /// Gets the cycle cost of the Management canister method [`vetkd_derive_key`](https://github.com/dfinity/portal/pull/3763).
 ///
 /// Later, the description will be available in [the interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-vetkd_derive_key).
-///
-/// # Note
-///
-/// Alternatively, [`management_canister::cost_vetkd_derive_key`](crate::management_canister::cost_vetkd_derive_key) provides a higher-level API that wraps this function.
 ///
 /// # Errors
 ///
