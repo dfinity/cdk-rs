@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::management_canister::{
+use ic_cdk_management_canister::{
     CanisterInfoResult, CanisterInstallMode, Change, ChangeDetails, ChangeOrigin,
     CodeDeploymentMode::{Install, Reinstall, Upgrade},
     CodeDeploymentRecord, ControllersChangeRecord, CreationRecord, FromCanisterRecord,

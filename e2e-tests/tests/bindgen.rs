@@ -1,6 +1,6 @@
 mod test_utilities;
 use candid::Principal;
-use ic_cdk::management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
+use ic_cdk_management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
 use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]

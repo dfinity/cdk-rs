@@ -1,6 +1,6 @@
-use ic_cdk::bitcoin_canister::*;
 use ic_cdk::call::Error;
 use ic_cdk::update;
+use ic_cdk_bitcoin_canister::*;
 
 /// A random Bitcoin address for testing.
 const BTC_ADDRESS: &str = "bcrt1qu58aj62urda83c00eylc6w34yl2s6e5rkzqet7";

@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
+use ic_cdk_management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
 use pocket_ic::ErrorCode;
 
 mod test_utilities;

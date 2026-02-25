@@ -2,7 +2,7 @@
 //!
 //! # Type Definitions
 //!
-//! This module defines the types of arguments and results for the management canister entry points.
+//! This crate defines the types of arguments and results for the management canister entry points.
 //! Most of these types are re-exported from the `ic-management-canister-types` crate.
 //!
 //! The only exception is that for the argument types that has a `sender_canister_version` field, this module provides reduced versions instead.
@@ -15,8 +15,8 @@
 //! ## Bounded-wait vs. Unbounded-wait
 //!
 //! Interacting with the IC management canister involves making inter-canister calls,
-//! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
-//! This module selects the appropriate type of wait call for each method based on the characteristics of the entry point.
+//! which can be either [bounded-wait](ic_cdk::call::Call::bounded_wait) or [unbounded-wait](ic_cdk::call::Call::unbounded_wait).
+//! This crate selects the appropriate type of wait call for each method based on the characteristics of the entry point.
 //!
 //! The strategy for choosing the type of wait call is as follows:
 //! - Unbounded-wait call by default because the management canister is universally trusted.
@@ -28,7 +28,7 @@
 //!
 //! For example, [`sign_with_ecdsa`] makes an unbounded-wait call. If a bounded-wait call is preferred, the call can be made as follows:
 //! ```rust, no_run
-//! # use ic_cdk::management_canister::{cost_sign_with_ecdsa, SignCallError, SignWithEcdsaArgs, SignWithEcdsaResult};
+//! # use ic_cdk_management_canister::{cost_sign_with_ecdsa, SignCallError, SignWithEcdsaArgs, SignWithEcdsaResult};
 //! # use ic_cdk::call::Call;
 //! # use candid::Principal;
 //! # async fn example() -> Result<SignWithEcdsaResult, SignCallError> {
@@ -55,14 +55,14 @@
 //! - [`cost_sign_with_schnorr`]
 //! - [`cost_vetkd_derive_key`]
 
-use crate::api::{
+use candid::{CandidType, Nat, Principal};
+use ic_cdk::api::{
     SignCostError, canister_version, cost_create_canister,
     cost_http_request as ic0_cost_http_request, cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
     cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
     cost_vetkd_derive_key as ic0_cost_vetkd_derive_key,
 };
-use crate::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
-use candid::{CandidType, Nat, Principal};
+use ic_cdk::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use serde::{Deserialize, Serialize};
 
 // Re-export types from the `ic-management-canister-types` crate.
@@ -572,7 +572,7 @@ pub fn transform_context_from_query(
         context,
         function: TransformFunc(candid::Func {
             method: candid_function_name,
-            principal: crate::api::canister_self(),
+            principal: ic_cdk::api::canister_self(),
         }),
     }
 }
@@ -602,9 +602,9 @@ mod transform_closure {
     )]
     extern "C" fn http_transform() {
         ic_cdk_executor::in_tracking_query_executor_context(|| {
-            use crate::api::{msg_arg_data, msg_caller, msg_reply};
+            use ic_cdk::api::{msg_arg_data, msg_caller, msg_reply};
             if msg_caller() != Principal::management_canister() {
-                crate::trap(
+                ic_cdk::trap(
                     "This function is internal to ic-cdk and should not be called externally.",
                 );
             }
@@ -614,7 +614,7 @@ mod transform_closure {
             let key = DefaultKey::from(KeyData::from_ffi(int));
             let func = TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(key));
             let Some(func) = func else {
-                crate::trap(format!("Missing transform function for request {int}"));
+                ic_cdk::trap(format!("Missing transform function for request {int}"));
             };
             let transformed = func(transform_args.response);
             let encoded = encode_one(transformed).unwrap();
@@ -640,7 +640,7 @@ mod transform_closure {
     /// please use [`http_request`] instead.
     ///
     /// HTTP outcall costs cycles which varies with the request size and the maximum response size.
-    /// This method attaches the required cycles (detemined by [`cost_http_request`](crate::api::cost_http_request)) to the call.
+    /// This method attaches the required cycles (detemined by [`cost_http_request`](ic_cdk::api::cost_http_request)) to the call.
     ///
     /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
     #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]

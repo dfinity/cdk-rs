@@ -1,7 +1,7 @@
 use candid::{IDLArgs, Principal};
 use candid_parser::parse_idl_args;
 use cargo_metadata::MetadataCommand;
-use ic_cdk::bitcoin_canister::Network;
+use ic_cdk_bitcoin_canister::Network;
 use std::path::PathBuf;
 
 mod test_utilities;

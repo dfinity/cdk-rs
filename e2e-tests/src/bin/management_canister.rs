@@ -1,7 +1,7 @@
 use candid::Principal;
 use ic_cdk::api::canister_self;
-use ic_cdk::management_canister::*;
 use ic_cdk::update;
+use ic_cdk_management_canister::*;
 use sha2::Digest;
 
 #[update]

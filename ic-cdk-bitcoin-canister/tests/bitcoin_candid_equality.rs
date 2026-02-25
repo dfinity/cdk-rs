@@ -9,7 +9,7 @@
 
 #![allow(unused)]
 use candid::candid_method;
-use ic_cdk::bitcoin_canister::*;
+use ic_cdk_bitcoin_canister::*;
 
 #[candid_method(update)]
 fn bitcoin_get_balance(_: GetBalanceRequest) -> Satoshi {
@@ -41,7 +41,7 @@ fn bitcoin_send_transaction(_: SendTransactionRequest) {
 #[cfg(test)]
 mod test {
     use candid_parser::utils::{CandidSource, service_equal};
-    use ic_cdk::bitcoin_canister::*;
+    use ic_cdk_bitcoin_canister::*;
 
     #[test]
     fn candid_equality_test() {
