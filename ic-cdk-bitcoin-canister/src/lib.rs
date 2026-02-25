@@ -1,22 +1,22 @@
-//! This module provides functionality for making inter-canister calls to the [Bitcoin canisters][1].
+//! This crate provides functionality for making inter-canister calls to the [Bitcoin canisters][1].
 //!
 //! The Bitcoin canisters allow for interactions with the Bitcoin network from within the Internet Computer.
-//! This module includes functions and types that facilitate these interactions, adhering to the
+//! This crate includes functions and types that facilitate these interactions, adhering to the
 //! [Bitcoin Canisters Interface Specification][2].
 //!
 //! # Bounded-wait vs. Unbounded-wait
 //!
 //! Interacting with the Bitcoin canisters involves making inter-canister calls,
-//! which can be either [bounded-wait](crate::call::Call::bounded_wait) or [unbounded-wait](crate::call::Call::unbounded_wait).
+//! which can be either [bounded-wait](ic_cdk::call::Call::bounded_wait) or [unbounded-wait](ic_cdk::call::Call::unbounded_wait).
 //!
-//! Most of the functions in this module use the bounded-wait calls because they only read state.
+//! Most of the functions in this crate use the bounded-wait calls because they only read state.
 //! The only function that uses the unbounded-wait call is [`bitcoin_send_transaction`].
 //!
 //! If the default behavior is not suitable for a particular use case, the [`Call`] struct can be used directly to make the call.
 //!
 //! For example, [`bitcoin_get_utxos`] makes an bounded-wait call. If an unbounded-wait call is preferred, the call can be made as follows:
 //! ```rust, no_run
-//! # use ic_cdk::bitcoin_canister::{cost_get_utxos, get_bitcoin_canister_id, GetUtxosRequest, GetUtxosResponse};
+//! # use ic_cdk_bitcoin_canister::{cost_get_utxos, get_bitcoin_canister_id, GetUtxosRequest, GetUtxosResponse};
 //! # use ic_cdk::call::Call;
 //! # async fn example() -> ic_cdk::call::CallResult<GetUtxosResponse> {
 //! let arg = GetUtxosRequest::default();
@@ -34,9 +34,9 @@
 //! ## Cycle Cost
 //!
 //! All the Bitcoin canister methods require cycles to be attached to the call.
-//! The helper functions in this module automatically calculate the required cycles and attach them to the call.
+//! The helper functions in this crate automatically calculate the required cycles and attach them to the call.
 //!
-//! For completeness, this module also provides functions to calculate the cycle cost:
+//! For completeness, this crate also provides functions to calculate the cycle cost:
 //! - [`cost_get_utxos`]
 //! - [`cost_get_balance`]
 //! - [`cost_get_current_fee_percentiles`]
@@ -46,15 +46,15 @@
 //! # Bitcoin Canister ID
 //!
 //! The Bitcoin canister ID is determined by the network.
-//! The helper functions in this module automatically determine the canister ID based on the `network` field in the request.
+//! The helper functions in this crate automatically determine the canister ID based on the `network` field in the request.
 //!
 //! For completeness, the [`get_bitcoin_canister_id`] function can be used to get the canister ID manually.
 //!
 //! [1]: https://github.com/dfinity/bitcoin-canister
 //! [2]: https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md
 
-use crate::call::{Call, CallResult};
 use candid::{CandidType, Principal};
+use ic_cdk::call::{Call, CallResult};
 use serde::{Deserialize, Serialize};
 
 const MAINNET_ID: Principal = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 4, 1, 1]); // "ghsi2-tqaaa-aaaan-aaaca-cai"

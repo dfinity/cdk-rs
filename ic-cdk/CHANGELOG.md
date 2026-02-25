@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - [BREAKING] Remove all items deprecated in v0.18.0: `api::call`, `api::stable`, `api::management_canister` modules and legacy functions (`spawn`, `print`, `caller`, `id`, `canister_balance`, `set_certified_data`, `set_global_timer`).
+- [BREAKING] Move the `bitcoin_canister` module to a separate crate `ic-cdk-bitcoin-canister`. Users should depend on `ic-cdk-bitcoin-canister` directly.
 
 ## [0.19.0] - 2025-11-13
 

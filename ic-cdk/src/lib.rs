@@ -13,7 +13,6 @@
 compile_error!("This version of the CDK does not support multithreading.");
 
 pub mod api;
-pub mod bitcoin_canister;
 pub mod call;
 pub mod futures;
 mod macros;

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "ic-cdk",
+    "ic-cdk-bitcoin-canister",
     "ic-cdk-bindgen",
     "ic-cdk-executor",
     "ic-cdk-macros",
@@ -33,6 +34,7 @@ opt-level = 'z'
 [workspace.dependencies]
 ic0 = { path = "ic0", version = "1.0.1" }
 ic-cdk = { path = "ic-cdk", version = "0.19.0" }
+ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.1.0" }
 ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
