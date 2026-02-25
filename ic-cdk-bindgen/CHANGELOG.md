@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.0] - 2026-02-19
+
 ### New API Design
 
 The `ic-cdk-bindgen` crate introduces a completely redesigned API to integrate seamlessly with `ic-cdk` v0.18 and later:
