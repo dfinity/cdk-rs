@@ -22,10 +22,10 @@ jobs:
       fail-fast: false
     steps:
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: 1.85.0 # MSRV, should sync with `rust-toolchain` in `Cargo.toml`
-          targets: wasm32-unknown-unknown
+          toolchain: 1.85.0 # MSRV, should sync with `rust-version` in `Cargo.toml`
+          target: wasm32-unknown-unknown
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Cache
@@ -98,7 +98,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly-2025-05-09 # 1.88.0
-          targets: wasm64-unknown-unknown
+          target: wasm64-unknown-unknown
           components: rust-src
       - name: Checkout repository
         uses: actions/checkout@v4
