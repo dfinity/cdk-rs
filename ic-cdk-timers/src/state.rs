@@ -128,10 +128,9 @@ impl Task {
         if let Task::Repeated {
             concurrent_calls, ..
         } = self
+            && *concurrent_calls > 0
         {
-            if *concurrent_calls > 0 {
-                *concurrent_calls -= 1;
-            }
+            *concurrent_calls -= 1;
         }
     }
 }
