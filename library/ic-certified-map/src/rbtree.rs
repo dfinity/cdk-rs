@@ -236,13 +236,14 @@ impl<K, V> Iter<'_, K, V> {
                     }
                     Visit::Post => {
                         let tip = self.parents.pop().unwrap();
-                        if let Some(parent) = self.parents.last()
-                            && parent
+                        if let Some(parent) = self.parents.last() {
+                            if parent
                                 .left
                                 .as_ref()
                                 .is_some_and(|l| std::ptr::eq(l.as_ref(), tip))
-                        {
-                            self.visit = Visit::In;
+                            {
+                                self.visit = Visit::In;
+                            }
                         }
                     }
                 }
