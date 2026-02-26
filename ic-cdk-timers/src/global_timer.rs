@@ -56,17 +56,17 @@ extern "C" fn global_timer() {
                     );
                     break;
                 }
-                if let Some(timer) = timers.peek() {
-                    if timer.time <= now {
-                        let timer: Timer = timers.pop().unwrap();
-                        match do_timer(timer, canister_self, now, timers) {
-                            ControlFlow::Continue(()) => continue,
-                            ControlFlow::Break(reschedule) => {
-                                if let Some(t) = reschedule {
-                                    to_reschedule.push(t);
-                                }
-                                break;
+                if let Some(timer) = timers.peek()
+                    && timer.time <= now
+                {
+                    let timer: Timer = timers.pop().unwrap();
+                    match do_timer(timer, canister_self, now, timers) {
+                        ControlFlow::Continue(()) => continue,
+                        ControlFlow::Break(reschedule) => {
+                            if let Some(t) = reschedule {
+                                to_reschedule.push(t);
                             }
+                            break;
                         }
                     }
                 }

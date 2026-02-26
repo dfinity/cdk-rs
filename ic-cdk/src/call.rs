@@ -838,16 +838,16 @@ impl Call<'_, '_> {
             ic0::call_with_best_effort_response(timeout_seconds);
         }
         let res = ic0::call_perform();
-        if res != 0 {
-            if let Some(state_ptr) = state_ptr_opt {
-                // SAFETY:
-                // - `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
-                // - by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
-                //      to any functions
-                // therefore, there is an outstanding handle to `state`, which it is safe to deallocate
-                unsafe {
-                    Arc::from_raw(state_ptr);
-                }
+        if res != 0
+            && let Some(state_ptr) = state_ptr_opt
+        {
+            // SAFETY:
+            // - `state_ptr_opt` is `Some` if-and-only-if ic0.call_new was called with ownership of `state`
+            // - by returning !=0, ic0.call_new relinquishes ownership of `state_ptr`; it will never be passed
+            //      to any functions
+            // therefore, there is an outstanding handle to `state`, which it is safe to deallocate
+            unsafe {
+                Arc::from_raw(state_ptr);
             }
         }
         res
