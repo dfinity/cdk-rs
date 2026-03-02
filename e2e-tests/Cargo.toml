@@ -31,7 +31,7 @@ futures = "0.3"
 hex.workspace = true
 ic-btc-interface.workspace = true
 ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2025-10-17_03-17-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-03-02_11-09-base" }
 reqwest = "0.12"
 
 [build-dependencies]

@@ -113,6 +113,10 @@ pub struct CanisterSettings {
     ///
     /// Default value: [`LogVisibility::Controllers`].
     pub log_visibility: Option<LogVisibility>,
+    /// Indicates the upper limit on the memory used for canister logs (bytes).
+    ///
+    /// Default value: `4096`.
+    pub log_memory_limit: Option<Nat>,
     /// Indicates the upper limit on the WASM heap memory (bytes) consumption of the canister.
     ///
     /// Must be a number between 0 and 2<sup>48</sup>-1 (i.e 256TB), inclusively.
@@ -159,6 +163,8 @@ pub struct DefiniteCanisterSettings {
     pub reserved_cycles_limit: Nat,
     /// Visibility of canister logs.
     pub log_visibility: LogVisibility,
+    /// Upper limit on the memory used for canister logs (bytes).
+    pub log_memory_limit: Nat,
     /// Upper limit on the WASM heap memory (bytes) consumption of the canister.
     pub wasm_memory_limit: Nat,
     /// Threshold on the remaining wasm memory size of the canister in bytes.
@@ -1658,10 +1664,33 @@ pub enum SnapshotDataOffset {
     WasmChunk,
 }
 
+/// # Canister Log Filter.
+///
+/// Filter for canister log records.
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub enum CanisterLogFilter {
+    /// Filter logs by index range (inclusive).
+    #[serde(rename = "by_idx")]
+    ByIdx { start: u64, end: u64 },
+    /// Filter logs by timestamp range (inclusive).
+    #[serde(rename = "by_timestamp_nanos")]
+    ByTimestampNanos { start: u64, end: u64 },
+}
+
 /// # Fetch Canister Logs Args.
 ///
 /// Argument type of [`fetch_canister_logs`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-fetch_canister_logs).
-pub type FetchCanisterLogsArgs = CanisterIdRecord;
+#[derive(
+    CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+)]
+pub struct FetchCanisterLogsArgs {
+    /// Canister ID.
+    pub canister_id: CanisterId,
+    /// Optional filter for the returned log records.
+    pub filter: Option<CanisterLogFilter>,
+}
 
 /// # Canister Log Record
 ///

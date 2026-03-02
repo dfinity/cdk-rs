@@ -17,6 +17,7 @@ async fn basic() {
             freezing_threshold: Some(604_800u32.into()),
             reserved_cycles_limit: Some(0u8.into()),
             log_visibility: Some(LogVisibility::Public),
+            log_memory_limit: Some(0u8.into()),
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
             environment_variables: Some(vec![]),
@@ -44,6 +45,7 @@ async fn basic() {
         definite_canister_setting.log_visibility,
         LogVisibility::Public
     );
+    assert_eq!(definite_canister_setting.log_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_threshold, 0u8);
 

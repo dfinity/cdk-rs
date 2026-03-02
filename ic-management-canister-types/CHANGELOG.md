@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.7.0] - 2026-03-02
+
+### Changed
+
+- Added `log_memory_limit` field to `CanisterSettings` and `DefiniteCanisterSettings`.
+- Added `filter` field to `FetchCanisterLogsArgs`.
+  - `FetchCanisterLogsArgs` is now a struct instead of a type alias for `CanisterIdRecord`.
+  - Added the type `CanisterLogFilter`.
+
 ## [0.6.0] - 2026-01-09
 
 ### Changed
