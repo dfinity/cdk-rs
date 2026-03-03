@@ -12,6 +12,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# All jobs use `actions-rust-lang/setup-rust-toolchain@v1`, which handles both
+# toolchain installation and Rust-specific caching (via Swatinem/rust-cache)
+# internally.  No separate `actions/cache` step is needed.  Caches are
+# automatically separated per job (the key includes the job name, OS, and a
+# hash of Cargo.lock).
+
 jobs:
   msrv:
     name: cargo build with MSRV
@@ -28,19 +34,6 @@ jobs:
           target: wasm32-unknown-unknown
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-msrv-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-msrv-
-            ${{ runner.os }}-
       - name: Run builds
         run: |
           cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
@@ -57,19 +50,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-test-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
+      # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
       - name: Install protoc (macOS)
@@ -108,19 +91,6 @@ jobs:
           components: rust-src
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-wasm64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-wasm64-
-            ${{ runner.os }}-
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
       - name: Install protoc (macOS)
@@ -140,19 +110,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-fmt-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-fmt-
-            ${{ runner.os }}-
+      # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Check formatting
         run: |
           cargo fmt --all -- --check
@@ -163,19 +123,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-clippy-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-clippy-
-            ${{ runner.os }}-
+      # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install cargo-hack
         uses: taiki-e/install-action@v2
         with:
@@ -196,19 +146,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-doc-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-doc-
-            ${{ runner.os }}-
+      # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install protoc (Ubuntu)
         if: runner.os == 'Linux'
         run: |
