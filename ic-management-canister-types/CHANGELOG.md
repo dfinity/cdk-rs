@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [0.7.0] - 2026-03-02
+## [0.7.1] - 2026-03-03
+
+This release supersedes 0.7.0, which has been yanked because it was missing the `log_memory_store_size` field in `MemoryMetrics`.
 
 ### Changed
 
@@ -15,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `filter` field to `FetchCanisterLogsArgs`.
   - `FetchCanisterLogsArgs` is now a struct instead of a type alias for `CanisterIdRecord`.
   - Added the type `CanisterLogFilter`.
+- Added `log_memory_store_size` field to `MemoryMetrics`.
+
+## [0.7.0] - 2026-03-02 [YANKED]
 
 ## [0.6.0] - 2026-01-09
 

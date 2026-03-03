@@ -48,6 +48,22 @@ async fn basic() {
     assert_eq!(definite_canister_setting.log_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_threshold, 0u8);
+    // memory_metrics
+    let mm = &result.memory_metrics;
+    assert_eq!(mm.wasm_memory_size, 0u8);
+    assert_eq!(mm.stable_memory_size, 0u8);
+    assert_eq!(mm.global_memory_size, 0u8);
+    assert_eq!(mm.wasm_binary_size, 0u8);
+    assert_eq!(mm.custom_sections_size, 0u8);
+    assert!(mm.canister_history_size > 0u8);
+    assert_eq!(mm.wasm_chunk_store_size, 0u8);
+    assert_eq!(mm.snapshots_size, 0u8);
+    assert_eq!(mm.log_memory_store_size, 0u8);
+    // query_stats
+    assert_eq!(result.query_stats.num_calls_total, 0u8);
+    assert_eq!(result.query_stats.num_instructions_total, 0u8);
+    assert_eq!(result.query_stats.request_payload_bytes_total, 0u8);
+    assert_eq!(result.query_stats.response_payload_bytes_total, 0u8);
 
     // update_settings
     let arg = UpdateSettingsArgs {

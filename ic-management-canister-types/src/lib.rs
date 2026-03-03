@@ -477,6 +477,8 @@ pub struct MemoryMetrics {
     pub wasm_chunk_store_size: Nat,
     /// Represents the memory consumed by all snapshots that belong to this canister.
     pub snapshots_size: Nat,
+    /// Represents the memory used by the canister's log store.
+    pub log_memory_store_size: Nat,
 }
 
 /// # Query Stats
