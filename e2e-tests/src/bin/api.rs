@@ -4,13 +4,13 @@
 use candid::Principal;
 use ic_cdk::api::*;
 
-#[export_name = "canister_update call_msg_arg_data"]
+#[unsafe(export_name = "canister_update call_msg_arg_data")]
 fn call_msg_arg_data() {
     assert_eq!(msg_arg_data(), vec![42]);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_msg_caller"]
+#[unsafe(export_name = "canister_update call_msg_caller")]
 fn call_msg_caller() {
     assert_eq!(msg_caller(), Principal::anonymous());
     msg_reply(vec![]);
@@ -35,7 +35,7 @@ async fn call_msg_deadline_caller() {
 /// This entrypoint is to be called by [`call_msg_deadline_caller`].
 /// If the call was made with `bounded_wait`, `msg_deadline` should be `Some`, then return 1.
 /// If the call was made with `unbounded_wait`, `msg_deadline` should be `None`, then return 0.
-#[export_name = "canister_update call_msg_deadline"]
+#[unsafe(export_name = "canister_update call_msg_deadline")]
 fn call_msg_deadline() {
     let reply = match msg_deadline() {
         Some(v) => {
@@ -48,36 +48,36 @@ fn call_msg_deadline() {
     msg_reply(vec![reply]);
 }
 
-#[export_name = "canister_update call_msg_reply"]
+#[unsafe(export_name = "canister_update call_msg_reply")]
 fn call_msg_reply() {
     msg_reply(vec![42]);
 }
 
-#[export_name = "canister_update call_msg_reject"]
+#[unsafe(export_name = "canister_update call_msg_reject")]
 fn call_msg_reject() {
     msg_reject("e2e test reject");
 }
 
-#[export_name = "canister_update call_msg_cycles_available"]
+#[unsafe(export_name = "canister_update call_msg_cycles_available")]
 fn call_msg_cycles_available() {
     assert_eq!(msg_cycles_available(), 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_msg_cycles_accept"]
+#[unsafe(export_name = "canister_update call_msg_cycles_accept")]
 fn call_msg_cycles_accept() {
     // The available cycles are 0, so the actual cycles accepted are 0.
     assert_eq!(msg_cycles_accept(1000), 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_cycles_burn"]
+#[unsafe(export_name = "canister_update call_cycles_burn")]
 fn call_cycles_burn() {
     assert_eq!(cycles_burn(1000), 1000);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_canister_self"]
+#[unsafe(export_name = "canister_update call_canister_self")]
 fn call_canister_self() {
     let self_id = canister_self();
     // The sender sended canister ID
@@ -86,32 +86,32 @@ fn call_canister_self() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_canister_cycle_balance"]
+#[unsafe(export_name = "canister_update call_canister_cycle_balance")]
 fn call_canister_cycle_balance() {
     assert!(canister_cycle_balance() > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_canister_liquid_cycle_balance"]
+#[unsafe(export_name = "canister_update call_canister_liquid_cycle_balance")]
 fn call_canister_liquid_cycle_balance() {
     assert!(canister_liquid_cycle_balance() > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_canister_status"]
+#[unsafe(export_name = "canister_update call_canister_status")]
 fn call_canister_status() {
     assert_eq!(canister_status(), CanisterStatusCode::Running);
     assert_eq!(canister_status(), 1);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_canister_version"]
+#[unsafe(export_name = "canister_update call_canister_version")]
 fn call_canister_version() {
     assert!(canister_version() > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_subnet_self"]
+#[unsafe(export_name = "canister_update call_subnet_self")]
 fn call_subnet_self() {
     let id = subnet_self();
     debug_print(format!("Subnet ID: {:?}", id.to_text()));
@@ -120,13 +120,13 @@ fn call_subnet_self() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_inspect_message"]
+#[unsafe(export_name = "canister_inspect_message")]
 fn inspect_message() {
     assert!(msg_method_name().starts_with("call_"));
     accept_message();
 }
 
-#[export_name = "canister_update call_stable"]
+#[unsafe(export_name = "canister_update call_stable")]
 fn call_stable() {
     assert_eq!(stable_size(), 0);
     assert_eq!(stable_grow(1), 0);
@@ -138,32 +138,32 @@ fn call_stable() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_root_key"]
+#[unsafe(export_name = "canister_update call_root_key")]
 fn call_root_key() {
     let root_key = root_key();
     assert!(!root_key.is_empty());
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_certified_data_set"]
+#[unsafe(export_name = "canister_update call_certified_data_set")]
 fn call_certified_data_set() {
     certified_data_set(vec![42]);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_data_certificate"]
+#[unsafe(export_name = "canister_query call_data_certificate")]
 fn call_data_certificate() {
     assert!(data_certificate().is_some());
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_time"]
+#[unsafe(export_name = "canister_update call_time")]
 fn call_time() {
     assert!(time() > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_performance_counter"]
+#[unsafe(export_name = "canister_update call_performance_counter")]
 fn call_performance_counter() {
     let t0 = PerformanceCounterType::InstructionCounter;
     assert_eq!(t0, 0);
@@ -183,7 +183,7 @@ fn call_performance_counter() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_is_controller"]
+#[unsafe(export_name = "canister_update call_is_controller")]
 fn call_is_controller() {
     // The canister was created by the anonymous principal.
     assert!(is_controller(&Principal::anonymous()));
@@ -192,7 +192,7 @@ fn call_is_controller() {
 
 /// This entry point will be called by both update and query calls.
 /// The query call will return 0, and the update call will return 1.
-#[export_name = "canister_query call_in_replicated_execution"]
+#[unsafe(export_name = "canister_query call_in_replicated_execution")]
 fn call_in_replicated_execution() {
     let res = match in_replicated_execution() {
         true => 1,
@@ -201,21 +201,21 @@ fn call_in_replicated_execution() {
     msg_reply(vec![res]);
 }
 
-#[export_name = "canister_update call_cost_call"]
+#[unsafe(export_name = "canister_update call_cost_call")]
 fn call_cost_call() {
     let res = cost_call(1, 2);
     assert!(res > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_cost_create_canister"]
+#[unsafe(export_name = "canister_query call_cost_create_canister")]
 fn call_cost_create_canister() {
     let res = cost_create_canister();
     assert!(res > 0);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_cost_http_request"]
+#[unsafe(export_name = "canister_query call_cost_http_request")]
 fn call_cost_http_request() {
     let res = cost_http_request(100, 1000);
     assert!(res > 0);
@@ -226,7 +226,7 @@ const INVALID_KEY_NAME: &str = "invalid_key_name";
 const INVALID_CURVE_OR_ALGORITHM: u32 = 42; // Just a big number which is impossible to be valid.
 const VALID_KEY_NAME: &str = "test_key_1";
 
-#[export_name = "canister_query call_cost_sign_with_ecdsa"]
+#[unsafe(export_name = "canister_query call_cost_sign_with_ecdsa")]
 fn call_cost_sign_with_ecdsa() {
     let err = cost_sign_with_ecdsa(VALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
     assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
@@ -241,7 +241,7 @@ fn call_cost_sign_with_ecdsa() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_cost_sign_with_schnorr"]
+#[unsafe(export_name = "canister_query call_cost_sign_with_schnorr")]
 fn call_cost_sign_with_schnorr() {
     let err = cost_sign_with_schnorr(VALID_KEY_NAME, INVALID_CURVE_OR_ALGORITHM).unwrap_err();
     assert!(matches!(err, SignCostError::InvalidCurveOrAlgorithm));
@@ -258,14 +258,14 @@ fn call_cost_sign_with_schnorr() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_env_var_count"]
+#[unsafe(export_name = "canister_query call_env_var_count")]
 fn call_env_var_count() {
     let count = env_var_count();
     assert_eq!(count, 2);
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_env_var_name"]
+#[unsafe(export_name = "canister_query call_env_var_name")]
 fn call_env_var_name() {
     // This is expected to panic as no environment variables are set.
     assert_eq!(env_var_name(0), "key1");
@@ -273,7 +273,7 @@ fn call_env_var_name() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_env_var_name_exists"]
+#[unsafe(export_name = "canister_query call_env_var_name_exists")]
 fn call_env_var_name_exists() {
     assert!(env_var_name_exists("key1"));
     assert!(env_var_name_exists("key2"));
@@ -281,20 +281,20 @@ fn call_env_var_name_exists() {
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_query call_env_var_value"]
+#[unsafe(export_name = "canister_query call_env_var_value")]
 fn call_env_var_value() {
     assert_eq!(env_var_value("key1"), "value1");
     assert_eq!(env_var_value("key2"), "value2");
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_debug_print"]
+#[unsafe(export_name = "canister_update call_debug_print")]
 fn call_debug_print() {
     debug_print("Hello, world!");
     msg_reply(vec![]);
 }
 
-#[export_name = "canister_update call_trap"]
+#[unsafe(export_name = "canister_update call_trap")]
 fn call_trap() {
     trap("It's a trap!");
 }

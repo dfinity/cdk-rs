@@ -1,8 +1,9 @@
 [workspace]
 members = [
+    "e2e-tests",
     "ic-cdk",
-    "ic-cdk-bitcoin-canister",
     "ic-cdk-bindgen",
+    "ic-cdk-bitcoin-canister",
     "ic-cdk-executor",
     "ic-cdk-macros",
     "ic-cdk-management-canister",
@@ -10,7 +11,6 @@ members = [
     "ic-management-canister-types",
     "ic0",
     "library/*",
-    "e2e-tests",
 ]
 resolver = "3"
 exclude = ["candid-extractor"]
@@ -25,33 +25,59 @@ repository = "https://github.com/dfinity/cdk-rs"
 rust-version = "1.88.0"
 license = "Apache-2.0"
 
+[workspace.dependencies]
+ic-cdk = { path = "ic-cdk", version = "0.19.0" }
+ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
+ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.1.0" }
+ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
+ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.19.0" }
+ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.0" }
+ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
+ic-management-canister-types = { path = "ic-management-canister-types", version = "0.7.1" }
+# Crates of this workspace
+ic0 = { path = "ic0", version = "1.0.1" }
+
+# Regular dependencies
+## sync candid version with the doc comment in ic-cdk/README.md
+candid = "0.10.24"
+candid_parser = "0.3.0"
+crc32fast = "1.5.0"
+darling = "0.23.0"
+hex = "0.4"
+ic-btc-interface = "0.3"
+ic-error-types = "0.2.0"
+pin-project-lite = "0.2.17"
+proc-macro2 = "1.0.106"
+quote = "1"
+serde = "1"
+serde_bytes = "0.11"
+sha2 = "0.10"
+slotmap = "1"
+smallvec = "1.15.1"
+syn = "2"
+thiserror = "2.0"
+
+# Dependencies only used in dev/test code
+anyhow = "1.0.102"
+async-channel = "2.5.0"
+bincode2 = "2.0.1"
+cargo_metadata = "0.23.1"
+env_logger = "0.11.9"
+escargot = "0.5.15"
+futures = "0.3"
+ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
+lazy_static = "1.5.0"
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-03-02_11-09-base" }
+prost = "0.14.3"
+prost-build = "0.14.3"
+reqwest = "0.13.2"
+rstest = "0.26.1"
+serde_cbor = "0.11"
+trybuild = "1.0.116"
+
 [profile.canister-release]
 inherits = "release"
 debug = false
 panic = "abort"
 lto = true
 opt-level = 'z'
-
-[workspace.dependencies]
-ic0 = { path = "ic0", version = "1.0.1" }
-ic-cdk = { path = "ic-cdk", version = "0.19.0" }
-ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.1.0" }
-ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
-ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
-ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
-ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.0" }
-ic-management-canister-types = { path = "ic-management-canister-types", version = "0.7.1" }
-
-candid = "0.10.18"      # sync with the doc comment in ic-cdk/README.md
-candid_parser = "0.2.1"
-futures = "0.3"
-hex = "0.4"
-ic-btc-interface = "0.3"
-ic_principal = "0.1"
-quote = "1"
-serde = "1"
-serde_bytes = "0.11"
-sha2 = "0.10"
-slotmap = "1"
-syn = "2"
-thiserror = "2.0"

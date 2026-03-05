@@ -129,13 +129,15 @@ fn cache_btc_canister_wasm() -> PathBuf {
     std::fs::create_dir_all(&artifact_dir).expect("failed to create artifact directory");
     let tag_file = artifact_dir.join("ic-btc-canister-tag");
     let binary_file = artifact_dir.join("ic-btc-canister.wasm.gz");
-    if let Ok(tag) = std::fs::read_to_string(&tag_file) {
-        if tag == EXPECTED_TAG && binary_file.exists() {
-            return binary_file.into();
-        }
+    if let Ok(tag) = std::fs::read_to_string(&tag_file)
+        && tag == EXPECTED_TAG
+        && binary_file.exists()
+    {
+        return binary_file.into();
     }
     let url = format!(
-        " https://github.com/dfinity/bitcoin-canister/releases/download/{EXPECTED_TAG}/ic-btc-canister.wasm.gz");
+        " https://github.com/dfinity/bitcoin-canister/releases/download/{EXPECTED_TAG}/ic-btc-canister.wasm.gz"
+    );
     let gz_bytes = reqwest::blocking::get(url)
         .expect("failed to download ic-btc-canister.wasm.gz")
         .bytes()

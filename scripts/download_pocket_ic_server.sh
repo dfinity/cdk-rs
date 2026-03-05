@@ -6,8 +6,8 @@ uname_sys=$(uname -s | tr '[:upper:]' '[:lower:]')
 echo "uname_sys: $uname_sys"
 
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPTS_DIR/../e2e-tests"
-# extract the tag from e2e-tests/Cargo.toml
+cd "$SCRIPTS_DIR/.."
+# extract the tag from the workspace Cargo.toml
 tag=$(grep -E 'pocket-ic.*tag' Cargo.toml | sed -n "s/.*tag *= *\"\([^\"]*\)\".*/\1/p")
 
 ARTIFACTS_DIR="$SCRIPTS_DIR/../target/e2e-tests-artifacts"

@@ -1,5 +1,5 @@
 use candid::Principal;
-use pocket_ic::{query_candid, ErrorCode};
+use pocket_ic::{ErrorCode, query_candid};
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -66,9 +66,11 @@ fn panic_after_await_frees_resources_in_spawn_migratory() {
         .unwrap();
     match res {
         Err(r) => assert!(r.reject_message.contains("Goodbye, cruel world.")),
-        Ok(()) => assert!(logs.last().is_some_and(|log| str::from_utf8(&log.content)
-            .unwrap()
-            .contains("Goodbye, cruel world.",))),
+        Ok(()) => assert!(logs.last().is_some_and(|log| {
+            str::from_utf8(&log.content)
+                .unwrap()
+                .contains("Goodbye, cruel world.")
+        })),
     }
 
     update::<_, ()>(&pic, canister_id, "migratory_resume", ()).unwrap();
@@ -90,9 +92,10 @@ fn panic_after_await_destructors_cannot_schedule_tasks() {
     pic.add_cycles(canister_id, 2_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
     let err = update::<_, ()>(&pic, canister_id, "schedule_on_panic", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("tasks cannot be spawned while recovering from a trap"));
+    assert!(
+        err.reject_message
+            .contains("tasks cannot be spawned while recovering from a trap")
+    );
     let (pre_bg_notifs,): (u64,) =
         query_candid(&pic, canister_id, "notifications_received", ()).unwrap();
     assert_eq!(pre_bg_notifs, 1);
@@ -218,9 +221,10 @@ fn protected_spawn_cannot_outlive() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     let err = update::<_, ()>(&pic, canister_id, "stalled_protected_task", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("protected task outlived its canister method"));
+    assert!(
+        err.reject_message
+            .contains("protected task outlived its canister method")
+    );
 }
 
 #[test]
@@ -232,7 +236,8 @@ fn protected_spawn_unavailable_in_migratory() {
     pic.install_canister(canister_id, wasm, vec![], None);
 
     let err = update::<_, ()>(&pic, canister_id, "protected_from_migratory", ()).unwrap_err();
-    assert!(err
-        .reject_message
-        .contains("cannot be called outside of a tracked method context"));
+    assert!(
+        err.reject_message
+            .contains("cannot be called outside of a tracked method context")
+    );
 }

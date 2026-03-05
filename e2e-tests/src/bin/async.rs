@@ -1,8 +1,8 @@
 use async_channel::{Receiver, Sender, TryRecvError};
 use candid::Principal;
 use core::panic;
-use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use ic_cdk::call::Call;
 use ic_cdk::futures::{spawn, spawn_017_compat, spawn_migratory};
 use ic_cdk::{query, update};

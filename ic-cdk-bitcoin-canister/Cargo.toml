@@ -8,10 +8,10 @@ rust-version.workspace = true
 repository.workspace = true
 description = "Utility for making inter-canister calls to the Bitcoin canisters on the Internet Computer"
 
-[dependencies]
-ic-btc-interface.workspace = true
-ic-cdk.workspace = true
-candid.workspace = true
-
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
+
+[dependencies]
+candid.workspace = true
+ic-btc-interface.workspace = true
+ic-cdk.workspace = true

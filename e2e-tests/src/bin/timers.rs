@@ -1,7 +1,7 @@
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{StreamExt, stream::FuturesUnordered};
 use ic_cdk::{api::canister_self, call::Call, futures::spawn, query, update};
 use ic_cdk_management_canister::{HttpMethod, HttpRequestArgs};
-use ic_cdk_timers::{clear_timer, set_timer, set_timer_interval, TimerId};
+use ic_cdk_timers::{TimerId, clear_timer, set_timer, set_timer_interval};
 use std::{
     cell::{Cell, RefCell},
     sync::atomic::{AtomicU32, Ordering},
