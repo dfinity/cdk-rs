@@ -1,40 +1,40 @@
 [package]
 name = "ic-cdk-e2e-tests"
 version = "0.1.0"
-authors = ["DFINITY Stiftung <sdk@dfinity.org>"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
 description = "End-to-end tests for the Rust Canister Development Kit"
-license = "Apache-2.0"
-repository = "https://github.com/dfinity/cdk-rs"
+license.workspace = true
+repository.workspace = true
 publish = false
 
 [dependencies]
-async-channel = "2.3.1"
+async-channel.workspace = true
 candid.workspace = true
-env_logger = "0.11.5"
-escargot = { version = "0.5.7" }
+env_logger.workspace = true
+escargot.workspace = true
 futures.workspace = true
 ic-cdk.workspace = true
 ic-cdk-bitcoin-canister.workspace = true
 ic-cdk-management-canister = { workspace = true, features = ["transform-closure"] }
 ic-cdk-timers.workspace = true
-lazy_static = "1.4.0"
+lazy_static.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 sha2.workspace = true
-prost = "0.14"
+prost.workspace = true
 
 [dev-dependencies]
 candid_parser.workspace = true
-cargo_metadata = "0.21"
-futures = "0.3"
+cargo_metadata.workspace = true
+futures.workspace = true
 hex.workspace = true
 ic-btc-interface.workspace = true
-ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-03-02_11-09-base" }
-reqwest = "0.12"
+ic-vetkd-utils.workspace = true
+pocket-ic.workspace = true
+reqwest = {workspace = true, features = ["blocking"]}
 
 [build-dependencies]
-prost-build = "0.14"
+prost-build.workspace = true
 ic-cdk-bindgen.workspace = true
 candid.workspace = true

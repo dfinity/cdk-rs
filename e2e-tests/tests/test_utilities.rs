@@ -1,8 +1,8 @@
-use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
+use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use cargo_metadata::MetadataCommand;
 use pocket_ic::common::rest::RawEffectivePrincipal;
-use pocket_ic::{call_candid, PocketIc, PocketIcBuilder, RejectResponse};
+use pocket_ic::{PocketIc, PocketIcBuilder, RejectResponse, call_candid};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::Once;
@@ -135,7 +135,9 @@ fn check_pocket_ic_server() -> PathBuf {
             return server_binary_path.into();
         }
     }
-    panic!("pocket-ic server not found or tag mismatch, please run `scripts/download_pocket_ic_server.sh` in the project root");
+    panic!(
+        "pocket-ic server not found or tag mismatch, please run `scripts/download_pocket_ic_server.sh` in the project root"
+    );
 }
 
 #[cfg(test)]

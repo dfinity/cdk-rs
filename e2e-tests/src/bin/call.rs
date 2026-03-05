@@ -210,7 +210,7 @@ async fn retry_calls() {
 
 #[update]
 async fn join_calls() {
-    use futures::future::{join_all, Future};
+    use futures::future::{Future, join_all};
     use std::pin::Pin;
     let future1 = async {
         Call::bounded_wait(canister_self(), "foo")

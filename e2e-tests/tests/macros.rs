@@ -94,8 +94,9 @@ fn call_macros() {
         "default_skipping_quota",
         (vec![42; 1500],),
     );
-    assert!(res
-        .unwrap_err()
-        .reject_message
-        .contains("Skipping cost exceeds the limit"));
+    assert!(
+        res.unwrap_err()
+            .reject_message
+            .contains("Skipping cost exceeds the limit")
+    );
 }

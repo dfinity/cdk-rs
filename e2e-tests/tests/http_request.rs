@@ -1,9 +1,9 @@
 use candid::{Encode, Principal};
+use pocket_ic::PocketIc;
 use pocket_ic::common::rest::{
     CanisterHttpHeader, CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse,
     MockCanisterHttpResponse,
 };
-use pocket_ic::PocketIc;
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base};

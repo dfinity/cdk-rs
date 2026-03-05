@@ -135,7 +135,8 @@ fn cache_btc_canister_wasm() -> PathBuf {
         }
     }
     let url = format!(
-        " https://github.com/dfinity/bitcoin-canister/releases/download/{EXPECTED_TAG}/ic-btc-canister.wasm.gz");
+        " https://github.com/dfinity/bitcoin-canister/releases/download/{EXPECTED_TAG}/ic-btc-canister.wasm.gz"
+    );
     let gz_bytes = reqwest::blocking::get(url)
         .expect("failed to download ic-btc-canister.wasm.gz")
         .bytes()

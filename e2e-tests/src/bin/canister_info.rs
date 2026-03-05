@@ -1,9 +1,10 @@
 use candid::Principal;
 use ic_cdk_management_canister::{
-    canister_info, create_canister_with_extra_cycles, install_code, uninstall_code,
-    update_settings, CanisterInfoArgs, CanisterInfoResult,
+    CanisterInfoArgs, CanisterInfoResult,
     CanisterInstallMode::{Install, Reinstall, Upgrade},
     CanisterSettings, CreateCanisterArgs, InstallCodeArgs, UninstallCodeArgs, UpdateSettingsArgs,
+    canister_info, create_canister_with_extra_cycles, install_code, uninstall_code,
+    update_settings,
 };
 
 #[ic_cdk::update]

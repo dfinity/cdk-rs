@@ -19,7 +19,7 @@ include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 [dependencies]
 ic-cdk.workspace = true
 candid.workspace = true
-crc32fast = "1.2.0"
+crc32fast.workspace = true
 hex.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true

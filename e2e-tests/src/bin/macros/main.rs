@@ -153,7 +153,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use candid_parser::utils::{service_equal, CandidSource};
+    use candid_parser::utils::{CandidSource, service_equal};
 
     #[test]
     fn candid_equality_test() {

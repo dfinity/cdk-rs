@@ -1,7 +1,7 @@
 use ic_cdk::{query, update};
 use ic_cdk_management_canister::{
-    http_request, http_request_with_closure, transform_context_from_query, HttpHeader, HttpMethod,
-    HttpRequestArgs, HttpRequestResult, TransformArgs,
+    HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs, http_request,
+    http_request_with_closure, transform_context_from_query,
 };
 
 /// All fields are Some except transform.

@@ -1,7 +1,8 @@
 use candid::Principal;
 use pocket_ic::{
+    PocketIc,
     common::rest::{CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse},
-    query_candid, PocketIc,
+    query_candid,
 };
 use std::time::Duration;
 
@@ -47,7 +48,9 @@ fn test_timers() {
         query_candid(&pic, canister_id, "get_events", ()).expect("Failed to call get_events");
     assert_eq!(
         events[..],
-        ["1", "2", "3", "4", "1", "2", "4", "3", "repeat", "repeat", "repeat"]
+        [
+            "1", "2", "3", "4", "1", "2", "4", "3", "repeat", "repeat", "repeat"
+        ]
     );
 }
 
@@ -106,8 +109,9 @@ fn test_scheduling_many_timers() {
     let logs = pic
         .fetch_canister_logs(canister_id, Principal::anonymous())
         .unwrap();
-    assert!(logs.iter().any(|line| str::from_utf8(&line.content)
-        .is_ok_and(|s| s.contains("too many concurrent timer calls"))));
+    assert!(logs.iter().any(|line| {
+        str::from_utf8(&line.content).is_ok_and(|s| s.contains("too many concurrent timer calls"))
+    }));
 }
 
 #[test]
@@ -212,8 +216,10 @@ fn test_individual_timer_ratelimits_when_time_skips() {
     let logs = pic
         .fetch_canister_logs(canister_id, Principal::anonymous())
         .unwrap();
-    assert!(logs.iter().any(|line| str::from_utf8(&line.content)
-        .is_ok_and(|s| s.contains("too many concurrent calls for single timer"))));
+    assert!(logs.iter().any(|line| {
+        str::from_utf8(&line.content)
+            .is_ok_and(|s| s.contains("too many concurrent calls for single timer"))
+    }));
 }
 
 #[test]
