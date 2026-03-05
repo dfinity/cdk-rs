@@ -18,7 +18,7 @@ This library aims to provide a Rust-ergonomic abstraction to implement Canister 
 
 ## Getting Started
 
-```
+```bash
 cargo add ic-cdk
 ```
 

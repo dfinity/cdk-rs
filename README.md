@@ -43,7 +43,7 @@ Type definitions to communicate with the ICP ledger canister.
 
 ## Rust CDK in Action
 
-```
+```bash
 cargo add ic-cdk
 ```
 
