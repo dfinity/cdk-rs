@@ -7,6 +7,12 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 description = "Utility for making inter-canister calls to the Bitcoin canisters on the Internet Computer"
+homepage = "https://docs.rs/ic-cdk-bitcoin-canister"
+documentation = "https://docs.rs/ic-cdk-bitcoin-canister"
+readme = "README.md"
+categories = ["api-bindings", "wasm"]
+keywords = ["internet-computer", "dfinity", "canister", "cdk", "bitcoin"]
+include = ["src", "Cargo.toml", "LICENSE", "README.md"]
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
