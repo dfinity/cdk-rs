@@ -12,7 +12,7 @@ documentation = "https://docs.rs/ic-cdk-management-canister"
 readme = "README.md"
 categories = ["api-bindings", "wasm"]
 keywords = ["internet-computer", "dfinity", "canister", "cdk"]
-include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [package.metadata.docs.rs]
 features = ["transform-closure"]

@@ -17,7 +17,7 @@ categories = [
     "development-tools::ffi",
 ]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
-include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [lib]
 proc-macro = true

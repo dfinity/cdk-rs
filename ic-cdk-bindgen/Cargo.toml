@@ -10,7 +10,7 @@ description = "Internet Computer Binding Generator."
 readme = "README.md"
 categories = ["api-bindings", "development-tools::ffi"]
 keywords = ["internet-computer", "types", "dfinity", "canister", "cdk"]
-include = ["src", "Cargo.toml", "LICENSE", "README.md"]
+include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [dependencies]
 candid.workspace = true
