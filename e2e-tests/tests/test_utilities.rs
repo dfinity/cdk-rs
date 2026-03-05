@@ -130,10 +130,11 @@ fn check_pocket_ic_server() -> PathBuf {
     let artifact_dir = target_dir.join("e2e-tests-artifacts");
     let tag_path = artifact_dir.join("pocket-ic-tag");
     let server_binary_path = artifact_dir.join("pocket-ic");
-    if let Ok(tag) = std::fs::read_to_string(&tag_path) {
-        if tag == pocket_ic_tag && server_binary_path.exists() {
-            return server_binary_path.into();
-        }
+    if let Ok(tag) = std::fs::read_to_string(&tag_path)
+        && tag == pocket_ic_tag
+        && server_binary_path.exists()
+    {
+        return server_binary_path.into();
     }
     panic!(
         "pocket-ic server not found or tag mismatch, please run `scripts/download_pocket_ic_server.sh` in the project root"
