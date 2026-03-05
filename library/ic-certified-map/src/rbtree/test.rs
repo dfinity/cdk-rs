@@ -388,10 +388,9 @@ fn test_serde_serialize_and_deserialize() {
     let t2: Tree<'_> = serde_cbor::from_slice(&b[..]).unwrap();
     assert_eq!(t1, t2);
 
-    // bincode test
-    use bincode::Options;
-    let b = bincode::options().serialize(&t1).unwrap();
-    let t3: Tree<'_> = bincode::options().deserialize(&b).unwrap();
+    // bincode2 test
+    let b = bincode2::config().serialize(&t1).unwrap();
+    let t3: Tree<'_> = bincode2::config().deserialize(&b).unwrap();
     assert_eq!(t1, t3);
 
     // candid test

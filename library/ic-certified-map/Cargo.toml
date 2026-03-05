@@ -28,4 +28,4 @@ candid.workspace = true
 hex.workspace = true
 serde_cbor.workspace = true
 ic-cdk.workspace = true
-bincode.workspace = true
+bincode2.workspace = true

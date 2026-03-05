@@ -44,9 +44,10 @@ ic-management-canister-types = { path = "ic-management-canister-types", version 
 
 anyhow = "1.0.102"
 async-channel = "2.5.0"
-bincode = "1.3.3"
-candid = "0.10.24" # sync with the doc comment in ic-cdk/README.md
+bincode2 = "2.0.1"
+# sync candid version with the doc comment in ic-cdk/README.md
 candid_parser = "0.3.0"
+candid = "0.10.24"
 cargo_metadata = "0.23.1"
 crc32fast = "1.5.0"
 darling = "0.23.0"
