@@ -13,10 +13,10 @@ keywords = ["internet-computer", "dfinity", "canister", "cdk"]
 # Update the link by updating the links-pin tag.
 links = "ic-cdk async executor, see https://github.com/dfinity/cdk-rs/blob/links-pin/TROUBLESHOOTING.md"
 
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+
 [dependencies]
 ic0.workspace = true
 slotmap.workspace = true
 smallvec.workspace = true
-
-[package.metadata.docs.rs]
-targets = ["wasm32-unknown-unknown"]

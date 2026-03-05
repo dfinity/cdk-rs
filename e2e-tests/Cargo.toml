@@ -16,13 +16,20 @@ escargot.workspace = true
 futures.workspace = true
 ic-cdk.workspace = true
 ic-cdk-bitcoin-canister.workspace = true
-ic-cdk-management-canister = { workspace = true, features = ["transform-closure"] }
+ic-cdk-management-canister = { workspace = true, features = [
+    "transform-closure",
+] }
 ic-cdk-timers.workspace = true
 lazy_static.workspace = true
+prost.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 sha2.workspace = true
-prost.workspace = true
+
+[build-dependencies]
+candid.workspace = true
+ic-cdk-bindgen.workspace = true
+prost-build.workspace = true
 
 [dev-dependencies]
 candid_parser.workspace = true
@@ -32,9 +39,4 @@ hex.workspace = true
 ic-btc-interface.workspace = true
 ic-vetkd-utils.workspace = true
 pocket-ic.workspace = true
-reqwest = {workspace = true, features = ["blocking"]}
-
-[build-dependencies]
-prost-build.workspace = true
-ic-cdk-bindgen.workspace = true
-candid.workspace = true
+reqwest = { workspace = true, features = ["blocking"] }

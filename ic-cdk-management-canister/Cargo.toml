@@ -8,10 +8,17 @@ rust-version.workspace = true
 repository.workspace = true
 description = "Utility for making inter-canister calls to the IC management canister"
 
+[package.metadata.docs.rs]
+features = ["transform-closure"]
+default-target = "wasm32-unknown-unknown"
+
+[features]
+transform-closure = ["dep:ic-cdk-executor", "dep:slotmap"]
+
 [dependencies]
+candid.workspace = true
 ic-cdk.workspace = true
 ic-management-canister-types.workspace = true
-candid.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 thiserror.workspace = true
@@ -19,10 +26,3 @@ thiserror.workspace = true
 # Only needed for transform-closure feature
 ic-cdk-executor = { workspace = true, optional = true }
 slotmap = { workspace = true, optional = true }
-
-[features]
-transform-closure = ["dep:ic-cdk-executor", "dep:slotmap"]
-
-[package.metadata.docs.rs]
-features = ["transform-closure"]
-default-target = "wasm32-unknown-unknown"

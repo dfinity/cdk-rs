@@ -19,13 +19,13 @@ keywords = ["internet-computer", "types", "dfinity", "map"]
 include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [dependencies]
+candid.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
 sha2.workspace = true
-candid.workspace = true
 
 [dev-dependencies]
-hex.workspace = true
-serde_cbor.workspace = true
-ic-cdk.workspace = true
 bincode2.workspace = true
+hex.workspace = true
+ic-cdk.workspace = true
+serde_cbor.workspace = true
