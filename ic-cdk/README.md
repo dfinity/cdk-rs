@@ -18,15 +18,15 @@ This library aims to provide a Rust-ergonomic abstraction to implement Canister 
 
 ## Getting Started
 
+```bash
+cargo add ic-cdk
+```
+
 In Cargo.toml:
 
 ```toml
 [lib]
 crate-type = ["cdylib"]
-
-[dependencies]
-ic-cdk = "0.19"
-candid = "0.10" # required if you want to define Candid data types
 ```
 
 Then in Rust source code:

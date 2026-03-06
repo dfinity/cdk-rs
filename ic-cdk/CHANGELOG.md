@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.20.0] - 2026-03-05
+
 ### Changed
 
 - [BREAKING] Remove all items deprecated in v0.18.0: `api::call`, `api::stable`, `api::management_canister` modules and legacy functions (`spawn`, `print`, `caller`, `id`, `canister_balance`, `set_certified_data`, `set_global_timer`).

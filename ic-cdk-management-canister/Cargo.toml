@@ -7,6 +7,12 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 description = "Utility for making inter-canister calls to the IC management canister"
+homepage = "https://docs.rs/ic-cdk-management-canister"
+documentation = "https://docs.rs/ic-cdk-management-canister"
+readme = "README.md"
+categories = ["api-bindings", "wasm"]
+keywords = ["internet-computer", "dfinity", "canister", "cdk"]
+include = ["src", "Cargo.toml", "CHANGELOG.md", "LICENSE", "README.md"]
 
 [package.metadata.docs.rs]
 features = ["transform-closure"]

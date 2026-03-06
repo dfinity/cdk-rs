@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.0] - 2026-03-05
+
 ### Changed
 
 - [BREAKING] All Bitcoin interface types are now re-exported from the [`ic-btc-interface`](https://crates.io/crates/ic-btc-interface) crate instead of being defined locally. This aligns with the canonical types published by the Bitcoin Canister team. The Candid-level interface remains compatible, but several Rust-level breaking changes are introduced.
