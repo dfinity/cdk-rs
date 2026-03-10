@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use candid::{CandidType, Nat, Principal};
 use ic_cdk::api::{
