@@ -158,10 +158,34 @@ jobs:
         run: |
           RUSTDOCFLAGS="-D warnings" cargo doc
 
+  docsrs:
+    name: docsrs
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install nightly Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+      - name: Install protoc (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+      - name: Build docs (docs.rs simulation)
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo +nightly doc --no-deps --all-features --target wasm32-unknown-unknown \
+            -p ic-cdk \
+            -p ic-cdk-bitcoin-canister \
+            -p ic-cdk-executor \
+            -p ic-cdk-management-canister \
+            -p ic-cdk-timers
+
   aggregate:
     name: ci:required
     if: ${{ always() }}
-    needs: [msrv, test, wasm64, fmt, clippy, doc]
+    needs: [msrv, test, wasm64, fmt, clippy, doc, docsrs]
     runs-on: ubuntu-24.04
     steps:
       - name: check msrv result
@@ -178,4 +202,7 @@ jobs:
         run: exit 1
       - name: check clippy result
         if: ${{ needs.clippy.result != 'success' }}
+        run: exit 1
+      - name: check docsrs result
+        if: ${{ needs.docsrs.result != 'success' }}
         run: exit 1
