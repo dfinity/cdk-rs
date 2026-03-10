@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.1.1] - 2026-03-10
+
+### Fixed
+
+- Fixed docs.rs build by adding `#![cfg_attr(docsrs, feature(doc_cfg))]`.
+
 ## [0.1.0] - 2026-03-05
 
 Initial release. The functionality was previously part of the `management_canister` module in `ic-cdk`.

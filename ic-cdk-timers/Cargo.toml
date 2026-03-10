@@ -24,7 +24,6 @@ links = "ic-cdk-timers (canister_global_timer), see https://github.com/dfinity/c
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
-rustc-args = ["--cfg=docsrs"]
 
 [dependencies]
 ic-cdk-executor.workspace = true

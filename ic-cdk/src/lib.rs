@@ -7,7 +7,6 @@
     clippy::undocumented_unsafe_blocks,
     clippy::missing_safety_doc
 )]
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(target_feature = "atomics")]
 compile_error!("This version of the CDK does not support multithreading.");
