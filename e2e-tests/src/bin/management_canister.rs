@@ -21,7 +21,7 @@ async fn basic() {
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
             environment_variables: Some(vec![]),
-            snapshot_visibility: Some(SnapshotVisibility::Controllers),
+            snapshot_visibility: Some(SnapshotVisibility::Public),
         }),
     };
     // 500 B is the minimum cycles required to create a canister.
@@ -48,7 +48,7 @@ async fn basic() {
     );
     assert_eq!(
         definite_canister_setting.snapshot_visibility,
-        SnapshotVisibility::Controllers
+        SnapshotVisibility::Public
     );
     assert_eq!(definite_canister_setting.log_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
