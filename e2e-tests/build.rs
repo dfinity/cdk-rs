@@ -14,6 +14,6 @@ fn main() {
     .generate();
     // Dynamic Callee mode bindgen for the bindgen_callee
     ic_cdk_bindgen::Config::new("bindgen_callee", "src/bin/bindgen_callee/callee.did")
-        .dynamic_callee("ICP_CANISTER_ID:bindgen_callee")
+        .dynamic_callee("PUBLIC_CANISTER_ID:bindgen_callee")
         .generate();
 }

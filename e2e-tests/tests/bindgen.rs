@@ -25,7 +25,7 @@ fn bindgen() {
     let _: () = update(&pic, canister_id, "call_management_canister", ()).unwrap();
 
     // The required env var is not set, so the call will fail.
-    let required_env_var = "ICP_CANISTER_ID:bindgen_callee";
+    let required_env_var = "PUBLIC_CANISTER_ID:bindgen_callee";
     let res: Result<(), _> = update(&pic, canister_id, "call_bindgen_callee", ());
     assert!(res.unwrap_err().reject_message.contains(&format!(
         "env var `{}` is not set. Canister controller can set it using tools like icp-cli.",

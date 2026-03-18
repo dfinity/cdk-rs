@@ -54,7 +54,7 @@ The ICP Environment Variables feature enables a workflow where the canister ID c
 environment variables, allowing for more flexible deployments. The "Dynamic callee" mode is designed for this workflow.
 
 For example, the `icp-cli` CLI tool sets an Env Var if there is a canister named `callee` in the project:
-- name: `ICP_CANISTER_ID:callee`
+- name: `PUBLIC_CANISTER_ID:callee`
 - value: The text representation of the Principal
 
 Just apply a one line change in the `build.rs` script:
@@ -63,7 +63,7 @@ Just apply a one line change in the `build.rs` script:
 // build.rs
 fn main() {
     ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
-        .dynamic_callee("ICP_CANISTER_ID:callee") // <--- Change made here
+        .dynamic_callee("PUBLIC_CANISTER_ID:callee") // <--- Change made here
         .generate();
 }
 ```
@@ -93,7 +93,7 @@ Then, add the type selector configuration to your build script using `set_type_s
 fn main() {
     ic_cdk_bindgen::Config::new("callee", "candid/callee.did")
         .set_type_selector_config("path/to/callee.toml")
-        .dynamic_callee("ICP_CANISTER_ID:callee")
+        .dynamic_callee("PUBLIC_CANISTER_ID:callee")
         .generate();
 }
 ```
