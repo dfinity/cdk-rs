@@ -598,3 +598,26 @@ pub fn trap<T: AsRef<str>>(data: T) -> ! {
     let buf = data.as_ref();
     ic0::trap(buf.as_bytes());
 }
+
+/// The arguments passed to the `on_complete` callback exposed by canister endpoint macros
+#[derive(Debug)]
+pub struct OnExecutionCompleteArgs {
+    /// The name of the canister endpoint
+    pub endpoint_name: &'static str,
+    /// The number of bytes in the request arg
+    pub arg_bytes_len: usize,
+    /// The number of bytes returned in the response
+    pub return_bytes_len: usize,
+}
+
+impl OnExecutionCompleteArgs {
+    /// Creates a new `OnExecutionCompleteArgs` with the given endpoint name, the byte lengths will
+    /// be set later as the request is processed
+    pub fn new(endpoint_name: &'static str) -> Self {
+        Self {
+            endpoint_name,
+            arg_bytes_len: 0,
+            return_bytes_len: 0,
+        }
+    }
+}

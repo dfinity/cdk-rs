@@ -32,6 +32,7 @@ struct ExportAttributes {
     pub hidden: bool,
     #[darling(rename = "crate")]
     pub cratename: Option<String>,
+    pub on_complete: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -242,11 +243,13 @@ fn dfn_macro(
             let arg_one = &arg_tuple[0];
             quote! {
                 let arg_bytes = #cratename::api::msg_arg_data();
+                on_complete_args.arg_bytes_len = arg_bytes.len();
                 let #arg_one = #decode_with_ident(arg_bytes);
             }
         } else {
             quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
+            on_complete_args.arg_bytes_len = arg_bytes.len();
             let ( #( #arg_tuple, )* ) = #decode_with_ident(arg_bytes); }
         }
     } else if arg_tuple.is_empty() {
@@ -254,6 +257,7 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
+            on_complete_args.arg_bytes_len = arg_bytes.len();
             let mut decoder_config = ::candid::DecoderConfig::new();
             decoder_config.set_skipping_quota(10000);
             let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
@@ -307,6 +311,7 @@ fn dfn_macro(
         };
         quote! {
             let bytes: Vec<u8> = #return_bytes;
+            on_complete_args.return_bytes_len = bytes.len();
             #cratename::api::msg_reply(bytes);
         }
     };
@@ -349,21 +354,37 @@ fn dfn_macro(
         }
     };
 
-    // 7. exported function body
+    // 7. on_complete function call
+    let on_complete = if let Some(on_complete) = &attrs.on_complete {
+        let on_complete_ident = parse_str::<Path>(on_complete)?;
+        quote! {
+            #on_complete_ident(on_complete_args);
+        }
+    } else {
+        quote! {}
+    };
+
+    // 8. exported function body
     let async_context_name = if method.is_state_persistent() {
         format_ident!("in_executor_context")
     } else {
         format_ident!("in_query_executor_context")
     };
+    let body_inner = quote!{
+        let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+        #arg_decode
+        let result = #function_call;
+        #return_encode
+        #on_complete
+    };
+
     let body = if signature.asyncness.is_some() {
         quote! {
             #cratename::futures::internals::#async_context_name(|| {
                 #guard
                 #[allow(clippy::disallowed_methods)]
                 #cratename::futures::spawn(async {
-                    #arg_decode
-                    let result = #function_call;
-                    #return_encode
+                    #body_inner
                 });
             });
         }
@@ -371,9 +392,7 @@ fn dfn_macro(
         quote! {
             #guard
             #cratename::futures::internals::#async_context_name(|| {
-                #arg_decode
-                let result = #function_call;
-                #return_encode
+                #body_inner
             });
         }
     };
