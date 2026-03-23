@@ -1,7 +1,6 @@
-use candid::{IDLArgs, Principal};
-use candid_parser::parse_idl_args;
+use candid::Principal;
 use cargo_metadata::MetadataCommand;
-use ic_btc_interface::NetworkInRequest;
+use ic_btc_interface::{CanisterArg, Fees, Flag, InitConfig, Network, NetworkInRequest};
 use std::path::PathBuf;
 
 mod test_utilities;
@@ -9,96 +8,58 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 
 #[test]
 fn test_bitcoin_canister() {
+    let blocks_source = Principal::from_text("aaaaa-aa").unwrap();
+
     // Mainnet
     let mainnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 4, 1, 1]);
-    let mainnet_init_args = r#"(
-  record {
-    api_access = variant { enabled };
-    lazily_evaluate_fee_percentiles = variant { enabled };
-    blocks_source = principal "aaaaa-aa";
-    fees = record {
-      get_current_fee_percentiles = 10_000_000 : nat;
-      get_utxos_maximum = 10_000_000_000 : nat;
-      get_block_headers_cycles_per_ten_instructions = 10 : nat;
-      get_current_fee_percentiles_maximum = 100_000_000 : nat;
-      send_transaction_per_byte = 20_000_000 : nat;
-      get_balance = 10_000_000 : nat;
-      get_utxos_cycles_per_ten_instructions = 10 : nat;
-      get_block_headers_base = 50_000_000 : nat;
-      get_utxos_base = 50_000_000 : nat;
-      get_balance_maximum = 100_000_000 : nat;
-      send_transaction_base = 5_000_000_000 : nat;
-      get_block_headers_maximum = 10_000_000_000 : nat;
-    };
-    network = variant { mainnet };
-    stability_threshold = 100 : nat;
-    syncing = variant { enabled };
-    burn_cycles = variant { enabled };
-    disable_api_if_not_fully_synced = variant { enabled };
-  },
-)"#;
-    test_network(NetworkInRequest::Mainnet, mainnet_id, mainnet_init_args);
+    let mainnet_init = CanisterArg::Init(InitConfig {
+        network: Some(Network::Mainnet),
+        blocks_source: Some(blocks_source),
+        stability_threshold: Some(100),
+        syncing: Some(Flag::Enabled),
+        api_access: Some(Flag::Enabled),
+        disable_api_if_not_fully_synced: Some(Flag::Enabled),
+        burn_cycles: Some(Flag::Enabled),
+        lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
+        fees: Some(Fees::mainnet()),
+        watchdog_canister: None,
+    });
+    test_network(NetworkInRequest::Mainnet, mainnet_id, mainnet_init);
+
     // Testnet
     let testnet_id = Principal::from_slice(&[0, 0, 0, 0, 1, 160, 0, 1, 1, 1]);
-    let testnet_init_args = r#"(
-  record {
-    api_access = variant { enabled };
-    lazily_evaluate_fee_percentiles = variant { enabled };
-    blocks_source = principal "aaaaa-aa";
-    fees = record {
-      get_current_fee_percentiles = 4_000_000 : nat;
-      get_utxos_maximum = 4_000_000_000 : nat;
-      get_block_headers_cycles_per_ten_instructions = 10 : nat;
-      get_current_fee_percentiles_maximum = 40_000_000 : nat;
-      send_transaction_per_byte = 8_000_000 : nat;
-      get_balance = 4_000_000 : nat;
-      get_utxos_cycles_per_ten_instructions = 10 : nat;
-      get_block_headers_base = 20_000_000 : nat;
-      get_utxos_base = 20_000_000 : nat;
-      get_balance_maximum = 40_000_000 : nat;
-      send_transaction_base = 2_000_000_000 : nat;
-      get_block_headers_maximum = 4_000_000_000 : nat;
-    };
-    network = variant { testnet };
-    stability_threshold = 144 : nat;
-    syncing = variant { enabled };
-    burn_cycles = variant { enabled };
-    disable_api_if_not_fully_synced = variant { enabled };
-  },
-)"#;
-    test_network(NetworkInRequest::Testnet, testnet_id, testnet_init_args);
+    let testnet_init = CanisterArg::Init(InitConfig {
+        network: Some(Network::Testnet),
+        blocks_source: Some(blocks_source),
+        stability_threshold: Some(144),
+        syncing: Some(Flag::Enabled),
+        api_access: Some(Flag::Enabled),
+        disable_api_if_not_fully_synced: Some(Flag::Enabled),
+        burn_cycles: Some(Flag::Enabled),
+        lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
+        fees: Some(Fees::testnet()),
+        watchdog_canister: None,
+    });
+    test_network(NetworkInRequest::Testnet, testnet_id, testnet_init);
+
     // Regtest
     let regtest_id = testnet_id;
-    let regtest_init_args = r#"(
-  record {
-    api_access = variant { enabled };
-    lazily_evaluate_fee_percentiles = variant { enabled };
-    blocks_source = principal "aaaaa-aa";
-    fees = record {
-      get_current_fee_percentiles = 0 : nat;
-      get_utxos_maximum = 0 : nat;
-      get_block_headers_cycles_per_ten_instructions = 0 : nat;
-      get_current_fee_percentiles_maximum = 0 : nat;
-      send_transaction_per_byte = 0 : nat;
-      get_balance = 0 : nat;
-      get_utxos_cycles_per_ten_instructions = 0 : nat;
-      get_block_headers_base = 0 : nat;
-      get_utxos_base = 0 : nat;
-      get_balance_maximum = 0 : nat;
-      send_transaction_base = 0 : nat;
-      get_block_headers_maximum = 0 : nat;
-    };
-    network = variant { regtest };
-    stability_threshold = 144 : nat;
-    syncing = variant { enabled };
-    burn_cycles = variant { enabled };
-    disable_api_if_not_fully_synced = variant { enabled };
-  },
-)"#;
-    test_network(NetworkInRequest::Regtest, regtest_id, regtest_init_args);
+    let regtest_init = CanisterArg::Init(InitConfig {
+        network: Some(Network::Regtest),
+        blocks_source: Some(blocks_source),
+        stability_threshold: Some(144),
+        syncing: Some(Flag::Enabled),
+        api_access: Some(Flag::Enabled),
+        disable_api_if_not_fully_synced: Some(Flag::Enabled),
+        burn_cycles: Some(Flag::Enabled),
+        lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
+        fees: Some(Fees::default()),
+        watchdog_canister: None,
+    });
+    test_network(NetworkInRequest::Regtest, regtest_id, regtest_init);
 }
 
-fn test_network(network: NetworkInRequest, btc_id: Principal, init_args: &str) {
+fn test_network(network: NetworkInRequest, btc_id: Principal, init_arg: CanisterArg) {
     let wasm = cargo_build_canister("bitcoin_canister");
     // The Bitcoin canisters can still function without connecting to a `bitcoind` node.
     // The interface check and the cycles cost logic are still valid.
@@ -110,14 +71,13 @@ fn test_network(network: NetworkInRequest, btc_id: Principal, init_args: &str) {
     let btc_canister_wasm = std::fs::read(cache_btc_canister_wasm()).unwrap();
     let _ = pic.create_canister_with_id(None, None, btc_id).unwrap();
     pic.add_cycles(btc_id, 10_000_000_000_000u128);
-    let args: IDLArgs = parse_idl_args(init_args).expect("failed to parse IDL args");
-    let encoded_args = args.to_bytes().expect("failed to encode IDL args");
+    let encoded_args = candid::encode_one(init_arg).expect("failed to encode init args");
     pic.install_canister(btc_id, btc_canister_wasm.clone(), encoded_args, None);
-    let () = update(&pic, canister_id, "execute_non_query_methods", (network,)).unwrap();
+    let () = update(&pic, canister_id, "execute_all_methods", (network,)).unwrap();
 }
 
 fn cache_btc_canister_wasm() -> PathBuf {
-    const EXPECTED_TAG: &str = "release%2F2024-08-30"; // The slash is encoded as %2F in the URL
+    const EXPECTED_TAG: &str = "release%2F2026-03-06"; // The slash is encoded as %2F in the URL
     let dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let cargo_toml_path = dir.join("Cargo.toml");
     let target_dir = MetadataCommand::new()
