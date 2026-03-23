@@ -162,6 +162,22 @@ pub fn cost_get_block_headers(arg: &GetBlockHeadersRequest) -> u128 {
     }
 }
 
+/// Gets information about the current state of the Bitcoin blockchain as seen by the canister.
+///
+/// **Bounded-wait call**
+///
+/// This is a query-only function and does not require the `api_access` flag to be enabled,
+/// nor does it require the canister to be fully synchronized. It is primarily intended for
+/// monitoring purposes.
+///
+/// Check the [Bitcoin Canisters Interface Specification](https://github.com/dfinity/bitcoin-canister/blob/master/INTERFACE_SPECIFICATION.md#get_blockchain_info) for more details.
+pub async fn get_blockchain_info(network: Network) -> CallResult<BlockchainInfo> {
+    let canister_id = get_bitcoin_canister_id(network);
+    Ok(Call::bounded_wait(canister_id, "get_blockchain_info")
+        .await?
+        .candid()?)
+}
+
 /// Sends a Bitcoin transaction to the Bitcoin network.
 ///
 /// **Unbounded-wait call**

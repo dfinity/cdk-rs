@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.0] - 2026-03-23
+
+### Added
+
+- `get_blockchain_info` function to query the current state of the Bitcoin blockchain.
+
+### Changed
+
+- Updated `ic-btc-interface` dependency to `0.4.0`.
+
 ## [0.1.0] - 2026-03-05
 
 ### Changed

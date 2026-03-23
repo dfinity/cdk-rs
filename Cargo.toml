@@ -28,7 +28,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 ic-cdk = { path = "ic-cdk", version = "0.20.0" }
 ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
-ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.1.0" }
+ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.2.0" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
 ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.0" }
 ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.1" }
@@ -44,7 +44,7 @@ candid_parser = "0.3.0"
 crc32fast = "1.5.0"
 darling = "0.23.0"
 hex = "0.4"
-ic-btc-interface = "0.3"
+ic-btc-interface = "0.4.0"
 ic-error-types = "0.2.0"
 pin-project-lite = "0.2.17"
 proc-macro2 = "1.0.106"
