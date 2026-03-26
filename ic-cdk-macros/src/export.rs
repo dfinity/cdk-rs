@@ -370,7 +370,7 @@ fn dfn_macro(
     } else {
         format_ident!("in_query_executor_context")
     };
-    let body_inner = quote!{
+    let body_inner = quote! {
         let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
         #arg_decode
         let result = #function_call;
