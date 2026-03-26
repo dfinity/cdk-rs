@@ -611,8 +611,8 @@ pub struct OnExecutionCompleteArgs {
 }
 
 impl OnExecutionCompleteArgs {
-    /// Creates a new `OnExecutionCompleteArgs` with the given endpoint name, the byte lengths will
-    /// be set later as the request is processed
+    /// Creates a new `OnExecutionCompleteArgs` instance with the given endpoint name, the byte
+    /// lengths will be set later as the request is processed
     pub fn new(endpoint_name: &'static str) -> Self {
         Self {
             endpoint_name,

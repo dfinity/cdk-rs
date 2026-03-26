@@ -195,7 +195,28 @@ fn dfn_macro(
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
-    // 2. guard(s)
+    // 2. set up the various expressions required by the on_complete callback, if provided
+    let (on_complete_new, on_complete_arg_len, on_complete_result_len, on_complete_ident) = if let Some(on_complete) = attrs.on_complete {
+        let on_complete_ident = parse_str::<Path>(&on_complete)?;
+        (
+            quote! {
+                let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+            },
+            quote! {
+                on_complete_args.arg_bytes_len = arg_bytes.len();
+            },
+            quote! {
+                on_complete_args.return_bytes_len = bytes.len();
+            },
+            quote! {
+                #on_complete_ident(on_complete_args);
+            }
+        )
+    } else {
+        Default::default()
+    };
+
+    // 3. guard(s)
     if !attrs.guard.is_empty() && method.is_lifecycle() {
         return Err(Error::new(
             attr_span,
@@ -220,7 +241,7 @@ fn dfn_macro(
         #(#guards)*
     };
 
-    // 3. decode arguments
+    // 4. decode arguments
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
         get_args(method, signature)?.iter().cloned().unzip();
     if !method.can_have_args() {
@@ -243,13 +264,13 @@ fn dfn_macro(
             let arg_one = &arg_tuple[0];
             quote! {
                 let arg_bytes = #cratename::api::msg_arg_data();
-                on_complete_args.arg_bytes_len = arg_bytes.len();
+                #on_complete_arg_len
                 let #arg_one = #decode_with_ident(arg_bytes);
             }
         } else {
             quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
-            on_complete_args.arg_bytes_len = arg_bytes.len();
+            #on_complete_arg_len
             let ( #( #arg_tuple, )* ) = #decode_with_ident(arg_bytes); }
         }
     } else if arg_tuple.is_empty() {
@@ -257,21 +278,21 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
-            on_complete_args.arg_bytes_len = arg_bytes.len();
+            #on_complete_arg_len
             let mut decoder_config = ::candid::DecoderConfig::new();
             decoder_config.set_skipping_quota(10000);
             let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
         }
     };
 
-    // 4. function call
+    // 5. function call
     let function_call = if signature.asyncness.is_some() {
         quote! { #name ( #(#arg_tuple),* ) .await }
     } else {
         quote! { #name ( #(#arg_tuple),* ) }
     };
 
-    // 5. return
+    // 6. return
     let return_length = match &signature.output {
         ReturnType::Default => 0,
         ReturnType::Type(_, ty) => match ty.as_ref() {
@@ -311,12 +332,12 @@ fn dfn_macro(
         };
         quote! {
             let bytes: Vec<u8> = #return_bytes;
-            on_complete_args.return_bytes_len = bytes.len();
+            #on_complete_result_len
             #cratename::api::msg_reply(bytes);
         }
     };
 
-    // 6. candid attributes for export_candid!()
+    // 7. candid attributes for export_candid!()
     let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
@@ -354,28 +375,18 @@ fn dfn_macro(
         }
     };
 
-    // 7. on_complete function call
-    let on_complete = if let Some(on_complete) = &attrs.on_complete {
-        let on_complete_ident = parse_str::<Path>(on_complete)?;
-        quote! {
-            #on_complete_ident(on_complete_args);
-        }
-    } else {
-        quote! {}
-    };
-
-    // 8. exported function body
+    // 7. exported function body
     let async_context_name = if method.is_state_persistent() {
         format_ident!("in_executor_context")
     } else {
         format_ident!("in_query_executor_context")
     };
     let body_inner = quote! {
-        let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+        #on_complete_new
         #arg_decode
         let result = #function_call;
         #return_encode
-        #on_complete
+        #on_complete_ident
     };
 
     let body = if signature.asyncness.is_some() {
