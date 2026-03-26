@@ -196,25 +196,26 @@ fn dfn_macro(
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
     // 2. set up the various expressions required by the on_complete callback, if provided
-    let (on_complete_new, on_complete_arg_len, on_complete_result_len, on_complete_ident) = if let Some(on_complete) = attrs.on_complete {
-        let on_complete_ident = parse_str::<Path>(&on_complete)?;
-        (
-            quote! {
-                let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
-            },
-            quote! {
-                on_complete_args.arg_bytes_len = arg_bytes.len();
-            },
-            quote! {
-                on_complete_args.return_bytes_len = bytes.len();
-            },
-            quote! {
-                #on_complete_ident(on_complete_args);
-            }
-        )
-    } else {
-        Default::default()
-    };
+    let (on_complete_new, on_complete_arg_len, on_complete_result_len, on_complete_ident) =
+        if let Some(on_complete) = attrs.on_complete {
+            let on_complete_ident = parse_str::<Path>(&on_complete)?;
+            (
+                quote! {
+                    let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+                },
+                quote! {
+                    on_complete_args.arg_bytes_len = arg_bytes.len();
+                },
+                quote! {
+                    on_complete_args.return_bytes_len = bytes.len();
+                },
+                quote! {
+                    #on_complete_ident(on_complete_args);
+                },
+            )
+        } else {
+            Default::default()
+        };
 
     // 3. guard(s)
     if !attrs.guard.is_empty() && method.is_lifecycle() {
@@ -926,7 +927,7 @@ mod test {
                 fn update(args: u32) -> u32 {}
             },
         )
-            .unwrap();
+        .unwrap();
         let parsed = syn::parse2::<syn::File>(generated).unwrap();
         assert!(parsed.items.len() == 3);
         let fn_name = match parsed.items[0] {
