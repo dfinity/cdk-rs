@@ -917,4 +917,47 @@ mod test {
             _ => panic!("not a function"),
         };
     }
+
+    #[test]
+    fn on_complete() {
+        let generated = ic_update(
+            quote!(on_complete = "on_complete_fn"),
+            quote! {
+                fn update(args: u32) -> u32 {}
+            },
+        )
+            .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_update update"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_update.update"))]
+            fn #fn_name() {
+                ::ic_cdk::futures::internals::in_executor_context(|| {
+                    let mut on_complete_args = ::ic_cdk::api::OnExecutionCompleteArgs::new("update");
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    on_complete_args.arg_bytes_len = arg_bytes.len();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (args, ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
+                    let result = update(args);
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
+                    on_complete_args.return_bytes_len = bytes.len();
+                    ::ic_cdk::api::msg_reply(bytes);
+                    on_complete_fn(on_complete_args);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
 }
