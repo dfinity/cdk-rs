@@ -8,7 +8,6 @@ members = [
     "ic-cdk-macros",
     "ic-cdk-management-canister",
     "ic-cdk-timers",
-    "ic-management-canister-types",
     "ic0",
     "library/*",
 ]
@@ -33,7 +32,7 @@ ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
 ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.0" }
 ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
-ic-management-canister-types = { path = "ic-management-canister-types", version = "0.7.1" }
+ic-management-canister-types = "0.7.1"
 # Crates of this workspace
 ic0 = { path = "ic0", version = "1.0.1" }
 

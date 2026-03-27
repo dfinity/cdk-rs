@@ -35,7 +35,6 @@ Generate Rust bindings from Candid to make inter-canister calls.
 Annotate functions with attribute macros to make them exposed public interfaces.
 - [`ic-cdk-timers`](ic-cdk-timers):
 The library implements multiple and periodic timers.
-- [`ic-management-canister-types`](ic-management-canister-types): Types for calling the IC management canister.
 - [`ic-certified-map`](library/ic-certified-map):
 An implementation of map which support *certified queries*.
 - [`ic-ledger-types`](library/ic-ledger-types):
