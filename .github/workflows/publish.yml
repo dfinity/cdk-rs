@@ -1,0 +1,120 @@
+name: Publish crates to crates.io
+
+on:
+  workflow_dispatch:
+    inputs:
+      ic0:
+        description: "Publish ic0"
+        type: boolean
+        default: false
+      ic-cdk:
+        description: "Publish ic-cdk and ic-cdk-macros"
+        type: boolean
+        default: false
+      ic-cdk-bindgen:
+        description: "Publish ic-cdk-bindgen"
+        type: boolean
+        default: false
+      ic-cdk-executor:
+        description: "Publish ic-cdk-executor"
+        type: boolean
+        default: false
+      ic-cdk-timers:
+        description: "Publish ic-cdk-timers"
+        type: boolean
+        default: false
+      ic-cdk-management-canister:
+        description: "Publish ic-cdk-management-canister"
+        type: boolean
+        default: false
+      ic-certified-map:
+        description: "Publish ic-certified-map"
+        type: boolean
+        default: false
+      ic-ledger-types:
+        description: "Publish ic-ledger-types"
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    name: Publish selected crates
+    runs-on: ubuntu-24.04
+    if: >-
+      inputs.ic0 || inputs.ic-cdk || inputs.ic-cdk-bindgen ||
+      inputs.ic-cdk-executor || inputs.ic-cdk-timers ||
+      inputs.ic-cdk-management-canister ||
+      inputs.ic-certified-map || inputs.ic-ledger-types
+
+    permissions:
+      contents: read
+      id-token: write # Required for trusted publishing via OIDC
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      # Crates are ordered by dependency: publish dependencies before dependents.
+      # ic0, ic-cdk-bindgen have no workspace deps.
+      # ic-cdk-executor depends on ic0.
+      # ic-cdk-timers depends on ic0, ic-cdk-executor.
+      # ic-cdk-macros and ic-cdk are always released together (macros first).
+      # ic-cdk depends on ic0, ic-cdk-macros, ic-cdk-executor.
+      # ic-cdk-management-canister depends on ic-cdk.
+
+      - name: Publish ic0
+        if: inputs.ic0
+        run: cargo publish -p ic0
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-cdk-bindgen
+        if: inputs.ic-cdk-bindgen
+        run: cargo publish -p ic-cdk-bindgen
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-cdk-executor
+        if: inputs.ic-cdk-executor
+        run: cargo publish -p ic-cdk-executor
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-cdk-timers
+        if: inputs.ic-cdk-timers
+        run: cargo publish -p ic-cdk-timers
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-cdk-macros and ic-cdk
+        if: inputs.ic-cdk
+        run: cargo publish -p ic-cdk-macros && cargo publish -p ic-cdk
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-cdk-management-canister
+        if: inputs.ic-cdk-management-canister
+        run: cargo publish -p ic-cdk-management-canister
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-certified-map
+        if: inputs.ic-certified-map
+        run: cargo publish -p ic-certified-map
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ic-ledger-types
+        if: inputs.ic-ledger-types
+        run: cargo publish -p ic-ledger-types
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
