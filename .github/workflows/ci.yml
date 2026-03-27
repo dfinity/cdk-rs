@@ -17,6 +17,11 @@ concurrency:
 # internally.  No separate `actions/cache` step is needed.  Caches are
 # automatically separated per job (the key includes the job name, OS, and a
 # hash of Cargo.lock).
+#
+# Jobs with caching remove the pre-installed stable toolchain first so it
+# doesn't pollute the rust-cache environment hash.  macOS (and sometimes Linux)
+# runner images ship with varying stable versions, making the hash
+# non-deterministic and causing constant cache misses.
 
 jobs:
   msrv:
@@ -27,6 +32,8 @@ jobs:
         os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -50,6 +57,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -77,6 +86,8 @@ jobs:
         os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -113,6 +124,8 @@ jobs:
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false # Disable caching for fmt, since it doesn't build anything.
       - name: Check formatting
         run: |
           cargo fmt --all -- --check
@@ -123,6 +136,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -146,6 +161,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -164,6 +181,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install nightly Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
