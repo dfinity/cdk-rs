@@ -40,7 +40,7 @@ jobs:
           toolchain: 1.88.0 # MSRV, should sync with `rust-version` in `Cargo.toml`
           target: wasm32-unknown-unknown
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run builds
         run: |
           cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
@@ -56,7 +56,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Remove pre-installed Rust stable toolchain
         run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
@@ -101,7 +101,7 @@ jobs:
           # from source for the wasm64 target.
           components: rust-src
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
       - name: Install protoc (macOS)
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Remove pre-installed Rust stable toolchain
         run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Remove pre-installed Rust stable toolchain
         run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
@@ -180,7 +180,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Remove pre-installed Rust stable toolchain
         run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install nightly Rust toolchain
