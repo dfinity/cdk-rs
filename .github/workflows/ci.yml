@@ -17,6 +17,11 @@ concurrency:
 # internally.  No separate `actions/cache` step is needed.  Caches are
 # automatically separated per job (the key includes the job name, OS, and a
 # hash of Cargo.lock).
+#
+# Jobs with caching remove the pre-installed stable toolchain first so it
+# doesn't pollute the rust-cache environment hash.  macOS (and sometimes Linux)
+# runner images ship with varying stable versions, making the hash
+# non-deterministic and causing constant cache misses.
 
 jobs:
   msrv:
@@ -27,13 +32,15 @@ jobs:
         os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.88.0 # MSRV, should sync with `rust-version` in `Cargo.toml`
           target: wasm32-unknown-unknown
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run builds
         run: |
           cargo build --workspace --exclude ic-cdk-e2e-tests --target wasm32-unknown-unknown
@@ -49,7 +56,9 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -77,6 +86,8 @@ jobs:
         os: [ubuntu-24.04, macos-15]
       fail-fast: false
     steps:
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -90,7 +101,7 @@ jobs:
           # from source for the wasm64 target.
           components: rust-src
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download pocket-ic server
         run: bash scripts/download_pocket_ic_server.sh
       - name: Install protoc (macOS)
@@ -109,10 +120,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false # Disable caching for fmt, since it doesn't build anything.
       - name: Check formatting
         run: |
           cargo fmt --all -- --check
@@ -122,7 +135,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -145,7 +160,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       # No explicit `toolchain` — uses the channel from rust-toolchain.toml.
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -163,7 +180,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - name: Remove pre-installed Rust stable toolchain
+        run: rustup toolchain remove stable 2>/dev/null || true
       - name: Install nightly Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
