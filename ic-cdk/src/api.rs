@@ -132,7 +132,7 @@ pub fn cycles_burn(amount: u128) -> u128 {
 
 /// Gets canister's own identity.
 pub fn canister_self() -> Principal {
-    // This value doesn't change during the canister's lifetime, so we can cache it
+    // This value doesn't change during a canister's lifetime, so we can cache it
     static CANISTER_SELF: LazyLock<Principal> = LazyLock::new(|| {
         let len = ic0::canister_self_size();
         let mut buf = vec![0u8; len];
