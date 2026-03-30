@@ -19,6 +19,7 @@
 //! For example, [`msg_arg_data`] wraps both `ic0::msg_arg_data_size` and `ic0::msg_arg_data_copy`.
 
 use candid::Principal;
+use std::sync::LazyLock;
 use std::{convert::TryFrom, num::NonZeroU64};
 
 /// Gets the message argument data.
@@ -131,11 +132,16 @@ pub fn cycles_burn(amount: u128) -> u128 {
 
 /// Gets canister's own identity.
 pub fn canister_self() -> Principal {
-    let len = ic0::canister_self_size();
-    let mut buf = vec![0u8; len];
-    ic0::canister_self_copy(&mut buf, 0);
-    // Trust that the system always returns a valid principal.
-    Principal::try_from(&buf).unwrap()
+    // This value doesn't change during the canister's lifetime, so we can cache it
+    static CANISTER_SELF: LazyLock<Principal> = LazyLock::new(|| {
+        let len = ic0::canister_self_size();
+        let mut buf = vec![0u8; len];
+        ic0::canister_self_copy(&mut buf, 0);
+        // Trust that the system always returns a valid principal.
+        Principal::try_from(&buf).unwrap()
+    });
+
+    *CANISTER_SELF
 }
 
 /// Gets the current cycle balance of the canister.
