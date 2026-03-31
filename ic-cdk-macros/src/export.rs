@@ -201,16 +201,16 @@ fn dfn_macro(
             let on_complete_ident = parse_str::<Path>(&on_complete)?;
             (
                 quote! {
-                    let mut on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+                    let mut __on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
                 },
                 quote! {
-                    on_complete_args.arg_bytes_len = arg_bytes.len();
+                    __on_complete_args.arg_bytes_len = arg_bytes.len();
                 },
                 quote! {
-                    on_complete_args.return_bytes_len = bytes.len();
+                    __on_complete_args.return_bytes_len = bytes.len();
                 },
                 quote! {
-                    #on_complete_ident(on_complete_args);
+                    #on_complete_ident(__on_complete_args);
                 },
             )
         } else {
@@ -376,7 +376,7 @@ fn dfn_macro(
         }
     };
 
-    // 7. exported function body
+    // 8. exported function body
     let async_context_name = if method.is_state_persistent() {
         format_ident!("in_executor_context")
     } else {
@@ -939,17 +939,17 @@ mod test {
             #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_update.update"))]
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_executor_context(|| {
-                    let mut on_complete_args = ::ic_cdk::api::OnExecutionCompleteArgs::new("update");
+                    let mut __on_complete_args = ::ic_cdk::api::OnExecutionCompleteArgs::new("update");
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
-                    on_complete_args.arg_bytes_len = arg_bytes.len();
+                    __on_complete_args.arg_bytes_len = arg_bytes.len();
                     let mut decoder_config = ::candid::DecoderConfig::new();
                     decoder_config.set_skipping_quota(10000);
                     let (args, ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
                     let result = update(args);
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
-                    on_complete_args.return_bytes_len = bytes.len();
+                    __on_complete_args.return_bytes_len = bytes.len();
                     ::ic_cdk::api::msg_reply(bytes);
-                    on_complete_fn(on_complete_args);
+                    on_complete_fn(__on_complete_args);
                 });
             }
         };
