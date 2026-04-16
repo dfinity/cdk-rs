@@ -108,31 +108,28 @@ fn do_timer(
                         interval,
                         concurrent_calls,
                         ..
-                    } => {
-                        if *concurrent_calls >= 5 {
-                            ic0::debug_print(
-                                format!(
-                                    "[ic-cdk-timers] canister_global_timer: \
-                                    too many concurrent calls for single timer ({}), \
-                                    rescheduling for next possible execution time",
-                                    concurrent_calls
-                                )
-                                .as_bytes(),
-                            );
-                            // Reschedule based on `now`, not `timer_scheduled_time`,
-                            // intentionally skipping intermediate executions.
-                            reschedule_timer(timers, task_id, now, *interval);
-                            return true; // skip
-                        }
+                    } if *concurrent_calls >= 5 => {
+                        ic0::debug_print(
+                            format!(
+                                "[ic-cdk-timers] canister_global_timer: \
+                                too many concurrent calls for single timer ({}), \
+                                rescheduling for next possible execution time",
+                                concurrent_calls
+                            )
+                            .as_bytes(),
+                        );
+                        // Reschedule based on `now`, not `timer_scheduled_time`,
+                        // intentionally skipping intermediate executions.
+                        reschedule_timer(timers, task_id, now, *interval);
+                        true // skip
                     }
                     // 3. Check serial timer is available
                     Task::RepeatedSerialBusy { interval } => {
                         reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
-                        return true; // skip
+                        true // skip
                     }
-                    _ => (),
+                    _ => false, // do not skip
                 }
-                false // do not skip
             });
             if skip {
                 return ControlFlow::Continue(());
