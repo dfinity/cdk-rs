@@ -66,7 +66,7 @@ escargot = "0.5.15"
 futures = "0.3"
 ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
 lazy_static = "1.5.0"
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-03-02_11-09-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", rev = "719ff387aab462ce5759c4c20c30de959fe9538c" } # 2026-04-15 https://github.com/dfinity/ic/pull/9845
 prost = "0.14.3"
 prost-build = "0.14.3"
 reqwest = "0.13.2"

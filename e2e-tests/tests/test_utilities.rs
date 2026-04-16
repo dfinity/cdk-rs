@@ -114,7 +114,7 @@ fn check_pocket_ic_server() -> PathBuf {
         .iter()
         .find(|m| m.name.as_ref() == "ic-cdk-e2e-tests")
         .expect("ic-cdk-e2e-tests not found in Cargo.toml");
-    let pocket_ic_tag = e2e_tests_package
+    let source_repr = &e2e_tests_package
         .dependencies
         .iter()
         .find(|d| d.name == "pocket-ic")
@@ -122,22 +122,28 @@ fn check_pocket_ic_server() -> PathBuf {
         .source
         .as_ref()
         .expect("pocket-ic source not found in Cargo.toml")
-        .repr
-        .split_once("tag=")
-        .expect("`tag=` not found in pocket-ic source")
-        .1;
+        .repr;
+    // Source URL is e.g. `git+https://...?rev=<hash>#<hash>` or `git+https://...?tag=<tag>#<hash>`.
+    // Extract the value after `rev=` or `tag=`, stopping at `#` or `&`.
+    let pocket_ic_ref = if let Some((_, rest)) = source_repr.split_once("rev=") {
+        rest.split_once(['#', '&']).map_or(rest, |(v, _)| v)
+    } else if let Some((_, rest)) = source_repr.split_once("tag=") {
+        rest.split_once(['#', '&']).map_or(rest, |(v, _)| v)
+    } else {
+        panic!("neither `rev=` nor `tag=` found in pocket-ic source: {source_repr}")
+    };
     let target_dir = metadata.target_directory;
     let artifact_dir = target_dir.join("e2e-tests-artifacts");
     let tag_path = artifact_dir.join("pocket-ic-tag");
     let server_binary_path = artifact_dir.join("pocket-ic");
-    if let Ok(tag) = std::fs::read_to_string(&tag_path)
-        && tag == pocket_ic_tag
+    if let Ok(cached) = std::fs::read_to_string(&tag_path)
+        && cached == pocket_ic_ref
         && server_binary_path.exists()
     {
         return server_binary_path.into();
     }
     panic!(
-        "pocket-ic server not found or tag mismatch, please run `scripts/download_pocket_ic_server.sh` in the project root"
+        "pocket-ic server not found or version mismatch, please run `scripts/download_pocket_ic_server.sh` in the project root"
     );
 }
 
