@@ -53,6 +53,23 @@ fn call_msg_reply() {
     msg_reply(vec![42]);
 }
 
+/// Returns the caller info data bytes provided in the `sender_info`.
+/// Returns empty bytes if no `sender_info` was provided.
+#[unsafe(export_name = "canister_update call_msg_caller_info_data")]
+fn call_msg_caller_info_data() {
+    msg_reply(msg_caller_info_data());
+}
+
+/// Returns the caller info signer as raw principal bytes.
+/// Returns empty bytes if no `sender_info` was provided.
+#[unsafe(export_name = "canister_update call_msg_caller_info_signer")]
+fn call_msg_caller_info_signer() {
+    let signer_bytes = msg_caller_info_signer()
+        .map(|p| p.as_slice().to_vec())
+        .unwrap_or_default();
+    msg_reply(signer_bytes);
+}
+
 #[unsafe(export_name = "canister_update call_msg_reject")]
 fn call_msg_reject() {
     msg_reject("e2e test reject");
