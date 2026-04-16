@@ -41,6 +41,32 @@ pub fn msg_caller() -> Principal {
     Principal::try_from(&buf).unwrap()
 }
 
+/// Gets auxiliary data about the caller as provided by the canister with which the caller's identity is associated.
+///
+/// This only returns non-empty data if the caller is a self-authenticating principal authenticated
+/// by canister signatures (e.g. Internet Identity). Returns empty bytes when the caller is another canister.
+pub fn msg_caller_info_data() -> Vec<u8> {
+    let len = ic0::msg_caller_info_data_size();
+    let mut buf = vec![0u8; len];
+    ic0::msg_caller_info_data_copy(&mut buf, 0);
+    buf
+}
+
+/// Gets the canister ID of the canister that provided the caller's canister signature.
+///
+/// Returns `None` if the caller is not a self-authenticating principal authenticated by canister
+/// signatures (e.g. when the caller is another canister or no sender info was provided).
+pub fn msg_caller_info_signer() -> Option<Principal> {
+    let len = ic0::msg_caller_info_signer_size();
+    if len == 0 {
+        return None;
+    }
+    let mut buf = vec![0u8; len];
+    ic0::msg_caller_info_signer_copy(&mut buf, 0);
+    // Trust that the system always returns a valid principal when non-empty.
+    Some(Principal::try_from(&buf).expect("msg_caller_info_signer must be a valid principal"))
+}
+
 /// Returns the reject code, if the current function is invoked as a reject callback.
 pub fn msg_reject_code() -> u32 {
     ic0::msg_reject_code()
