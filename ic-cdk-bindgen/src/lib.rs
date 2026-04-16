@@ -31,7 +31,7 @@ pub struct Config {
     canister_name: String,
     candid_path: PathBuf,
     mode: Mode,
-    type_selector_config_path: Option<PathBuf>, // TODO: Implement type selector config
+    type_selector_config_path: Option<PathBuf>,
 }
 
 /// Bindgen mode.
@@ -155,8 +155,14 @@ impl Config {
                 e
             )
         });
-        // unused are not handled
-        let (output, _unused) = emit_bindgen(&rust_bindgen_config, &env, &actor, &prog);
+        let (output, unused) = emit_bindgen(&rust_bindgen_config, &env, &actor, &prog);
+        if !unused.is_empty() {
+            println!(
+                "cargo:warning=ic-cdk-bindgen: {} unused type(s) were not emitted: {:?}",
+                unused.len(),
+                unused
+            );
+        }
 
         // 2. Generate the Rust bindings using the Handlebars template
         let mut external = ExternalConfig::default();

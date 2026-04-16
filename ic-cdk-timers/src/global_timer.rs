@@ -49,7 +49,7 @@ extern "C" fn global_timer() {
                     first = false;
                 } else if insn_count == 0 {
                     insn_count = ic0::performance_counter(0);
-                } else if insn_count * 3 + ic0::performance_counter(0) > 40_000_000_000 {
+                } else if insn_count.saturating_mul(3).saturating_add(ic0::performance_counter(0)) > 40_000_000_000 {
                     ic0::debug_print(
                         b"[ic-cdk-timers] canister_global_timer: approaching instruction limit, \
                         deferring remaining timers to next round",
