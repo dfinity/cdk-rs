@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added `msg_caller_info_data_size`, `msg_caller_info_data_copy`, `msg_caller_info_signer_size`, and `msg_caller_info_signer_copy` API bindings.
+
 ## [1.0.1] - 2025-09-11
 
 ### Added
