@@ -12,6 +12,14 @@ unsafe extern "C" {
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
     pub fn msg_caller_copy(dst: usize, offset: usize, size: usize);
     #[doc = "# Safety\n\nAlways safe to call"]
+    pub fn msg_caller_info_data_size() -> usize;
+    #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
+    pub fn msg_caller_info_data_copy(dst: usize, offset: usize, size: usize);
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub fn msg_caller_info_signer_size() -> usize;
+    #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
+    pub fn msg_caller_info_signer_copy(dst: usize, offset: usize, size: usize);
+    #[doc = "# Safety\n\nAlways safe to call"]
     pub fn msg_reject_code() -> u32;
     #[doc = "# Safety\n\nAlways safe to call"]
     pub fn msg_reject_msg_size() -> usize;
@@ -162,6 +170,22 @@ mod non_wasm {
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
     pub unsafe fn msg_caller_copy(dst: usize, offset: usize, size: usize) {
         panic!("msg_caller_copy should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub unsafe fn msg_caller_info_data_size() -> usize {
+        panic!("msg_caller_info_data_size should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
+    pub unsafe fn msg_caller_info_data_copy(dst: usize, offset: usize, size: usize) {
+        panic!("msg_caller_info_data_copy should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\nAlways safe to call"]
+    pub unsafe fn msg_caller_info_signer_size() -> usize {
+        panic!("msg_caller_info_signer_size should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
+    pub unsafe fn msg_caller_info_signer_copy(dst: usize, offset: usize, size: usize) {
+        panic!("msg_caller_info_signer_copy should only be called inside canisters.");
     }
     #[doc = "# Safety\n\nAlways safe to call"]
     pub unsafe fn msg_reject_code() -> u32 {

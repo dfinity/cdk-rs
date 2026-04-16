@@ -9,6 +9,14 @@ ic0.msg_caller_size : () -> I;                                                  
     Always safe to call
 ic0.msg_caller_copy : (dst : I, offset : I, size : I) -> ();                          // *
     `dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety.
+ic0.msg_caller_info_data_size : () -> I;                                              // U RQ NRQ CQ Ry Rt CRy CRt C CC F
+    Always safe to call
+ic0.msg_caller_info_data_copy : (dst : I, offset : I, size : I) -> ();                // U RQ NRQ CQ Ry Rt CRy CRt C CC F
+    `dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety.
+ic0.msg_caller_info_signer_size : () -> I;                                            // U RQ NRQ CQ Ry Rt CRy CRt C CC F
+    Always safe to call
+ic0.msg_caller_info_signer_copy : (dst : I, offset : I, size : I) -> ();              // U RQ NRQ CQ Ry Rt CRy CRt C CC F
+    `dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety.
 ic0.msg_reject_code : () -> i32;                                                      // Ry Rt CRy CRt
     Always safe to call
 ic0.msg_reject_msg_size : () -> I  ;                                                  // Rt CRt
