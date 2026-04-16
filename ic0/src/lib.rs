@@ -67,6 +67,52 @@ pub fn msg_caller_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
 }
 
 #[inline]
+pub fn msg_caller_info_data_size() -> usize {
+    // SAFETY: ic0.msg_caller_info_data_size is always safe to call
+    unsafe { sys::msg_caller_info_data_size() }
+}
+
+#[inline]
+pub fn msg_caller_info_data_copy(dst: &mut [u8], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_info_data_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::msg_caller_info_data_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+/// # Safety
+///
+/// This function will fully initialize `dst` (or trap if it cannot).
+#[inline]
+pub fn msg_caller_info_data_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_info_data_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::msg_caller_info_data_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+#[inline]
+pub fn msg_caller_info_signer_size() -> usize {
+    // SAFETY: ic0.msg_caller_info_signer_size is always safe to call
+    unsafe { sys::msg_caller_info_signer_size() }
+}
+
+#[inline]
+pub fn msg_caller_info_signer_copy(dst: &mut [u8], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_info_signer_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::msg_caller_info_signer_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+/// # Safety
+///
+/// This function will fully initialize `dst` (or trap if it cannot).
+#[inline]
+pub fn msg_caller_info_signer_copy_uninit(dst: &mut [MaybeUninit<u8>], offset: usize) {
+    // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.msg_caller_info_signer_copy
+    // The offset parameter does not affect safety
+    unsafe { sys::msg_caller_info_signer_copy(dst.as_mut_ptr() as usize, offset, dst.len()) }
+}
+
+#[inline]
 pub fn msg_reject_code() -> u32 {
     // SAFETY: ic0.msg_reject_code is always safe to call
     unsafe { sys::msg_reject_code() }
