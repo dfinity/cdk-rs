@@ -32,6 +32,7 @@ struct ExportAttributes {
     pub hidden: bool,
     #[darling(rename = "crate")]
     pub cratename: Option<String>,
+    pub on_complete: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -194,7 +195,29 @@ fn dfn_macro(
     };
     let host_compatible_name = export_name.replace(' ', ".").replace(['-', '<', '>'], "_");
 
-    // 2. guard(s)
+    // 2. set up the various expressions required by the on_complete callback, if provided
+    let (on_complete_new, on_complete_arg_len, on_complete_result_len, on_complete_ident) =
+        if let Some(on_complete) = attrs.on_complete {
+            let on_complete_ident = parse_str::<Path>(&on_complete)?;
+            (
+                quote! {
+                    let mut __on_complete_args = #cratename::api::OnExecutionCompleteArgs::new(#function_name);
+                },
+                quote! {
+                    __on_complete_args.arg_bytes_len = arg_bytes.len();
+                },
+                quote! {
+                    __on_complete_args.return_bytes_len = bytes.len();
+                },
+                quote! {
+                    #on_complete_ident(__on_complete_args);
+                },
+            )
+        } else {
+            Default::default()
+        };
+
+    // 3. guard(s)
     if !attrs.guard.is_empty() && method.is_lifecycle() {
         return Err(Error::new(
             attr_span,
@@ -219,7 +242,7 @@ fn dfn_macro(
         #(#guards)*
     };
 
-    // 3. decode arguments
+    // 4. decode arguments
     let (arg_tuple, _): (Vec<Ident>, Vec<Box<Type>>) =
         get_args(method, signature)?.iter().cloned().unzip();
     if !method.can_have_args() {
@@ -242,11 +265,13 @@ fn dfn_macro(
             let arg_one = &arg_tuple[0];
             quote! {
                 let arg_bytes = #cratename::api::msg_arg_data();
+                #on_complete_arg_len
                 let #arg_one = #decode_with_ident(arg_bytes);
             }
         } else {
             quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
+            #on_complete_arg_len
             let ( #( #arg_tuple, )* ) = #decode_with_ident(arg_bytes); }
         }
     } else if arg_tuple.is_empty() {
@@ -254,20 +279,21 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
+            #on_complete_arg_len
             let mut decoder_config = ::candid::DecoderConfig::new();
             decoder_config.set_skipping_quota(10000);
             let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
         }
     };
 
-    // 4. function call
+    // 5. function call
     let function_call = if signature.asyncness.is_some() {
         quote! { #name ( #(#arg_tuple),* ) .await }
     } else {
         quote! { #name ( #(#arg_tuple),* ) }
     };
 
-    // 5. return
+    // 6. return
     let return_length = match &signature.output {
         ReturnType::Default => 0,
         ReturnType::Type(_, ty) => match ty.as_ref() {
@@ -307,11 +333,12 @@ fn dfn_macro(
         };
         quote! {
             let bytes: Vec<u8> = #return_bytes;
+            #on_complete_result_len
             #cratename::api::msg_reply(bytes);
         }
     };
 
-    // 6. candid attributes for export_candid!()
+    // 7. candid attributes for export_candid!()
     let candid_method_attr = if attrs.hidden {
         quote! {}
     } else {
@@ -349,21 +376,27 @@ fn dfn_macro(
         }
     };
 
-    // 7. exported function body
+    // 8. exported function body
     let async_context_name = if method.is_state_persistent() {
         format_ident!("in_executor_context")
     } else {
         format_ident!("in_query_executor_context")
     };
+    let body_inner = quote! {
+        #on_complete_new
+        #arg_decode
+        let result = #function_call;
+        #return_encode
+        #on_complete_ident
+    };
+
     let body = if signature.asyncness.is_some() {
         quote! {
             #cratename::futures::internals::#async_context_name(|| {
                 #guard
                 #[allow(clippy::disallowed_methods)]
                 #cratename::futures::spawn(async {
-                    #arg_decode
-                    let result = #function_call;
-                    #return_encode
+                    #body_inner
                 });
             });
         }
@@ -371,9 +404,7 @@ fn dfn_macro(
         quote! {
             #guard
             #cratename::futures::internals::#async_context_name(|| {
-                #arg_decode
-                let result = #function_call;
-                #return_encode
+                #body_inner
             });
         }
     };
@@ -876,6 +907,49 @@ mod test {
                     let result = query();
                     let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
                     ic_cdk_old::api::msg_reply(bytes);
+                });
+            }
+        };
+        let expected = syn::parse2::<syn::ItemFn>(expected).unwrap();
+        match &parsed.items[0] {
+            syn::Item::Fn(f) => {
+                assert_eq!(*f, expected);
+            }
+            _ => panic!("not a function"),
+        };
+    }
+
+    #[test]
+    fn on_complete() {
+        let generated = ic_update(
+            quote!(on_complete = "on_complete_fn"),
+            quote! {
+                fn update(args: u32) -> u32 {}
+            },
+        )
+        .unwrap();
+        let parsed = syn::parse2::<syn::File>(generated).unwrap();
+        assert!(parsed.items.len() == 3);
+        let fn_name = match parsed.items[0] {
+            syn::Item::Fn(ref f) => &f.sig.ident,
+            _ => panic!("Incorrect parsed AST."),
+        };
+        let expected = quote! {
+            #[cfg_attr(target_family = "wasm", unsafe(export_name = "canister_update update"))]
+            #[cfg_attr(not(target_family = "wasm"), unsafe(export_name = "canister_update.update"))]
+            fn #fn_name() {
+                ::ic_cdk::futures::internals::in_executor_context(|| {
+                    let mut __on_complete_args = ::ic_cdk::api::OnExecutionCompleteArgs::new("update");
+                    let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    __on_complete_args.arg_bytes_len = arg_bytes.len();
+                    let mut decoder_config = ::candid::DecoderConfig::new();
+                    decoder_config.set_skipping_quota(10000);
+                    let (args, ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
+                    let result = update(args);
+                    let bytes: Vec<u8> = ::candid::utils::encode_one(result).unwrap();
+                    __on_complete_args.return_bytes_len = bytes.len();
+                    ::ic_cdk::api::msg_reply(bytes);
+                    on_complete_fn(__on_complete_args);
                 });
             }
         };

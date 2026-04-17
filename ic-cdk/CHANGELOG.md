@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added optional `on_complete` hook to canister endpoints (#703)
+
 ## [0.20.0] - 2026-03-05
 
 ### Changed
