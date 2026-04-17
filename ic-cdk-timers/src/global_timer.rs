@@ -154,11 +154,17 @@ fn do_timer(
         let cost = ic0::cost_call(METHOD_NAME.len() as u64, 8);
         // --- no allocations between the liquid cycles check and call_perform
         if liquid_cycles < cost {
-            ic0::debug_print(b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles");
             let next_backoff_secs = match env.timer.backoff_secs {
                 0 => 5,
                 n => (n * 2).min(60),
             };
+            ic0::debug_print(
+                format!(
+                    "[ic-cdk-timers] unable to schedule timer: not enough liquid cycles, \
+                    retrying in {next_backoff_secs}s"
+                )
+                .as_bytes(),
+            );
             env.timer.time = now.saturating_add(next_backoff_secs as u64 * 1_000_000_000);
             env.timer.backoff_secs = next_backoff_secs;
             return ControlFlow::Break(Some(env.timer));
