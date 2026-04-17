@@ -12,6 +12,7 @@ fn reschedule_timer(timers: &mut BinaryHeap<Timer>, id: TaskId, base: u64, inter
                 task: id,
                 time,
                 counter: state::next_counter(),
+                backoff_secs: 0,
             });
         }
         None => ic0::debug_print(
@@ -143,7 +144,7 @@ fn do_timer(
         // here is performing an inter-canister call to ourselves; traps will be caught at the call
         // boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
         // become available, this code should be rewritten.
-        let env = Box::new(CallEnv {
+        let mut env = Box::new(CallEnv {
             timer,
             method_handle: ic_cdk_executor::extend_current_method_context(),
         });
@@ -154,6 +155,12 @@ fn do_timer(
         // --- no allocations between the liquid cycles check and call_perform
         if liquid_cycles < cost {
             ic0::debug_print(b"[ic-cdk-timers] unable to schedule timer: not enough liquid cycles");
+            let next_backoff_secs = match env.timer.backoff_secs {
+                0 => 5,
+                n => (n * 2).min(60),
+            };
+            env.timer.time = now.saturating_add(next_backoff_secs as u64 * 1_000_000_000);
+            env.timer.backoff_secs = next_backoff_secs;
             return ControlFlow::Break(Some(env.timer));
         }
         let env = Box::<CallEnv>::into_raw(env) as usize;
