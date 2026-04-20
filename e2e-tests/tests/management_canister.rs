@@ -4,8 +4,10 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 #[test]
 fn test_management_canister() {
     let wasm = cargo_build_canister("management_canister");
-    // Setup pocket-ic with an II subnet which is required by the "provisional" test.
-    let pic = pic_base().with_ii_subnet().build();
+    let pic = pic_base()
+        .with_ii_subnet() // II subnet is required by the "provisional" test.
+        .with_test_threshold_keys_subnet() // threshold keys subnet is required for testing ecdsa/schnorr signing APIs with pre-defined key name.
+        .build();
 
     let canister_id = pic.create_canister();
     let subnet_id = pic.get_subnet(canister_id).unwrap();

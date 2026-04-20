@@ -25,16 +25,16 @@ rust-version = "1.88.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-ic-cdk = { path = "ic-cdk", version = "0.20.0" }
+# Crates of this workspace
+ic-cdk = { path = "ic-cdk", version = "0.20.1" }
 ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
 ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.2.0" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
-ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.0" }
+ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.1" }
 ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
 ic-management-canister-types = "0.7.1"
-# Crates of this workspace
-ic0 = { path = "ic0", version = "1.0.1" }
+ic0 = { path = "ic0", version = "1.1.0" }
 
 # Regular dependencies
 ## sync candid version with the doc comment in ic-cdk/README.md
@@ -66,7 +66,7 @@ escargot = "0.5.15"
 futures = "0.3"
 ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
 lazy_static = "1.5.0"
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-03-02_11-09-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-04-16_04-20-base" }
 prost = "0.14.3"
 prost-build = "0.14.3"
 reqwest = "0.13.2"

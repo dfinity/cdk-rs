@@ -1,6 +1,6 @@
 use candid::Principal;
 use ic_cdk_management_canister::{CanisterSettings, EnvironmentVariable, UpdateSettingsArgs};
-use pocket_ic::ErrorCode;
+use pocket_ic::{ErrorCode, common::rest::RawSenderInfo};
 
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
@@ -8,8 +8,8 @@ use test_utilities::{cargo_build_canister, pic_base, update};
 #[test]
 fn call_api() {
     let wasm = cargo_build_canister("api");
-    // with_ii_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
-    let pic = pic_base().with_ii_subnet().build();
+    // with_test_threshold_keys_subnet is required for testing the ic0.cost_sign_with_* API with pre-defined key name.
+    let pic = pic_base().with_test_threshold_keys_subnet().build();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000);
     pic.install_canister(canister_id, wasm, vec![], None);
@@ -25,6 +25,43 @@ fn call_api() {
     // Unlike the other entry points, `call_msg_dealine_caller` was implemented with the `#[update]` macro.
     // So we use the update method which assumes candid
     let _: () = update(&pic, canister_id, "call_msg_deadline_caller", ()).unwrap();
+    let info_data = b"test_caller_info_data";
+    let sender_info = RawSenderInfo {
+        info: info_data.to_vec(),
+        signer: canister_id.as_slice().to_vec(),
+    };
+    // With sender_info: data should equal the info bytes that were sent.
+    let res = pic
+        .update_call_with_sender_info(
+            canister_id,
+            sender,
+            "call_msg_caller_info_data",
+            vec![],
+            sender_info.clone(),
+        )
+        .unwrap();
+    assert_eq!(res, info_data);
+    // Without sender_info: data should be empty.
+    let res = pic
+        .update_call(canister_id, sender, "call_msg_caller_info_data", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    // With sender_info: signer should be the canister_id principal bytes.
+    let res = pic
+        .update_call_with_sender_info(
+            canister_id,
+            sender,
+            "call_msg_caller_info_signer",
+            vec![],
+            sender_info,
+        )
+        .unwrap();
+    assert_eq!(res, canister_id.as_slice());
+    // Without sender_info: signer should be None, returning empty bytes.
+    let res = pic
+        .update_call(canister_id, sender, "call_msg_caller_info_signer", vec![])
+        .unwrap();
+    assert!(res.is_empty());
     // `msg_reject_code` and `msg_reject_msg` can't be tested here.
     // They are invoked in the reply/reject callback of inter-canister calls.
     // So the `call.rs` test covers them.
