@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.20.1] - 2026-04-20
+
 ### Added
 
 - Added `msg_caller_info_data` and `msg_caller_info_signer` to `ic_cdk::api`, exposing the caller's identity attribute data and the signing canister ID respectively.
