@@ -45,6 +45,18 @@ pub fn msg_caller() -> Principal {
 ///
 /// This only returns non-empty data if the caller is a self-authenticating principal authenticated
 /// by canister signatures (e.g. Internet Identity). Returns empty bytes when the caller is another canister.
+///
+/// The data is guaranteed to be signed by the canister returned from [`msg_caller_info_signer`],
+/// so the signer should be checked before trusting the payload.
+///
+/// ```rust,no_run
+/// use ic_cdk::api::{msg_caller_info_data, msg_caller_info_signer};
+///
+/// if msg_caller_info_signer().is_some() {
+///     let data = msg_caller_info_data();
+///     // Decode per the signer's documented format (e.g. identity attributes).
+/// }
+/// ```
 pub fn msg_caller_info_data() -> Vec<u8> {
     let len = ic0::msg_caller_info_data_size();
     let mut buf = vec![0u8; len];
@@ -56,6 +68,16 @@ pub fn msg_caller_info_data() -> Vec<u8> {
 ///
 /// Returns `None` if the caller is not a self-authenticating principal authenticated by canister
 /// signatures (e.g. when the caller is another canister or no sender info was provided).
+///
+/// ```rust,no_run
+/// use ic_cdk::api::msg_caller_info_signer;
+/// use candid::Principal;
+///
+/// let trusted_issuer = Principal::from_text("rdmx6-jaaaa-aaaaa-aaadq-cai").unwrap();
+/// if msg_caller_info_signer() == Some(trusted_issuer) {
+///     // Caller's identity was attested by the trusted issuer (e.g. Internet Identity).
+/// }
+/// ```
 pub fn msg_caller_info_signer() -> Option<Principal> {
     let len = ic0::msg_caller_info_signer_size();
     if len == 0 {
