@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Update, query, `init`, and `post_upgrade` canister entry points now interpret an empty input vector as a Candid encoding of `()`, making them more lenient when no arguments are provided.
+
 ## [0.20.1] - 2026-04-20
 
 ### Added
