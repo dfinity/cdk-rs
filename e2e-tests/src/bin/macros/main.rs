@@ -1,4 +1,4 @@
-use ic_cdk::{export_candid, update};
+use ic_cdk::{export_candid, query, update};
 use prost::Message;
 use std::marker::PhantomData;
 
@@ -145,6 +145,12 @@ fn guard2() -> Result<(), String> {
 #[update]
 fn default_skipping_quota(_arg: Option<u32>) {}
 
+#[update]
+fn foo_update(_x: Option<u64>) {}
+
+#[query]
+fn foo_query(_x: Option<u64>) {}
+
 export_candid! {}
 
 fn main() {
@@ -172,6 +178,8 @@ mod tests {
             manual_reply : () -> (nat32);
             with_guards : () -> ();
             default_skipping_quota : (opt nat32) -> ();
+            foo_update : (opt nat64) -> ();
+            foo_query : (opt nat64) -> () query;
           }";
         let expected_candid = CandidSource::Text(expected);
 

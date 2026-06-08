@@ -99,4 +99,11 @@ fn call_macros() {
             .reject_message
             .contains("Skipping cost exceeds the limit")
     );
+
+    // vec![] (empty binary) must be accepted as if it were the Candid encoding of ()
+    // for any input args list, not just for methods with no arguments.
+    pic.update_call(canister_id, sender, "foo_update", vec![])
+        .unwrap();
+    pic.query_call(canister_id, sender, "foo_query", vec![])
+        .unwrap();
 }

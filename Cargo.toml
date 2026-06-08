@@ -26,11 +26,11 @@ license = "Apache-2.0"
 
 [workspace.dependencies]
 # Crates of this workspace
-ic-cdk = { path = "ic-cdk", version = "0.20.1" }
+ic-cdk = { path = "ic-cdk", version = "0.20.2" }
 ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
 ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.2.0" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
-ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.1" }
+ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.2" }
 ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
 ic-management-canister-types = "0.7.1"
