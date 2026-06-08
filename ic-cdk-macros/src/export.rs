@@ -254,6 +254,7 @@ fn dfn_macro(
     } else {
         quote! {
             let arg_bytes = #cratename::api::msg_arg_data();
+            let arg_bytes = if arg_bytes.is_empty() { b"DIDL\x00\x00".to_vec() } else { arg_bytes };
             let mut decoder_config = ::candid::DecoderConfig::new();
             decoder_config.set_skipping_quota(10000);
             let ( #( #arg_tuple, )* ) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
@@ -576,6 +577,7 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let arg_bytes = if arg_bytes.is_empty() { b"DIDL\x00\x00".to_vec() } else { arg_bytes };
                     let mut decoder_config = ::candid::DecoderConfig::new();
                     decoder_config.set_skipping_quota(10000);
                     let (a,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
@@ -615,6 +617,7 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let arg_bytes = if arg_bytes.is_empty() { b"DIDL\x00\x00".to_vec() } else { arg_bytes };
                     let mut decoder_config = ::candid::DecoderConfig::new();
                     decoder_config.set_skipping_quota(10000);
                     let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
@@ -654,6 +657,7 @@ mod test {
             fn #fn_name() {
                 ::ic_cdk::futures::internals::in_query_executor_context(|| {
                     let arg_bytes = ::ic_cdk::api::msg_arg_data();
+                    let arg_bytes = if arg_bytes.is_empty() { b"DIDL\x00\x00".to_vec() } else { arg_bytes };
                     let mut decoder_config = ::candid::DecoderConfig::new();
                     decoder_config.set_skipping_quota(10000);
                     let (a, b,) = ::candid::utils::decode_args_with_config(&arg_bytes, &decoder_config).unwrap();
