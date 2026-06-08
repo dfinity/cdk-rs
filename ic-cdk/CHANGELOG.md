@@ -6,9 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-### Fixed
+### Changed
 
-- Update, query, `init`, and `post_upgrade` canister entry points now interpret an empty input vector as a Candid encoding of `()`, making them more lenient when no arguments are provided.
+- Update, query, `init`, and `post_upgrade` canister entry points now interpret an empty input vector as the Candid encoding of `()`, making them more lenient when no arguments are provided. This does not apply to methods using `decode_with`, which still receive the raw (empty) bytes.
 
 ## [0.20.1] - 2026-04-20
 
