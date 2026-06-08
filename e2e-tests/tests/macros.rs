@@ -9,7 +9,6 @@ use canister::*;
 mod test_utilities;
 use test_utilities::{cargo_build_canister, pic_base, update};
 
-
 #[test]
 fn call_macros() {
     let wasm = cargo_build_canister("macros");
