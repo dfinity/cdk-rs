@@ -333,7 +333,7 @@ fn test_iter() {
         assert!(
             t.iter().eq(v.iter().map(|(k, v)| (k, v))),
             "iterators aren't equal {:?} vs {:?}",
-            &t.iter().collect::<Vec<_>>(),
+            t.iter().collect::<Vec<_>>(),
             v
         );
     }
