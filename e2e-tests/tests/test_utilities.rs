@@ -72,7 +72,7 @@ pub fn cargo_build_canister(bin_name: &str) -> Vec<u8> {
     std::fs::read(&wasm_path).unwrap_or_else(|e| {
         panic!(
             "failed to read compiled Wasm file from {:?}: {}",
-            &wasm_path, e
+            wasm_path, e
         )
     })
 }
