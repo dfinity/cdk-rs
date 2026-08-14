@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.1] - 2026-08-14
+
+### Fixed
+
+- Upgrade `candid_parser` to v0.4.1, which escapes the method names of a service type when
+  generating the Rust bindings. Previously such a name was emitted raw between the quotes of a Rust
+  string literal, so a name containing characters that are legal in Candid text but significant in
+  Rust produced incorrect generated code. Bindings generated from a `.did` file whose service-type
+  method names are ordinary identifiers are unchanged.
+- Raise the minimum `candid` version to v0.10.28, which `candid_parser` v0.4 requires to compile but
+  does not declare.
+
 ## [0.2.0] - 2026-02-19
 
 ### New API Design
