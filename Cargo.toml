@@ -27,7 +27,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 # Crates of this workspace
 ic-cdk = { path = "ic-cdk", version = "0.20.2" }
-ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.0" }
+ic-cdk-bindgen = { path = "ic-cdk-bindgen", version = "0.2.1" }
 ic-cdk-bitcoin-canister = { path = "ic-cdk-bitcoin-canister", version = "0.2.0" }
 ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
 ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.2" }
@@ -37,9 +37,11 @@ ic-management-canister-types = "0.7.1"
 ic0 = { path = "ic0", version = "1.1.0" }
 
 # Regular dependencies
-## sync candid version with the doc comment in ic-cdk/README.md
-candid = "0.10.24"
-candid_parser = "0.3.0"
+# candid_parser v0.4 needs candid >= 0.10.28, but only declares >= 0.10.16.
+# Requiring it here keeps a consumer with an older candid pinned in their lockfile from
+# resolving to a combination that fails to compile.
+candid = "0.10.28"
+candid_parser = "0.4.1"
 crc32fast = "1.5.0"
 darling = "0.23.0"
 hex = "0.4"
