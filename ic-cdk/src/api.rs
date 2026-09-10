@@ -268,10 +268,6 @@ pub fn subnet_self() -> Principal {
 }
 
 /// Gets the number of nodes on the subnet on which the canister is running.
-///
-/// This is useful for computing valid replication bounds for the Management canister method
-/// [`flexible_http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-flexible_http_request),
-/// whose `total_requests` must not exceed the number of nodes on the subnet.
 pub fn subnet_self_node_count() -> u32 {
     ic0::subnet_self_node_count()
 }

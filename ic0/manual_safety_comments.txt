@@ -57,7 +57,7 @@ ic0.subnet_self_size : () -> I;                                                 
     Always safe to call
 ic0.subnet_self_copy : (dst : I, offset : I, size : I) -> ();                         // *
     `dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety.
-ic0.subnet_self_node_count : () -> i32;                                                // *
+ic0.subnet_self_node_count : () -> i32;                                               // *
     Always safe to call
 ic0.msg_method_name_size : () -> I;                                                   // F
     Always safe to call

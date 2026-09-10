@@ -33,7 +33,7 @@
 
     ic0.subnet_self_size : () -> I;                                                       // *
     ic0.subnet_self_copy : (dst : I, offset : I, size : I) -> ();                         // *
-    ic0.subnet_self_node_count : () -> i32;                                                // *
+    ic0.subnet_self_node_count : () -> i32;                                               // *
 
     ic0.msg_method_name_size : () -> I;                                                   // F
     ic0.msg_method_name_copy : (dst : I, offset : I, size : I) -> ();                     // F

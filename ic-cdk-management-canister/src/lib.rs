@@ -28,13 +28,14 @@ pub use ic_management_canister_types::{
     NodeMetricsHistoryResult, OnLowWasmMemoryHookStatus, ProvisionalCreateCanisterWithCyclesResult,
     ProvisionalTopUpCanisterArgs, QueryStats, RawRandResult, ReadCanisterSnapshotDataArgs,
     ReadCanisterSnapshotDataResult, ReadCanisterSnapshotMetadataArgs,
-    ReadCanisterSnapshotMetadataResult, ReplicationCounts, ResourceUsage, SchnorrAlgorithm,
-    SchnorrAux, SchnorrKeyId, SchnorrPublicKeyArgs, SchnorrPublicKeyResult, SignWithEcdsaArgs,
-    SignWithEcdsaResult, SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot, SnapshotDataKind,
-    SnapshotDataOffset, SnapshotId, SnapshotMetadataGlobal, SnapshotSource, StartCanisterArgs,
-    StopCanisterArgs, StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
-    TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
-    TransformFunc, UpgradeFlags, UploadCanisterSnapshotDataArgs,
+    ReadCanisterSnapshotMetadataResult, RenameCanisterRecord, RenameToRecord, ReplicationCounts,
+    ResourceUsage, SchnorrAlgorithm, SchnorrAux, SchnorrKeyId, SchnorrPublicKeyArgs,
+    SchnorrPublicKeyResult, SignWithEcdsaArgs, SignWithEcdsaResult, SignWithSchnorrArgs,
+    SignWithSchnorrResult, Snapshot, SnapshotDataKind, SnapshotDataOffset, SnapshotId,
+    SnapshotMetadataGlobal, SnapshotSource, SnapshotVisibility, StartCanisterArgs,
+    StatusVisibility, StopCanisterArgs, StoredChunksArgs, StoredChunksResult, SubnetInfoArgs,
+    SubnetInfoResult, TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs,
+    TransformContext, TransformFunc, UpgradeFlags, UploadCanisterSnapshotDataArgs,
     UploadCanisterSnapshotMetadataArgs, UploadCanisterSnapshotMetadataResult, UploadChunkArgs,
     UploadChunkResult, VetKDCurve, VetKDDeriveKeyArgs, VetKDDeriveKeyResult, VetKDKeyId,
     VetKDPublicKeyArgs, VetKDPublicKeyResult, WasmMemoryPersistence, WasmModule,
@@ -581,6 +582,11 @@ fn request_bytes(
 /// the outcall could consume, which yields a reservation the outcall cannot exhaust but which
 /// holds far more cycles for the duration of the call.
 ///
+/// Narrowing an expectation below what the call actually needs is not rejected up front. The
+/// outcall runs with reduced limits, and potentially fails at a later point. A node that
+/// exhausts its budget rejects instead of returning the response, possibly after the remote
+/// server has already been contacted.
+///
 /// Use [`FlexibleHttpRequest`] for an outcall whose nodes return their individual responses.
 ///
 /// # Examples
@@ -670,8 +676,8 @@ impl HttpRequest {
 
     /// Sets the maximum size of the response in bytes, up to 2MB.
     ///
-    /// Under pricing version `2` this no longer sets the price, but it still bounds the response
-    /// and it bounds how many cycles are held while the call runs. Setting it as low as the
+    /// Under pricing version `2` this does not set the price, but it still bounds the response
+    /// and it affects how many cycles are held while the call runs. Setting it as low as the
     /// response allows keeps the reservation small.
     pub fn with_max_response_bytes(mut self, max_response_bytes: u64) -> Self {
         self.args.max_response_bytes = Some(max_response_bytes);
@@ -696,6 +702,9 @@ impl HttpRequest {
 
     /// Sets the round-trip time the outcall is expected to take, in milliseconds.
     ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
+    ///
     /// Defaults to the 60 second maximum the system allows.
     pub fn with_expected_roundtrip_time_ms(mut self, ms: u64) -> Self {
         self.reservation.roundtrip_time_ms = Some(ms);
@@ -704,6 +713,9 @@ impl HttpRequest {
 
     /// Sets the size the response is expected to have as it arrives from the server.
     ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
+    ///
     /// Defaults to `max_response_bytes`, or 2MB if that is unset.
     pub fn with_expected_raw_response_bytes(mut self, bytes: u64) -> Self {
         self.reservation.raw_response_bytes = Some(bytes);
@@ -711,6 +723,9 @@ impl HttpRequest {
     }
 
     /// Sets the size the response is expected to have after the transform function.
+    ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
     ///
     /// Defaults to `max_response_bytes` plus the bytes reserved for the Candid encoding, or 2MB
     /// plus that reserve if `max_response_bytes` is unset.
@@ -721,8 +736,10 @@ impl HttpRequest {
 
     /// Sets the instructions the transform function is expected to use.
     ///
-    /// Defaults to the query call instruction limit, which almost no transform approaches, so
-    /// setting this is usually the single largest reduction in the reservation.
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
+    ///
+    /// Defaults to the query call instruction limit.
     pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {
         self.reservation.transform_instructions = Some(instructions);
         self
@@ -806,6 +823,21 @@ impl HttpRequest {
 /// A committee of nodes make the request and the canister receives their individual responses
 /// rather than one the subnet agreed on, so reconciling them is the canister's job. Flexible
 /// outcalls are always priced with pricing version `2`.
+///
+/// Because the cycles attached to a version `2` outcall are also the budget the nodes may spend
+/// on it, the amount to attach depends on how much the outcall is expected to consume. Every
+/// `with_expected_*` method narrows that estimate; whatever is left unset falls back to the most
+/// the outcall could consume, which yields a reservation the outcall cannot exhaust but which
+/// holds far more cycles for the duration of the call.
+///
+/// Here the budget is split between the `total_requests` nodes rather than across the subnet, and
+/// too few cycles surface in one of two ways. A node that exhausts its own share rejects, counting
+/// towards [`TooManyRejects`](FlexibleHttpGlobalError::TooManyRejects). Separately, what the
+/// committee leaves unspent is pooled to pay for delivering the result, and once that pool no
+/// longer covers any result the outcall could still produce, it fails with
+/// [`OutOfCycles`](FlexibleHttpGlobalError::OutOfCycles) instead. Delivery is priced by the sizes
+/// of the responses, so that verdict can come after the nodes have already made their HTTP
+/// requests: the outcall can spend cycles and still deliver no responses.
 ///
 /// # Examples
 ///
@@ -895,8 +927,8 @@ impl FlexibleHttpRequest {
 
     /// Sets the maximum size of any single node's response in bytes, up to 2MB.
     ///
-    /// The responses delivered together must also fit a 2MiB total, so this should be no larger
-    /// than `2MiB / min_responses` unless a transform brings the delivered size below that.
+    /// Note that at least `min_responses` must fit a 2MiB total, in order for a
+    /// result to be delivered.
     pub fn with_max_response_bytes(mut self, max_response_bytes: u64) -> Self {
         self.args.max_response_bytes = Some(max_response_bytes);
         self
@@ -921,6 +953,9 @@ impl FlexibleHttpRequest {
 
     /// Sets the round-trip time the outcall is expected to take, in milliseconds.
     ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
+    ///
     /// Defaults to the 60 second maximum the system allows.
     pub fn with_expected_roundtrip_time_ms(mut self, ms: u64) -> Self {
         self.reservation.roundtrip_time_ms = Some(ms);
@@ -928,6 +963,9 @@ impl FlexibleHttpRequest {
     }
 
     /// Sets the size a response is expected to have as it arrives from the server.
+    ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
     ///
     /// Defaults to `max_response_bytes`, or 2MB if that is unset.
     pub fn with_expected_raw_response_bytes(mut self, bytes: u64) -> Self {
@@ -937,6 +975,9 @@ impl FlexibleHttpRequest {
 
     /// Sets the size a response is expected to have after the transform function.
     ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
+    ///
     /// Defaults to `max_response_bytes` plus the bytes reserved for the Candid encoding, or 2MB
     /// plus that reserve if `max_response_bytes` is unset.
     pub fn with_expected_transformed_response_bytes(mut self, bytes: u64) -> Self {
@@ -945,6 +986,9 @@ impl FlexibleHttpRequest {
     }
 
     /// Sets the instructions the transform function is expected to use.
+    ///
+    /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
+    /// below what the call needs.
     ///
     /// Defaults to the query call instruction limit.
     pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {

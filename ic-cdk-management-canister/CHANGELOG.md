@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `with_expected_roundtrip_time_ms`, `with_expected_raw_response_bytes`, `with_expected_transformed_response_bytes` and `with_expected_transform_instructions` on both builders. Under pricing version `2` the attached cycles are also the budget each node may spend, so these narrow the reservation from "the most the outcall could consume" to what the caller expects. Anything left unset falls back to the maximum, which yields a reservation the outcall cannot exhaust but which holds far more cycles for the duration of the call.
 - `with_transform_closure` on both builders, replacing the free function `http_request_with_closure` and extending closure transforms to flexible outcalls.
 - `cost_http_request_v2` and its argument types `CostHttpRequestV2Args` and `HttpOutcallType`.
+- Re-exports of `SnapshotVisibility` and `StatusVisibility`, the types of the `CanisterSettings` and `DefiniteCanisterSettings` fields of the same name, and of `RenameCanisterRecord` and `RenameToRecord`, the payload of `ChangeDetails::RenameCanister`. All four were reachable only by depending on `ic-management-canister-types` directly, which left those fields impossible to construct or match on.
 - Re-exports of the new `ic-management-canister-types` items: `FlexibleHttpRequestArgs`, `FlexibleHttpRequestResult`, `FlexibleHttpRequestErr`, `FlexibleHttpGlobalError`, `FlexibleHttpNodeDetail`, `FlexibleHttpNodeError`, `HttpRequestResourceReport`, `ReplicationCounts` and `ResourceUsage`.
 
 ### Removed
