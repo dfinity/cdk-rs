@@ -122,6 +122,10 @@ fn call_api() {
         .update_call(canister_id, sender, "call_subnet_self", vec![])
         .unwrap();
     assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_subnet_self_node_count", vec![])
+        .unwrap();
+    assert!(res.is_empty());
     // `msg_method_name` and `accept_message` are invoked in the inspect_message entry point.
     // Every calls above/below execute the inspect_message entry point.
     // So these two API bindings are tested implicitly.
@@ -172,6 +176,10 @@ fn call_api() {
     assert!(res.is_empty());
     let res = pic
         .update_call(canister_id, sender, "call_cost_http_request", vec![])
+        .unwrap();
+    assert!(res.is_empty());
+    let res = pic
+        .update_call(canister_id, sender, "call_cost_http_request_v2", vec![])
         .unwrap();
     assert!(res.is_empty());
     let res = pic

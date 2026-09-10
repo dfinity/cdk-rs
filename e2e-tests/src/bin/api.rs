@@ -137,6 +137,15 @@ fn call_subnet_self() {
     msg_reply(vec![]);
 }
 
+#[unsafe(export_name = "canister_update call_subnet_self_node_count")]
+fn call_subnet_self_node_count() {
+    let count = subnet_self_node_count();
+    debug_print(format!("Subnet node count: {count}"));
+    // Every subnet has at least one node.
+    assert!(count > 0);
+    msg_reply(vec![]);
+}
+
 #[unsafe(export_name = "canister_inspect_message")]
 fn inspect_message() {
     assert!(msg_method_name().starts_with("call_"));
@@ -235,6 +244,23 @@ fn call_cost_create_canister() {
 #[unsafe(export_name = "canister_query call_cost_http_request")]
 fn call_cost_http_request() {
     let res = cost_http_request(100, 1000);
+    assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[unsafe(export_name = "canister_query call_cost_http_request_v2")]
+fn call_cost_http_request_v2() {
+    // The Candid encoding of the parameter record, with `outcall_type` left unset so a fully
+    // replicated outcall is priced.
+    let args = ic_cdk_management_canister::CostHttpRequestV2Args {
+        request_bytes: 100,
+        http_roundtrip_time_ms: 1_000,
+        raw_response_bytes: 1_000,
+        transformed_response_bytes: 1_000,
+        transform_instructions: 1_000_000,
+        outcall_type: None,
+    };
+    let res = ic_cdk_management_canister::cost_http_request_v2(&args);
     assert!(res > 0);
     msg_reply(vec![]);
 }

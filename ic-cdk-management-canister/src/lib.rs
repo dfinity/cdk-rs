@@ -1,10 +1,10 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use candid::{CandidType, Nat, Principal};
+use candid::{CandidType, Nat, Principal, Reserved};
 use ic_cdk::api::{
     SignCostError, canister_version, cost_create_canister,
-    cost_http_request as ic0_cost_http_request, cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
+    cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
     cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
     cost_vetkd_derive_key as ic0_cost_vetkd_derive_key,
 };
@@ -20,17 +20,19 @@ pub use ic_management_canister_types::{
     CodeDeploymentRecord, ControllersChangeRecord, CreateCanisterResult, CreationRecord,
     DefiniteCanisterSettings, DeleteCanisterArgs, DeleteCanisterSnapshotArgs, DepositCyclesArgs,
     EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgs, EcdsaPublicKeyResult, EnvironmentVariable,
-    FromCanisterRecord, FromUserRecord, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult,
-    ListCanisterSnapshotsArgs, ListCanisterSnapshotsResult, LoadSnapshotRecord, LogVisibility,
-    MemoryMetrics, NodeMetrics, NodeMetricsHistoryArgs, NodeMetricsHistoryRecord,
+    FlexibleHttpGlobalError, FlexibleHttpNodeDetail, FlexibleHttpNodeError,
+    FlexibleHttpRequestArgs, FlexibleHttpRequestErr, FlexibleHttpRequestResult, FromCanisterRecord,
+    FromUserRecord, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResourceReport,
+    HttpRequestResult, ListCanisterSnapshotsArgs, ListCanisterSnapshotsResult, LoadSnapshotRecord,
+    LogVisibility, MemoryMetrics, NodeMetrics, NodeMetricsHistoryArgs, NodeMetricsHistoryRecord,
     NodeMetricsHistoryResult, OnLowWasmMemoryHookStatus, ProvisionalCreateCanisterWithCyclesResult,
     ProvisionalTopUpCanisterArgs, QueryStats, RawRandResult, ReadCanisterSnapshotDataArgs,
     ReadCanisterSnapshotDataResult, ReadCanisterSnapshotMetadataArgs,
-    ReadCanisterSnapshotMetadataResult, SchnorrAlgorithm, SchnorrAux, SchnorrKeyId,
-    SchnorrPublicKeyArgs, SchnorrPublicKeyResult, SignWithEcdsaArgs, SignWithEcdsaResult,
-    SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot, SnapshotDataKind, SnapshotDataOffset,
-    SnapshotId, SnapshotMetadataGlobal, SnapshotSource, StartCanisterArgs, StopCanisterArgs,
-    StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
+    ReadCanisterSnapshotMetadataResult, ReplicationCounts, ResourceUsage, SchnorrAlgorithm,
+    SchnorrAux, SchnorrKeyId, SchnorrPublicKeyArgs, SchnorrPublicKeyResult, SignWithEcdsaArgs,
+    SignWithEcdsaResult, SignWithSchnorrArgs, SignWithSchnorrResult, Snapshot, SnapshotDataKind,
+    SnapshotDataOffset, SnapshotId, SnapshotMetadataGlobal, SnapshotSource, StartCanisterArgs,
+    StopCanisterArgs, StoredChunksArgs, StoredChunksResult, SubnetInfoArgs, SubnetInfoResult,
     TakeCanisterSnapshotArgs, TakeCanisterSnapshotResult, TransformArgs, TransformContext,
     TransformFunc, UpgradeFlags, UploadCanisterSnapshotDataArgs,
     UploadCanisterSnapshotMetadataArgs, UploadCanisterSnapshotMetadataResult, UploadChunkArgs,
@@ -459,54 +461,565 @@ pub async fn raw_rand() -> CallResult<RawRandResult> {
     )
 }
 
-/// Calculates the cost of making an HTTP outcall with the given [`HttpRequestArgs`].
+/// The maximum `max_response_bytes` an HTTP outcall may declare, and the value used when the
+/// field is omitted.
+const MAX_RESPONSE_BYTES_LIMIT: u64 = 2_000_000;
+/// The longest the system waits for an HTTP response.
+const MAX_ROUNDTRIP_TIME_MS: u64 = 60_000;
+/// The instruction limit of a query call, which bounds a `transform` function.
+const MAX_TRANSFORM_INSTRUCTIONS: u64 = 5_000_000_000;
+/// Bytes reserved on top of `max_response_bytes` for the Candid encoding of a response.
+const CANDID_OVERHEAD_RESERVE_BYTES: u64 = 1_024;
+
+/// # HTTP Outcall Type.
 ///
-/// [`http_request`] and [`http_request_with_closure`] invoke this method internally and attach the required cycles to the call.
+/// Which kind of HTTP outcall to price. See [`CostHttpRequestV2Args::outcall_type`].
+#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum HttpOutcallType {
+    /// An `http_request` with `is_replicated` set to `None` or `Some(true)`.
+    #[serde(rename = "fully_replicated")]
+    FullyReplicated(Reserved),
+    /// An `http_request` with `is_replicated` set to `Some(false)`.
+    #[serde(rename = "non_replicated")]
+    NonReplicated(Reserved),
+    /// A `flexible_http_request`, optionally with the replication counts it will use.
+    ///
+    /// If the counts are `None`, the endpoint's own defaults are priced.
+    #[serde(rename = "flexible")]
+    Flexible(Option<ReplicationCounts>),
+}
+
+/// # Cost HTTP Request V2 Args.
 ///
-/// # Note
+/// The resource usage to price. Argument type of [`cost_http_request_v2`].
+#[derive(CandidType, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct CostHttpRequestV2Args {
+    /// The byte length of the URL, the header names and values, the body, and the transform
+    /// method name and context.
+    pub request_bytes: u64,
+    /// Milliseconds between sending the request and fully receiving the response.
+    pub http_roundtrip_time_ms: u64,
+    /// The byte length of the HTTP response, before transformation.
+    pub raw_response_bytes: u64,
+    /// The byte length of the response after transformation.
+    pub transformed_response_bytes: u64,
+    /// Instructions the transform function uses.
+    pub transform_instructions: u64,
+    /// The kind of outcall. If `None`, a fully replicated outcall is priced.
+    pub outcall_type: Option<HttpOutcallType>,
+}
+
+/// Calculates the cost of an HTTP outcall priced with pricing version `2`.
 ///
-/// Alternatively, [`api::cost_http_request`][ic0_cost_http_request] requires manually calculating the request size and the maximum response size.
-/// This method handles the calculation internally.
-pub fn cost_http_request(arg: &HttpRequestArgs) -> u128 {
-    let request_size = (arg.url.len()
-        + arg
-            .headers
+/// This returns the amount to **attach** for an outcall that consumes exactly the resources in
+/// `arg`, not a prediction of the charge. The surplus is refunded, so the eventual charge is at
+/// most the amount attached.
+///
+/// [`HttpRequest`] and [`FlexibleHttpRequest`] invoke this internally and attach the result.
+///
+/// # Panics
+///
+/// Panics if `arg` cannot be Candid-encoded, which cannot happen for a well-formed value.
+pub fn cost_http_request_v2(arg: &CostHttpRequestV2Args) -> u128 {
+    let bytes = candid::encode_one(arg).expect("failed to Candid-encode the cost parameters");
+    ic_cdk::api::cost_http_request_v2(&bytes)
+}
+
+/// The resource usage a caller expects, used to size the cycles reservation.
+///
+/// Any field left unset falls back to the maximum the outcall could consume, which yields a
+/// reservation the outcall cannot exhaust.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct Reservation {
+    roundtrip_time_ms: Option<u64>,
+    raw_response_bytes: Option<u64>,
+    transformed_response_bytes: Option<u64>,
+    transform_instructions: Option<u64>,
+}
+
+impl Reservation {
+    /// Resolves the expected usage against `max_response_bytes`, filling unset fields with the
+    /// maximum the outcall could consume.
+    fn resolve(&self, max_response_bytes: Option<u64>) -> (u64, u64, u64, u64) {
+        let cap = max_response_bytes.unwrap_or(MAX_RESPONSE_BYTES_LIMIT);
+        (
+            self.roundtrip_time_ms.unwrap_or(MAX_ROUNDTRIP_TIME_MS),
+            self.raw_response_bytes.unwrap_or(cap),
+            self.transformed_response_bytes
+                .unwrap_or(cap.saturating_add(CANDID_OVERHEAD_RESERVE_BYTES)),
+            self.transform_instructions
+                .unwrap_or(MAX_TRANSFORM_INSTRUCTIONS),
+        )
+    }
+}
+
+/// Computes the `request_bytes` an outcall is charged for.
+fn request_bytes(
+    url: &str,
+    headers: &[HttpHeader],
+    body: Option<&Vec<u8>>,
+    transform: Option<&TransformContext>,
+) -> u64 {
+    (url.len()
+        + headers
             .iter()
             .map(|h| h.name.len() + h.value.len())
             .sum::<usize>()
-        + arg.body.as_ref().map_or(0, |b| b.len())
-        + arg
-            .transform
-            .as_ref()
-            .map_or(0, |t| t.context.len() + t.function.0.method.len()))
-        as u64;
-    // As stated here: https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request:
-    // "The upper limit on the maximal size for the response is 2MB (2,000,000B) and this value also applies if no maximal size value is specified."
-    let max_res_bytes = arg.max_response_bytes.unwrap_or(2_000_000);
-    ic0_cost_http_request(request_size, max_res_bytes)
+        + body.map_or(0, |b| b.len())
+        + transform.map_or(0, |t| t.context.len() + t.function.0.method.len())) as u64
 }
 
-/// Makes an HTTP outcall.
+/// A builder for an HTTP outcall via the Management canister method
+/// [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request).
 ///
-/// **Unbounded-wait call**
+/// The outcall is always made with pricing version `2` ("pay-as-you-go"), which charges for the
+/// resources the call actually consumes rather than for `max_response_bytes`.
 ///
-/// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
+/// Because the cycles attached to a version `2` outcall are also the budget each node may spend
+/// on it, the amount to attach depends on how much the call is expected to consume. Every
+/// `with_expected_*` method narrows that estimate; whatever is left unset falls back to the most
+/// the outcall could consume, which yields a reservation the outcall cannot exhaust but which
+/// holds far more cycles for the duration of the call.
 ///
-/// # Note
+/// Use [`FlexibleHttpRequest`] for an outcall whose nodes return their individual responses.
 ///
-/// HTTP outcall costs cycles which varies with the request size and the maximum response size.
-/// This method attaches the required cycles (detemined by [`cost_http_request`]) to the call.
+/// # Examples
 ///
-/// Check [HTTPS outcalls cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost#https-outcalls) for more details.
-pub async fn http_request(arg: &HttpRequestArgs) -> CallResult<HttpRequestResult> {
-    let cycles = cost_http_request(arg);
-    Ok(
-        Call::unbounded_wait(Principal::management_canister(), "http_request")
-            .with_arg(arg)
+/// ```no_run
+/// # use ic_cdk_management_canister::{HttpRequest, HttpMethod};
+/// # async fn f() -> Result<(), Box<dyn std::error::Error>> {
+/// let response = HttpRequest::new("https://example.com/api")
+///     .with_method(HttpMethod::POST)
+///     .with_body(b"{}".to_vec())
+///     .with_max_response_bytes(4_000)
+///     // a 200 ms call with a cheap transform reserves far less than the worst case
+///     .with_expected_roundtrip_time_ms(200)
+///     .with_expected_transform_instructions(1_000_000)
+///     .send()
+///     .await?;
+/// # Ok(()) }
+/// ```
+#[must_use = "an HttpRequest does nothing unless you call `send`"]
+#[derive(Debug, Clone)]
+pub struct HttpRequest {
+    args: HttpRequestArgs,
+    reservation: Reservation,
+    #[cfg(feature = "transform-closure")]
+    transform_guard: Option<std::sync::Arc<transform_closure::TransformGuard>>,
+}
+
+impl HttpRequest {
+    /// Starts building an outcall to `url`.
+    pub fn new(url: impl Into<String>) -> Self {
+        Self {
+            args: HttpRequestArgs {
+                url: url.into(),
+                pricing_version: Some(2),
+                ..Default::default()
+            },
+            reservation: Reservation::default(),
+            #[cfg(feature = "transform-closure")]
+            transform_guard: None,
+        }
+    }
+
+    /// Starts building an outcall from an existing [`HttpRequestArgs`].
+    ///
+    /// The `pricing_version` field is overwritten with `2`.
+    pub fn from_args(args: HttpRequestArgs) -> Self {
+        Self {
+            args: HttpRequestArgs {
+                pricing_version: Some(2),
+                ..args
+            },
+            reservation: Reservation::default(),
+            #[cfg(feature = "transform-closure")]
+            transform_guard: None,
+        }
+    }
+
+    /// Sets the HTTP method. Defaults to `GET`.
+    ///
+    /// `PUT`, `DELETE` and `PATCH` are accepted only in non-replicated mode, see
+    /// [`Self::non_replicated`].
+    pub fn with_method(mut self, method: HttpMethod) -> Self {
+        self.args.method = method;
+        self
+    }
+
+    /// Sets the request headers.
+    pub fn with_headers(mut self, headers: Vec<HttpHeader>) -> Self {
+        self.args.headers = headers;
+        self
+    }
+
+    /// Appends one request header.
+    pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.args.headers.push(HttpHeader {
+            name: name.into(),
+            value: value.into(),
+        });
+        self
+    }
+
+    /// Sets the request body.
+    pub fn with_body(mut self, body: Vec<u8>) -> Self {
+        self.args.body = Some(body);
+        self
+    }
+
+    /// Sets the maximum size of the response in bytes, up to 2MB.
+    ///
+    /// Under pricing version `2` this no longer sets the price, but it still bounds the response
+    /// and it bounds how many cycles are held while the call runs. Setting it as low as the
+    /// response allows keeps the reservation small.
+    pub fn with_max_response_bytes(mut self, max_response_bytes: u64) -> Self {
+        self.args.max_response_bytes = Some(max_response_bytes);
+        self
+    }
+
+    /// Sets the transform function, which each node runs on its own response.
+    pub fn with_transform(mut self, transform: TransformContext) -> Self {
+        self.args.transform = Some(transform);
+        self
+    }
+
+    /// Makes the request from a single node chosen by the system, rather than from every node.
+    ///
+    /// This gives weaker integrity guarantees: the single node could observe or modify the
+    /// response. It avoids the rate-limit pressure of one request per node, and it is the only
+    /// mode in which `PUT`, `DELETE` and `PATCH` are accepted.
+    pub fn non_replicated(mut self) -> Self {
+        self.args.is_replicated = Some(false);
+        self
+    }
+
+    /// Sets the round-trip time the outcall is expected to take, in milliseconds.
+    ///
+    /// Defaults to the 60 second maximum the system allows.
+    pub fn with_expected_roundtrip_time_ms(mut self, ms: u64) -> Self {
+        self.reservation.roundtrip_time_ms = Some(ms);
+        self
+    }
+
+    /// Sets the size the response is expected to have as it arrives from the server.
+    ///
+    /// Defaults to `max_response_bytes`, or 2MB if that is unset.
+    pub fn with_expected_raw_response_bytes(mut self, bytes: u64) -> Self {
+        self.reservation.raw_response_bytes = Some(bytes);
+        self
+    }
+
+    /// Sets the size the response is expected to have after the transform function.
+    ///
+    /// Defaults to `max_response_bytes` plus the bytes reserved for the Candid encoding, or 2MB
+    /// plus that reserve if `max_response_bytes` is unset.
+    pub fn with_expected_transformed_response_bytes(mut self, bytes: u64) -> Self {
+        self.reservation.transformed_response_bytes = Some(bytes);
+        self
+    }
+
+    /// Sets the instructions the transform function is expected to use.
+    ///
+    /// Defaults to the query call instruction limit, which almost no transform approaches, so
+    /// setting this is usually the single largest reduction in the reservation.
+    pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {
+        self.reservation.transform_instructions = Some(instructions);
+        self
+    }
+
+    /// Sets a transform implemented as a closure, instead of an exported query method.
+    ///
+    /// Each node runs it on its own response. The closure is deregistered when this builder is
+    /// dropped, so a builder that is never sent does not leak it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a transform has already been set, as the two would conflict.
+    #[cfg(feature = "transform-closure")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
+    pub fn with_transform_closure(
+        mut self,
+        transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
+    ) -> Self {
+        assert!(
+            self.args.transform.is_none(),
+            "a transform is already set on this outcall"
+        );
+        let (transform, guard) = transform_closure::register(transform_func);
+        self.args.transform = Some(transform);
+        self.transform_guard = Some(std::sync::Arc::new(guard));
+        self
+    }
+
+    /// Returns the arguments the outcall will be made with.
+    pub fn args(&self) -> &HttpRequestArgs {
+        &self.args
+    }
+
+    /// Returns the cycles that [`Self::send`] will attach.
+    pub fn get_cost(&self) -> u128 {
+        let (roundtrip, raw, transformed, instructions) =
+            self.reservation.resolve(self.args.max_response_bytes);
+        cost_http_request_v2(&CostHttpRequestV2Args {
+            request_bytes: request_bytes(
+                &self.args.url,
+                &self.args.headers,
+                self.args.body.as_ref(),
+                self.args.transform.as_ref(),
+            ),
+            http_roundtrip_time_ms: roundtrip,
+            raw_response_bytes: raw,
+            transformed_response_bytes: transformed,
+            transform_instructions: instructions,
+            // Absent means fully replicated, which is the encoding the system documents as the
+            // default. Note this still emits the field as `null`: Candid keeps an `opt` field in
+            // the type table, so it is not the same as omitting it.
+            outcall_type: if self.args.is_replicated == Some(false) {
+                Some(HttpOutcallType::NonReplicated(Reserved))
+            } else {
+                None
+            },
+        })
+    }
+
+    /// Makes the outcall, attaching [`Self::get_cost`] cycles.
+    ///
+    /// **Unbounded-wait call**
+    pub async fn send(self) -> CallResult<HttpRequestResult> {
+        let cycles = self.get_cost();
+        let result = Call::unbounded_wait(Principal::management_canister(), "http_request")
+            .with_arg(&self.args)
             .with_cycles(cycles)
             .await?
-            .candid()?,
-    )
+            .candid();
+        // The transform guard, if any, must outlive the call.
+        #[cfg(feature = "transform-closure")]
+        drop(self.transform_guard);
+        Ok(result?)
+    }
+}
+
+/// A builder for a flexible HTTP outcall via the Management canister method
+/// [`flexible_http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-flexible_http_request).
+///
+/// A committee of nodes make the request and the canister receives their individual responses
+/// rather than one the subnet agreed on, so reconciling them is the canister's job. Flexible
+/// outcalls are always priced with pricing version `2`.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use ic_cdk_management_canister::{FlexibleHttpRequest, FlexibleHttpRequestResult, ReplicationCounts};
+/// # async fn f() -> Result<(), Box<dyn std::error::Error>> {
+/// // ask 3 nodes, accept any 2 or 3 answers
+/// let result = FlexibleHttpRequest::new("https://example.com/price")
+///     .with_replication(ReplicationCounts {
+///         min_responses: 2,
+///         max_responses: 3,
+///         total_requests: 3,
+///     })
+///     .with_max_response_bytes(4_000)
+///     .send()
+///     .await?;
+/// match result {
+///     // fewer than `max_responses` is a normal success
+///     FlexibleHttpRequestResult::Ok(responses) => { let _ = responses; }
+///     FlexibleHttpRequestResult::Err(err) => { let _ = err.global_error; }
+/// }
+/// # Ok(()) }
+/// ```
+#[must_use = "a FlexibleHttpRequest does nothing unless you call `send`"]
+#[derive(Debug, Clone)]
+pub struct FlexibleHttpRequest {
+    args: FlexibleHttpRequestArgs,
+    reservation: Reservation,
+    #[cfg(feature = "transform-closure")]
+    transform_guard: Option<std::sync::Arc<transform_closure::TransformGuard>>,
+}
+
+impl FlexibleHttpRequest {
+    /// Starts building a flexible outcall to `url`.
+    pub fn new(url: impl Into<String>) -> Self {
+        Self {
+            args: FlexibleHttpRequestArgs {
+                url: url.into(),
+                ..Default::default()
+            },
+            reservation: Reservation::default(),
+            #[cfg(feature = "transform-closure")]
+            transform_guard: None,
+        }
+    }
+
+    /// Starts building a flexible outcall from an existing [`FlexibleHttpRequestArgs`].
+    pub fn from_args(args: FlexibleHttpRequestArgs) -> Self {
+        Self {
+            args,
+            reservation: Reservation::default(),
+            #[cfg(feature = "transform-closure")]
+            transform_guard: None,
+        }
+    }
+
+    /// Sets the HTTP method. Defaults to `GET`.
+    ///
+    /// `PUT`, `DELETE` and `PATCH` are accepted only when the replication counts are
+    /// deterministic, that is when `min_responses`, `max_responses` and `total_requests` are all
+    /// equal.
+    pub fn with_method(mut self, method: HttpMethod) -> Self {
+        self.args.method = method;
+        self
+    }
+
+    /// Sets the request headers.
+    pub fn with_headers(mut self, headers: Vec<HttpHeader>) -> Self {
+        self.args.headers = headers;
+        self
+    }
+
+    /// Appends one request header.
+    pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.args.headers.push(HttpHeader {
+            name: name.into(),
+            value: value.into(),
+        });
+        self
+    }
+
+    /// Sets the request body.
+    pub fn with_body(mut self, body: Vec<u8>) -> Self {
+        self.args.body = Some(body);
+        self
+    }
+
+    /// Sets the maximum size of any single node's response in bytes, up to 2MB.
+    ///
+    /// The responses delivered together must also fit a 2MiB total, so this should be no larger
+    /// than `2MiB / min_responses` unless a transform brings the delivered size below that.
+    pub fn with_max_response_bytes(mut self, max_response_bytes: u64) -> Self {
+        self.args.max_response_bytes = Some(max_response_bytes);
+        self
+    }
+
+    /// Sets the transform function, which each node runs on its own response.
+    pub fn with_transform(mut self, transform: TransformContext) -> Self {
+        self.args.transform = Some(transform);
+        self
+    }
+
+    /// Sets how many nodes issue the request and how many responses to require and accept.
+    ///
+    /// Must satisfy `0 <= min_responses <= max_responses <= total_requests` and
+    /// `1 <= total_requests <= N`, where `N` is
+    /// [`subnet_self_node_count`](ic_cdk::api::subnet_self_node_count). Defaults to
+    /// `floor(2 / 3 * N) + 1`, `N` and `N`.
+    pub fn with_replication(mut self, replication: ReplicationCounts) -> Self {
+        self.args.replication = Some(replication);
+        self
+    }
+
+    /// Sets the round-trip time the outcall is expected to take, in milliseconds.
+    ///
+    /// Defaults to the 60 second maximum the system allows.
+    pub fn with_expected_roundtrip_time_ms(mut self, ms: u64) -> Self {
+        self.reservation.roundtrip_time_ms = Some(ms);
+        self
+    }
+
+    /// Sets the size a response is expected to have as it arrives from the server.
+    ///
+    /// Defaults to `max_response_bytes`, or 2MB if that is unset.
+    pub fn with_expected_raw_response_bytes(mut self, bytes: u64) -> Self {
+        self.reservation.raw_response_bytes = Some(bytes);
+        self
+    }
+
+    /// Sets the size a response is expected to have after the transform function.
+    ///
+    /// Defaults to `max_response_bytes` plus the bytes reserved for the Candid encoding, or 2MB
+    /// plus that reserve if `max_response_bytes` is unset.
+    pub fn with_expected_transformed_response_bytes(mut self, bytes: u64) -> Self {
+        self.reservation.transformed_response_bytes = Some(bytes);
+        self
+    }
+
+    /// Sets the instructions the transform function is expected to use.
+    ///
+    /// Defaults to the query call instruction limit.
+    pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {
+        self.reservation.transform_instructions = Some(instructions);
+        self
+    }
+
+    /// Sets a transform implemented as a closure, instead of an exported query method.
+    ///
+    /// Each node runs it on its own response. The closure is deregistered when this builder is
+    /// dropped, so a builder that is never sent does not leak it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a transform has already been set, as the two would conflict.
+    #[cfg(feature = "transform-closure")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
+    pub fn with_transform_closure(
+        mut self,
+        transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
+    ) -> Self {
+        assert!(
+            self.args.transform.is_none(),
+            "a transform is already set on this flexible outcall"
+        );
+        let (transform, guard) = transform_closure::register(transform_func);
+        self.args.transform = Some(transform);
+        self.transform_guard = Some(std::sync::Arc::new(guard));
+        self
+    }
+
+    /// Returns the arguments the outcall will be made with.
+    pub fn args(&self) -> &FlexibleHttpRequestArgs {
+        &self.args
+    }
+
+    /// Returns the cycles that [`Self::send`] will attach.
+    pub fn get_cost(&self) -> u128 {
+        let (roundtrip, raw, transformed, instructions) =
+            self.reservation.resolve(self.args.max_response_bytes);
+        cost_http_request_v2(&CostHttpRequestV2Args {
+            request_bytes: request_bytes(
+                &self.args.url,
+                &self.args.headers,
+                self.args.body.as_ref(),
+                self.args.transform.as_ref(),
+            ),
+            http_roundtrip_time_ms: roundtrip,
+            raw_response_bytes: raw,
+            transformed_response_bytes: transformed,
+            transform_instructions: instructions,
+            outcall_type: Some(HttpOutcallType::Flexible(self.args.replication.clone())),
+        })
+    }
+
+    /// Makes the outcall, attaching [`Self::get_cost`] cycles.
+    ///
+    /// **Unbounded-wait call**
+    ///
+    /// Both arms of [`FlexibleHttpRequestResult`] arrive as a reply. This returns `Err` only for
+    /// failures detected before the requests are issued, such as invalid arguments, invalid
+    /// replication counts, or too few attached cycles.
+    pub async fn send(self) -> CallResult<FlexibleHttpRequestResult> {
+        let cycles = self.get_cost();
+        let result =
+            Call::unbounded_wait(Principal::management_canister(), "flexible_http_request")
+                .with_arg(&self.args)
+                .with_cycles(cycles)
+                .await?
+                .candid();
+        // The transform guard, if any, must outlive the call.
+        #[cfg(feature = "transform-closure")]
+        drop(self.transform_guard);
+        Ok(result?)
+    }
 }
 
 /// Constructs a [`TransformContext`] from a query method name and context.
@@ -525,10 +1038,7 @@ pub fn transform_context_from_query(
 
 #[cfg(feature = "transform-closure")]
 mod transform_closure {
-    use super::{
-        CallResult, HttpRequestArgs, HttpRequestResult, Principal, TransformArgs, http_request,
-        transform_context_from_query,
-    };
+    use super::{HttpRequestResult, Principal, TransformArgs, TransformContext};
     use candid::{decode_one, encode_one};
     use slotmap::{DefaultKey, Key, KeyData, SlotMap};
     use std::cell::RefCell;
@@ -568,59 +1078,35 @@ mod transform_closure {
         });
     }
 
-    /// Makes an HTTP outcall and transforms the response using a closure.
+    /// Deregisters a transform closure when dropped.
     ///
-    /// **Unbounded-wait call**
-    ///
-    /// See [IC method `http_request`](https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-http_request).
-    ///
-    /// # Panics
-    ///
-    /// This method will panic if the `transform` field in `arg` is not `None`,
-    /// as it would conflict with the transform function provided by the closure.
-    ///
-    /// # Note
-    ///
-    /// This method provides a straightforward way to transform the HTTP outcall result.
-    /// If you need to specify a custom transform [`context`](`ic_management_canister_types::TransformContext::context`),
-    /// please use [`http_request`] instead.
-    ///
-    /// HTTP outcall costs cycles which varies with the request size and the maximum response size.
-    /// This method attaches the required cycles (detemined by [`cost_http_request`](ic_cdk::api::cost_http_request)) to the call.
-    ///
-    /// Check [Gas and cycles cost](https://internetcomputer.org/docs/current/developer-docs/gas-cost) for more details.
-    #[cfg_attr(docsrs, doc(cfg(feature = "transform-closure")))]
-    pub async fn http_request_with_closure(
-        arg: &HttpRequestArgs,
+    /// A request builder holds this until its call completes, so that a builder which is dropped
+    /// without being sent does not leak the closure.
+    #[derive(Debug)]
+    pub struct TransformGuard(DefaultKey);
+
+    impl Drop for TransformGuard {
+        fn drop(&mut self) {
+            TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(self.0));
+        }
+    }
+
+    /// Registers `transform_func` and returns the [`TransformContext`] that routes to it, plus a
+    /// guard that deregisters it when dropped.
+    pub fn register(
         transform_func: impl FnOnce(HttpRequestResult) -> HttpRequestResult + 'static,
-    ) -> CallResult<HttpRequestResult> {
-        assert!(
-            arg.transform.is_none(),
-            "The `transform` field in `HttpRequestArgs` must be `None` when using a closure"
-        );
+    ) -> (TransformContext, TransformGuard) {
         let transform_func = Box::new(transform_func) as _;
         let key = TRANSFORMS.with(|transforms| transforms.borrow_mut().insert(transform_func));
-        struct DropGuard(DefaultKey);
-        impl Drop for DropGuard {
-            fn drop(&mut self) {
-                TRANSFORMS.with(|transforms| transforms.borrow_mut().remove(self.0));
-            }
-        }
-        let key = DropGuard(key);
-        let context = key.0.data().as_ffi().to_be_bytes().to_vec();
-        let arg = HttpRequestArgs {
-            transform: Some(transform_context_from_query(
-                "<ic-cdk internal> http_transform".to_string(),
-                context,
-            )),
-            ..arg.clone()
-        };
-        http_request(&arg).await
+        let guard = TransformGuard(key);
+        let context = guard.0.data().as_ffi().to_be_bytes().to_vec();
+        let transform = super::transform_context_from_query(
+            "<ic-cdk internal> http_transform".to_string(),
+            context,
+        );
+        (transform, guard)
     }
 }
-
-#[cfg(feature = "transform-closure")]
-pub use transform_closure::http_request_with_closure;
 
 /// Gets a SEC1 encoded ECDSA public key for the given canister using the given derivation path.
 ///
@@ -1062,4 +1548,136 @@ pub async fn delete_canister_snapshot(arg: &DeleteCanisterSnapshotArgs) -> CallR
             .await?
             .candid()?,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The cost parameter record must round-trip through Candid, since it is handed to the
+    /// system API as an encoded blob.
+    #[test]
+    fn cost_args_candid_round_trip() {
+        for outcall_type in [
+            None,
+            Some(HttpOutcallType::FullyReplicated(Reserved)),
+            Some(HttpOutcallType::NonReplicated(Reserved)),
+            Some(HttpOutcallType::Flexible(None)),
+            Some(HttpOutcallType::Flexible(Some(ReplicationCounts {
+                min_responses: 2,
+                max_responses: 3,
+                total_requests: 3,
+            }))),
+        ] {
+            let args = CostHttpRequestV2Args {
+                request_bytes: 1,
+                http_roundtrip_time_ms: 2,
+                raw_response_bytes: 3,
+                transformed_response_bytes: 4,
+                transform_instructions: 5,
+                outcall_type,
+            };
+            let bytes = candid::encode_one(&args).unwrap();
+            let decoded: CostHttpRequestV2Args = candid::decode_one(&bytes).unwrap();
+            assert_eq!(args, decoded);
+        }
+    }
+
+    /// An unset expectation must fall back to the maximum the outcall could consume.
+    #[test]
+    fn reservation_defaults_to_the_maxima() {
+        let (roundtrip, raw, transformed, instructions) = Reservation::default().resolve(None);
+        assert_eq!(roundtrip, MAX_ROUNDTRIP_TIME_MS);
+        assert_eq!(raw, MAX_RESPONSE_BYTES_LIMIT);
+        assert_eq!(
+            transformed,
+            MAX_RESPONSE_BYTES_LIMIT + CANDID_OVERHEAD_RESERVE_BYTES
+        );
+        assert_eq!(instructions, MAX_TRANSFORM_INSTRUCTIONS);
+    }
+
+    /// `max_response_bytes` bounds both response sizes when they are not given explicitly.
+    #[test]
+    fn reservation_defaults_follow_max_response_bytes() {
+        let (_, raw, transformed, _) = Reservation::default().resolve(Some(4_000));
+        assert_eq!(raw, 4_000);
+        assert_eq!(transformed, 4_000 + CANDID_OVERHEAD_RESERVE_BYTES);
+    }
+
+    /// An explicit expectation must win over the default.
+    #[test]
+    fn reservation_uses_supplied_values() {
+        let reservation = Reservation {
+            roundtrip_time_ms: Some(300),
+            raw_response_bytes: Some(1_000),
+            transformed_response_bytes: Some(900),
+            transform_instructions: Some(1_000_000),
+        };
+        assert_eq!(
+            reservation.resolve(Some(4_000)),
+            (300, 1_000, 900, 1_000_000)
+        );
+    }
+
+    /// The builder must always ask for pricing version 2, including via `from_args`.
+    #[test]
+    fn builder_always_selects_pricing_version_2() {
+        assert_eq!(
+            HttpRequest::new("https://example.com")
+                .args()
+                .pricing_version,
+            Some(2)
+        );
+        let args = HttpRequestArgs {
+            url: "https://example.com".to_string(),
+            pricing_version: Some(1),
+            ..Default::default()
+        };
+        assert_eq!(HttpRequest::from_args(args).args().pricing_version, Some(2));
+    }
+
+    /// `non_replicated` must be reflected in both the args and the priced outcall type.
+    #[test]
+    fn non_replicated_is_recorded() {
+        let req = HttpRequest::new("https://example.com").non_replicated();
+        assert_eq!(req.args().is_replicated, Some(false));
+    }
+
+    /// The flexible builder records the replication counts, and leaves them unset so the
+    /// system picks its defaults when the caller does not.
+    #[test]
+    fn flexible_replication_is_recorded() {
+        assert_eq!(
+            FlexibleHttpRequest::new("https://example.com")
+                .args()
+                .replication,
+            None
+        );
+        let counts = ReplicationCounts {
+            min_responses: 2,
+            max_responses: 3,
+            total_requests: 3,
+        };
+        assert_eq!(
+            FlexibleHttpRequest::new("https://example.com")
+                .with_replication(counts.clone())
+                .args()
+                .replication,
+            Some(counts)
+        );
+    }
+
+    /// `request_bytes` counts the URL, the headers, the body and the transform.
+    #[test]
+    fn request_bytes_counts_every_variable_part() {
+        let headers = vec![HttpHeader {
+            name: "ab".to_string(),
+            value: "cde".to_string(),
+        }];
+        let body = vec![0u8; 7];
+        assert_eq!(
+            request_bytes("https://x", &headers, Some(&body), None),
+            (9 + 2 + 3 + 7) as u64
+        );
+    }
 }

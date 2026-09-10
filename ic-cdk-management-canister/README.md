@@ -57,9 +57,10 @@ async fn example() -> Result<SignWithEcdsaResult, SignCallError> {
 
 Some management canister entry points require cycles to be attached to the call.
 The functions for calling management canister automatically calculate the required cycles and attach them to the call.
+HTTPS outcalls go through the [`HttpRequest`] and [`FlexibleHttpRequest`] builders, which do the same and additionally let a caller narrow how many cycles are reserved.
 
 For completeness, this module also provides functions to calculate the cycle cost:
-- [`cost_http_request`]
+- [`cost_http_request_v2`]
 - [`cost_sign_with_ecdsa`]
 - [`cost_sign_with_schnorr`]
 - [`cost_vetkd_derive_key`]
@@ -68,7 +69,9 @@ For completeness, this module also provides functions to calculate the cycle cos
 [unbounded-wait]: https://docs.rs/ic-cdk/latest/ic_cdk/call/struct.Call.html#method.unbounded_wait
 [`Call`]: https://docs.rs/ic-cdk/latest/ic_cdk/call/struct.Call.html
 [`sign_with_ecdsa`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.sign_with_ecdsa.html
-[`cost_http_request`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.cost_http_request.html
+[`cost_http_request_v2`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.cost_http_request_v2.html
 [`cost_sign_with_ecdsa`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.cost_sign_with_ecdsa.html
 [`cost_sign_with_schnorr`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.cost_sign_with_schnorr.html
 [`cost_vetkd_derive_key`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/fn.cost_vetkd_derive_key.html
+[`HttpRequest`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/struct.HttpRequest.html
+[`FlexibleHttpRequest`]: https://docs.rs/ic-cdk-management-canister/latest/ic_cdk_management_canister/struct.FlexibleHttpRequest.html

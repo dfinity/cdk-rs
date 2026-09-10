@@ -21,6 +21,7 @@ async fn basic() {
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
             environment_variables: Some(vec![]),
+            ..Default::default()
         }),
     };
     // 500 B is the minimum cycles required to create a canister.

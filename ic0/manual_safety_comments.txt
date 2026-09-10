@@ -57,6 +57,8 @@ ic0.subnet_self_size : () -> I;                                                 
     Always safe to call
 ic0.subnet_self_copy : (dst : I, offset : I, size : I) -> ();                         // *
     `dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety.
+ic0.subnet_self_node_count : () -> i32;                                                // *
+    Always safe to call
 ic0.msg_method_name_size : () -> I;                                                   // F
     Always safe to call
 ic0.msg_method_name_copy : (dst : I, offset : I, size : I) -> ();                     // F
@@ -130,6 +132,9 @@ ic0.cost_create_canister : (dst : I) -> ();                                     
     `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)
 ic0.cost_http_request : (request_size : i64, max_res_bytes : i64, dst : I) -> ();     // * s
     `dst` must be a pointer to a writable sequence of 16 bytes (LE u128). The `request_size` and `max_res_bytes` parameters do not affect safety
+ic0.cost_http_request_v2 : (params_src : I, params_size : I, dst : I) -> ();          // * s
+    - `params_src` must be a pointer to a readable sequence of bytes with size `params_size`
+    - `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)
 ic0.cost_sign_with_ecdsa : (src : I, size : I, ecdsa_curve: i32, dst : I) -> i32;     // * s
     - `src` must be a pointer to a readable UTF-8 string with size `size`
     - `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)
