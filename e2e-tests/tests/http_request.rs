@@ -67,14 +67,14 @@ fn test_flexible_http_request() {
             },
         )]
     });
-    // `get_cost` is pure, so this needs no mocked response.
-    pic.update_call(
-        canister_id,
-        Principal::anonymous(),
+    // `get_cost` is pure, so these need no mocked response.
+    for method in [
         "flexible_expected_usage_lowers_cost",
-        vec![],
-    )
-    .expect("flexible_expected_usage_lowers_cost failed");
+        "flexible_default_caps_transformed_bytes",
+    ] {
+        pic.update_call(canister_id, Principal::anonymous(), method, vec![])
+            .unwrap_or_else(|e| panic!("{method} failed: {e}"));
+    }
 }
 
 fn reply() -> CanisterHttpResponse {

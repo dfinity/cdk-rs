@@ -224,6 +224,23 @@ async fn flexible_too_many_rejects() {
     );
 }
 
+/// With default replication the expected transformed size is capped at what a deliverable
+/// result can average, well below the worst case a single response could reach.
+///
+/// Default replication means the cap is derived from `subnet_self_node_count`, so this only
+/// works on a replica.
+#[update]
+async fn flexible_default_caps_transformed_bytes() {
+    let capped = FlexibleHttpRequest::new("https://example.com").get_cost();
+    let uncapped = FlexibleHttpRequest::new("https://example.com")
+        .with_expected_transformed_response_bytes(2_000_000 + 1_024)
+        .get_cost();
+    assert!(
+        capped < uncapped,
+        "capped {capped} should be below the uncapped worst case {uncapped}"
+    );
+}
+
 /// Narrowing the expected resource usage must lower the cycles reservation here too.
 #[update]
 async fn flexible_expected_usage_lowers_cost() {

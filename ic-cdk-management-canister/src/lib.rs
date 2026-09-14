@@ -6,7 +6,7 @@ use ic_cdk::api::{
     SignCostError, canister_version, cost_create_canister,
     cost_sign_with_ecdsa as ic0_cost_sign_with_ecdsa,
     cost_sign_with_schnorr as ic0_cost_sign_with_schnorr,
-    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key,
+    cost_vetkd_derive_key as ic0_cost_vetkd_derive_key, subnet_self_node_count,
 };
 use ic_cdk::call::{Call, CallFailed, CallResult, CandidDecodeFailed};
 use serde::{Deserialize, Serialize};
@@ -471,6 +471,9 @@ const MAX_ROUNDTRIP_TIME_MS: u64 = 60_000;
 const MAX_TRANSFORM_INSTRUCTIONS: u64 = 5_000_000_000;
 /// Bytes reserved on top of `max_response_bytes` for the Candid encoding of a response.
 const CANDID_OVERHEAD_RESERVE_BYTES: u64 = 1_024;
+/// The block space the system has for the responses of one flexible outcall, which bounds the
+/// combined size of the responses it can deliver.
+const MAX_FLEXIBLE_RESULT_BYTES: u64 = 2 * 1024 * 1024;
 
 /// # HTTP Outcall Type.
 ///
@@ -541,17 +544,45 @@ struct Reservation {
 impl Reservation {
     /// Resolves the expected usage against `max_response_bytes`, filling unset fields with the
     /// maximum the outcall could consume.
-    fn resolve(&self, max_response_bytes: Option<u64>) -> (u64, u64, u64, u64) {
+    ///
+    /// `transformed_default_cap` bounds the value an unset `transformed_response_bytes` falls
+    /// back to. An expectation the caller set explicitly is always used as given.
+    fn resolve(
+        &self,
+        max_response_bytes: Option<u64>,
+        transformed_default_cap: Option<u64>,
+    ) -> (u64, u64, u64, u64) {
         let cap = max_response_bytes.unwrap_or(MAX_RESPONSE_BYTES_LIMIT);
+        let transformed = self.transformed_response_bytes.unwrap_or_else(|| {
+            let worst_case = cap.saturating_add(CANDID_OVERHEAD_RESERVE_BYTES);
+            transformed_default_cap.map_or(worst_case, |c| worst_case.min(c))
+        });
         (
             self.roundtrip_time_ms.unwrap_or(MAX_ROUNDTRIP_TIME_MS),
             self.raw_response_bytes.unwrap_or(cap),
-            self.transformed_response_bytes
-                .unwrap_or(cap.saturating_add(CANDID_OVERHEAD_RESERVE_BYTES)),
+            transformed,
             self.transform_instructions
                 .unwrap_or(MAX_TRANSFORM_INSTRUCTIONS),
         )
     }
+}
+
+/// The largest a flexible outcall's responses can average and still be deliverable.
+///
+/// `None` when no response is ever delivered, or when `min_responses` is zero.
+fn flexible_transformed_default_cap(replication: Option<&ReplicationCounts>) -> Option<u64> {
+    let min_responses = match replication {
+        Some(counts) => {
+            if counts.max_responses == 0 {
+                // Fire-and-forget: no response is delivered, so nothing bounds its size.
+                return None;
+            }
+            counts.min_responses
+        }
+        // The system's own default when `replication` is unset.
+        None => 2 * subnet_self_node_count() / 3 + 1,
+    };
+    (min_responses > 0).then(|| MAX_FLEXIBLE_RESULT_BYTES.div_ceil(u64::from(min_responses)))
 }
 
 /// Computes the `request_bytes` an outcall is charged for.
@@ -777,7 +808,7 @@ impl HttpRequest {
     /// Returns the cycles that [`Self::send`] will attach.
     pub fn get_cost(&self) -> u128 {
         let (roundtrip, raw, transformed, instructions) =
-            self.reservation.resolve(self.args.max_response_bytes);
+            self.reservation.resolve(self.args.max_response_bytes, None);
         cost_http_request_v2(&CostHttpRequestV2Args {
             request_bytes: request_bytes(
                 &self.args.url,
@@ -944,7 +975,7 @@ impl FlexibleHttpRequest {
     ///
     /// Must satisfy `0 <= min_responses <= max_responses <= total_requests` and
     /// `1 <= total_requests <= N`, where `N` is
-    /// [`subnet_self_node_count`](ic_cdk::api::subnet_self_node_count). Defaults to
+    /// [`subnet_self_node_count`]. Defaults to
     /// `floor(2 / 3 * N) + 1`, `N` and `N`.
     pub fn with_replication(mut self, replication: ReplicationCounts) -> Self {
         self.args.replication = Some(replication);
@@ -1027,8 +1058,10 @@ impl FlexibleHttpRequest {
 
     /// Returns the cycles that [`Self::send`] will attach.
     pub fn get_cost(&self) -> u128 {
-        let (roundtrip, raw, transformed, instructions) =
-            self.reservation.resolve(self.args.max_response_bytes);
+        let (roundtrip, raw, transformed, instructions) = self.reservation.resolve(
+            self.args.max_response_bytes,
+            flexible_transformed_default_cap(self.args.replication.as_ref()),
+        );
         cost_http_request_v2(&CostHttpRequestV2Args {
             request_bytes: request_bytes(
                 &self.args.url,
@@ -1630,7 +1663,8 @@ mod tests {
     /// An unset expectation must fall back to the maximum the outcall could consume.
     #[test]
     fn reservation_defaults_to_the_maxima() {
-        let (roundtrip, raw, transformed, instructions) = Reservation::default().resolve(None);
+        let (roundtrip, raw, transformed, instructions) =
+            Reservation::default().resolve(None, None);
         assert_eq!(roundtrip, MAX_ROUNDTRIP_TIME_MS);
         assert_eq!(raw, MAX_RESPONSE_BYTES_LIMIT);
         assert_eq!(
@@ -1643,7 +1677,7 @@ mod tests {
     /// `max_response_bytes` bounds both response sizes when they are not given explicitly.
     #[test]
     fn reservation_defaults_follow_max_response_bytes() {
-        let (_, raw, transformed, _) = Reservation::default().resolve(Some(4_000));
+        let (_, raw, transformed, _) = Reservation::default().resolve(Some(4_000), None);
         assert_eq!(raw, 4_000);
         assert_eq!(transformed, 4_000 + CANDID_OVERHEAD_RESERVE_BYTES);
     }
@@ -1658,7 +1692,7 @@ mod tests {
             transform_instructions: Some(1_000_000),
         };
         assert_eq!(
-            reservation.resolve(Some(4_000)),
+            reservation.resolve(Some(4_000), None),
             (300, 1_000, 900, 1_000_000)
         );
     }
@@ -1709,6 +1743,73 @@ mod tests {
                 .replication,
             Some(counts)
         );
+    }
+
+    /// The flexible default for `transformed_response_bytes` is the block budget split across
+    /// the responses that have to be delivered together.
+    #[test]
+    fn flexible_default_cap_divides_the_block_budget() {
+        let counts = ReplicationCounts {
+            min_responses: 9,
+            max_responses: 13,
+            total_requests: 13,
+        };
+        let cap = flexible_transformed_default_cap(Some(&counts)).unwrap();
+        assert_eq!(cap, MAX_FLEXIBLE_RESULT_BYTES.div_ceil(9));
+        // The rounding only matters when every node's response has to be delivered, since the
+        // reserve prices `total_requests` of them. Rounding down is 8 bytes short here.
+        let deterministic = ReplicationCounts {
+            min_responses: 9,
+            max_responses: 9,
+            total_requests: 9,
+        };
+        let cap = flexible_transformed_default_cap(Some(&deterministic)).unwrap();
+        assert!(9 * cap >= MAX_FLEXIBLE_RESULT_BYTES);
+        // Rounding down instead would have left the reserve 8 bytes short of a full block.
+        assert_eq!(9 * (cap - 1), MAX_FLEXIBLE_RESULT_BYTES - 8);
+    }
+
+    /// Nothing bounds the response size when no response is delivered, or when no minimum is
+    /// required, so those must not divide by `min_responses`.
+    #[test]
+    fn flexible_default_cap_is_absent_when_nothing_must_be_delivered() {
+        // Fire-and-forget.
+        assert_eq!(
+            flexible_transformed_default_cap(Some(&ReplicationCounts {
+                min_responses: 0,
+                max_responses: 0,
+                total_requests: 3,
+            })),
+            None
+        );
+        // No minimum, but responses may still arrive.
+        assert_eq!(
+            flexible_transformed_default_cap(Some(&ReplicationCounts {
+                min_responses: 0,
+                max_responses: 3,
+                total_requests: 3,
+            })),
+            None
+        );
+    }
+
+    /// The cap applies to the fallback only, and never raises it.
+    #[test]
+    fn flexible_cap_bounds_the_default_but_not_an_explicit_expectation() {
+        let cap = Some(233_016);
+        // Unset: the worst case is cut down to the cap.
+        let (_, _, transformed, _) = Reservation::default().resolve(None, cap);
+        assert_eq!(transformed, 233_016);
+        // A small `max_response_bytes` already sits below the cap, so nothing changes.
+        let (_, _, transformed, _) = Reservation::default().resolve(Some(4_000), cap);
+        assert_eq!(transformed, 4_000 + CANDID_OVERHEAD_RESERVE_BYTES);
+        // An explicit expectation is used as given, above the cap or below it.
+        let reservation = Reservation {
+            transformed_response_bytes: Some(1_000_000),
+            ..Default::default()
+        };
+        let (_, _, transformed, _) = reservation.resolve(None, cap);
+        assert_eq!(transformed, 1_000_000);
     }
 
     /// `request_bytes` counts the URL, the headers, the body and the transform.
