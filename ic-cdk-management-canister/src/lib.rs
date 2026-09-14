@@ -547,10 +547,15 @@ impl Reservation {
     ///
     /// `transformed_default_cap` bounds the value an unset `transformed_response_bytes` falls
     /// back to. An expectation the caller set explicitly is always used as given.
+    ///
+    /// `has_transform` says whether the request sets a `transform` function. Without one the
+    /// system never runs a transform, so an unset `transform_instructions` falls back to zero
+    /// rather than to the query call instruction limit.
     fn resolve(
         &self,
         max_response_bytes: Option<u64>,
         transformed_default_cap: Option<u64>,
+        has_transform: bool,
     ) -> (u64, u64, u64, u64) {
         let cap = max_response_bytes.unwrap_or(MAX_RESPONSE_BYTES_LIMIT);
         let transformed = self.transformed_response_bytes.unwrap_or_else(|| {
@@ -561,8 +566,11 @@ impl Reservation {
             self.roundtrip_time_ms.unwrap_or(MAX_ROUNDTRIP_TIME_MS),
             self.raw_response_bytes.unwrap_or(cap),
             transformed,
-            self.transform_instructions
-                .unwrap_or(MAX_TRANSFORM_INSTRUCTIONS),
+            self.transform_instructions.unwrap_or(if has_transform {
+                MAX_TRANSFORM_INSTRUCTIONS
+            } else {
+                0
+            }),
         )
     }
 }
@@ -770,7 +778,8 @@ impl HttpRequest {
     /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
     /// below what the call needs.
     ///
-    /// Defaults to the query call instruction limit.
+    /// Defaults to the query call instruction limit when a transform is set, and to zero when
+    /// none is, since the system then never runs one.
     pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {
         self.reservation.transform_instructions = Some(instructions);
         self
@@ -807,8 +816,11 @@ impl HttpRequest {
 
     /// Returns the cycles that [`Self::send`] will attach.
     pub fn get_cost(&self) -> u128 {
-        let (roundtrip, raw, transformed, instructions) =
-            self.reservation.resolve(self.args.max_response_bytes, None);
+        let (roundtrip, raw, transformed, instructions) = self.reservation.resolve(
+            self.args.max_response_bytes,
+            None,
+            self.args.transform.is_some(),
+        );
         cost_http_request_v2(&CostHttpRequestV2Args {
             request_bytes: request_bytes(
                 &self.args.url,
@@ -1021,7 +1033,8 @@ impl FlexibleHttpRequest {
     /// A lower expectation reserves fewer cycles; see [`Self`] for the risk of setting it
     /// below what the call needs.
     ///
-    /// Defaults to the query call instruction limit.
+    /// Defaults to the query call instruction limit when a transform is set, and to zero when
+    /// none is, since the system then never runs one.
     pub fn with_expected_transform_instructions(mut self, instructions: u64) -> Self {
         self.reservation.transform_instructions = Some(instructions);
         self
@@ -1061,6 +1074,7 @@ impl FlexibleHttpRequest {
         let (roundtrip, raw, transformed, instructions) = self.reservation.resolve(
             self.args.max_response_bytes,
             flexible_transformed_default_cap(self.args.replication.as_ref()),
+            self.args.transform.is_some(),
         );
         cost_http_request_v2(&CostHttpRequestV2Args {
             request_bytes: request_bytes(
@@ -1664,7 +1678,7 @@ mod tests {
     #[test]
     fn reservation_defaults_to_the_maxima() {
         let (roundtrip, raw, transformed, instructions) =
-            Reservation::default().resolve(None, None);
+            Reservation::default().resolve(None, None, true);
         assert_eq!(roundtrip, MAX_ROUNDTRIP_TIME_MS);
         assert_eq!(raw, MAX_RESPONSE_BYTES_LIMIT);
         assert_eq!(
@@ -1677,7 +1691,7 @@ mod tests {
     /// `max_response_bytes` bounds both response sizes when they are not given explicitly.
     #[test]
     fn reservation_defaults_follow_max_response_bytes() {
-        let (_, raw, transformed, _) = Reservation::default().resolve(Some(4_000), None);
+        let (_, raw, transformed, _) = Reservation::default().resolve(Some(4_000), None, true);
         assert_eq!(raw, 4_000);
         assert_eq!(transformed, 4_000 + CANDID_OVERHEAD_RESERVE_BYTES);
     }
@@ -1692,7 +1706,7 @@ mod tests {
             transform_instructions: Some(1_000_000),
         };
         assert_eq!(
-            reservation.resolve(Some(4_000), None),
+            reservation.resolve(Some(4_000), None, true),
             (300, 1_000, 900, 1_000_000)
         );
     }
@@ -1798,18 +1812,34 @@ mod tests {
     fn flexible_cap_bounds_the_default_but_not_an_explicit_expectation() {
         let cap = Some(233_016);
         // Unset: the worst case is cut down to the cap.
-        let (_, _, transformed, _) = Reservation::default().resolve(None, cap);
+        let (_, _, transformed, _) = Reservation::default().resolve(None, cap, true);
         assert_eq!(transformed, 233_016);
         // A small `max_response_bytes` already sits below the cap, so nothing changes.
-        let (_, _, transformed, _) = Reservation::default().resolve(Some(4_000), cap);
+        let (_, _, transformed, _) = Reservation::default().resolve(Some(4_000), cap, true);
         assert_eq!(transformed, 4_000 + CANDID_OVERHEAD_RESERVE_BYTES);
         // An explicit expectation is used as given, above the cap or below it.
         let reservation = Reservation {
             transformed_response_bytes: Some(1_000_000),
             ..Default::default()
         };
-        let (_, _, transformed, _) = reservation.resolve(None, cap);
+        let (_, _, transformed, _) = reservation.resolve(None, cap, true);
         assert_eq!(transformed, 1_000_000);
+    }
+
+    /// Without a transform the system never runs one, so nothing is reserved for it.
+    #[test]
+    fn no_transform_reserves_no_instructions() {
+        let (.., instructions) = Reservation::default().resolve(None, None, false);
+        assert_eq!(instructions, 0);
+        let (.., instructions) = Reservation::default().resolve(None, None, true);
+        assert_eq!(instructions, MAX_TRANSFORM_INSTRUCTIONS);
+        // An explicit expectation still wins, transform or not.
+        let reservation = Reservation {
+            transform_instructions: Some(7),
+            ..Default::default()
+        };
+        let (.., instructions) = reservation.resolve(None, None, false);
+        assert_eq!(instructions, 7);
     }
 
     /// `request_bytes` counts the URL, the headers, the body and the transform.

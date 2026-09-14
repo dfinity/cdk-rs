@@ -113,6 +113,25 @@ async fn non_replicated() {
         .unwrap();
 }
 
+/// A request that sets no transform reserves nothing for running one.
+#[update]
+async fn no_transform_lowers_cost() {
+    let without = HttpRequest::new("https://example.com")
+        .with_max_response_bytes(4_000)
+        .get_cost();
+    let with = HttpRequest::new("https://example.com")
+        .with_max_response_bytes(4_000)
+        .with_transform(transform_context_from_query(
+            "transform".to_string(),
+            vec![42],
+        ))
+        .get_cost();
+    assert!(
+        without < with,
+        "without a transform {without} should be below {with}"
+    );
+}
+
 /// Narrowing the expected resource usage must lower the cycles reservation.
 #[update]
 async fn expected_usage_lowers_cost() {

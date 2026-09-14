@@ -25,13 +25,10 @@ fn test_http_request() {
     test_one_http_request(&pic, canister_id, "get_with_transform_closure");
     test_one_http_request(&pic, canister_id, "non_replicated");
     // `get_cost` is pure, so this needs no mocked response.
-    pic.update_call(
-        canister_id,
-        Principal::anonymous(),
-        "expected_usage_lowers_cost",
-        vec![],
-    )
-    .expect("expected_usage_lowers_cost failed");
+    for method in ["expected_usage_lowers_cost", "no_transform_lowers_cost"] {
+        pic.update_call(canister_id, Principal::anonymous(), method, vec![])
+            .unwrap_or_else(|e| panic!("{method} failed: {e}"));
+    }
 }
 
 #[test]
