@@ -1022,7 +1022,12 @@ impl FlexibleHttpRequest {
     /// below what the call needs.
     ///
     /// Defaults to `max_response_bytes` plus the bytes reserved for the Candid encoding, or 2MB
-    /// plus that reserve if `max_response_bytes` is unset.
+    /// plus that reserve if `max_response_bytes` is unset, and is then capped at the largest a
+    /// response can average and still leave a deliverable result, that is at the 2MiB total
+    /// result limit divided by `min_responses`. With the default replication counts on a
+    /// 13 node subnet that cap is roughly 233KB. The cap applies to this default only: an
+    /// expectation set here is used as given. Nothing is capped when no response has to be
+    /// delivered, that is when `min_responses` is zero.
     pub fn with_expected_transformed_response_bytes(mut self, bytes: u64) -> Self {
         self.reservation.transformed_response_bytes = Some(bytes);
         self

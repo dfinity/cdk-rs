@@ -56,6 +56,18 @@ fn test_flexible_http_request() {
     test_one_flexible_http_request(&pic, canister_id, "flexible_with_transform_closure", |_| {
         vec![reply()]
     });
+    // A response per node, each one different, so that the canister can tell whether every node
+    // ran the transform closure on its own.
+    test_one_flexible_http_request(
+        &pic,
+        canister_id,
+        "flexible_multi_node_transform_closure",
+        |_| {
+            (1..=3)
+                .map(|body| reply_with_body(vec![body]))
+                .collect::<Vec<_>>()
+        },
+    );
     test_one_flexible_http_request(&pic, canister_id, "flexible_too_many_rejects", |_| {
         vec![CanisterHttpResponse::CanisterHttpReject(
             CanisterHttpReject {
@@ -75,13 +87,17 @@ fn test_flexible_http_request() {
 }
 
 fn reply() -> CanisterHttpResponse {
+    reply_with_body(vec![42])
+}
+
+fn reply_with_body(body: Vec<u8>) -> CanisterHttpResponse {
     CanisterHttpResponse::CanisterHttpReply(CanisterHttpReply {
         status: 200,
         headers: vec![CanisterHttpHeader {
             name: "response_header_name".to_string(),
             value: "response_header_value".to_string(),
         }],
-        body: vec![42],
+        body,
     })
 }
 

@@ -222,6 +222,40 @@ async fn flexible_with_transform_closure() {
     assert_eq!(responses[0].body, vec![42, 42]);
 }
 
+/// Every node of a larger committee runs the closure on its own response.
+///
+/// The responses differ per node, so this pins down that each one is transformed individually
+/// rather than one of them standing in for the others.
+#[update]
+async fn flexible_multi_node_transform_closure() {
+    let res = FlexibleHttpRequest::new("https://example.com")
+        .with_replication(ReplicationCounts {
+            min_responses: 3,
+            max_responses: 3,
+            total_requests: 3,
+        })
+        .with_transform_closure(|args: HttpRequestResult| {
+            let mut body = args.body;
+            body.push(42);
+            HttpRequestResult {
+                status: args.status,
+                headers: args.headers,
+                body,
+            }
+        })
+        .send()
+        .await
+        .unwrap();
+    let FlexibleHttpRequestResult::Ok(responses) = res else {
+        panic!("expected responses, got {res:?}");
+    };
+    // The order of the responses is not specified, so compare them sorted.
+    let mut bodies: Vec<Vec<u8>> = responses.into_iter().map(|r| r.body).collect();
+    bodies.sort();
+    // Each node's own response body, with the 42 that its own run of the closure appended.
+    assert_eq!(bodies, vec![vec![1, 42], vec![2, 42], vec![3, 42]]);
+}
+
 /// A committee that only rejects reports `too_many_rejects`, and does so as a reply.
 #[update]
 async fn flexible_too_many_rejects() {
