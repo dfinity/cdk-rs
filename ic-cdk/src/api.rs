@@ -267,6 +267,11 @@ pub fn subnet_self() -> Principal {
     Principal::try_from(&buf).unwrap()
 }
 
+/// Gets the number of nodes on the subnet on which the canister is running.
+pub fn subnet_self_node_count() -> u32 {
+    ic0::subnet_self_node_count()
+}
+
 /// Gets the name of the method to be inspected.
 ///
 /// This function is only available in the `canister_inspect_message` context.
@@ -500,6 +505,23 @@ pub fn cost_create_canister() -> u128 {
 /// Gets the cycle cost of the Management canister method [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request).
 pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
     ic0::cost_http_request(request_size, max_res_bytes)
+}
+
+/// Gets the cycle cost of a canister HTTPS outcall priced with pricing version `2`.
+///
+/// This prices both [`http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-http_request)
+/// with `pricing_version` set to `2` and
+/// [`flexible_http_request`](https://internetcomputer.org/docs/references/ic-interface-spec#ic-flexible_http_request),
+/// which is always priced this way.
+///
+/// `params` must be the Candid encoding of the parameter record documented for
+/// [`ic0.cost_http_request_v2`](https://internetcomputer.org/docs/references/ic-interface-spec#system-api-cycle-cost).
+/// This function traps if it is not.
+///
+/// Prefer the typed wrappers in the `ic-cdk-management-canister` crate, which build and encode
+/// the record for you.
+pub fn cost_http_request_v2(params: &[u8]) -> u128 {
+    ic0::cost_http_request_v2(params)
 }
 
 /// The error type for [`cost_sign_with_ecdsa`] and [`cost_sign_with_schnorr`].

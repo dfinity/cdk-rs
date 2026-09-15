@@ -137,6 +137,15 @@ fn call_subnet_self() {
     msg_reply(vec![]);
 }
 
+#[unsafe(export_name = "canister_update call_subnet_self_node_count")]
+fn call_subnet_self_node_count() {
+    let count = subnet_self_node_count();
+    debug_print(format!("Subnet node count: {count}"));
+    // Every subnet has at least one node.
+    assert!(count > 0);
+    msg_reply(vec![]);
+}
+
 #[unsafe(export_name = "canister_inspect_message")]
 fn inspect_message() {
     assert!(msg_method_name().starts_with("call_"));
@@ -236,6 +245,41 @@ fn call_cost_create_canister() {
 fn call_cost_http_request() {
     let res = cost_http_request(100, 1000);
     assert!(res > 0);
+    msg_reply(vec![]);
+}
+
+#[unsafe(export_name = "canister_query call_cost_http_request_v2")]
+fn call_cost_http_request_v2() {
+    use ic_cdk_management_canister::{
+        CostHttpRequestV2Args, HttpOutcallType, ReplicationCounts, cost_http_request_v2,
+    };
+    // The System API traps if the parameter record is not encoded the way it expects, and the
+    // `fully_replicated` and `non_replicated` payloads in particular have to be encoded as
+    // `null`. So every `outcall_type` the CDK can produce is priced here, including the absent
+    // one, which prices a fully replicated outcall.
+    let outcall_types = [
+        None,
+        Some(HttpOutcallType::FullyReplicated(candid::Reserved)),
+        Some(HttpOutcallType::NonReplicated(candid::Reserved)),
+        Some(HttpOutcallType::Flexible(None)),
+        Some(HttpOutcallType::Flexible(Some(ReplicationCounts {
+            min_responses: 2,
+            max_responses: 3,
+            total_requests: 3,
+        }))),
+    ];
+    for outcall_type in outcall_types {
+        let args = CostHttpRequestV2Args {
+            request_bytes: 100,
+            http_roundtrip_time_ms: 1_000,
+            raw_response_bytes: 1_000,
+            transformed_response_bytes: 1_000,
+            transform_instructions: 1_000_000,
+            outcall_type,
+        };
+        let res = cost_http_request_v2(&args);
+        assert!(res > 0);
+    }
     msg_reply(vec![]);
 }
 

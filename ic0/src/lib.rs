@@ -261,6 +261,12 @@ pub fn subnet_self_size() -> usize {
 }
 
 #[inline]
+pub fn subnet_self_node_count() -> u32 {
+    // SAFETY: ic0.subnet_self_node_count is always safe to call.
+    unsafe { sys::subnet_self_node_count() }
+}
+
+#[inline]
 pub fn subnet_self_copy(dst: &mut [u8], offset: usize) {
     // SAFETY: dst is a writable sequence of bytes and therefore safe to pass as ptr and len to ic0.subnet_self_copy
     // The offset parameter does not affect safety
@@ -576,6 +582,22 @@ pub fn cost_http_request(request_size: u64, max_res_bytes: u64) -> u128 {
     // The request_size and max_res_bytes parameters do not affect safety
     unsafe {
         sys::cost_http_request(request_size, max_res_bytes, dst_bytes.as_mut_ptr() as usize);
+    }
+    u128::from_le_bytes(dst_bytes)
+}
+
+#[inline]
+pub fn cost_http_request_v2(params: &[u8]) -> u128 {
+    let mut dst_bytes = [0_u8; 16];
+    // SAFETY: params is a readable sequence of bytes of length params.len(), and dst_bytes is a
+    // writable sequence of 16 bytes, and therefore both are safe to pass as ptrs to
+    // ic0.cost_http_request_v2
+    unsafe {
+        sys::cost_http_request_v2(
+            params.as_ptr() as usize,
+            params.len(),
+            dst_bytes.as_mut_ptr() as usize,
+        );
     }
     u128::from_le_bytes(dst_bytes)
 }

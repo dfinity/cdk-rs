@@ -33,7 +33,7 @@ ic-cdk-executor = { path = "ic-cdk-executor", version = "2.0.0" }
 ic-cdk-macros = { path = "ic-cdk-macros", version = "=0.20.2" }
 ic-cdk-management-canister = { path = "ic-cdk-management-canister", version = "0.1.1" }
 ic-cdk-timers = { path = "ic-cdk-timers", version = "1.0.0" }
-ic-management-canister-types = "0.7.1"
+ic-management-canister-types = "0.10"
 ic0 = { path = "ic0", version = "1.1.0" }
 
 # Regular dependencies
@@ -68,7 +68,7 @@ escargot = "0.5.15"
 futures = "0.3"
 ic-vetkd-utils = { git = "https://github.com/dfinity/ic", rev = "95231520" }
 lazy_static = "1.5.0"
-pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-04-16_04-20-base" }
+pocket-ic = { git = "https://github.com/dfinity/ic", tag = "release-2026-09-03_04-41-base" }
 prost = "0.14.3"
 prost-build = "0.14.3"
 reqwest = "0.13.2"

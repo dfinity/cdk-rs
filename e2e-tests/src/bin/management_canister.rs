@@ -16,8 +16,11 @@ async fn basic() {
             // Since around 2025-04, the freezing threshold is enforced to be at least 604800 seconds (7 days).
             freezing_threshold: Some(604_800u32.into()),
             reserved_cycles_limit: Some(0u8.into()),
+            minimum_incoming_canister_call_cycles: Some(1_000u32.into()),
             log_visibility: Some(LogVisibility::Public),
             log_memory_limit: Some(0u8.into()),
+            snapshot_visibility: Some(SnapshotVisibility::Public),
+            status_visibility: Some(StatusVisibility::Public),
             wasm_memory_limit: Some(0u8.into()),
             wasm_memory_threshold: Some(0u8.into()),
             environment_variables: Some(vec![]),
@@ -42,10 +45,22 @@ async fn basic() {
     assert_eq!(definite_canister_setting.freezing_threshold, 604_800u32);
     assert_eq!(definite_canister_setting.reserved_cycles_limit, 0u8);
     assert_eq!(
+        definite_canister_setting.minimum_incoming_canister_call_cycles,
+        1_000u32
+    );
+    assert_eq!(
         definite_canister_setting.log_visibility,
         LogVisibility::Public
     );
     assert_eq!(definite_canister_setting.log_memory_limit, 0u8);
+    assert_eq!(
+        definite_canister_setting.snapshot_visibility,
+        SnapshotVisibility::Public
+    );
+    assert_eq!(
+        definite_canister_setting.status_visibility,
+        StatusVisibility::Public
+    );
     assert_eq!(definite_canister_setting.wasm_memory_limit, 0u8);
     assert_eq!(definite_canister_setting.wasm_memory_threshold, 0u8);
     // memory_metrics

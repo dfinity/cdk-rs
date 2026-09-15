@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- `api::subnet_self_node_count`, returning the number of nodes on the subnet. Useful for computing valid replication bounds for `flexible_http_request`.
+- `api::cost_http_request_v2`, pricing a canister HTTPS outcall under pricing version `2`. It takes the Candid-encoded parameter record; prefer the typed wrappers in `ic-cdk-management-canister`.
+
 ## [0.20.2] - 2026-06-08
 
 ### Changed

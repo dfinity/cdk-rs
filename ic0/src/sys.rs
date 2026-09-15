@@ -58,6 +58,8 @@ unsafe extern "C" {
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
     pub fn subnet_self_copy(dst: usize, offset: usize, size: usize);
     #[doc = "# Safety\n\nAlways safe to call"]
+    pub fn subnet_self_node_count() -> u32;
+    #[doc = "# Safety\n\nAlways safe to call"]
     pub fn msg_method_name_size() -> usize;
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of bytes with size `size`. The `offset` parameter does not affect safety."]
     pub fn msg_method_name_copy(dst: usize, offset: usize, size: usize);
@@ -120,6 +122,8 @@ unsafe extern "C" {
     pub fn cost_create_canister(dst: usize);
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of 16 bytes (LE u128). The `request_size` and `max_res_bytes` parameters do not affect safety"]
     pub fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize);
+    #[doc = "# Safety\n\n- `params_src` must be a pointer to a readable sequence of bytes with size `params_size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)"]
+    pub fn cost_http_request_v2(params_src: usize, params_size: usize, dst: usize);
     #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
     pub fn cost_sign_with_ecdsa(src: usize, size: usize, ecdsa_curve: u32, dst: usize) -> u32;
     #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `algorithm` parameter does not affect safety"]
@@ -264,6 +268,10 @@ mod non_wasm {
         panic!("subnet_self_copy should only be called inside canisters.");
     }
     #[doc = "# Safety\n\nAlways safe to call"]
+    pub unsafe fn subnet_self_node_count() -> u32 {
+        panic!("subnet_self_node_count should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\nAlways safe to call"]
     pub unsafe fn msg_method_name_size() -> usize {
         panic!("msg_method_name_size should only be called inside canisters.");
     }
@@ -379,6 +387,10 @@ mod non_wasm {
     #[doc = "# Safety\n\n`dst` must be a pointer to a writable sequence of 16 bytes (LE u128). The `request_size` and `max_res_bytes` parameters do not affect safety"]
     pub unsafe fn cost_http_request(request_size: u64, max_res_bytes: u64, dst: usize) {
         panic!("cost_http_request should only be called inside canisters.");
+    }
+    #[doc = "# Safety\n\n- `params_src` must be a pointer to a readable sequence of bytes with size `params_size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)"]
+    pub unsafe fn cost_http_request_v2(params_src: usize, params_size: usize, dst: usize) {
+        panic!("cost_http_request_v2 should only be called inside canisters.");
     }
     #[doc = "# Safety\n\n- `src` must be a pointer to a readable UTF-8 string with size `size`\n- `dst` must be a pointer to a writable sequence of 16 bytes (LE u128)\n- The `ecdsa_curve` parameter does not affect safety"]
     pub unsafe fn cost_sign_with_ecdsa(

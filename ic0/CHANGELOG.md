@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added the `subnet_self_node_count` and `cost_http_request_v2` API bindings.
+
 ## [1.1.0] - 2026-04-20
 
 ### Added
