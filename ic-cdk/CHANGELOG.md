@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.20.3] - 2026-09-15
+
 ### Added
 
 - `api::subnet_self_node_count`, returning the number of nodes on the subnet. Useful for computing valid replication bounds for `flexible_http_request`.

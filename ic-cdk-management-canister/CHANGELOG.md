@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.0] - 2026-09-15
+
 ### Added
 
 - `HttpRequest`, a builder for `http_request`. It always selects pricing version `2` ("pay-as-you-go"), which charges for the resources the outcall consumes rather than for `max_response_bytes`. Every mainnet subnet supports that pricing version, but since both builders price the call through the `ic0.cost_http_request_v2` System API, a canister built with them requires a replica that provides it.
