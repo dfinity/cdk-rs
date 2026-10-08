@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- [BREAKING] `ic-management-canister-types` bumped from `0.10` to `0.11`, which adds the `Secp256r1` variant to `EcdsaCurve`. It selects threshold ECDSA on the NIST P-256 curve. `ecdsa_public_key`, `sign_with_ecdsa` and `cost_sign_with_ecdsa` accept it without further changes. The new variant breaks code that matches on `EcdsaCurve` exhaustively.
+
 ## [0.2.0] - 2026-09-15
 
 ### Added
