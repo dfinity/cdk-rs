@@ -1,3 +1,7 @@
+// darling's `FromMeta` derive on `ExportAttributes` trips this lint since Rust 1.99
+// (rust-lang/rust-clippy#17525). Remove once darling releases TedDriggs/darling#441.
+#![allow(clippy::redundant_field_names)]
+
 use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro2::{Ident, Span, TokenStream};

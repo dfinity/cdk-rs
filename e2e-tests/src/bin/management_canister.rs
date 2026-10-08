@@ -193,33 +193,35 @@ async fn env_var() {
 
 #[update]
 async fn ecdsa() {
-    // ecdsa_public_key
-    let key_id = EcdsaKeyId {
-        curve: EcdsaCurve::Secp256k1,
-        name: "test_key_1".to_string(),
-    };
-    let derivation_path = vec![];
-    let arg = EcdsaPublicKeyArgs {
-        canister_id: None,
-        derivation_path: derivation_path.clone(),
-        key_id: key_id.clone(),
-    };
-    let EcdsaPublicKeyResult {
-        public_key,
-        chain_code,
-    } = ecdsa_public_key(&arg).await.unwrap();
-    assert_eq!(public_key.len(), 33);
-    assert_eq!(chain_code.len(), 32);
+    for curve in [EcdsaCurve::Secp256k1, EcdsaCurve::Secp256r1] {
+        // ecdsa_public_key
+        let key_id = EcdsaKeyId {
+            curve,
+            name: "test_key_1".to_string(),
+        };
+        let derivation_path = vec![];
+        let arg = EcdsaPublicKeyArgs {
+            canister_id: None,
+            derivation_path: derivation_path.clone(),
+            key_id: key_id.clone(),
+        };
+        let EcdsaPublicKeyResult {
+            public_key,
+            chain_code,
+        } = ecdsa_public_key(&arg).await.unwrap();
+        assert_eq!(public_key.len(), 33);
+        assert_eq!(chain_code.len(), 32);
 
-    let message = "hello world";
-    let message_hash = sha2::Sha256::digest(message).to_vec();
-    let arg = SignWithEcdsaArgs {
-        message_hash,
-        derivation_path,
-        key_id,
-    };
-    let SignWithEcdsaResult { signature } = sign_with_ecdsa(&arg).await.unwrap();
-    assert_eq!(signature.len(), 64);
+        let message = "hello world";
+        let message_hash = sha2::Sha256::digest(message).to_vec();
+        let arg = SignWithEcdsaArgs {
+            message_hash,
+            derivation_path,
+            key_id,
+        };
+        let SignWithEcdsaResult { signature } = sign_with_ecdsa(&arg).await.unwrap();
+        assert_eq!(signature.len(), 64);
+    }
 }
 
 #[update]
