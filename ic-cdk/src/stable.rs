@@ -186,7 +186,10 @@ impl<M: StableMemory> StableIO<M> {
     ///
     /// When it cannot grow the memory to accommodate the new data.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, StableMemoryError> {
-        let required_capacity_bytes = self.offset + buf.len() as u64;
+        let required_capacity_bytes = self
+            .offset
+            .checked_add(buf.len() as u64)
+            .ok_or(StableMemoryError::OutOfBounds)?;
         let required_capacity_pages = required_capacity_bytes.div_ceil(WASM_PAGE_SIZE_IN_BYTES);
         let current_pages = self.capacity;
         let additional_pages_required = required_capacity_pages.saturating_sub(current_pages);
@@ -233,9 +236,23 @@ impl<M: StableMemory> StableIO<M> {
         self.offset = match offset {
             io::SeekFrom::Start(offset) => offset,
             io::SeekFrom::End(offset) => {
-                ((self.capacity * WASM_PAGE_SIZE_IN_BYTES) as i64 + offset) as u64
+                let end = i64::try_from(self.capacity * WASM_PAGE_SIZE_IN_BYTES)
+                    .ok()
+                    .and_then(|end| end.checked_add(offset))
+                    .and_then(|pos| u64::try_from(pos).ok());
+                end.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "seek position overflow")
+                })?
             }
-            io::SeekFrom::Current(offset) => (self.offset as i64 + offset) as u64,
+            io::SeekFrom::Current(offset) => {
+                let pos = i64::try_from(self.offset)
+                    .ok()
+                    .and_then(|cur| cur.checked_add(offset))
+                    .and_then(|pos| u64::try_from(pos).ok());
+                pos.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "seek position overflow")
+                })?
+            }
         };
 
         Ok(self.offset)

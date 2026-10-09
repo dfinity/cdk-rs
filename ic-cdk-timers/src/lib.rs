@@ -71,6 +71,7 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            backoff_secs: 0,
         })
     });
     state::update_ic0_timer();
@@ -127,6 +128,7 @@ where
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            backoff_secs: 0,
         });
     });
     state::update_ic0_timer();
@@ -177,6 +179,7 @@ pub fn set_timer_interval_serial(interval: Duration, func: impl AsyncFnMut() + '
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            backoff_secs: 0,
         });
     });
     state::update_ic0_timer();

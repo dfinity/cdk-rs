@@ -57,6 +57,7 @@ pub(crate) struct Timer {
     pub(crate) task: TaskId,
     pub(crate) time: u64,
     pub(crate) counter: u128,
+    pub(crate) backoff_secs: u32,
 }
 
 // Timers are sorted first by time, then by insertion order to ensure deterministic ordering.
