@@ -338,3 +338,26 @@ fn test_repeated_timer_not_duplicated_after_timeout() {
         ["slow start", "slow tick", "slow tick", "slow tick"]
     );
 }
+
+#[test]
+fn test_periodic_timers_can_cancel_themselves_synchronously() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(
+        &pic,
+        canister_id,
+        "set_sync_self_cancelling_periodic_timer",
+        (),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        advance_and_tick(&pic, 1);
+    }
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events[..], ["periodic timer cancelled self synchronously"]);
+}

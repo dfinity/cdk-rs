@@ -111,6 +111,18 @@ fn start_repeating_serial() {
     REPEATING.with(|repeating| repeating.set(id));
 }
 
+/// Cancels itself synchronously, before returning the future, i.e. while the executor has the
+/// task taken out of its slot.
+#[update]
+fn set_sync_self_cancelling_periodic_timer() {
+    let id = set_timer_interval(Duration::from_secs(1), || {
+        stop_repeating();
+        add_event("periodic timer cancelled self synchronously");
+        async {}
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
 #[update]
 fn start_repeating_serial_sync() {
     let id = ic_cdk_timers::set_timer_interval_serial(Duration::from_secs(1), async || {
