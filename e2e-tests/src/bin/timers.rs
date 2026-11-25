@@ -112,6 +112,45 @@ fn start_repeating_serial() {
 }
 
 #[update]
+fn start_repeating_serial_sync() {
+    let id = ic_cdk_timers::set_timer_interval_serial(Duration::from_secs(1), async || {
+        add_event("repeat serial sync");
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
+fn set_self_cancelling_serial_timer() {
+    let id = ic_cdk_timers::set_timer_interval_serial(Duration::from_secs(1), async || {
+        stop_repeating();
+        add_event("serial timer cancelled self");
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+thread_local! {
+    static SLOW_STARTED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// The first invocation stays suspended on an http outcall (never mocked by the test), so its
+/// self-call times out after the 300s bounded wait. Later invocations complete immediately.
+#[update]
+fn start_repeating_slow_first() {
+    let id = set_timer_interval(Duration::from_secs(1000), || async {
+        if SLOW_STARTED.replace(true) {
+            add_event("slow tick");
+        } else {
+            add_event("slow start");
+            let _ = ic_cdk_management_canister::HttpRequest::new("http://mock")
+                .with_method(HttpMethod::GET)
+                .send()
+                .await;
+        }
+    });
+    REPEATING.with(|repeating| repeating.set(id));
+}
+
+#[update]
 fn set_self_cancelling_periodic_timer() {
     let id = set_timer_interval(Duration::from_secs(1), async || {
         stop_repeating();

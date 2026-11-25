@@ -12,6 +12,7 @@ fn reschedule_timer(timers: &mut BinaryHeap<Timer>, id: TaskId, base: u64, inter
                 task: id,
                 time,
                 counter: state::next_counter(),
+                is_retry: false,
             });
         }
         None => ic0::debug_print(
@@ -23,6 +24,39 @@ fn reschedule_timer(timers: &mut BinaryHeap<Timer>, id: TaskId, base: u64, inter
             .as_bytes(),
         ),
     }
+}
+
+/// Returns the latest interval boundary `base + k * interval` (k >= 0) that is `<= now`, or `base` if
+/// `now < base`. Passing the result to [`reschedule_timer`] schedules the timer for the first interval
+/// boundary strictly after `now`, skipping any intervals that were missed, while preserving the
+/// timer's phase.
+fn latest_boundary_not_after(base: u64, now: u64, interval: Duration) -> u64 {
+    let interval = interval.as_nanos() as u64;
+    if now <= base || interval == 0 {
+        return base;
+    }
+    // base + ((now - base) / interval) * interval <= now, so this cannot overflow.
+    base + (now - base) / interval * interval
+}
+
+/// Reschedules a serial interval timer for the first interval boundary after `now`, skipping
+/// any intervals it missed (e.g. after a subnet stall), so that it fires at most once per
+/// `canister_global_timer` invocation.
+fn reschedule_serial_timer(
+    timers: &mut BinaryHeap<Timer>,
+    id: TaskId,
+    base: u64,
+    now: u64,
+    interval: Duration,
+) {
+    // A zero interval would reschedule at `now`, which would be popped again in the same invocation.
+    let interval = interval.max(Duration::from_nanos(1));
+    reschedule_timer(
+        timers,
+        id,
+        latest_boundary_not_after(base, now, interval),
+        interval,
+    );
 }
 
 // This function is called by the IC at or after the timestamp provided to `ic0.global_timer_set`.
@@ -120,12 +154,24 @@ fn do_timer(
                         );
                         // Reschedule based on `now`, not `timer_scheduled_time`,
                         // intentionally skipping intermediate executions.
-                        reschedule_timer(timers, task_id, now, *interval);
+                        // A retry's next occurrence is already scheduled.
+                        if !timer.is_retry {
+                            reschedule_timer(timers, task_id, now, *interval);
+                        }
                         true // skip
                     }
                     // 3. Check serial timer is available
                     Task::RepeatedSerialBusy { interval } => {
-                        reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
+                        // A retry's next occurrence is already scheduled.
+                        if !timer.is_retry {
+                            reschedule_serial_timer(
+                                timers,
+                                task_id,
+                                timer_scheduled_time,
+                                now,
+                                *interval,
+                            );
+                        }
                         true // skip
                     }
                     _ => false, // do not skip
@@ -140,6 +186,7 @@ fn do_timer(
         // here is performing an inter-canister call to ourselves; traps will be caught at the call
         // boundary. This invokes a meaningful cycles cost, and should an alternative for catching traps
         // become available, this code should be rewritten.
+        let is_retry = timer.is_retry;
         let env = Box::new(CallEnv {
             timer,
             method_handle: ic_cdk_executor::extend_current_method_context(),
@@ -204,11 +251,25 @@ fn do_timer(
             TASKS.with_borrow_mut(|tasks| {
                 let task = &mut tasks[task_id];
                 task.increment_concurrent();
-                // 7: Reschedule repeated timers
-                if let Task::Repeated { interval, .. } | Task::RepeatedSerial { interval, .. } =
-                    task
-                {
-                    reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
+                // 7: Reschedule repeated timers (a retry's next occurrence is already scheduled)
+                if is_retry {
+                    return;
+                }
+                match task {
+                    Task::Repeated { interval, .. } => {
+                        reschedule_timer(timers, task_id, timer_scheduled_time, *interval);
+                    }
+                    // Serial timers skip missed intervals instead of catching up one call per interval.
+                    Task::RepeatedSerial { interval, .. } => {
+                        reschedule_serial_timer(
+                            timers,
+                            task_id,
+                            timer_scheduled_time,
+                            now,
+                            *interval,
+                        );
+                    }
+                    _ => {}
                 }
             })
         }
@@ -245,10 +306,17 @@ unsafe extern "C" fn timer_scope_callback(env: usize) {
         match reject_code {
             0 => {} // success
             2 | 6 => {
-                // Double check that it exists - in case of SYS_TRANSIENT it may have completed.
+                // Double check that it exists - in case of SYS_UNKNOWN it may have completed.
                 if TASKS.with_borrow(|tasks| tasks.contains_key(task_id)) {
-                    // Try to execute the timer again later.
-                    TIMERS.with_borrow_mut(|timers| timers.push(timer));
+                    // Try to execute the timer again later. Mark it as a retry: the next occurrence
+                    // of a repeated task was already scheduled when it was dispatched, and must not
+                    // be scheduled again, or the task would fire twice per interval from then on.
+                    TIMERS.with_borrow_mut(|timers| {
+                        timers.push(Timer {
+                            is_retry: true,
+                            ..timer
+                        })
+                    });
                     state::update_ic0_timer();
                 }
                 return;
@@ -305,4 +373,29 @@ unsafe extern "C" fn timer_scope_cleanup(env: usize) {
         drop(Box::from_raw(env as *mut CallEnv));
     }
     ic0::debug_print(b"[ic-cdk-timers] internal error: trap in scope callback");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::latest_boundary_not_after;
+    use std::time::Duration;
+
+    #[test]
+    fn boundary_skips_missed_intervals() {
+        let iv = Duration::from_nanos(10);
+        // not late: unchanged
+        assert_eq!(latest_boundary_not_after(100, 50, iv), 100);
+        assert_eq!(latest_boundary_not_after(100, 100, iv), 100);
+        // less than one interval late: unchanged, so the next run is at base + interval
+        assert_eq!(latest_boundary_not_after(100, 109, iv), 100);
+        // exactly one interval late: next run at 120 (> now)
+        assert_eq!(latest_boundary_not_after(100, 110, iv), 110);
+        // many intervals late: phase is preserved
+        assert_eq!(latest_boundary_not_after(100, 3_615, iv), 3_610);
+        // no overflow near u64::MAX
+        assert_eq!(
+            latest_boundary_not_after(u64::MAX - 25, u64::MAX, iv),
+            u64::MAX - 5
+        );
+    }
 }

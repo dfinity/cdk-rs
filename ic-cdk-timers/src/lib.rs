@@ -71,6 +71,7 @@ pub fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) ->
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            is_retry: false,
         })
     });
     state::update_ic0_timer();
@@ -127,6 +128,7 @@ where
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            is_retry: false,
         });
     });
     state::update_ic0_timer();
@@ -140,6 +142,11 @@ where
 /// Unlike [`set_timer_interval`], this function takes an async closure (`async || {`). This is simpler to use
 /// with captured variables, but also means that invocations cannot be run concurrently; if the interval is up
 /// but the previous invocation is still running, the new invocation will be skipped.
+///
+/// Missed intervals are not caught up: if the timer falls one or more intervals behind (e.g. after
+/// a subnet stall), it runs at most once and is then rescheduled for the next interval boundary
+/// after the current time. As a consequence, if `interval` is shorter than the time between two
+/// executions of the canister's global timer, the closure runs at most once per execution.
 ///
 /// <div class="warning">
 ///
@@ -177,6 +184,7 @@ pub fn set_timer_interval_serial(interval: Duration, func: impl AsyncFnMut() + '
             task: key,
             time: scheduled_time,
             counter: state::next_counter(),
+            is_retry: false,
         });
     });
     state::update_ic0_timer();

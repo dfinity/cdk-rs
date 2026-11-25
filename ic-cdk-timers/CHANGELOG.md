@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Fix: `set_timer_interval_serial` no longer makes one self-call per missed interval when the timer falls behind (e.g. after a subnet stall, or `advance_time` in PocketIC). It now runs at most once and skips the missed intervals, keeping its phase. This is a behavior change: a serial timer whose interval is shorter than the time between two global timer executions runs at most once per execution.
+- Fix: a repeated timer whose self-call is rejected with `SYS_TRANSIENT` or `SYS_UNKNOWN` (e.g. a closure running longer than the 300s bounded wait) no longer gets a duplicate schedule entry that made it fire twice per interval.
+- Fix: clearing an interval timer while its closure is running (including from inside the closure) no longer traps.
+
 ## [1.0.0] - 2025-11-13
 
 - `ic-cdk-timers` no longer has a dependency on `ic-cdk` and no longer needs to be upgraded when `ic-cdk` is upgraded.
