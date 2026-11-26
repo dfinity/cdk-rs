@@ -71,13 +71,19 @@ extern "C" fn timer_executor() {
                 } => {
                     let invocation = func();
                     // Invalid cleared in the same round
-                    TASKS.with_borrow_mut(|tasks| {
-                        tasks[task_id] = Task::Repeated {
-                            func,
-                            interval,
-                            concurrent_calls,
-                        };
+                    // `func` may have cleared its own timer. If so, drop it outside the borrow.
+                    let cleared = TASKS.with_borrow_mut(|tasks| match tasks.get_mut(task_id) {
+                        Some(task) => {
+                            *task = Task::Repeated {
+                                func,
+                                interval,
+                                concurrent_calls,
+                            };
+                            None
+                        }
+                        None => Some(func),
                     });
+                    drop(cleared);
                     ic_cdk_executor::spawn_protected(async move {
                         invocation.await;
                         ic0::msg_reply();
@@ -96,9 +102,18 @@ extern "C" fn timer_executor() {
                                 let func = self.0.take().unwrap();
                                 let interval = self.1;
                                 let task_id = self.2;
-                                TASKS.with_borrow_mut(|tasks| {
-                                    tasks[task_id] = Task::RepeatedSerial { func, interval };
-                                });
+                                // The timer may have been cleared while running (possibly by itself).
+                                // If so, drop `func` outside the borrow, as its captures' destructors
+                                // may themselves set or clear timers.
+                                let cleared =
+                                    TASKS.with_borrow_mut(|tasks| match tasks.get_mut(task_id) {
+                                        Some(task) => {
+                                            *task = Task::RepeatedSerial { func, interval };
+                                            None
+                                        }
+                                        None => Some(func),
+                                    });
+                                drop(cleared);
                             }
                         }
                         let mut guard = ReplaceGuard(Some(func), interval, task_id);

@@ -57,6 +57,10 @@ pub(crate) struct Timer {
     pub(crate) task: TaskId,
     pub(crate) time: u64,
     pub(crate) counter: u128,
+    /// Whether this is a retry of a dispatch that was rejected with a transient error. The next
+    /// occurrence of a repeated task was already scheduled by the original dispatch, so a retry
+    /// must not schedule another one, or the task would end up with two heap entries.
+    pub(crate) is_retry: bool,
 }
 
 // Timers are sorted first by time, then by insertion order to ensure deterministic ordering.

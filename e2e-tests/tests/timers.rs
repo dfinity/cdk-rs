@@ -260,3 +260,104 @@ fn test_serial_timers_run_in_serial() {
         ["method repeat serial", "method repeat serial",]
     );
 }
+
+#[test]
+fn test_serial_timers_skip_missed_intervals_when_time_skips() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "start_repeating_serial_sync", ()).unwrap();
+    // 1s interval, 100 intervals missed: must run once, not 100 times.
+    advance_and_tick(&pic, 100);
+    for _ in 0..3 {
+        pic.tick();
+    }
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events[..], ["repeat serial sync"]);
+
+    // It keeps running on schedule afterwards.
+    advance_and_tick(&pic, 1);
+    advance_and_tick(&pic, 1);
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events.len(), 3);
+}
+
+#[test]
+fn test_serial_timers_can_cancel_themselves() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "set_self_cancelling_serial_timer", ()).unwrap();
+    for _ in 0..3 {
+        advance_and_tick(&pic, 1);
+    }
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events[..], ["serial timer cancelled self"]);
+}
+
+#[test]
+fn test_repeated_timer_not_duplicated_after_timeout() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(&pic, canister_id, "start_repeating_slow_first", ()).unwrap();
+    // First invocation starts and suspends.
+    advance_and_tick(&pic, 1000);
+    // Let the timer self-call time out (300s bounded wait). The timed-out run is retried once,
+    // which produces the first "slow tick" and shows that the timeout path was exercised.
+    advance_and_tick(&pic, 400);
+    for _ in 0..3 {
+        pic.tick();
+    }
+    // Two more intervals: one run each.
+    for _ in 0..2 {
+        advance_and_tick(&pic, 1000);
+        for _ in 0..3 {
+            pic.tick();
+        }
+    }
+    update::<(), ()>(&pic, canister_id, "stop_repeating", ()).unwrap();
+
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    // Without the fix, the retry left a second schedule entry and each interval ran twice.
+    assert_eq!(
+        events[..],
+        ["slow start", "slow tick", "slow tick", "slow tick"]
+    );
+}
+
+#[test]
+fn test_periodic_timers_can_cancel_themselves_synchronously() {
+    let wasm = cargo_build_canister("timers");
+    let pic = pic_base().build();
+
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.install_canister(canister_id, wasm, vec![], None);
+
+    update::<(), ()>(
+        &pic,
+        canister_id,
+        "set_sync_self_cancelling_periodic_timer",
+        (),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        advance_and_tick(&pic, 1);
+    }
+    let (events,): (Vec<String>,) = query_candid(&pic, canister_id, "get_events", ()).unwrap();
+    assert_eq!(events[..], ["periodic timer cancelled self synchronously"]);
+}
